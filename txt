@@ -1,0 +1,74 @@
+		COO Matrix
+	col 0	col 1	col 2	col 3
+row 0	0	0	2	0
+row 1	0	0	0	4
+row 2	0	4	0	2
+row 3	0	0	0	0
+Row indices
+	0	1	2	2
+Column indices
+	2	3	1	3
+values
+	2	4	4	2
+		COO Matrix
+	col 0	col 1	col 2	col 3
+row 0	4	0	3	0
+row 1	0	0	0	0
+row 2	0	0	0	0
+row 3	2	0	4	0
+Row indices
+	0	0	3	3
+Column indices
+	0	2	0	2
+values
+	4	3	2	4
+		COO Matrix
+	col 0	col 1	col 2	col 3
+row 0	4	0	2	0
+row 1	0	0	0	4
+row 2	0	4	0	2
+row 3	2	0	4	0
+Row indices
+	0	0	0	1	2	2	3	3
+Column indices
+	0	2	2	3	1	3	0	2
+values
+	4	2	3	4	4	2	2	4
+		CSR Matrix
+Row offsets
+	0	3	4	6	8
+Column indices
+	0	2	2	3	1	3	0	2
+values
+	4	2	3	4	4	2	2	4
+		CSR Matrix
+Row offsets
+	0	2	2	2	4
+Column indices
+	0	2	0	2
+values
+	4	3	2	4
+Calling Insert Elements
+csr's values within try block, csr.values[0] :4
+csr's values within try block, csr.values[1] :2
+csr's values within try block, csr.values[2] :3
+csr's values within try block, csr.values[3] :4
+csr's values within try block, csr.values[4] :4
+csr's values within try block, csr.values[5] :2
+csr's values within try block, csr.values[6] :2
+csr's values within try block, csr.values[7] :4
+csr's values after returning from cSM, csr.values[0] :4
+csr's values after returning from cSM, csr.values[1] :2
+csr's values after returning from cSM, csr.values[2] :3
+csr's values after returning from cSM, csr.values[3] :4
+csr's values after returning from cSM, csr.values[4] :4
+csr's values after returning from cSM, csr.values[5] :2
+csr's values after returning from cSM, csr.values[6] :2
+csr's values after returning from cSM, csr.values[7] :4
+		CSR Matrix
+Row offsets
+	0	6	8	12	16
+Column indices
+	0	2	2	0	2	2	3	3	1	3	1	3	0	2	0	2
+values
+	4	2	3	4	2	3	4	4	4	2	4	2	2	4	2	4
