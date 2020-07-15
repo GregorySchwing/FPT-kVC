@@ -1,32 +1,11 @@
-#include <math.h>
+#include "COO.h"
+#include <math.h>       /* floor */
 #include "COO.cuh"
+#include <cuda.h>
 
-// Kernel function to add the elements of two arrays
-__global__
-void add(int n, float *x, float *y)
-{
-  int index = threadIdx.x;
-  int stride = blockDim.x;
-  for (int i = index; i < n; i += stride)
-  {
-    y[i] = x[i] + y[i];
-  }
-}
+extern void wrapperFunction(int * column_indices, int * row_indices, int * values, int size);
 
-__host__
-void initialAllocation(int * column_indices, int * row_indices, int * values, int size){
-  cudaMalloc( (void**)&column_indices, size * sizeof(int) );
-  cudaMalloc( (void**)&row_indices, size * sizeof(int) );
-  cudaMalloc( (void**)&values, size * sizeof(int) );
-}
-
-void wrapperfunction(int * column_indices, int * row_indices, int * values, int size){
-  // your code for initialization, copying data to device memory,
-  initialAllocation(column_indices, row_indices, values, size); //kernel call
-  //your code for copying back the result to host memory & return
-  }
-
-  COO::COO(int size, int numberOfRows, int numberOfColumns, bool populate):SparseMatrix(size, numberOfRows, numberOfColumns){
+COO::COO(int size, int numberOfRows, int numberOfColumns, bool populate):SparseMatrix(size, numberOfRows, numberOfColumns){
     
     wrapperFunction(column_indices, row_indices, values, size);
     /*if (populate){
