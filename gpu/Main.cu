@@ -132,8 +132,8 @@ int main(int argc, char *argv[])
     std::cout << "creating iterators" << std::endl;
 
     // Now we'll create some zip_iterators for A and B
-    Int3Iterator A_first = thrust::make_zip_iterator(thrust::make_tuple(col_vec_dev.begin(), row_vec_dev.begin(), val_vec_dev.begin()));
-    Int3Iterator A_last  = thrust::make_zip_iterator(thrust::make_tuple(col_vec_dev.end(),   row_vec_dev.end(),   val_vec_dev.end()));
+    Int3Iterator A_first = thrust::make_zip_iterator(thrust::make_tuple(row_vec_dev.begin(), col_vec_dev.begin(), val_vec_dev.begin()));
+    Int3Iterator A_last  = thrust::make_zip_iterator(thrust::make_tuple(row_vec_dev.end(),   col_vec_dev.end(),   val_vec_dev.end()));
     //Int3Iterator B_first = thrust::make_zip_iterator(thrust::make_tuple(B0.begin(), B1.begin(), B2.begin()));
         std::cout << "sorting" << std::endl;
 
