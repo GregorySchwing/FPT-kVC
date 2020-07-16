@@ -5,6 +5,9 @@
 #include <thrust/sort.h>
 #include <thrust/functional.h>
 #include <cstdlib>
+#include <iostream>
+#include <string>
+#include <sstream>      // std::stringstream
 
 // We'll use a 3-tuple to store our 3d vector type
 // rows, cols, vals
@@ -116,4 +119,57 @@ int main(int argc, char *argv[])
     //Int3Iterator B_first = thrust::make_zip_iterator(thrust::make_tuple(B0.begin(), B1.begin(), B2.begin()));
     thrust::sort(A_first, A_last, cmp());
 
+    thrust::host_vector<int> col_vec_host(numEntries);
+    thrust::host_vector<int> row_vec_host(numEntries);
+    thrust::host_vector<int> val_vec_host(numEntries);
+
+    col_vec_host = col_vec;
+    row_vec_host = row_vec;
+    val_vec_host = val_vec;
+
+    std::stringstream ss;
+    std::string myMatrix;
+    ss << "\t\tCOO Matrix" << std::endl;
+    for (int i = 0; i<numEntries; i++){
+        ss << "\tcol " << i;
+    }
+    ss << std::endl;
+    int row_index = 0;
+    for (int i = 0; i < numEntries; i++){
+        ss << "row " << i;
+        for( int j = 0; j < numEntries; j++){
+            if (row_vec_host[row_index] ==  i){
+                if(j==col_vec_host[row_index]){
+                    ss << "\t" << val_vec_host[row_index];
+                    // Skip duplicate entries
+                    while(row_vec_host[row_index] == i && j == col_vec_host[row_index]){
+                        row_index++;
+                    }
+                } else {
+                    ss << "\t" << 0;
+                }
+            } else {
+                ss << "\t" << 0;
+            }
+        }        
+        ss << std::endl;
+    }
+    ss << "Row indices" << std::endl;
+    for(int i = 0; i< row_vec_host.size(); i++){
+        ss << "\t" << row_vec_host[i];
+    }
+    ss << std::endl;
+    ss << "Column indices" << std::endl;
+    for(int i = 0; i< col_vec_host.size(); i++){
+        ss << "\t" << col_vec_host[i];
+    }
+    ss << std::endl;
+    ss << "values" << std::endl;
+    for(int i = 0; i< val_vec_host.size(); i++){
+        ss << "\t" << val_vec_host[i];
+    }
+    ss << std::endl;
+    myMatrix = ss.str();
+
+    std::cout << myMatrix << std::endl;
 }
