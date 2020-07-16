@@ -148,14 +148,14 @@ int main(int argc, char *argv[])
     std::stringstream ss;
     std::string myMatrix;
     ss << "\t\tCOO Matrix" << std::endl;
-    for (int i = 0; i<numEntries; i++){
+    for (int i = 0; i<N; i++){
         ss << "\tcol " << i;
     }
     ss << std::endl;
     int row_index = 0;
-    for (int i = 0; i < numEntries; i++){
+    for (int i = 0; i < N; i++){
         ss << "row " << i;
-        for( int j = 0; j < numEntries; j++){
+        for( int j = 0; j < N; j++){
             if (row_vec[row_index] ==  i){
                 if(j==col_vec[row_index]){
                     ss << "\t" << val_vec[row_index];
