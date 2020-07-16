@@ -86,6 +86,8 @@ int main(int argc, char *argv[])
     cudaMemcpy(values_b_dev, values_b, numEntries * sizeof(int), cudaMemcpyHostToDevice);
 */
     // generate 16M random numbers on the host
+
+    std::cout << "building vecs" << std::endl;
     thrust::device_vector<int> col_vec(numEntries);
     thrust::device_vector<int> row_vec(numEntries);
     thrust::device_vector<int> val_vec(numEntries);
@@ -93,15 +95,20 @@ int main(int argc, char *argv[])
     thrust::device_vector<int> dimensions(numEntries);
     thrust::device_vector<int> ones(numEntries);
 
+
     // fill dimensions with twos
     thrust::fill(dimensions.begin(), dimensions.end(), N);
     thrust::fill(ones.begin(), ones.end(), 1);
+
+    std::cout << "generating vecs on gpu" << std::endl;
 
     thrust::generate(col_vec.begin(), col_vec.end(), rand);
     thrust::generate(row_vec.begin(), row_vec.end(), rand);
     thrust::generate(val_vec.begin(), val_vec.end(), rand);
 
     // compute Y = X mod 2
+    std::cout << "transforming vecs on gpu" << std::endl;
+
     thrust::transform(col_vec.begin(), col_vec.end(), dimensions.begin(), col_vec.begin(), thrust::modulus<int>());
     thrust::transform(row_vec.begin(), row_vec.end(), dimensions.begin(), row_vec.begin(), thrust::modulus<int>());
     thrust::transform(val_vec.begin(), val_vec.end(), dimensions.begin(), val_vec.begin(), thrust::modulus<int>());
@@ -109,15 +116,23 @@ int main(int argc, char *argv[])
 
     // METHOD #1
     // Defining a zip_iterator type can be a little cumbersome ...
+    std::cout << "creating tuples" << std::endl;
+
     typedef thrust::device_vector<int>::iterator                     IntIterator;
     typedef thrust::tuple<IntIterator, IntIterator, IntIterator> IntIteratorTuple;
     typedef thrust::zip_iterator<IntIteratorTuple>                   Int3Iterator;
+
+    std::cout << "creating iterators" << std::endl;
 
     // Now we'll create some zip_iterators for A and B
     Int3Iterator A_first = thrust::make_zip_iterator(thrust::make_tuple(col_vec.begin(), row_vec.begin(), val_vec.begin()));
     Int3Iterator A_last  = thrust::make_zip_iterator(thrust::make_tuple(col_vec.end(),   row_vec.end(),   val_vec.end()));
     //Int3Iterator B_first = thrust::make_zip_iterator(thrust::make_tuple(B0.begin(), B1.begin(), B2.begin()));
+        std::cout << "sorting" << std::endl;
+
     thrust::sort(A_first, A_last, cmp());
+
+    std::cout << "creating host vecs" << std::endl;
 
     thrust::host_vector<int> col_vec_host(numEntries);
     thrust::host_vector<int> row_vec_host(numEntries);
