@@ -30,63 +30,6 @@ int main(int argc, char *argv[])
     int N = atoi(argv[1]);
     int numEntries = atoi(argv[2]);
 
-/*
-    int column_indices_a[numEntries], row_indices_a[numEntries], values_a[numEntries];
-    int * column_indices_a_dev, * row_indices_a_dev, * values_a_dev;
-
-    int column_indices_b[numEntries], row_indices_b[numEntries], values_b[numEntries];
-    int * column_indices_b_dev, * row_indices_b_dev, * values_b_dev;
-
-    cudaMalloc( (void**)&column_indices_a_dev, numEntries * sizeof(int) );
-    cudaMalloc( (void**)&row_indices_a_dev, numEntries * sizeof(int) );
-    cudaMalloc( (void**)&values_a_dev, numEntries * sizeof(int) );
-
-    cudaMalloc( (void**)&column_indices_b_dev, numEntries * sizeof(int) );
-    cudaMalloc( (void**)&row_indices_b_dev, numEntries * sizeof(int) );
-    cudaMalloc( (void**)&values_b_dev, numEntries * sizeof(int) );
-
-    int trialRow, trialCol;
-    bool empty;
-    for (int i = 0; i < numEntries; i++){
-        do {
-            empty = true;
-            trialCol = std::rand() % N;
-            trialRow = std::rand() %  N;
-            for (int j = 0; j < i; j++){
-                if (row_indices_a[j] == trialRow && column_indices_a[j] == trialCol)
-                    empty = false;
-            }
-        } while (!empty);
-        row_indices_a[i] = trialRow;
-        column_indices_a[i] = trialCol;
-        values_a[i] =  std::rand() % N + 1;
-    }
-
-    for (int i = 0; i < numEntries; i++){
-        do {
-            empty = true;
-            trialCol = std::rand() % N;
-            trialRow = std::rand() %  N;
-            for (int j = 0; j < i; j++){
-                if (row_indices_b[j] == trialRow && column_indices_b[j] == trialCol)
-                    empty = false;
-            }
-        } while (!empty);
-        row_indices_b[i] = trialRow;
-        column_indices_b[i] = trialCol;
-        values_b[i] =  std::rand() % N + 1;
-    }
-
-    cudaMemcpy(column_indices_a_dev, column_indices_a, numEntries * sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(row_indices_a_dev, row_indices_a, numEntries * sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(values_a_dev, values_a, numEntries * sizeof(int), cudaMemcpyHostToDevice);
-
-    cudaMemcpy(column_indices_b_dev, column_indices_b, numEntries * sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(row_indices_b_dev, row_indices_b, numEntries * sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(values_b_dev, values_b, numEntries * sizeof(int), cudaMemcpyHostToDevice);
-*/
-    // generate 16M random numbers on the host
-
     std::cout << "building vecs" << std::endl;
     thrust::host_vector<int> col_vec(numEntries);
     thrust::host_vector<int> row_vec(numEntries);
@@ -96,7 +39,7 @@ int main(int argc, char *argv[])
     thrust::host_vector<int> ones(numEntries);
 
 
-    // fill dimensions with twos
+    // fill dimensions vector with Ns
     thrust::fill(dimensions.begin(), dimensions.end(), N);
     thrust::fill(ones.begin(), ones.end(), 1);
 
@@ -106,7 +49,7 @@ int main(int argc, char *argv[])
     thrust::generate(row_vec.begin(), row_vec.end(), rand);
     thrust::generate(val_vec.begin(), val_vec.end(), rand);
 
-    // compute Y = X mod 2
+    // compute Y = X mod N
     std::cout << "transforming vecs on host" << std::endl;
 
     thrust::transform(col_vec.begin(), col_vec.end(), dimensions.begin(), col_vec.begin(), thrust::modulus<int>());
@@ -135,7 +78,7 @@ int main(int argc, char *argv[])
     Int3Iterator A_first = thrust::make_zip_iterator(thrust::make_tuple(row_vec_dev.begin(), col_vec_dev.begin(), val_vec_dev.begin()));
     Int3Iterator A_last  = thrust::make_zip_iterator(thrust::make_tuple(row_vec_dev.end(),   col_vec_dev.end(),   val_vec_dev.end()));
     //Int3Iterator B_first = thrust::make_zip_iterator(thrust::make_tuple(B0.begin(), B1.begin(), B2.begin()));
-        std::cout << "sorting" << std::endl;
+    std::cout << "sorting" << std::endl;
 
     thrust::sort(A_first, A_last, cmp());
 
