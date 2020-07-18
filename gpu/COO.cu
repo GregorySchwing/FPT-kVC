@@ -1,91 +1,101 @@
-#include <math.h>
 #include "COO.cuh"
+#include <math.h>       /* floor */
+#include <cuda.h>
 
-// Kernel function to add the elements of two arrays
-__global__
-void add(int n, float *x, float *y)
+//static void coo(int N, int numEntries);
+
+
+typedef thrust::tuple<int,int,int> Int3;
+
+struct cmp : public std::binary_function<Int3,Int3,bool>
 {
-  int index = threadIdx.x;
-  int stride = blockDim.x;
-  for (int i = index; i < n; i += stride)
-  {
-    y[i] = x[i] + y[i];
-  }
-}
-
-__host__
-void initialAllocation(int * column_indices, int * row_indices, int * values, int size){
-  cudaMalloc( (void**)&column_indices, size * sizeof(int) );
-  cudaMalloc( (void**)&row_indices, size * sizeof(int) );
-  cudaMalloc( (void**)&values, size * sizeof(int) );
-}
-
-void wrapperfunction(int * column_indices, int * row_indices, int * values, int size){
-  // your code for initialization, copying data to device memory,
-  initialAllocation(column_indices, row_indices, values, size); //kernel call
-  //your code for copying back the result to host memory & return
-  }
-
-  COO::COO(int size, int numberOfRows, int numberOfColumns, bool populate):SparseMatrix(size, numberOfRows, numberOfColumns){
-    
-    wrapperFunction(column_indices, row_indices, values, size);
-    /*if (populate){
-        int trialRow, trialCol;
-        bool empty;
-        for (int i = 0; i < size; i++){
-            do {
-                empty = true;
-                trialCol = std::rand() % numberOfColumns;
-                trialRow = std::rand() %  numberOfRows;
-                for (int j = 0; j < i; j++){
-                    if (row_indices[j] == trialRow && column_indices[j] == trialCol)
-                        empty = false;
-                }
-            } while (!empty);
-            row_indices[i] = trialRow;
-            column_indices[i] = trialCol;
-            values[i] =  std::rand() % size + 1;
+    __host__ __device__
+        bool operator()(const Int3& a, const Int3& b) const
+        {
+            if (thrust::get<0>(a) != thrust::get<0>(b))
+                return thrust::get<0>(a) < thrust::get<0>(b);
+            else 
+                return thrust::get<1>(a) < thrust::get<1>(b);
         }
-        toString();
+};
 
-    }*/
-}
 
-void COO::insertElements(const SparseMatrix & s){
-  /*  try {
-        const COO &c = dynamic_cast<const COO&>(c);
-    }
-    catch(const std::bad_cast& e) {
-        std::cout << "wrong type, expecting type COO\n";    
-        exit(1);
-    }
-    const COO& c =  dynamic_cast<const COO&> (s);
-    row_indices.insert(row_indices.end(), c.row_indices.begin(), c.row_indices.end());
-    column_indices.insert(column_indices.end(), c.column_indices.begin(), c.column_indices.end());
-    values.insert(values.end(), c.values.begin(), c.values.end());
-    size+=c.size;
-    sortMyself();*/
-}
+COO::COO(int dimensions, int numberOfEntries){
+    
+    std::cout << "building vecs" << std::endl;
+    col_vec.resize(numEntries);
+    row_vec.resize(numEntries);
+    val_vec.resize(numEntries);
 
-std::string COO::toString(){
-  /*  if(!isSorted)
-        sortMyself();
+    dimensions_vec.resize(numEntries);
+    ones.resize(numEntries);
+
+
+    // fill dimensions vector with Ns
+    thrust::fill(dimensions_vec.begin(), dimensions_vec.end(), dimensions);
+    thrust::fill(ones.begin(), ones.end(), 1);
+
+    std::cout << "generating vecs on host" << std::endl;
+
+    thrust::generate(col_vec.begin(), col_vec.end(), rand);
+    thrust::generate(row_vec.begin(), row_vec.end(), rand);
+    thrust::generate(val_vec.begin(), val_vec.end(), rand);
+
+    // compute Y = X mod N
+    std::cout << "transforming vecs on host" << std::endl;
+
+    thrust::transform(col_vec.begin(), col_vec.end(), dimensions_vec.begin(), col_vec.begin(), thrust::modulus<int>());
+    thrust::transform(row_vec.begin(), row_vec.end(), dimensions_vec.begin(), row_vec.begin(), thrust::modulus<int>());
+    thrust::transform(val_vec.begin(), val_vec.end(), dimensions_vec.begin(), val_vec.begin(), thrust::modulus<int>());
+    thrust::transform(val_vec.begin(), val_vec.end(), ones.begin(), val_vec.begin(), thrust::plus<int>());
+
+
+    std::cout << "copying vecs from host to device" << std::endl;
+
+    col_vec_dev = col_vec;
+    row_vec_dev = row_vec;
+    val_vec_dev = val_vec;
+
+    // METHOD #1
+    // Defining a zip_iterator type can be a little cumbersome ...
+    std::cout << "creating tuples" << std::endl;
+
+    typedef thrust::device_vector<int>::iterator                     IntIterator;
+    typedef thrust::tuple<IntIterator, IntIterator, IntIterator> IntIteratorTuple;
+    typedef thrust::zip_iterator<IntIteratorTuple>                   Int3Iterator;
+
+    std::cout << "creating iterators" << std::endl;
+
+    // Now we'll create some zip_iterators for A and B
+    Int3Iterator A_first = thrust::make_zip_iterator(thrust::make_tuple(row_vec_dev.begin(), col_vec_dev.begin(), val_vec_dev.begin()));
+    Int3Iterator A_last  = thrust::make_zip_iterator(thrust::make_tuple(row_vec_dev.end(),   col_vec_dev.end(),   val_vec_dev.end()));
+    //Int3Iterator B_first = thrust::make_zip_iterator(thrust::make_tuple(B0.begin(), B1.begin(), B2.begin()));
+    std::cout << "sorting" << std::endl;
+
+    thrust::sort(A_first, A_last, cmp());
+
+    std::cout << "copying back to host vecs" << std::endl;
+
+    col_vec = col_vec_dev;
+    row_vec = row_vec_dev;
+    val_vec = val_vec_dev;
+
     std::stringstream ss;
     std::string myMatrix;
     ss << "\t\tCOO Matrix" << std::endl;
-    for (int i = 0; i<numberOfColumns; i++){
+    for (int i = 0; i<dimensions; i++){
         ss << "\tcol " << i;
     }
     ss << std::endl;
     int row_index = 0;
-    for (int i = 0; i < numberOfRows; i++){
+    for (int i = 0; i < dimensions; i++){
         ss << "row " << i;
-        for( int j = 0; j < numberOfColumns; j++){
-            if (row_indices[row_index] ==  i){
-                if(j==column_indices[row_index]){
-                    ss << "\t" << values[row_index];
+        for( int j = 0; j < dimensions; j++){
+            if (row_vec[row_index] ==  i){
+                if(j==col_vec[row_index]){
+                    ss << "\t" << val_vec[row_index];
                     // Skip duplicate entries
-                    while(row_indices[row_index] == i && j == column_indices[row_index]){
+                    while(row_vec[row_index] == i && j == col_vec[row_index]){
                         row_index++;
                     }
                 } else {
@@ -98,77 +108,21 @@ std::string COO::toString(){
         ss << std::endl;
     }
     ss << "Row indices" << std::endl;
-    for(int i = 0; i< row_indices.size(); i++){
-        ss << "\t" << row_indices[i];
+    for(int i = 0; i< row_vec.size(); i++){
+        ss << "\t" << row_vec[i];
     }
     ss << std::endl;
     ss << "Column indices" << std::endl;
-    for(int i = 0; i< column_indices.size(); i++){
-        ss << "\t" << column_indices[i];
+    for(int i = 0; i< col_vec.size(); i++){
+        ss << "\t" << col_vec[i];
     }
     ss << std::endl;
     ss << "values" << std::endl;
-    for(int i = 0; i< values.size(); i++){
-        ss << "\t" << values[i];
+    for(int i = 0; i< val_vec.size(); i++){
+        ss << "\t" << val_vec[i];
     }
     ss << std::endl;
     myMatrix = ss.str();
-    return myMatrix;*/
-}
 
-void COO::sortMyself(){
-   /* float min_val, temp_val;
-    int temp_row, temp_col, min_row, min_col;
-// Sort by rows
-    for(int i = 0; i < size; i++){
-        min_row = row_indices[i];
-        min_col = column_indices[i];
-        min_val = values[i];
-        for (int j = i; j < size; j++){
-            if(row_indices[j] < min_row){
-                temp_row = row_indices[j];
-                temp_col = column_indices[j];
-                temp_val = values[j];
-                row_indices[j] = min_row;
-                column_indices[j] = min_col;
-                values[j] = min_val;
-                row_indices[i] = temp_row;
-                column_indices[i] = temp_col;
-                values[i] = temp_val;
-
-                min_row = row_indices[i];
-                min_col = column_indices[i];
-                min_val = values[i];
-            }
-        }
-    }
-    
-//  Sort within rows by col
-    for(int i = 0; i < size; i++){
-        min_row = row_indices[i];
-        min_col = column_indices[i];
-        min_val = values[i];
-        for (int j = i; j < size; j++){
-            if(min_row == row_indices[j] && column_indices[j] < min_col){
-                temp_row = row_indices[j];
-                temp_col = column_indices[j];
-                temp_val = values[j];
-                row_indices[j] = min_row;
-                column_indices[j] = min_col;
-                values[j] = min_val;
-                row_indices[i] = temp_row;
-                column_indices[i] = temp_col;
-                values[i] = temp_val;
-
-                min_row = row_indices[i];
-                min_col = column_indices[i];
-                min_val = values[i];            
-            }
-        }
-    }
-    isSorted = true;*/
-}
-
-COO& COO::SpMV(COO & c){
-
+    std::cout << myMatrix << std::endl;
 }
