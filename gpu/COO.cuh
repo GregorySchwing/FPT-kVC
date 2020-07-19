@@ -6,7 +6,6 @@
 #include <string>
 #include <iostream>
 #include <cuda.h>
-#include "holder.cuh"
 
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
@@ -25,13 +24,13 @@ class COO
 {
 public:
     COO(int dimensions, int numberOfEntries);
-    //std::string toString();
-    //void sortMyself();
+    std::string toString();
+    void sortMyself();
     //bool getIsSorted() const { return isSorted; }
-    //void insertElements(const SparseMatrix & c);
+    void insertElements(COO & c);
     //COO& SpMV(COO & c);
     //int * column_indices, * row_indices, * values;
-    int dimensions, numEntries;
+    int dimensions, numberOfEntries;
     thrust::host_vector<int> col_vec;
     thrust::host_vector<int> row_vec;
     thrust::host_vector<int> val_vec;

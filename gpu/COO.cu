@@ -2,7 +2,7 @@
 #include <math.h>       /* floor */
 #include <cuda.h>
 
-//static void coo(int N, int numEntries);
+//static void coo(int N, int numberOfEntries);
 
 
 typedef thrust::tuple<int,int,int> Int3;
@@ -20,15 +20,15 @@ struct cmp : public std::binary_function<Int3,Int3,bool>
 };
 
 
-COO::COO(int dimensions, int numberOfEntries){
+COO::COO(int dimensions, int numberOfEntries): dimensions(dimensions), numberOfEntries(numberOfEntries){
     
     std::cout << "building vecs" << std::endl;
-    col_vec.resize(numEntries);
-    row_vec.resize(numEntries);
-    val_vec.resize(numEntries);
+    col_vec.resize(numberOfEntries);
+    row_vec.resize(numberOfEntries);
+    val_vec.resize(numberOfEntries);
 
-    dimensions_vec.resize(numEntries);
-    ones.resize(numEntries);
+    dimensions_vec.resize(numberOfEntries);
+    ones.resize(numberOfEntries);
 
 
     // fill dimensions vector with Ns
@@ -49,7 +49,21 @@ COO::COO(int dimensions, int numberOfEntries){
     thrust::transform(val_vec.begin(), val_vec.end(), dimensions_vec.begin(), val_vec.begin(), thrust::modulus<int>());
     thrust::transform(val_vec.begin(), val_vec.end(), ones.begin(), val_vec.begin(), thrust::plus<int>());
 
+    sortMyself();
 
+    std::cout << toString() << std::endl;
+}
+
+void COO::insertElements(COO & c){
+    row_vec.insert(row_vec.end(), c.row_vec.begin(), c.row_vec.end());
+    col_vec.insert(col_vec.end(), c.col_vec.begin(), c.col_vec.end());
+    val_vec.insert(val_vec.end(), c.val_vec.begin(), c.val_vec.end());
+    numberOfEntries+=c.numberOfEntries;
+    sortMyself();
+}
+
+
+void COO::sortMyself(){
     std::cout << "copying vecs from host to device" << std::endl;
 
     col_vec_dev = col_vec;
@@ -79,7 +93,9 @@ COO::COO(int dimensions, int numberOfEntries){
     col_vec = col_vec_dev;
     row_vec = row_vec_dev;
     val_vec = val_vec_dev;
+}
 
+std::string COO::toString(){
     std::stringstream ss;
     std::string myMatrix;
     ss << "\t\tCOO Matrix" << std::endl;
@@ -124,5 +140,5 @@ COO::COO(int dimensions, int numberOfEntries){
     ss << std::endl;
     myMatrix = ss.str();
 
-    std::cout << myMatrix << std::endl;
+    return myMatrix;
 }
