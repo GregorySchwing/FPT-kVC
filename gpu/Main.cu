@@ -21,5 +21,7 @@ int main(int argc, char *argv[])
 
     std::cout << "Creating CSR" << std::endl;
     CSR c3(c2);
+    std::cout << c3.toString() << std::endl;
+
 
 }
