@@ -33,8 +33,6 @@ int main(int argc, char *argv[])
     COO c2(N, numEntries);
 
     std::cout << "C1 inserted into C2" << std::endl;
-    c2.insertElements(c1);
+    //c2.insertElements(c1);
     std::cout << c2.toString() << std::endl;
-
-
 }
