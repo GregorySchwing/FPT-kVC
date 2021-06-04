@@ -8,19 +8,7 @@ int main(int argc, char *argv[])
 {
     /* Num edges, N, N, random entries? */
     //COO coo1(4, 4, 4, true);
-    COO coo1(4, 4, 4, false);
-
-    coo1.addEdge(2,3,5,0);
-    coo1.addEdge(1,3,2,1);
-    coo1.addEdge(0,1,2,2);
-    coo1.addEdge(0,3,2,3);
-    coo1.sortMyself();
-
-    std::cout << coo1.toString();
-
-    CSR csr1(coo1);
-
-    std::cout << csr1.toString();
+    Graph g(4);
 
     //std::cout << "Calling Insert Elements" << std::endl;
     //csr1.insertElements(coo1);

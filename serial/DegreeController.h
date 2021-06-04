@@ -1,6 +1,24 @@
 #ifndef DEGREE_CONTROLLER_H
 #define DEGREE_CONTROLLER_H
+
+#include <list>
+#include <vector>
+#include "CSR.h"
+
 class DegreeController{
-    DegreeController(int numVerts);
+    
+    struct DegreeNode {
+        std::list<int> listOfNodes;
+        int degree;
+    };
+    public:
+        DegreeController(CSR * compressedSparseMatrix, bool useSoph = false);
+        std::string toString();
+
+    private:
+        std::list<DegreeNode> degreeController;
+        std::vector< std::vector<int> > temporaryDegCont;
+        void CSR2VecofVecs(CSR * compressedSparseMatrix);
+
 };
 #endif

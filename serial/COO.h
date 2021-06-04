@@ -17,6 +17,8 @@ public:
     bool getIsSorted() const { return isSorted; }
     void insertElements(const SparseMatrix & c);
     void addEdge(int u, int v, int weight, int edgeID);
+    void addEdge(int u, int v, int weight);
+
     //COO& SpMV(COO & c);
     std::vector<int> column_indices, row_indices;
 private:

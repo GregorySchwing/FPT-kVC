@@ -41,6 +41,18 @@ void COO::addEdge(int u, int v, int weight, int edgeID){
     }
 }
 
+void COO::addEdge(int u, int v, int weight){
+    if(u <= v){
+    row_indices.push_back(u);
+    column_indices.push_back(v);
+    values.push_back(weight);
+    } else {
+        row_indices.push_back(v);
+        column_indices.push_back(u);
+        values.push_back(weight);
+    }
+}
+
 
 void COO::insertElements(const SparseMatrix & s){
     try {
