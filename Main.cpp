@@ -1,30 +1,32 @@
-//#include "serial/COO.h"
-//#include "serial/CSR.h"
-//#include "DCSR.h"
-#include "gpu/COO.cuh"
+#include "serial/Graph.h"
+#include "serial/COO.h"
+#include "serial/CSR.h"
+#include "serial/DCSR.h"
+//#include "gpu/COO.cuh"
 
 int main(int argc, char *argv[])
 {
-    /*
-    COO coo1(4, 4, 4, true);
-    COO coo2(4, 4, 4, true);
-    std::cout << coo1.toString();
-    std::cout << coo2.toString();
-    coo1.insertElements(coo2);
+    /* Num edges, N, N, random entries? */
+    //COO coo1(4, 4, 4, true);
+    COO coo1(4, 4, 4, false);
+
+    coo1.addEdge(2,3,5,0);
+    coo1.addEdge(1,3,2,1);
+    coo1.addEdge(0,1,2,2);
+    coo1.addEdge(0,3,2,3);
+    coo1.sortMyself();
+
     std::cout << coo1.toString();
 
     CSR csr1(coo1);
-    CSR csr2(coo2);
 
     std::cout << csr1.toString();
-    std::cout << csr2.toString();
 
-    std::cout << "Calling Insert Elements" << std::endl;
-    csr1.insertElements(coo1);
+    //std::cout << "Calling Insert Elements" << std::endl;
+    //csr1.insertElements(coo1);
 
-    std::cout << csr1.toString();
-*/
-
+    //std::cout << csr1.toString();
+/*
   int N = 2e7;
   float *x, *y;
 
@@ -60,4 +62,5 @@ int main(int argc, char *argv[])
   //  dcsr.allocateSegments(csr2);
   //  std::cout << dcsr.toString();
 
+*/
 }

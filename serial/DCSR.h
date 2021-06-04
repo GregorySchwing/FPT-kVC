@@ -4,7 +4,7 @@
 #include <vector>
 #include "COO.h"
 #include "CSR.h"
-#include "VectorUtilities.h"
+#include "../VectorUtilities.h"
 
 class DCSR : SparseMatrix
 {

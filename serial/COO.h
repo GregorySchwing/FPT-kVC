@@ -10,11 +10,14 @@ class COO final : public SparseMatrix
 {
 public:
     COO(int size, int numberOfRows, int numberOfColumns, bool populate = false);
+    COO(int numberOfRows, int numberOfColumns);
+
     std::string toString();
     void sortMyself();
     bool getIsSorted() const { return isSorted; }
     void insertElements(const SparseMatrix & c);
-    COO& SpMV(COO & c);
+    void addEdge(int u, int v, int weight, int edgeID);
+    //COO& SpMV(COO & c);
     std::vector<int> column_indices, row_indices;
 private:
 bool isSorted;

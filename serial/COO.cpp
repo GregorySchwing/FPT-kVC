@@ -23,9 +23,24 @@ COO::COO(int size, int numberOfRows, int numberOfColumns, bool populate):SparseM
             values[i] =  std::rand() % size + 1;
         }
         toString();
-
     }
 }
+
+COO::COO(int numberOfRows, int numberOfColumns):SparseMatrix(numberOfRows, numberOfColumns){
+}
+
+void COO::addEdge(int u, int v, int weight, int edgeID){
+    if(u <= v){
+    row_indices[edgeID] = u;
+    column_indices[edgeID] = v;
+    values[edgeID] =  weight;
+    } else {
+        row_indices[edgeID] = v;
+        column_indices[edgeID] = u;
+        values[edgeID] =  weight;
+    }
+}
+
 
 void COO::insertElements(const SparseMatrix & s){
     try {
@@ -44,8 +59,8 @@ void COO::insertElements(const SparseMatrix & s){
 }
 
 std::string COO::toString(){
-    if(!isSorted)
-        sortMyself();
+    //if(!isSorted)
+    //    sortMyself();
     std::stringstream ss;
     std::string myMatrix;
     ss << "\t\tCOO Matrix" << std::endl;
@@ -145,6 +160,6 @@ void COO::sortMyself(){
     isSorted = true;
 }
 
-COO& COO::SpMV(COO & c){
+//COO& COO::SpMV(COO & c){
 
-}
+//}
