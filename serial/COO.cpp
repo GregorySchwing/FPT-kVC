@@ -41,11 +41,13 @@ void COO::addEdge(int u, int v, int weight, int edgeID){
     }
 }
 
+/* Edges are stored once, but I need to do some fancy logic to get accurate degrees of vertices
+    v > |V|/2 */
 void COO::addEdge(int u, int v, int weight){
     if(u <= v){
-    row_indices.push_back(u);
-    column_indices.push_back(v);
-    values.push_back(weight);
+        row_indices.push_back(u);
+        column_indices.push_back(v);
+        values.push_back(weight);
     } else {
         row_indices.push_back(v);
         column_indices.push_back(u);
@@ -53,6 +55,18 @@ void COO::addEdge(int u, int v, int weight){
     }
 }
 
+
+/* Works but the amount of data is 2x */
+/*
+void COO::addEdge(int u, int v, int weight){
+    row_indices.push_back(u);
+    column_indices.push_back(v);
+    values.push_back(weight);
+    row_indices.push_back(v);
+    column_indices.push_back(u);
+    values.push_back(weight);
+}
+*/
 
 void COO::insertElements(const SparseMatrix & s){
     try {

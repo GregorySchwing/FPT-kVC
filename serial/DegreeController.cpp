@@ -1,19 +1,19 @@
 #include "DegreeController.h"
 
-DegreeController::DegreeController(CSR * compressedSparseMatrix, bool useSoph){
-    if (useSoph){
-
-    } else {
-        CSR2VecofVecs(compressedSparseMatrix);
-    }
+DegreeController::DegreeController(CSR * compressedSparseMatrix){
+    //CSR2VecofVecs(compressedSparseMatrix);
 }
 
+/* Replace this with N bitsets of N size */
 /* This will take N*std::allocator space */
 void DegreeController::CSR2VecofVecs(CSR * compressedSparseMatrix){
     temporaryDegCont.resize(compressedSparseMatrix->numberOfRows);
-    for (int i = 0; i < compressedSparseMatrix->numberOfRows; ++i){
+    /* Simple degree arimetic for the first half of the vertices */
+    for (int i = 0; i <= compressedSparseMatrix->numberOfRows/2 + 1; ++i){
         temporaryDegCont[compressedSparseMatrix->row_offsets[i+1] - compressedSparseMatrix->row_offsets[i]].push_back(i);
     }
+    compressedSparseMatrix->column_indices
+
 }
 
 std::string DegreeController::toString(){

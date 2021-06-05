@@ -12,7 +12,7 @@ class DegreeController{
         int degree;
     };
     public:
-        DegreeController(CSR * compressedSparseMatrix, bool useSoph = false);
+        DegreeController(CSR * compressedSparseMatrix);
         std::string toString();
         std::vector< std::vector<int> > & GetTempDegCont();
 
