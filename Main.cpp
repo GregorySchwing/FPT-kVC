@@ -2,6 +2,7 @@
 #include "serial/COO.h"
 #include "serial/CSR.h"
 #include "serial/DCSR.h"
+#include "serial/SequentialKernelization.h"
 //#include "gpu/COO.cuh"
 
 int main(int argc, char *argv[])
@@ -9,7 +10,9 @@ int main(int argc, char *argv[])
     /* Num edges, N, N, random entries? */
     //COO coo1(4, 4, 4, true);
     Graph g(4);
-
+    int k = 1;
+    //SequentialKernelization sk(k, g);
+    SequentialKernelization sk(g, k);
     //std::cout << "Calling Insert Elements" << std::endl;
     //csr1.insertElements(coo1);
 

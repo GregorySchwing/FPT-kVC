@@ -31,3 +31,8 @@ std::string DegreeController::toString(){
     return myMatrix;
 }
 
+std::vector< std::vector<int> > & DegreeController::GetTempDegCont(){
+    return temporaryDegCont;
+}
+
+

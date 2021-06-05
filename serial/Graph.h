@@ -24,6 +24,10 @@ class Graph {
             degCont = new DegreeController(compressedSparseMatrix);
             std::cout << degCont->toString();
         }
+
+        DegreeController * GetDegreeController(){
+            return degCont;
+        }
     private:
         COO coordinateFormat;
         CSR * compressedSparseMatrix;
