@@ -6,6 +6,8 @@
 #include "COO.h"
 #include "CSR.h"
 #include "DegreeController.h"
+#include "NeighborsBinaryDataStructure.h"
+
 class Graph {
     public:
         Graph(int vertexCount);
@@ -14,5 +16,6 @@ class Graph {
         COO coordinateFormat;
         CSR * compressedSparseMatrix;
         DegreeController * degCont;
+        NeighborsBinaryDataStructure * neighBits;
 };
 #endif

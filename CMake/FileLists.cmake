@@ -4,6 +4,7 @@ set(sources
     serial/CSR.cpp
     serial/DegreeController.cpp
     serial/Graph.cpp
+    serial/NeighborsBinaryDataStructure.cpp
     serial/SequentialKernelization.cpp
     serial/SparseMatrix.cpp
    )
@@ -13,6 +14,7 @@ set(headers
     serial/CSR.h
     serial/DegreeController.h
     serial/Graph.h
+    serial/NeighborsBinaryDataStructure.h
     serial/SequentialKernelization.h
     serial/SparseMatrix.h
    )

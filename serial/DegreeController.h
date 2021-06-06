@@ -4,7 +4,6 @@
 #include <list>
 #include <vector>
 #include "CSR.h"
-#include <boost/dynamic_bitset.hpp>
 
 class DegreeController{
     
@@ -20,6 +19,8 @@ class DegreeController{
     private:
         std::list<DegreeNode> degreeController;
         std::vector< std::vector<int> > temporaryDegCont;
+        
+
         void CSR2VecofVecs(CSR * compressedSparseMatrix);
 
 };

@@ -2,6 +2,7 @@
 
 DegreeController::DegreeController(CSR * compressedSparseMatrix){
     CSR2VecofVecs(compressedSparseMatrix);
+
 }
 
 /* Replace this with N bitsets of N size */
@@ -12,8 +13,6 @@ void DegreeController::CSR2VecofVecs(CSR * compressedSparseMatrix){
     for (int i = 0; i < compressedSparseMatrix->numberOfRows; ++i){
         temporaryDegCont[compressedSparseMatrix->row_offsets[i+1] - compressedSparseMatrix->row_offsets[i]].push_back(i);
     }
-    //compressedSparseMatrix->column_indices
-
 }
 
 std::string DegreeController::toString(){

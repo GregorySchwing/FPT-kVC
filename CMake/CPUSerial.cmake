@@ -12,4 +12,3 @@ if(WIN32)
     #needed for hostname
     target_link_libraries(CPUSerial ws2_32)
 endif()
-target_link_libraries( CPUSerial ${BOOST_LIBRARIES} )

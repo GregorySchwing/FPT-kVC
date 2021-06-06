@@ -46,8 +46,6 @@ find_package(Boost)
 
 if(Boost_FOUND)
     message(STATUS "Boost_INCLUDE_DIRS: ${BOOST_INCLUDE_DIRS}")
-    message(STATUS "Boost_LIBRARIES: ${BOOST_LIBRARIES}")
-    message(STATUS "Boost_VERSION: ${Boost_VERSION_STRING}")
 endif()
 
 include_directories(${BOOST_INCLUDE_DIRS})

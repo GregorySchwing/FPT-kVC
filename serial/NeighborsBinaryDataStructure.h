@@ -1,11 +1,14 @@
 #ifndef NEIGHBORSBINARYDATASTRUCTURE_H
 #define NEIGHBORSBINARYDATASTRUCTURE_H
 
-//#include <boost/dynamic_bitset.hpp>
+#include "CSR.h"
+#include <boost/dynamic_bitset.hpp>
 
 class NeighborsBinaryDataStructure {
-    NeighborsBinaryDataStructure();
+    public:
+        NeighborsBinaryDataStructure(CSR * compressedSparseMatrix);
 
+        std::vector<boost::dynamic_bitset<> > twoDimensionalBitMatrixOfNeighboringVertices;
 
 };
 
