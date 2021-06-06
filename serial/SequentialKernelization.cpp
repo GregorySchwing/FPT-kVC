@@ -6,9 +6,10 @@ SequentialKernelization::SequentialKernelization(Graph & g_arg, int k_arg):g(g_a
     PrintS();            
     std::cout << "Removing S from G" << std::endl;
     RemoveSFromG();
-    std::cout << g.edgesLeftToCover/2 << " edges left ";
-    std::cout << "Setting k' = k - b = " << k - b << std::endl;
-    printf("%s\n",GPrimeEdgesGraterKTimesKPrime() ? "G' > k*k', no solution exists" : "G' <= k*k', a solution may exist");
+    std::cout << g.edgesLeftToCover/2 << " edges left in induced subgraph G'" << std::endl;
+    kPrime = k - b;
+    std::cout << "Setting k' = k - b = " << kPrime << std::endl;
+    printf("%s\n",GPrimeEdgesGraterKTimesKPrime() ? "|G'(E)| > k*k', no solution exists" : "|G'(E)| <= k*k', a solution may exist");
                 
 }
 
@@ -46,15 +47,17 @@ int SequentialKernelization::GetSetOfVerticesDegreeGreaterK(int k, std::vector<i
 }
 
 void SequentialKernelization::PrintS(){
-    std::cout << "{";
+    std::cout << "S = {";
     for (auto & i : S){
         std::cout << i << " ";
     }
     std::cout << "}" << std::endl;
 }
 void SequentialKernelization::RemoveSFromG(){
-    for (auto v : S)
-        g.edgesLeftToCover -= g.GetDegree(v);
+    for (auto v : S){
+        /* Since we enter each edge twice, remove 2 times degree */
+        g.edgesLeftToCover -= 2*g.GetDegree(v);
+    }
 }
 bool SequentialKernelization::GPrimeEdgesGraterKTimesKPrime(){
     int kTimesKPrime = k * kPrime;
