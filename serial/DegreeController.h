@@ -4,6 +4,7 @@
 #include <list>
 #include <vector>
 #include "CSR.h"
+#include <boost/dynamic_bitset.hpp>
 
 class DegreeController{
     

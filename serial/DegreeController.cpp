@@ -1,7 +1,7 @@
 #include "DegreeController.h"
 
 DegreeController::DegreeController(CSR * compressedSparseMatrix){
-    //CSR2VecofVecs(compressedSparseMatrix);
+    CSR2VecofVecs(compressedSparseMatrix);
 }
 
 /* Replace this with N bitsets of N size */
@@ -9,10 +9,10 @@ DegreeController::DegreeController(CSR * compressedSparseMatrix){
 void DegreeController::CSR2VecofVecs(CSR * compressedSparseMatrix){
     temporaryDegCont.resize(compressedSparseMatrix->numberOfRows);
     /* Simple degree arimetic for the first half of the vertices */
-    for (int i = 0; i <= compressedSparseMatrix->numberOfRows/2 + 1; ++i){
+    for (int i = 0; i < compressedSparseMatrix->numberOfRows; ++i){
         temporaryDegCont[compressedSparseMatrix->row_offsets[i+1] - compressedSparseMatrix->row_offsets[i]].push_back(i);
     }
-    compressedSparseMatrix->column_indices
+    //compressedSparseMatrix->column_indices
 
 }
 

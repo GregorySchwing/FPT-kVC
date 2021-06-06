@@ -1,0 +1,15 @@
+cmake_minimum_required(VERSION 3.8)
+
+project(boost-download NONE)
+
+include(ExternalProject)
+ExternalProject_Add(
+    Boost
+    URL https://sourceforge.net/projects/boost/files/boost/${BOOST_REQUESTED_VERSION}/boost_${BOOST_REQUESTED_VERSION_UNDERSCORE}.zip/download
+    UPDATE_COMMAND ""
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    BUILD_IN_SOURCE false
+    INSTALL_COMMAND ""
+    INSTALL_DIR ${BOOST_ROOT_DIR}
+)
