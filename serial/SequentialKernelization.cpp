@@ -6,7 +6,8 @@ SequentialKernelization::SequentialKernelization(Graph & g_arg, int k_arg):g(g_a
     PrintS();            
     std::cout << "Removing S from G" << std::endl;
     RemoveSFromG();
-    std::cout << "Setting k' = k - b" << std::endl;
+    std::cout << g.edgesLeftToCover/2 << " edges left ";
+    std::cout << "Setting k' = k - b = " << k - b << std::endl;
     printf("%s\n",GPrimeEdgesGraterKTimesKPrime() ? "G' > k*k', no solution exists" : "G' <= k*k', a solution may exist");
                 
 }
@@ -52,13 +53,12 @@ void SequentialKernelization::PrintS(){
     std::cout << "}" << std::endl;
 }
 void SequentialKernelization::RemoveSFromG(){
-    for (auto & i : S){
-        //g.RemoveVertexAndEdges(i);           
-    } 
+    for (auto v : S)
+        g.edgesLeftToCover -= g.GetDegree(v);
 }
 bool SequentialKernelization::GPrimeEdgesGraterKTimesKPrime(){
     int kTimesKPrime = k * kPrime;
-    //if (g.GetEdgeCount() > kTimesKPrime)
-    //    return true;
+    if (g.edgesLeftToCover/2 > kTimesKPrime)
+        return true;
     return false;
 }

@@ -15,8 +15,13 @@ Graph::Graph(int vertexCount): coordinateFormat(vertexCount, vertexCount)
     degCont = new DegreeController(compressedSparseMatrix);
     std::cout << degCont->toString();
     neighBits = new NeighborsBinaryDataStructure(compressedSparseMatrix);
+    edgesLeftToCover = compressedSparseMatrix->column_indices.size();
 }
 
 DegreeController * Graph::GetDegreeController(){
     return degCont;
+}
+
+int Graph::GetDegree(int v){
+    return compressedSparseMatrix->row_offsets[v+1] - compressedSparseMatrix->row_offsets[v];
 }

@@ -12,6 +12,9 @@ class Graph {
     public:
         Graph(int vertexCount);
         DegreeController * GetDegreeController();
+        int GetDegree(int v);
+        int edgesLeftToCover;
+
     private:
         COO coordinateFormat;
         CSR * compressedSparseMatrix;

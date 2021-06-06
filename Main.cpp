@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
     /* Num edges, N, N, random entries? */
     //COO coo1(4, 4, 4, true);
     Graph g(4);
-    int k = 1;
+    int k = 2;
     //SequentialKernelization sk(k, g);
     SequentialKernelization sk(g, k);
     //std::cout << "Calling Insert Elements" << std::endl;
