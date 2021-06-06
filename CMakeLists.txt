@@ -4,6 +4,7 @@ project(FPT)
 
 include_directories(serial)
 include_directories(lib/boost)
+include_directories(lib)
 
 
 #Out-of-source build
