@@ -30,3 +30,9 @@ DegreeController * Graph::GetDegreeController(){
 int Graph::GetDegree(int v){
     return compressedSparseMatrix->row_offsets[v+1] - compressedSparseMatrix->row_offsets[v];
 }
+
+/* The edges */
+CSR * Graph::GetCSR(){
+    return compressedSparseMatrix;
+}
+

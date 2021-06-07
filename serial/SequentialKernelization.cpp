@@ -6,6 +6,8 @@ SequentialKernelization::SequentialKernelization(Graph & g_arg, int k_arg):g(g_a
     PrintS();            
     std::cout << "Removing S from G" << std::endl;
     RemoveSFromG();
+    SetEdgesOfS(g.GetCSR());
+    PrintEdgesOfS();
     std::cout << g.edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
     kPrime = k - b;
     std::cout << "Setting k' = k - b = " << kPrime << std::endl;
@@ -54,6 +56,28 @@ void SequentialKernelization::PrintS(){
     }
     std::cout << "}" << std::endl;
 }
+
+void SequentialKernelization::PrintEdgesOfS(){
+    std::cout << "E(S) = {";
+    for (auto & e : edges){
+        std::cout << "(" << e.first << ", " << e.second << "), ";
+    }
+    std::cout << "}" << std::endl;
+}
+
+void SequentialKernelization::SetEdgesOfS(CSR * csr){
+    int v;
+    for (auto u : S){
+        for (int i = csr->row_offsets[u]; i < csr->row_offsets[u+1]; ++i){
+            v = csr->column_indices[i];
+            if (u < v)
+                edges.insert(std::make_pair(u,v));
+            else
+                edges.insert(std::make_pair(v,u));
+        }
+    }
+}
+
 void SequentialKernelization::RemoveSFromG(){
     for (auto v : S){
         /* Since we enter each edge twice, remove 2 times degree */

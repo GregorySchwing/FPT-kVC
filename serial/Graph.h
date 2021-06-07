@@ -13,6 +13,7 @@ class Graph {
         Graph(int vertexCount);
         DegreeController * GetDegreeController();
         int GetDegree(int v);
+        CSR * GetCSR();
         int edgesLeftToCover;
 
     private:
