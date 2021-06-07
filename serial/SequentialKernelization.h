@@ -21,7 +21,7 @@ class SequentialKernelization {
         void PrintEdgesOfS();
 
         void SetEdgesOfS(CSR * csr);
-        //void RemoveSFromG();
+        void SetEdgesLeftToCover();
         int GetCardinalityOfSEdges();
         bool GPrimeEdgesGreaterKTimesKPrime();
 };

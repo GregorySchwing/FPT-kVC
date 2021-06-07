@@ -1,7 +1,9 @@
 #include "SequentialBuss.h"
 
 /* Vertex Cover Using Buss’ algorithm */
-SequentialBuss::SequentialBuss(int k_arg, Graph & g_arg):g(g_arg), k(k_arg){
+SequentialBuss::SequentialBuss(Graph & g_arg, int k_arg):g(g_arg), k(k_arg){
+
+    SetGPrimeVertices();
     /* NumberOfVertices <= 2k^2 */
     /* Hence, NumberOfVertices^k <= (2*k^2)^k */
     NumberOfVerticesToThePowerOfK = myPow(g.GetVertexCount(), k);
@@ -16,6 +18,18 @@ SequentialBuss::SequentialBuss(int k_arg, Graph & g_arg):g(g_arg), k(k_arg){
 SequentialBuss::~SequentialBuss(){
     delete[] results;
     delete[] combinations;
+}
+
+void SetGPrimeVertices(){
+    std::vector< std::vector<int> > & tempDegCont = (g.GetDegreeController())->GetTempDegCont();
+    std::vector< std::vector<int> >::const_iterator it = tempDegCont.cbegin();
+    while(it != (tempDegCont.cbegin() + k)){
+        for (auto & e : *it){
+            std::cout << e << " ";
+            verticesOfGPrime.push_back(e);
+        }
+        it++;
+    }
 }
 void SequentialBuss::FindCover(){
     bool edgeCovered = false;

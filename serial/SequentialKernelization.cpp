@@ -8,7 +8,7 @@ SequentialKernelization::SequentialKernelization(Graph & g_arg, int k_arg):g(g_a
     //RemoveSFromG();
     SetEdgesOfS(g.GetCSR());
     PrintEdgesOfS();
-    g.edgesLeftToCover -= GetCardinalityOfSEdges();
+    SetEdgesLeftToCover();
     std::cout << g.edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
     kPrime = k - b;
     std::cout << "Setting k' = k - b = " << kPrime << std::endl;
@@ -79,6 +79,11 @@ void SequentialKernelization::SetEdgesOfS(CSR * csr){
 int SequentialKernelization::GetCardinalityOfSEdges(){
     return g.edgesCoveredByKernelization.size();
 }
+
+void SequentialKernelization::SetEdgesLeftToCover(){
+    g.edgesLeftToCover -= GetCardinalityOfSEdges();
+}
+
 bool SequentialKernelization::GPrimeEdgesGreaterKTimesKPrime(){
     int kTimesKPrime = k * kPrime;
     if (g.edgesLeftToCover > kTimesKPrime)

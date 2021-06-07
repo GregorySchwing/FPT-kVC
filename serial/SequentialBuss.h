@@ -11,13 +11,20 @@
 /* For : http://rosettacode.org/wiki/Combinations#C.2B.2B */
 class SequentialBuss {
     public:
-        SequentialBuss(int k_arg, DegreeController * degCont);
+        SequentialBuss(Graph & g_arg, int k_arg);
         ~SequentialBuss();
         void FindCover();
         void PrintVCSets();
         std::vector< std::set<std::pair<int,int>> > vectorOfSetsOfEdgesCoveredByBuss;
 
     private:
+        Graph & g;
+        int k;
+	    int NumberOfVerticesToThePowerOfK;
+        int * results;
+        int * combinations;        
+        std::vector<int> verticesOfGPrime;
+        void SetGPrimeVertices();
 		/* http://rosettacode.org/wiki/Combinations#C.2B.2B */
         void PopulateCombinations(int * combinations_arg, int N, int K);
         /* https://stackoverflow.com/questions/1505675/power-of-an-integer-in-c */
