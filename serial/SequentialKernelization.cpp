@@ -2,7 +2,10 @@
 
 SequentialKernelization::SequentialKernelization(Graph & g_arg, int k_arg):g(g_arg), k(k_arg){
     std::cout << "Build VC" << std::endl;
-    printf("%s\n",CardinalityOfSetDegreeGreaterK(g.GetDegreeController()) ? "b > k, no solution exists" : "b <= k, a solution may exist");
+    noSolutionExists = CardinalityOfSetDegreeGreaterK(g.GetDegreeController());
+    printf("%s\n", noSolutionExists ? "b > k, no solution exists" : "b <= k, a solution may exist");
+    if (noSolutionExists)
+        exit(0);
     PrintS();            
     std::cout << "Removing S from G" << std::endl;
     //RemoveSFromG();
@@ -12,7 +15,8 @@ SequentialKernelization::SequentialKernelization(Graph & g_arg, int k_arg):g(g_a
     std::cout << g.edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
     kPrime = k - b;
     std::cout << "Setting k' = k - b = " << kPrime << std::endl;
-    printf("%s\n",GPrimeEdgesGreaterKTimesKPrime() ? "|G'(E)| > k*k', no solution exists" : "|G'(E)| <= k*k', a solution may exist");
+    noSolutionExists = GPrimeEdgesGreaterKTimesKPrime();
+    printf("%s\n", noSolutionExists ? "|G'(E)| > k*k', no solution exists" : "|G'(E)| <= k*k', a solution may exist");
                 
 }
 

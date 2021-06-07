@@ -25,7 +25,7 @@ SequentialBuss::~SequentialBuss(){
     delete[] combinations;
 }
 
-void SetGPrimeVertices(){
+void SequentialBuss::SetGPrimeVertices(){
     std::vector< std::vector<int> > & tempDegCont = (g.GetDegreeController())->GetTempDegCont();
     std::vector< std::vector<int> >::const_iterator it = tempDegCont.cbegin();
     while(it != (tempDegCont.cbegin() + k)){
@@ -43,8 +43,8 @@ void SequentialBuss::GenerateEdgeSets(){
     for (int x = 0; x < NumberOfVerticesToThePowerOfK; ++x){
         for (int z = 0; z < k; ++z){
             u = combinations[x*k + z];
-            for (int i = csr->row_offsets[u]; i < csr->row_offsets[u+1]; ++i){
-                v = csr->column_indices[i];
+            for (int i = g.GetCSR()->row_offsets[u]; i < g.GetCSR()->row_offsets[u+1]; ++i){
+                v = g.GetCSR()->column_indices[i];
                 if (u < v){
                     vectorOfSetsOfEdgesCoveredByBuss[x].insert(std::make_pair(u,v));
                 } else {

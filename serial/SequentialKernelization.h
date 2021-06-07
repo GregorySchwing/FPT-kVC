@@ -7,7 +7,7 @@
 class SequentialKernelization {
     public:
         SequentialKernelization(Graph & g_arg, int k_arg);
-        
+        bool noSolutionExists;
     private:
         int kPrime;
         Graph & g;

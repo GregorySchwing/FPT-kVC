@@ -15,6 +15,8 @@ int main(int argc, char *argv[])
     int k = 2;
     //SequentialKernelization sk(k, g);
     SequentialKernelization sk(g, k);
+    if (sk.noSolutionExists)
+      exit(0);
     SequentialBuss sb(g, k);
     sb.PrintVCSets();
 
