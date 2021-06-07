@@ -30,7 +30,7 @@ SequentialBuss::~SequentialBuss(){
 void SequentialBuss::SetGPrimeVertices(){
     std::vector< std::vector<int> > & tempDegCont = (g.GetDegreeController())->GetTempDegCont();
     std::vector< std::vector<int> >::const_iterator it = tempDegCont.cbegin();
-    while(it != (tempDegCont.cbegin() + k_prime + 2)){
+    while(it != (tempDegCont.cbegin() + k + 1)){
         for (auto & e : *it){
             std::cout << e << " ";
             verticesOfGPrime.push_back(e);
