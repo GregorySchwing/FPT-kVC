@@ -71,7 +71,11 @@ void SequentialKernelization::SetEdgesOfS(CSR * csr){
     for (auto u : S){
         for (int i = csr->row_offsets[u]; i < csr->row_offsets[u+1]; ++i){
             v = csr->column_indices[i];
-            g.edgesCoveredByKernelization.insert(std::make_pair(u,v));
+            if (u < v){
+                g.edgesCoveredByKernelization.insert(std::make_pair(u,v));
+            } else {
+                g.edgesCoveredByKernelization.insert(std::make_pair(v,u));
+            }
         }
     }
 }

@@ -13,8 +13,9 @@ class SequentialBuss {
     public:
         SequentialBuss(Graph & g_arg, int k_arg);
         ~SequentialBuss();
-        void FindCover();
         void PrintVCSets();
+        /* Thanks to our asymmetric CSR, the edges in these sets will be disjoint from
+            the edges covered by the kernelization step. */
         std::vector< std::set<std::pair<int,int>> > vectorOfSetsOfEdgesCoveredByBuss;
 
     private:
@@ -25,6 +26,8 @@ class SequentialBuss {
         int * combinations;        
         std::vector<int> verticesOfGPrime;
         void SetGPrimeVertices();
+        void GenerateEdgeSets();
+        void UnionKernelEdgesAndBFSEdges();
 		/* http://rosettacode.org/wiki/Combinations#C.2B.2B */
         void PopulateCombinations(int * combinations_arg, int N, int K);
         /* https://stackoverflow.com/questions/1505675/power-of-an-integer-in-c */

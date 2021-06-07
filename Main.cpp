@@ -3,6 +3,8 @@
 #include "serial/CSR.h"
 #include "serial/DCSR.h"
 #include "serial/SequentialKernelization.h"
+#include "serial/SequentialBuss.h"
+
 //#include "gpu/COO.cuh"
 
 int main(int argc, char *argv[])
@@ -13,6 +15,9 @@ int main(int argc, char *argv[])
     int k = 2;
     //SequentialKernelization sk(k, g);
     SequentialKernelization sk(g, k);
+    SequentialBuss sb(g, k);
+    sb.PrintVCSets();
+
     //std::cout << "Calling Insert Elements" << std::endl;
     //csr1.insertElements(coo1);
 

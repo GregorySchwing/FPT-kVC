@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.8)
 project(FPT)
 
 include_directories(serial)
+include_directories(lib/boost/include)
 include_directories(lib/boost)
 include_directories(lib)
 

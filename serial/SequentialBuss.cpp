@@ -3,17 +3,22 @@
 /* Vertex Cover Using Buss’ algorithm */
 SequentialBuss::SequentialBuss(Graph & g_arg, int k_arg):g(g_arg), k(k_arg){
 
+    /* G(V) - Verts with degree > k = GPrimeVertices <= 2k^2 */
     SetGPrimeVertices();
-    /* NumberOfVertices <= 2k^2 */
-    /* Hence, NumberOfVertices^k <= (2*k^2)^k */
-    NumberOfVerticesToThePowerOfK = myPow(g.GetVertexCount(), k);
+    /* Hence, GPrimeVertices^k <= (2*k^2)^k */
+    
+    NumberOfVerticesToThePowerOfK = myPow(verticesOfGPrime.size(), k);
     results = new int[NumberOfVerticesToThePowerOfK];
 
     /* Hence, the amount of space to store the NumberOfVertices^k combinations
         each of size k, is (NumberOfVertices^k)*k */
     combinations = new int[NumberOfVerticesToThePowerOfK*k];
-    PopulateCombinations(combinations, g.GetVertexCount(), k);
+    PopulateCombinations(combinations, verticesOfGPrime.size(), k);
 
+    /* The sets of edges covered by each of the NumberOfVertices^k combinations */
+    vectorOfSetsOfEdgesCoveredByBuss.resize(NumberOfVerticesToThePowerOfK*k);
+    GenerateEdgeSets();
+    UnionKernelEdgesAndBFSEdges();
 }
 SequentialBuss::~SequentialBuss(){
     delete[] results;
@@ -31,38 +36,36 @@ void SetGPrimeVertices(){
         it++;
     }
 }
-void SequentialBuss::FindCover(){
-    bool edgeCovered = false;
-    bool alledgesCoveredByKernelization = true;
-    Vertex * vertices = g.GetVertices();
-std::cout << "g.GetVertexCount()) " << g.GetVertexCount() << "k " << k<< "(g.GetVertexCount())^k " << NumberOfVerticesToThePowerOfK << std::endl;
+void SequentialBuss::GenerateEdgeSets(){
+    std::cout << "|G'(V)|" << verticesOfGPrime.size() << "k " << k << "|G'(V)|^k " << NumberOfVerticesToThePowerOfK << std::endl;
     /* Iterate through all k-combinations of vertices */
+    int u,v;
     for (int x = 0; x < NumberOfVerticesToThePowerOfK; ++x){
-        std::cout << "iteration " << x << std::endl;
-        alledgesCoveredByKernelization = true;
-        /* Currently edges belong to vertices, so the only way to iterate through all edges, is to iterate through all verts and then the edges of that vert */
-        for (int y = 0; y < g.GetVertexCount(); ++y){
-            std::cout << "vertex " << y << " Edges : " << std::endl;
-            for (auto & e : vertices[y].GetEdges()){
-                std::cout << "edge (" << y << ", " << e << ")"  << std::endl;
-                edgeCovered = false;
-                /* Check if any of the vertices in this combination cover this edge */
-    /* y - the source, e - the destination (y,e) */
-    /* We iterate over all vertices, but vertices removed from kernelization
-        will have 0 edges, thus we don't modify alledgesCoveredByKernelization */
-                std::cout << "combination {";
-                for (int z = 0; z < k; ++z){
-                    std::cout << z << ", ";
-                    if (e == combinations[x*k + z] || y == combinations[x*k + z])
-                        edgeCovered = true;
+        for (int z = 0; z < k; ++z){
+            u = combinations[x*k + z];
+            for (int i = csr->row_offsets[u]; i < csr->row_offsets[u+1]; ++i){
+                v = csr->column_indices[i];
+                if (u < v){
+                    vectorOfSetsOfEdgesCoveredByBuss[x].insert(std::make_pair(u,v));
+                } else {
+                    vectorOfSetsOfEdgesCoveredByBuss[x].insert(std::make_pair(v,u));
                 }
-                std::cout << "}" << std::endl;
-                alledgesCoveredByKernelization &= edgeCovered; 
             }
         }
-        results[x] = alledgesCoveredByKernelization;        
     }
 }
+
+void SequentialBuss::UnionKernelEdgesAndBFSEdges(){
+    int totalEdgeCount = g.GetCSR()->column_indices.size();
+    for (int x = 0; x < NumberOfVerticesToThePowerOfK; ++x){
+        vectorOfSetsOfEdgesCoveredByBuss[x].insert(g.edgesCoveredByKernelization.begin(), g.edgesCoveredByKernelization.end());
+        if(vectorOfSetsOfEdgesCoveredByBuss[x].size() - totalEdgeCount == 0)
+            results[x] = 1;
+        else
+            results[x] = 0;
+    }
+}
+
 void SequentialBuss::PrintVCSets(){
     bool anyAnswerExists = false;
     for (int x = 0; x < NumberOfVerticesToThePowerOfK; ++x){
