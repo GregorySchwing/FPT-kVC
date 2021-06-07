@@ -5,9 +5,10 @@ SequentialKernelization::SequentialKernelization(Graph & g_arg, int k_arg):g(g_a
     printf("%s\n",CardinalityOfSetDegreeGreaterK(g.GetDegreeController()) ? "b > k, no solution exists" : "b <= k, a solution may exist");
     PrintS();            
     std::cout << "Removing S from G" << std::endl;
-    RemoveSFromG();
+    //RemoveSFromG();
     SetEdgesOfS(g.GetCSR());
     PrintEdgesOfS();
+    g.edgesLeftToCover -= GetCardinalityOfSEdges();
     std::cout << g.edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
     kPrime = k - b;
     std::cout << "Setting k' = k - b = " << kPrime << std::endl;
@@ -78,11 +79,8 @@ void SequentialKernelization::SetEdgesOfS(CSR * csr){
     }
 }
 
-void SequentialKernelization::RemoveSFromG(){
-    for (auto v : S){
-        /* Since we enter each edge twice, remove 2 times degree */
-        g.edgesLeftToCover -= g.GetDegree(v);
-    }
+int SequentialKernelization::GetCardinalityOfSEdges(){
+    return edges.size();
 }
 bool SequentialKernelization::GPrimeEdgesGraterKTimesKPrime(){
     int kTimesKPrime = k * kPrime;
