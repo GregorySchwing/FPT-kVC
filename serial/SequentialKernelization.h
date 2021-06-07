@@ -26,6 +26,6 @@ class SequentialKernelization {
         //void RemoveSFromG();
         int GetCardinalityOfSEdges();
 
-        bool GPrimeEdgesGraterKTimesKPrime();
+        bool GPrimeEdgesGreaterKTimesKPrime();
 };
 #endif

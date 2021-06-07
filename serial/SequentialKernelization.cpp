@@ -12,7 +12,7 @@ SequentialKernelization::SequentialKernelization(Graph & g_arg, int k_arg):g(g_a
     std::cout << g.edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
     kPrime = k - b;
     std::cout << "Setting k' = k - b = " << kPrime << std::endl;
-    printf("%s\n",GPrimeEdgesGraterKTimesKPrime() ? "|G'(E)| > k*k', no solution exists" : "|G'(E)| <= k*k', a solution may exist");
+    printf("%s\n",GPrimeEdgesGreaterKTimesKPrime() ? "|G'(E)| > k*k', no solution exists" : "|G'(E)| <= k*k', a solution may exist");
                 
 }
 
@@ -82,7 +82,7 @@ void SequentialKernelization::SetEdgesOfS(CSR * csr){
 int SequentialKernelization::GetCardinalityOfSEdges(){
     return edges.size();
 }
-bool SequentialKernelization::GPrimeEdgesGraterKTimesKPrime(){
+bool SequentialKernelization::GPrimeEdgesGreaterKTimesKPrime(){
     int kTimesKPrime = k * kPrime;
     if (g.edgesLeftToCover > kTimesKPrime)
         return true;
