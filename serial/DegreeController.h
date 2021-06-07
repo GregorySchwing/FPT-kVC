@@ -19,9 +19,10 @@ class DegreeController{
 
     private:
         std::list<DegreeNode> degreeController;
-        std::vector< std::vector<int> > temporaryDegCont;
+        std::vector< std::vector<int> > degContVecOfVecs;
+        void AllocateVecofVecs(int numVerts);
         void CreateDegreeController(NeighborsBinaryDataStructure * neighBits);
-
+        int numVerts;
 
         //void CSR2VecofVecs(CSR * compressedSparseMatrix);
 

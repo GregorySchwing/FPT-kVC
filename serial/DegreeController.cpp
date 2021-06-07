@@ -1,7 +1,7 @@
 #include "DegreeController.h"
 
-DegreeController::DegreeController(int numVerts, NeighborsBinaryDataStructure * neighBits){
-    //CSR2VecofVecs(compressedSparseMatrix);
+DegreeController::DegreeController(int numVerts_arg, NeighborsBinaryDataStructure * neighBits) : numVerts(numVerts_arg){
+    AllocateVecofVecs(numVerts);
     CreateDegreeController(neighBits);
 }
 
@@ -16,14 +16,20 @@ void DegreeController::CSR2VecofVecs(CSR * compressedSparseMatrix){
 }
 */
 
+/* Replace this with N bitsets of N size */
+/* This will take N*std::allocator space */
+void DegreeController::AllocateVecofVecs(int numVerts){
+    degContVecOfVecs.resize(numVerts);
+}
+
 std::string DegreeController::toString(){
     std::stringstream ss;
     std::string myMatrix;
     ss << "Degree Controller" << std::endl;
-    for(int i = 0; i < temporaryDegCont.size(); i++){
+    for(int i = 0; i < degContVecOfVecs.size(); i++){
         ss << "\t" << i << " : ";
-        for(int j = 0; j < temporaryDegCont[i].size(); ++j)
-            ss << "\t" << temporaryDegCont[i][j];
+        for(int j = 0; j < degContVecOfVecs[i].size(); ++j)
+            ss << "\t" << degContVecOfVecs[i][j];
         ss << std::endl;
     }
     ss << std::endl;
@@ -32,11 +38,12 @@ std::string DegreeController::toString(){
 }
 
 std::vector< std::vector<int> > & DegreeController::GetTempDegCont(){
-    return temporaryDegCont;
+    return degContVecOfVecs;
 }
 
 void DegreeController::CreateDegreeController(NeighborsBinaryDataStructure * neighBits){
-
+    for (int i = 0; i < numVerts; ++i)
+        degContVecOfVecs[neighBits->GetDegree(i)].push_back(i);
 }
 
 

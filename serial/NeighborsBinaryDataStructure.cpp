@@ -18,3 +18,7 @@ NeighborsBinaryDataStructure::NeighborsBinaryDataStructure(CSR * compressedSpars
         std::cout << buffer << std::endl;
     }
 }
+
+int NeighborsBinaryDataStructure::GetDegree(int vertex){
+    return twoDimensionalBitMatrixOfNeighboringVertices[vertex].count();
+}
