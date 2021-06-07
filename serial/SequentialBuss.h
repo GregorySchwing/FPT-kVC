@@ -28,6 +28,7 @@ class SequentialBuss {
         std::vector<int> verticesOfGPrime;
         void SetGPrimeVertices();
         void GenerateEdgeSets();
+        void PrintEdgeSets();
         void UnionKernelEdgesAndBFSEdges();
 		/* http://rosettacode.org/wiki/Combinations#C.2B.2B */
         void PopulateCombinations(int * combinations_arg, std::vector<int> & gPrimeVertices, int K);

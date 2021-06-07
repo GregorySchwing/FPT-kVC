@@ -8,18 +8,19 @@ SequentialBuss::SequentialBuss(Graph & g_arg, int k_arg, int k_prime_arg):g(g_ar
     /* Hence, GPrimeVertices^k <= (2*k^2)^k */
     
     NumberOfGPrimeVerticesChooseKPrime = choose(verticesOfGPrime.size(), k_prime);
-    std::cout << "NumberOfGPrimeVerticesChooseKPrime " << NumberOfGPrimeVerticesChooseKPrime << std::endl;
+    //std::cout << "NumberOfGPrimeVerticesChooseKPrime " << NumberOfGPrimeVerticesChooseKPrime << std::endl;
     results = new int[NumberOfGPrimeVerticesChooseKPrime];
 
     /* Hence, the amount of space to store the NumberOfVertices^k combinations
         each of size k, is (NumberOfVertices^k)*k */
-    std::cout << "NumberOfGPrimeVerticesChooseKPrime*k_prime = " << NumberOfGPrimeVerticesChooseKPrime*k_prime << std::endl;
+    //std::cout << "NumberOfGPrimeVerticesChooseKPrime*k_prime = " << NumberOfGPrimeVerticesChooseKPrime*k_prime << std::endl;
     combinations = new int[NumberOfGPrimeVerticesChooseKPrime*k_prime];
     PopulateCombinations(combinations, verticesOfGPrime, k_prime);
 
     /* The sets of edges covered by each of the NumberOfVertices^k combinations */
     vectorOfSetsOfEdgesCoveredByBuss.resize(NumberOfGPrimeVerticesChooseKPrime);
     GenerateEdgeSets();
+    //PrintEdgeSets();
     UnionKernelEdgesAndBFSEdges();
 }
 SequentialBuss::~SequentialBuss(){
@@ -30,6 +31,7 @@ SequentialBuss::~SequentialBuss(){
 void SequentialBuss::SetGPrimeVertices(){
     std::vector< std::vector<int> > & tempDegCont = (g.GetDegreeController())->GetTempDegCont();
     std::vector< std::vector<int> >::const_iterator it = tempDegCont.cbegin();
+    std::cout << "G'(V) = {";
     while(it != (tempDegCont.cbegin() + k + 1)){
         for (auto & e : *it){
             std::cout << e << " ";
@@ -37,9 +39,10 @@ void SequentialBuss::SetGPrimeVertices(){
         }
         it++;
     }
+    std::cout << "}";
 }
 void SequentialBuss::GenerateEdgeSets(){
-    std::cout << "|G'(V)| " << verticesOfGPrime.size() << " k_prime " << k_prime << " |G'(V)| Choose k_prime " << NumberOfGPrimeVerticesChooseKPrime << std::endl;
+    //std::cout << "|G'(V)| " << verticesOfGPrime.size() << " k_prime " << k_prime << " |G'(V)| Choose k_prime " << NumberOfGPrimeVerticesChooseKPrime << std::endl;
     /* Iterate through all k_prime-combinations of vertices */
     int u,v;
     for (int x = 0; x < NumberOfGPrimeVerticesChooseKPrime; ++x){
@@ -57,8 +60,19 @@ void SequentialBuss::GenerateEdgeSets(){
     }
 }
 
+void SequentialBuss::PrintEdgeSets(){
+    for (int x = 0; x < NumberOfGPrimeVerticesChooseKPrime; ++x){
+        for (std::set<std::pair<int,int>>::iterator it = vectorOfSetsOfEdgesCoveredByBuss[x].begin();
+            it != vectorOfSetsOfEdgesCoveredByBuss[x].end();
+                ++it){
+            std::cout << "(" << it->first << ", " << it->second << "), ";
+        }
+        std::cout << std::endl;
+    }
+}
+
 void SequentialBuss::UnionKernelEdgesAndBFSEdges(){
-    int totalEdgeCount = g.GetCSR()->column_indices.size();
+    int totalEdgeCount = g.GetCSR()->column_indices.size()/2;
     for (int x = 0; x < NumberOfGPrimeVerticesChooseKPrime; ++x){
         vectorOfSetsOfEdgesCoveredByBuss[x].insert(g.edgesCoveredByKernelization.begin(), g.edgesCoveredByKernelization.end());
         if(vectorOfSetsOfEdgesCoveredByBuss[x].size() - totalEdgeCount == 0)
@@ -70,13 +84,16 @@ void SequentialBuss::UnionKernelEdgesAndBFSEdges(){
 
 void SequentialBuss::PrintVCSets(){
     bool anyAnswerExists = false;
+    int VCCount = 0;
     for (int x = 0; x < NumberOfGPrimeVerticesChooseKPrime; ++x){
         if(results[x] != 0){
+            std::cout << "VC #" << VCCount << " = {";
             anyAnswerExists = true;
             for (int z = 0; z < k_prime; ++z){
-                std::cout << " " << combinations[x*k_prime + z];
+                std::cout << combinations[x*k_prime + z] << ", " ;
             }
-            std::cout << std::endl;
+            std::cout << "}" << std::endl;
+            ++VCCount;
         }
     }
     if (!anyAnswerExists){
@@ -101,11 +118,11 @@ void SequentialBuss::PopulateCombinations(int * combinations_arg, std::vector<in
             if (bitmask[i]){
                 /* Row length is k_prime */
                 combinations_arg[rowI*k_prime + colI] = gPrimeVertices[i];
-                std::cout << " " << gPrimeVertices[i];
+                //std::cout << " " << gPrimeVertices[i];
                 ++colI;
             }
         }
-        std::cout << std::endl;
+        //std::cout << std::endl;
         ++rowI;
     } while (std::prev_permutation(bitmask.begin(), bitmask.end()));
 }
