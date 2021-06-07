@@ -45,7 +45,7 @@ void COO::addEdge(int u, int v, int weight, int edgeID){
     v > |V|/2
     One possibility is to use the 2D Bit Matrix to intersect 1 vs all, then call Count()
  */
-void COO::addEdgeAsymmetric(int u, int v, int weight){
+void COO::addEdgeASymmetric(int u, int v, int weight){
     if(u <= v){
         row_indices.push_back(u);
         column_indices.push_back(v);

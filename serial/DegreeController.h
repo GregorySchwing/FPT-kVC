@@ -4,6 +4,7 @@
 #include <list>
 #include <vector>
 #include "CSR.h"
+#include "NeighborsBinaryDataStructure.h"
 
 class DegreeController{
     
@@ -12,16 +13,17 @@ class DegreeController{
         int degree;
     };
     public:
-        DegreeController(CSR * compressedSparseMatrix);
+        DegreeController(int numVerts, NeighborsBinaryDataStructure * neighBits);
         std::string toString();
         std::vector< std::vector<int> > & GetTempDegCont();
 
     private:
         std::list<DegreeNode> degreeController;
         std::vector< std::vector<int> > temporaryDegCont;
-        
+        void CreateDegreeController(NeighborsBinaryDataStructure * neighBits);
 
-        void CSR2VecofVecs(CSR * compressedSparseMatrix);
+
+        //void CSR2VecofVecs(CSR * compressedSparseMatrix);
 
 };
 #endif

@@ -1,19 +1,20 @@
 #include "DegreeController.h"
 
-DegreeController::DegreeController(CSR * compressedSparseMatrix){
-    CSR2VecofVecs(compressedSparseMatrix);
-
+DegreeController::DegreeController(int numVerts, NeighborsBinaryDataStructure * neighBits){
+    //CSR2VecofVecs(compressedSparseMatrix);
+    CreateDegreeController(neighBits);
 }
 
 /* Replace this with N bitsets of N size */
-/* This will take N*std::allocator space */
+/* This will take N*std::allocator space 
 void DegreeController::CSR2VecofVecs(CSR * compressedSparseMatrix){
     temporaryDegCont.resize(compressedSparseMatrix->numberOfRows);
-    /* Simple degree arimetic for the first half of the vertices */
+    // Simple degree arimetic for the first half of the vertices
     for (int i = 0; i < compressedSparseMatrix->numberOfRows; ++i){
         temporaryDegCont[compressedSparseMatrix->row_offsets[i+1] - compressedSparseMatrix->row_offsets[i]].push_back(i);
     }
 }
+*/
 
 std::string DegreeController::toString(){
     std::stringstream ss;
@@ -33,5 +34,11 @@ std::string DegreeController::toString(){
 std::vector< std::vector<int> > & DegreeController::GetTempDegCont(){
     return temporaryDegCont;
 }
+
+void DegreeController::CreateDegreeController(NeighborsBinaryDataStructure * neighBits){
+
+}
+
+
 
 

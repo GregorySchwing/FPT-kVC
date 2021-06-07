@@ -6,7 +6,7 @@ SequentialKernelization::SequentialKernelization(Graph & g_arg, int k_arg):g(g_a
     PrintS();            
     std::cout << "Removing S from G" << std::endl;
     RemoveSFromG();
-    std::cout << g.edgesLeftToCover/2 << " edges left in induced subgraph G'" << std::endl;
+    std::cout << g.edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
     kPrime = k - b;
     std::cout << "Setting k' = k - b = " << kPrime << std::endl;
     printf("%s\n",GPrimeEdgesGraterKTimesKPrime() ? "|G'(E)| > k*k', no solution exists" : "|G'(E)| <= k*k', a solution may exist");
@@ -22,6 +22,7 @@ bool SequentialKernelization::CardinalityOfSetDegreeGreaterK(DegreeController * 
         return false;
 }
 
+/* Use the Count function of dynamic bitset */
 int SequentialKernelization::GetSetOfVerticesDegreeGreaterK(int k, std::vector<int> & S, DegreeController * degCont){
     std::vector< std::vector<int> > & tempDegCont = degCont->GetTempDegCont();
     std::vector< std::vector<int> >::reverse_iterator it = tempDegCont.rbegin();
@@ -56,12 +57,12 @@ void SequentialKernelization::PrintS(){
 void SequentialKernelization::RemoveSFromG(){
     for (auto v : S){
         /* Since we enter each edge twice, remove 2 times degree */
-        g.edgesLeftToCover -= 2*g.GetDegree(v);
+        g.edgesLeftToCover -= g.GetDegree(v);
     }
 }
 bool SequentialKernelization::GPrimeEdgesGraterKTimesKPrime(){
     int kTimesKPrime = k * kPrime;
-    if (g.edgesLeftToCover/2 > kTimesKPrime)
+    if (g.edgesLeftToCover > kTimesKPrime)
         return true;
     return false;
 }

@@ -3,22 +3,23 @@
 Graph::Graph(int vertexCount): coordinateFormat(vertexCount, vertexCount)
 {
     /* Eventually replace this with an initialization from file */
-    coordinateFormat.addEdgeSymmetric(2,0,5);
-    coordinateFormat.addEdgeSymmetric(1,3,2);
-    coordinateFormat.addEdgeSymmetric(2,1,2);
-    coordinateFormat.addEdgeSymmetric(2,3,2);
-    coordinateFormat.addEdgeSymmetric(2,4,2);
-    coordinateFormat.addEdgeSymmetric(1,4,2);
-    coordinateFormat.addEdgeSymmetric(0,4,2);
+    coordinateFormat.addEdgeASymmetric(2,0,5);
+    coordinateFormat.addEdgeASymmetric(1,3,2);
+    coordinateFormat.addEdgeASymmetric(2,1,2);
+    coordinateFormat.addEdgeASymmetric(2,3,2);
+    coordinateFormat.addEdgeASymmetric(2,4,2);
+    coordinateFormat.addEdgeASymmetric(1,4,2);
+    coordinateFormat.addEdgeASymmetric(0,4,2);
 
     coordinateFormat.size = coordinateFormat.column_indices.size();
+    // vlog(e)
     coordinateFormat.sortMyself();
     compressedSparseMatrix = new CSR(coordinateFormat);             
     std::cout << coordinateFormat.toString();
     std::cout << compressedSparseMatrix->toString();
-    degCont = new DegreeController(compressedSparseMatrix);
-    std::cout << degCont->toString();
     neighBits = new NeighborsBinaryDataStructure(compressedSparseMatrix);
+    degCont = new DegreeController(compressedSparseMatrix->numberOfRows, neighBits);
+    std::cout << degCont->toString();
     edgesLeftToCover = compressedSparseMatrix->column_indices.size();
 }
 

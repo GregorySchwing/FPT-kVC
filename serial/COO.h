@@ -17,7 +17,7 @@ public:
     bool getIsSorted() const { return isSorted; }
     void insertElements(const SparseMatrix & c);
     void addEdge(int u, int v, int weight, int edgeID);
-    void addEdgeAsymmetric(int u, int v, int weight);
+    void addEdgeASymmetric(int u, int v, int weight);
     void addEdgeSymmetric(int u, int v, int weight);
 
     //COO& SpMV(COO & c);
