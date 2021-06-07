@@ -13,7 +13,6 @@ int main(int argc, char *argv[])
     //COO coo1(4, 4, 4, true);
     Graph g(10);
     int k = 4;
-    //SequentialKernelization sk(k, g);
     SequentialKernelization sk(g, k);
     if (sk.noSolutionExists)
       exit(0);
