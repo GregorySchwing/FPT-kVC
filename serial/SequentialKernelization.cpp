@@ -88,6 +88,11 @@ int SequentialKernelization::GetCardinalityOfSEdges(){
     return g.edgesCoveredByKernelization.size();
 }
 
+int SequentialKernelization::GetKPrime(){
+    return kPrime;
+}
+
+
 void SequentialKernelization::SetEdgesLeftToCover(){
     g.edgesLeftToCover -= GetCardinalityOfSEdges();
 }

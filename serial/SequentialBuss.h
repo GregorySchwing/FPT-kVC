@@ -11,7 +11,7 @@
 /* For : http://rosettacode.org/wiki/Combinations#C.2B.2B */
 class SequentialBuss {
     public:
-        SequentialBuss(Graph & g_arg, int k_arg);
+        SequentialBuss(Graph & g_arg, int k_arg, int k_prime_arg);
         ~SequentialBuss();
         void PrintVCSets();
         /* Thanks to our asymmetric CSR, the edges in these sets will be disjoint from
@@ -21,7 +21,8 @@ class SequentialBuss {
     private:
         Graph & g;
         int k;
-	    int NumberOfVerticesToThePowerOfK;
+        int k_prime;
+	    int NumberOfVerticesToThePowerOfKPrime;
         int * results;
         int * combinations;        
         std::vector<int> verticesOfGPrime;
@@ -29,7 +30,7 @@ class SequentialBuss {
         void GenerateEdgeSets();
         void UnionKernelEdgesAndBFSEdges();
 		/* http://rosettacode.org/wiki/Combinations#C.2B.2B */
-        void PopulateCombinations(int * combinations_arg, int N, int K);
+        void PopulateCombinations(int * combinations_arg, std::vector<int> & gPrimeVertices, int N, int K);
         /* https://stackoverflow.com/questions/1505675/power-of-an-integer-in-c */
         int myPow(int x, unsigned int p);
 };

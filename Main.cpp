@@ -11,13 +11,13 @@ int main(int argc, char *argv[])
 {
     /* Num edges, N, N, random entries? */
     //COO coo1(4, 4, 4, true);
-    Graph g(5);
-    int k = 2;
+    Graph g(10);
+    int k = 4;
     //SequentialKernelization sk(k, g);
     SequentialKernelization sk(g, k);
     if (sk.noSolutionExists)
       exit(0);
-    SequentialBuss sb(g, k);
+    SequentialBuss sb(g, k, sk.GetKPrime());
     sb.PrintVCSets();
 
     //std::cout << "Calling Insert Elements" << std::endl;
