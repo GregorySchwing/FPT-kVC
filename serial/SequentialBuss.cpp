@@ -7,16 +7,18 @@ SequentialBuss::SequentialBuss(Graph & g_arg, int k_arg, int k_prime_arg):g(g_ar
     SetGPrimeVertices();
     /* Hence, GPrimeVertices^k <= (2*k^2)^k */
     
-    NumberOfVerticesToThePowerOfKPrime = myPow(verticesOfGPrime.size(), k_prime);
-    results = new int[NumberOfVerticesToThePowerOfKPrime];
+    NumberOfGPrimeVerticesChooseKPrime = choose(verticesOfGPrime.size(), k_prime);
+    std::cout << "NumberOfGPrimeVerticesChooseKPrime " << NumberOfGPrimeVerticesChooseKPrime << std::endl;
+    results = new int[NumberOfGPrimeVerticesChooseKPrime];
 
     /* Hence, the amount of space to store the NumberOfVertices^k combinations
         each of size k, is (NumberOfVertices^k)*k */
-    combinations = new int[NumberOfVerticesToThePowerOfKPrime*k_prime];
-    PopulateCombinations(combinations, verticesOfGPrime, verticesOfGPrime.size(), k_prime);
+    std::cout << "NumberOfGPrimeVerticesChooseKPrime*k_prime = " << NumberOfGPrimeVerticesChooseKPrime*k_prime << std::endl;
+    combinations = new int[NumberOfGPrimeVerticesChooseKPrime*k_prime];
+    PopulateCombinations(combinations, verticesOfGPrime, k_prime);
 
     /* The sets of edges covered by each of the NumberOfVertices^k combinations */
-    vectorOfSetsOfEdgesCoveredByBuss.resize(NumberOfVerticesToThePowerOfKPrime*k_prime);
+    vectorOfSetsOfEdgesCoveredByBuss.resize(NumberOfGPrimeVerticesChooseKPrime);
     GenerateEdgeSets();
     UnionKernelEdgesAndBFSEdges();
 }
@@ -37,10 +39,10 @@ void SequentialBuss::SetGPrimeVertices(){
     }
 }
 void SequentialBuss::GenerateEdgeSets(){
-    std::cout << "|G'(V)|" << verticesOfGPrime.size() << "k_prime " << k_prime << "|G'(V)|^k_prime " << NumberOfVerticesToThePowerOfKPrime << std::endl;
+    std::cout << "|G'(V)| " << verticesOfGPrime.size() << " k_prime " << k_prime << " |G'(V)| Choose k_prime " << NumberOfGPrimeVerticesChooseKPrime << std::endl;
     /* Iterate through all k_prime-combinations of vertices */
     int u,v;
-    for (int x = 0; x < NumberOfVerticesToThePowerOfKPrime; ++x){
+    for (int x = 0; x < NumberOfGPrimeVerticesChooseKPrime; ++x){
         for (int z = 0; z < k_prime; ++z){
             u = combinations[x*k_prime + z];
             for (int i = g.GetCSR()->row_offsets[u]; i < g.GetCSR()->row_offsets[u+1]; ++i){
@@ -57,7 +59,7 @@ void SequentialBuss::GenerateEdgeSets(){
 
 void SequentialBuss::UnionKernelEdgesAndBFSEdges(){
     int totalEdgeCount = g.GetCSR()->column_indices.size();
-    for (int x = 0; x < NumberOfVerticesToThePowerOfKPrime; ++x){
+    for (int x = 0; x < NumberOfGPrimeVerticesChooseKPrime; ++x){
         vectorOfSetsOfEdgesCoveredByBuss[x].insert(g.edgesCoveredByKernelization.begin(), g.edgesCoveredByKernelization.end());
         if(vectorOfSetsOfEdgesCoveredByBuss[x].size() - totalEdgeCount == 0)
             results[x] = 1;
@@ -68,7 +70,7 @@ void SequentialBuss::UnionKernelEdgesAndBFSEdges(){
 
 void SequentialBuss::PrintVCSets(){
     bool anyAnswerExists = false;
-    for (int x = 0; x < NumberOfVerticesToThePowerOfKPrime; ++x){
+    for (int x = 0; x < NumberOfGPrimeVerticesChooseKPrime; ++x){
         if(results[x] != 0){
             anyAnswerExists = true;
             for (int z = 0; z < k_prime; ++z){
@@ -84,18 +86,20 @@ void SequentialBuss::PrintVCSets(){
 
 
 /* http://rosettacode.org/wiki/Combinations#C.2B.2B */
-void SequentialBuss::PopulateCombinations(int * combinations_arg, std::vector<int> & gPrimeVertices, int N, int k_prime){
-    std::string bitmask(k_prime, 1); // K leading 1's
-    bitmask.resize(N, 0); // N-K trailing 0's
+void SequentialBuss::PopulateCombinations(int * combinations_arg, std::vector<int> & gPrimeVertices, int k_prime){
+    std::string bitmask(k_prime, 1); // k_prime leading 1's
+    bitmask.resize(gPrimeVertices.size(), 0); // N-K trailing 0's
     int rowI = 0;
     int colI = 0;
     // print integers and permute bitmask
+    int iter = 0;
     std::cout << std::endl;
     do {
-        for (int i = 0; i < N; ++i) // [0..N-1] integers
+        colI = 0;
+        for (int i = 0; i < gPrimeVertices.size(); ++i) // [0..G'(V)] integers
         {
             if (bitmask[i]){
-                /* Row length is K */
+                /* Row length is k_prime */
                 combinations_arg[rowI*k_prime + colI] = gPrimeVertices[i];
                 std::cout << " " << gPrimeVertices[i];
                 ++colI;
@@ -115,4 +119,9 @@ int SequentialBuss::myPow(int x, unsigned int p)
   int tmp = myPow(x, p/2);
   if (p%2 == 0) return tmp * tmp;
     else return x * tmp * tmp;
+}
+
+int SequentialBuss::choose(int n, int k){
+    if (k == 0) return 1;
+    return (n * choose(n - 1, k - 1)) / k;
 }

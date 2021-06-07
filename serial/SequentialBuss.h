@@ -22,7 +22,7 @@ class SequentialBuss {
         Graph & g;
         int k;
         int k_prime;
-	    int NumberOfVerticesToThePowerOfKPrime;
+	    int NumberOfGPrimeVerticesChooseKPrime;
         int * results;
         int * combinations;        
         std::vector<int> verticesOfGPrime;
@@ -30,8 +30,10 @@ class SequentialBuss {
         void GenerateEdgeSets();
         void UnionKernelEdgesAndBFSEdges();
 		/* http://rosettacode.org/wiki/Combinations#C.2B.2B */
-        void PopulateCombinations(int * combinations_arg, std::vector<int> & gPrimeVertices, int N, int K);
+        void PopulateCombinations(int * combinations_arg, std::vector<int> & gPrimeVertices, int K);
         /* https://stackoverflow.com/questions/1505675/power-of-an-integer-in-c */
         int myPow(int x, unsigned int p);
+        int choose(int n, int k);
+
 };
 #endif
