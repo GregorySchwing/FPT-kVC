@@ -11,11 +11,11 @@
 /* For : http://rosettacode.org/wiki/Combinations#C.2B.2B */
 class SequentialBuss {
     public:
-        SequentialBuss(int k_arg, Graph & g_arg);
+        SequentialBuss(int k_arg, DegreeController * degCont);
         ~SequentialBuss();
         void FindCover();
         void PrintVCSets();
-
+        std::vector< std::set<std::pair<int,int>> > vectorOfSetsOfEdgesCoveredByBuss;
 
     private:
 		/* http://rosettacode.org/wiki/Combinations#C.2B.2B */

@@ -19,13 +19,13 @@ SequentialBuss::~SequentialBuss(){
 }
 void SequentialBuss::FindCover(){
     bool edgeCovered = false;
-    bool allEdgesCovered = true;
+    bool alledgesCoveredByKernelization = true;
     Vertex * vertices = g.GetVertices();
 std::cout << "g.GetVertexCount()) " << g.GetVertexCount() << "k " << k<< "(g.GetVertexCount())^k " << NumberOfVerticesToThePowerOfK << std::endl;
     /* Iterate through all k-combinations of vertices */
     for (int x = 0; x < NumberOfVerticesToThePowerOfK; ++x){
         std::cout << "iteration " << x << std::endl;
-        allEdgesCovered = true;
+        alledgesCoveredByKernelization = true;
         /* Currently edges belong to vertices, so the only way to iterate through all edges, is to iterate through all verts and then the edges of that vert */
         for (int y = 0; y < g.GetVertexCount(); ++y){
             std::cout << "vertex " << y << " Edges : " << std::endl;
@@ -35,7 +35,7 @@ std::cout << "g.GetVertexCount()) " << g.GetVertexCount() << "k " << k<< "(g.Get
                 /* Check if any of the vertices in this combination cover this edge */
     /* y - the source, e - the destination (y,e) */
     /* We iterate over all vertices, but vertices removed from kernelization
-        will have 0 edges, thus we don't modify allEdgesCovered */
+        will have 0 edges, thus we don't modify alledgesCoveredByKernelization */
                 std::cout << "combination {";
                 for (int z = 0; z < k; ++z){
                     std::cout << z << ", ";
@@ -43,10 +43,10 @@ std::cout << "g.GetVertexCount()) " << g.GetVertexCount() << "k " << k<< "(g.Get
                         edgeCovered = true;
                 }
                 std::cout << "}" << std::endl;
-                allEdgesCovered &= edgeCovered; 
+                alledgesCoveredByKernelization &= edgeCovered; 
             }
         }
-        results[x] = allEdgesCovered;        
+        results[x] = alledgesCoveredByKernelization;        
     }
 }
 void SequentialBuss::PrintVCSets(){

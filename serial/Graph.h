@@ -7,6 +7,7 @@
 #include "CSR.h"
 #include "DegreeController.h"
 #include "NeighborsBinaryDataStructure.h"
+#include <set>
 
 class Graph {
     public:
@@ -15,11 +16,13 @@ class Graph {
         int GetDegree(int v);
         CSR * GetCSR();
         int edgesLeftToCover;
+        std::set<std::pair<int,int>> edgesCoveredByKernelization;
 
     private:
         COO coordinateFormat;
         CSR * compressedSparseMatrix;
         DegreeController * degCont;
         NeighborsBinaryDataStructure * neighBits;
+
 };
 #endif

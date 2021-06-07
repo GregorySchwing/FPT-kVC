@@ -3,7 +3,6 @@
 
 #include "Graph.h"
 #include <iostream>
-#include <set>
 
 class SequentialKernelization {
     public:
@@ -15,7 +14,6 @@ class SequentialKernelization {
         int k;
         int b;
         std::vector<int> S;
-        std::set<std::pair<int,int>> edges;
 
         bool CardinalityOfSetDegreeGreaterK(DegreeController * degCont);
         int GetSetOfVerticesDegreeGreaterK(int k, std::vector<int> & S, DegreeController * degCont);
@@ -25,7 +23,6 @@ class SequentialKernelization {
         void SetEdgesOfS(CSR * csr);
         //void RemoveSFromG();
         int GetCardinalityOfSEdges();
-
         bool GPrimeEdgesGreaterKTimesKPrime();
 };
 #endif

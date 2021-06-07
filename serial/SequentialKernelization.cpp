@@ -60,7 +60,7 @@ void SequentialKernelization::PrintS(){
 
 void SequentialKernelization::PrintEdgesOfS(){
     std::cout << "E(S) = {";
-    for (auto & e : edges){
+    for (auto & e : g.edgesCoveredByKernelization){
         std::cout << "(" << e.first << ", " << e.second << "), ";
     }
     std::cout << "}" << std::endl;
@@ -71,16 +71,13 @@ void SequentialKernelization::SetEdgesOfS(CSR * csr){
     for (auto u : S){
         for (int i = csr->row_offsets[u]; i < csr->row_offsets[u+1]; ++i){
             v = csr->column_indices[i];
-            if (u < v)
-                edges.insert(std::make_pair(u,v));
-            else
-                edges.insert(std::make_pair(v,u));
+            g.edgesCoveredByKernelization.insert(std::make_pair(u,v));
         }
     }
 }
 
 int SequentialKernelization::GetCardinalityOfSEdges(){
-    return edges.size();
+    return g.edgesCoveredByKernelization.size();
 }
 bool SequentialKernelization::GPrimeEdgesGreaterKTimesKPrime(){
     int kTimesKPrime = k * kPrime;
