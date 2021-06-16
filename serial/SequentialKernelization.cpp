@@ -54,6 +54,11 @@ int SequentialKernelization::GetSetOfVerticesDegreeGreaterK(int k, std::vector<i
     return cardinalityOfS;
 }
 
+std::vector<int> & SequentialKernelization::GetS(){
+    return S;
+}
+
+
 void SequentialKernelization::PrintS(){
     std::cout << "S = {";
     for (auto & i : S){

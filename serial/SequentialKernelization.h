@@ -8,6 +8,7 @@ class SequentialKernelization {
     public:
         SequentialKernelization(Graph & g_arg, int k_arg);
         int GetKPrime();
+        std::vector<int> & GetS();
         bool noSolutionExists;
     private:
         int kPrime;

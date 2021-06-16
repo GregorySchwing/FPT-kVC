@@ -29,6 +29,13 @@ COO::COO(int size, int numberOfRows, int numberOfColumns, bool populate):SparseM
 COO::COO(int numberOfRows, int numberOfColumns):SparseMatrix(numberOfRows, numberOfColumns){
 }
 
+COO::COO(COO & coo_arg):SparseMatrix(coo_arg){
+    column_indices = coo_arg.column_indices;
+    row_indices = coo_arg.row_indices;
+    isSorted = coo_arg.isSorted;
+}
+
+
 void COO::addEdge(int u, int v, int weight, int edgeID){
     if(u <= v){
     row_indices[edgeID] = u;

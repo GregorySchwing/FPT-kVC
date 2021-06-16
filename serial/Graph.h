@@ -12,9 +12,13 @@
 class Graph {
     public:
         Graph(int vertexCount);
+        Graph(std::vector<int> S, Graph & g_arg);
+
         DegreeController * GetDegreeController();
         int GetDegree(int v);
         CSR * GetCSR();
+        COO & GetCOO();
+        void UpdateNeighBits();
         int edgesLeftToCover;
         std::set<std::pair<int,int>> edgesCoveredByKernelization;
 

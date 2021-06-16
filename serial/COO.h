@@ -11,6 +11,7 @@ class COO final : public SparseMatrix
 public:
     COO(int size, int numberOfRows, int numberOfColumns, bool populate = false);
     COO(int numberOfRows, int numberOfColumns);
+    COO(COO & coo_arg);
 
     std::string toString();
     void sortMyself();

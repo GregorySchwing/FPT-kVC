@@ -9,7 +9,11 @@
 class CSR : public SparseMatrix {
     public:
         CSR(const COO & c);
+        CSR(const CSR & c);
+
         std::string toString();
+        void removeVertexEdges(int u);
+
         void insertElements(const SparseMatrix & s);
         const CSR& castSparseMatrix(const SparseMatrix & s);
         std::vector<int> column_indices, row_offsets;
