@@ -5,6 +5,7 @@ set(sources
     serial/DegreeController.cpp
     serial/Graph.cpp
     serial/NeighborsBinaryDataStructure.cpp
+    serial/SequentialB1.cpp   
     serial/SequentialBuss.cpp
     serial/SequentialDFKernelization.cpp
     serial/SequentialKernelization.cpp
@@ -17,6 +18,7 @@ set(headers
     serial/DegreeController.h
     serial/Graph.h
     serial/NeighborsBinaryDataStructure.h
+    serial/SequentialB1.h
     serial/SequentialBuss.h
     serial/SequentialDFKernelization.h
     serial/SequentialKernelization.h

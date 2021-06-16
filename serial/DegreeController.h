@@ -25,7 +25,7 @@ class DegreeController{
         void AllocateVecofVecs(int numVerts);
         void CSR2VecofVecs(CSR * compressedSparseMatrix);
         void CreateDegreeController(NeighborsBinaryDataStructure * neighBits);
-        void UpdateDegreeController();
+        void UpdateDegreeController(NeighborsBinaryDataStructure * neighBits);
         int numVerts;
         CSR * compressedSparseMatrixRef;
         //void CSR2VecofVecs(CSR * compressedSparseMatrix);

@@ -54,8 +54,10 @@ void DegreeController::CreateDegreeController(NeighborsBinaryDataStructure * nei
         degContVecOfVecs[neighBits->GetDegree(i)].push_back(i);
 }
 
-void DegreeController::UpdateDegreeController(int vertexAddedToCover){
-    
+void DegreeController::UpdateDegreeController(NeighborsBinaryDataStructure * neighBits){
+    degContVecOfVecs.clear();
+    for (int i = 0; i < numVerts; ++i)
+        degContVecOfVecs[neighBits->GetDegree(i)].push_back(i);
 }
 
 

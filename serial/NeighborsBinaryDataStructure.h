@@ -8,6 +8,9 @@ class NeighborsBinaryDataStructure {
     public:
 
         NeighborsBinaryDataStructure(CSR * compressedSparseMatrix);
+        void InducedSubgraphAdjMatrixAsym(CSR * compressedSparseMatrix);
+        void InducedSubgraphAdjMatrixSym(CSR * compressedSparseMatrix);
+
         int GetDegree(int vertex);
         std::vector<boost::dynamic_bitset<> > twoDimensionalBitMatrixOfNeighboringVertices;
 

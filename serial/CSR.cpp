@@ -21,6 +21,31 @@ CSR::CSR(const COO & c):SparseMatrix(c){
     values = c.values;    
 }
 
+CSR::CSR(const CSR & c):SparseMatrix(c){
+    row_offsets = c.row_offsets;
+    column_indices = c.column_indices;
+    values = c.values;    
+}
+
+void CSR::removeVertexEdges(int u){
+    int v, i, j;
+    for (i = 0; i < row_offsets[u+1]-row_offsets[u]; ++i){
+        /* Get neighbor vertex */
+        v = column_indices[row_offsets[u]+i];
+        /* Set (u,v) to 0 */
+        values[row_offsets[u] + i] = 0;
+
+        j = 0;
+        /* Find u in v's list of edges */
+        while (column_indices[row_offsets[v]] + j != u){
+            ++j;
+        }
+        /* Set (v,u) to 0 */
+        values[row_offsets[v] + j] = 0;
+    }
+}
+
+
 void CSR::insertElements(const SparseMatrix & s){
 
     const CSR & csr = castSparseMatrix(s);
