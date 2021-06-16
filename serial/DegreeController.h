@@ -14,6 +14,8 @@ class DegreeController{
     };
     public:
         DegreeController(int numVerts, NeighborsBinaryDataStructure * neighBits);
+        DegreeController(int numVerts, CSR * compressedSparseMatrix);
+
         std::string toString();
         std::vector< std::vector<int> > & GetTempDegCont();
 
@@ -21,9 +23,11 @@ class DegreeController{
         std::list<DegreeNode> degreeController;
         std::vector< std::vector<int> > degContVecOfVecs;
         void AllocateVecofVecs(int numVerts);
+        void CSR2VecofVecs(CSR * compressedSparseMatrix);
         void CreateDegreeController(NeighborsBinaryDataStructure * neighBits);
+        void UpdateDegreeController();
         int numVerts;
-
+        CSR * compressedSparseMatrixRef;
         //void CSR2VecofVecs(CSR * compressedSparseMatrix);
 
 };

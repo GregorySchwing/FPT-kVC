@@ -6,6 +6,7 @@ set(sources
     serial/Graph.cpp
     serial/NeighborsBinaryDataStructure.cpp
     serial/SequentialBuss.cpp
+    serial/SequentialDFKernelization.cpp
     serial/SequentialKernelization.cpp
     serial/SparseMatrix.cpp
    )
@@ -17,6 +18,7 @@ set(headers
     serial/Graph.h
     serial/NeighborsBinaryDataStructure.h
     serial/SequentialBuss.h
+    serial/SequentialDFKernelization.h
     serial/SequentialKernelization.h
     serial/SparseMatrix.h
    )
