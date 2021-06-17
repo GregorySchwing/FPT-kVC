@@ -32,17 +32,24 @@ Graph::Graph(int vertexCount): coordinateFormat(vertexCount, vertexCount)
 /* Constructor to make induced subgraph G' */
 Graph::Graph(std::vector<int> S, Graph & g_arg): coordinateFormat(g_arg.GetCOO())
 {
+
     coordinateFormat.size = coordinateFormat.column_indices.size();
+        
     if (!coordinateFormat.getIsSorted())
         // vlog(e)
         coordinateFormat.sortMyself();
+
     compressedSparseMatrix = new CSR(coordinateFormat);             
     std::cout << coordinateFormat.toString();
-    std::cout << compressedSparseMatrix->toString();
+/*    std::cout << compressedSparseMatrix->toString();
+    for (auto v : S){
+        compressedSparseMatrix->removeVertexEdges(v);
+    }
     neighBits = new NeighborsBinaryDataStructure(compressedSparseMatrix);
     degCont = new DegreeController(compressedSparseMatrix->numberOfRows, neighBits);
     std::cout << degCont->toString();
     edgesLeftToCover = compressedSparseMatrix->column_indices.size()/2;
+    */
 }
 
 void Graph::UpdateNeighBits(){
