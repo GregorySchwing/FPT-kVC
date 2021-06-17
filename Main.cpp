@@ -17,8 +17,15 @@ int main(int argc, char *argv[])
     SequentialKernelization sk(g, k);
     if (sk.noSolutionExists)
       exit(0);
-    SequentialBuss sb(g, k, sk.GetKPrime());
-    sb.PrintVCSets();
+    for (auto v : sk.GetS())
+      g.GetCSR()->removeVertexEdges(v);
+    std::cout << g.GetCSR()->toString();
+
+    /* Create Induced Subgraph */
+    Graph gPrime(g);
+    
+    //SequentialBuss sb(g, k, sk.GetKPrime());
+    //sb.PrintVCSets();
 
     //SequentialDFKernelization(g, sk, k);
 

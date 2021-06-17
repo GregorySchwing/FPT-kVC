@@ -29,6 +29,7 @@ CSR::CSR(const CSR & c):SparseMatrix(c){
 
 void CSR::removeVertexEdges(int u){
     int v, i, j;
+    /* i - out going vertices of u */
     for (i = 0; i < row_offsets[u+1]-row_offsets[u]; ++i){
         /* Get neighbor vertex */
         v = column_indices[row_offsets[u]+i];
@@ -37,7 +38,9 @@ void CSR::removeVertexEdges(int u){
 
         j = 0;
         /* Find u in v's list of edges */
-        while (column_indices[row_offsets[v]] + j != u){
+        /* j - out going vertices of v */
+
+        while (column_indices[row_offsets[v] + j] != u){
             ++j;
         }
         /* Set (v,u) to 0 */

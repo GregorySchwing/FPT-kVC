@@ -29,12 +29,26 @@ COO::COO(int size, int numberOfRows, int numberOfColumns, bool populate):SparseM
 COO::COO(int numberOfRows, int numberOfColumns):SparseMatrix(numberOfRows, numberOfColumns){
 }
 
+/* Copy Constructor */
 COO::COO(COO & coo_arg):SparseMatrix(coo_arg){
     column_indices = coo_arg.column_indices;
     row_indices = coo_arg.row_indices;
     isSorted = coo_arg.isSorted;
 }
 
+/* SpRef */
+COO::COO(COO & coo_arg, int edgesLeftToCover):SparseMatrix(coo_arg, edgesLeftToCover){
+    column_indices.reserve(edgesLeftToCover);
+    row_indices.reserve(edgesLeftToCover);
+    for (int i = 0; i < coo_arg.size; ++i){
+        if (values[i] != 0){
+            column_indices.push_back(coo_arg.column_indices[i]);
+            row_indices.push_back(coo_arg.row_indices[i]);
+            values.push_back(coo_arg.values[i]);
+        }
+    }
+    isSorted = coo_arg.isSorted;
+}
 
 void COO::addEdge(int u, int v, int weight, int edgeID){
     if(u <= v){

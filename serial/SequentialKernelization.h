@@ -23,6 +23,7 @@ class SequentialKernelization {
         void PrintEdgesOfS();
 
         void SetEdgesOfS(CSR * csr);
+        void SetEdgesOfSSym(CSR * csr);
         void SetEdgesLeftToCover();
         int GetCardinalityOfSEdges();
         bool GPrimeEdgesGreaterKTimesKPrime();

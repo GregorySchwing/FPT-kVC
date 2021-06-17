@@ -30,26 +30,20 @@ Graph::Graph(int vertexCount): coordinateFormat(vertexCount, vertexCount)
 }
 
 /* Constructor to make induced subgraph G' */
-Graph::Graph(std::vector<int> S, Graph & g_arg): coordinateFormat(g_arg.GetCOO())
-{
-
-    coordinateFormat.size = coordinateFormat.column_indices.size();
-        
+Graph::Graph(Graph & g_arg): coordinateFormat(g_arg.GetCOO(), g_arg.GetEdgesLeftToCover())
+{        
     if (!coordinateFormat.getIsSorted())
         // vlog(e)
         coordinateFormat.sortMyself();
 
     compressedSparseMatrix = new CSR(coordinateFormat);             
     std::cout << coordinateFormat.toString();
-/*    std::cout << compressedSparseMatrix->toString();
-    for (auto v : S){
-        compressedSparseMatrix->removeVertexEdges(v);
-    }
+    std::cout << compressedSparseMatrix->toString();
     neighBits = new NeighborsBinaryDataStructure(compressedSparseMatrix);
     degCont = new DegreeController(compressedSparseMatrix->numberOfRows, neighBits);
     std::cout << degCont->toString();
     edgesLeftToCover = compressedSparseMatrix->column_indices.size()/2;
-    */
+    
 }
 
 void Graph::UpdateNeighBits(){
@@ -64,6 +58,11 @@ COO & Graph::GetCOO(){
 DegreeController * Graph::GetDegreeController(){
     return degCont;
 }
+
+int Graph::GetEdgesLeftToCover(){
+    return edgesLeftToCover;
+}
+
 
 int Graph::GetDegree(int v){
     return compressedSparseMatrix->row_offsets[v+1] - compressedSparseMatrix->row_offsets[v];

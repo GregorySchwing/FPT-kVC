@@ -12,9 +12,11 @@
 class Graph {
     public:
         Graph(int vertexCount);
-        Graph(std::vector<int> S, Graph & g_arg);
+        Graph(Graph & g_arg);
 
         DegreeController * GetDegreeController();
+        int GetEdgesLeftToCover();
+
         int GetDegree(int v);
         CSR * GetCSR();
         COO & GetCOO();

@@ -8,8 +8,8 @@ SequentialKernelization::SequentialKernelization(Graph & g_arg, int k_arg):g(g_a
         exit(0);
     PrintS();            
     std::cout << "Removing S from G" << std::endl;
-    //RemoveSFromG();
-    SetEdgesOfS(g.GetCSR());
+    //SetEdgesOfS(g.GetCSR());
+    SetEdgesOfSSym(g.GetCSR());
     PrintEdgesOfS();
     SetEdgesLeftToCover();
     std::cout << g.edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
@@ -85,6 +85,16 @@ void SequentialKernelization::SetEdgesOfS(CSR * csr){
             } else {
                 g.edgesCoveredByKernelization.insert(std::make_pair(v,u));
             }
+        }
+    }
+}
+
+void SequentialKernelization::SetEdgesOfSSym(CSR * csr){
+    int v;
+    for (auto u : S){
+        for (int i = csr->row_offsets[u]; i < csr->row_offsets[u+1]; ++i){
+            v = csr->column_indices[i];
+            g.edgesCoveredByKernelization.insert(std::make_pair(u,v));
         }
     }
 }
