@@ -1,27 +1,29 @@
 #include "Graph.h"
 
-Graph::Graph(int vertexCount): coordinateFormat(vertexCount, vertexCount)
+Graph::Graph(int vertexCount)
 {
-    /* Eventually replace this with an initialization from file */
-    coordinateFormat.addEdgeSymmetric(0,1,1);
-    coordinateFormat.addEdgeSymmetric(0,4,1);
-    coordinateFormat.addEdgeSymmetric(1,4,1);
-    coordinateFormat.addEdgeSymmetric(1,5,1);
-    coordinateFormat.addEdgeSymmetric(1,6,1);
-    coordinateFormat.addEdgeSymmetric(2,4,1);
-    coordinateFormat.addEdgeSymmetric(2,6,1);
-    coordinateFormat.addEdgeSymmetric(3,5,1);
-    coordinateFormat.addEdgeSymmetric(3,6,1);
-    coordinateFormat.addEdgeSymmetric(4,7,1);
-    coordinateFormat.addEdgeSymmetric(4,8,1);
-    coordinateFormat.addEdgeSymmetric(5,8,1);
-    coordinateFormat.addEdgeSymmetric(6,9,1);
+    coordinateFormat = new COO(vertexCount, vertexCount);
 
-    coordinateFormat.size = coordinateFormat.column_indices.size();
+    /* Eventually replace this with an initialization from file */
+    coordinateFormat->addEdgeSymmetric(0,1,1);
+    coordinateFormat->addEdgeSymmetric(0,4,1);
+    coordinateFormat->addEdgeSymmetric(1,4,1);
+    coordinateFormat->addEdgeSymmetric(1,5,1);
+    coordinateFormat->addEdgeSymmetric(1,6,1);
+    coordinateFormat->addEdgeSymmetric(2,4,1);
+    coordinateFormat->addEdgeSymmetric(2,6,1);
+    coordinateFormat->addEdgeSymmetric(3,5,1);
+    coordinateFormat->addEdgeSymmetric(3,6,1);
+    coordinateFormat->addEdgeSymmetric(4,7,1);
+    coordinateFormat->addEdgeSymmetric(4,8,1);
+    coordinateFormat->addEdgeSymmetric(5,8,1);
+    coordinateFormat->addEdgeSymmetric(6,9,1);
+
+    coordinateFormat->size = coordinateFormat->column_indices.size();
     // vlog(e)
-    coordinateFormat.sortMyself();
-    compressedSparseMatrix = new CSR(coordinateFormat);             
-    std::cout << coordinateFormat.toString();
+    coordinateFormat->sortMyself();
+    compressedSparseMatrix = new CSR(*coordinateFormat);             
+    std::cout << coordinateFormat->toString();
     std::cout << compressedSparseMatrix->toString();
     neighBits = new NeighborsBinaryDataStructure(compressedSparseMatrix);
     degCont = new DegreeController(compressedSparseMatrix->numberOfRows, neighBits);
@@ -30,14 +32,10 @@ Graph::Graph(int vertexCount): coordinateFormat(vertexCount, vertexCount)
 }
 
 /* Constructor to make induced subgraph G' */
-Graph::Graph(Graph & g_arg): coordinateFormat(g_arg.GetCOO(), g_arg.GetEdgesLeftToCover())
+Graph::Graph(Graph & g_arg)
 {        
-    if (!coordinateFormat.getIsSorted())
-        // vlog(e)
-        coordinateFormat.sortMyself();
-
-    compressedSparseMatrix = new CSR(coordinateFormat);             
-    std::cout << coordinateFormat.toString();
+    /* This should use the edgesLeftToCover constructor of COO */
+    compressedSparseMatrix = new CSR(*(g_arg.GetCSR()), g_arg.GetEdgesLeftToCover());             
     std::cout << compressedSparseMatrix->toString();
     neighBits = new NeighborsBinaryDataStructure(compressedSparseMatrix);
     degCont = new DegreeController(compressedSparseMatrix->numberOfRows, neighBits);
@@ -50,7 +48,7 @@ void Graph::UpdateNeighBits(){
 
 }
 
-COO & Graph::GetCOO(){
+COO * Graph::GetCOO(){
     return coordinateFormat;
 }
 

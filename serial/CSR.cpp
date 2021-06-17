@@ -27,6 +27,22 @@ CSR::CSR(const CSR & c):SparseMatrix(c){
     values = c.values;    
 }
 
+CSR::CSR(const CSR & c, int edgesLeftToCover):SparseMatrix(c, edgesLeftToCover){
+    row_offsets.reserve(c.numberOfRows + 1);
+    column_indices.reserve(edgesLeftToCover);
+    int count = 0;
+    row_offsets.push_back(count);
+    for (int i = 0; i < c.numberOfRows + 1; ++i){
+        for (int j = c.row_offsets[i]; j < c.row_offsets[i+1]; ++j)
+            if (c.values[j] != 0){
+                ++count; 
+                column_indices.push_back(c.column_indices[j]);
+                values.push_back(c.values[j]);
+            }
+        row_offsets.push_back(count);
+    }
+}
+
 void CSR::removeVertexEdges(int u){
     int v, i, j;
     /* i - out going vertices of u */

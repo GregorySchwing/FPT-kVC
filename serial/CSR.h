@@ -10,6 +10,7 @@ class CSR : public SparseMatrix {
     public:
         CSR(const COO & c);
         CSR(const CSR & c);
+        CSR(const CSR & c, int edgesLeftToCover);
 
         std::string toString();
         void removeVertexEdges(int u);

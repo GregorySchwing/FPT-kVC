@@ -19,13 +19,13 @@ class Graph {
 
         int GetDegree(int v);
         CSR * GetCSR();
-        COO & GetCOO();
+        COO * GetCOO();
         void UpdateNeighBits();
         int edgesLeftToCover;
         std::set<std::pair<int,int>> edgesCoveredByKernelization;
 
     private:
-        COO coordinateFormat;
+        COO * coordinateFormat;
         CSR * compressedSparseMatrix;
         DegreeController * degCont;
         NeighborsBinaryDataStructure * neighBits;
