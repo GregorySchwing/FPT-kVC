@@ -3,6 +3,9 @@
 
 #include <list>
 #include <vector>
+#include <map>
+#include <set>
+
 #include "CSR.h"
 #include "NeighborsBinaryDataStructure.h"
 #include  <random>
@@ -25,19 +28,21 @@ class DegreeController{
     private:
         std::list<DegreeNode> degreeController;
         std::vector< std::vector<int> > degContVecOfVecs;
+        std::map< int, std::vector<int> > degMap;
+        std::set<int> mapKeys;
+
         void AllocateVecofVecs(int numVerts);
         void CSR2VecofVecs(CSR * compressedSparseMatrix);
         void CreateDegreeController(NeighborsBinaryDataStructure * neighBits);
         void UpdateDegreeController(NeighborsBinaryDataStructure * neighBits);
         int numVerts;
         CSR * compressedSparseMatrixRef;
-        //void CSR2VecofVecs(CSR * compressedSparseMatrix);
 
         template<typename RandomGenerator>
         int select_random_vertex(std::vector<int>::iterator start, std::vector<int>::iterator end, RandomGenerator& g);
         template<typename RandomGenerator>
-        int select_random_degree(std::vector<std::vector<int>>::iterator start, std::vector<std::vector<int>>::iterator end, RandomGenerator& g);
-        int select_random_degree(std::vector<std::vector<int>>::iterator start, std::vector<std::vector<int>>::iterator end);
+        int select_random_degree(RandomGenerator& g);
+        int select_random_degree();
 
 };
 #endif

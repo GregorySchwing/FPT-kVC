@@ -9,8 +9,6 @@
 #include "NeighborsBinaryDataStructure.h"
 #include <set>
 
-#include "RandomSampler.h"
-
 class Graph {
     public:
         Graph(int vertexCount);
@@ -20,6 +18,8 @@ class Graph {
         int GetEdgesLeftToCover();
         int GetRandomVertex();
         int GetDegree(int v);
+        int GetOutgoingEdge(int v, int outEdgeIndex);
+        int GetRandomOutgoingEdge(int v, std::vector<int> & path);
         CSR * GetCSR();
         COO * GetCOO();
         void UpdateNeighBits();
@@ -27,7 +27,6 @@ class Graph {
         std::set<std::pair<int,int>> edgesCoveredByKernelization;
 
     private:
-        RandomSampler rs;
         COO * coordinateFormat;
         CSR * compressedSparseMatrix;
         DegreeController * degCont;

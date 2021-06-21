@@ -20,6 +20,8 @@ void DegreeController::CSR2VecofVecs(CSR * compressedSparseMatrix){
     // Simple degree arimetic for the first half of the vertices
     for (int i = 0; i < compressedSparseMatrix->numberOfRows; ++i){
         degContVecOfVecs[compressedSparseMatrix->row_offsets[i+1] - compressedSparseMatrix->row_offsets[i]].push_back(i);
+        degMap[compressedSparseMatrix->row_offsets[i+1] - compressedSparseMatrix->row_offsets[i]].push_back(i);
+        mapKeys.insert(compressedSparseMatrix->row_offsets[i+1] - compressedSparseMatrix->row_offsets[i]);
     }
 }
 
@@ -62,7 +64,7 @@ void DegreeController::UpdateDegreeController(NeighborsBinaryDataStructure * nei
 
 int DegreeController::GetRandomVertex(){
     int r;
-    return r = select_random_degree(degContVecOfVecs.begin(), degContVecOfVecs.end());
+    return r = select_random_degree();
 }
 
 template<typename RandomGenerator>
@@ -73,16 +75,21 @@ int DegreeController::select_random_vertex(std::vector<int>::iterator start, std
 }
 
 template<typename RandomGenerator>
-int DegreeController::select_random_degree(std::vector<std::vector<int>>::iterator start, std::vector<std::vector<int>>::iterator end, RandomGenerator& g) {
-    std::uniform_int_distribution<> dis(0, std::distance(start, end) - 1);
+int DegreeController::select_random_degree(RandomGenerator& g) {
+    std::cout << "Map size " << mapKeys.size() << std::endl;
+
+    std::uniform_int_distribution<> dis(0, mapKeys.size() - 1);
+    auto start = mapKeys.begin();
     std::advance(start, dis(g));
-    return select_random_vertex(start->begin(), start->end(), g);
+    std::cout << "Deg " << *start << std::endl;
+    return *start;
+    //return select_random_vertex(degMap[*start].begin(), degMap[*start].end(), g);
 }
 
-int DegreeController::select_random_degree(std::vector<std::vector<int>>::iterator start, std::vector<std::vector<int>>::iterator end) {
+int DegreeController::select_random_degree() {
     static std::random_device rd;
     static std::mt19937 gen(rd());
-    return select_random_degree(start, end, gen);
+    return select_random_degree(gen);
 }
 
 
