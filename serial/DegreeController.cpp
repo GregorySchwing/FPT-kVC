@@ -60,6 +60,31 @@ void DegreeController::UpdateDegreeController(NeighborsBinaryDataStructure * nei
         degContVecOfVecs[neighBits->GetDegree(i)].push_back(i);
 }
 
+int DegreeController::GetRandomVertex(){
+    int r;
+    return r = select_random_degree(degContVecOfVecs.begin(), degContVecOfVecs.end());
+}
+
+template<typename RandomGenerator>
+int DegreeController::select_random_vertex(std::vector<int>::iterator start, std::vector<int>::iterator end, RandomGenerator& g) {
+    std::uniform_int_distribution<> dis(0, std::distance(start, end) - 1);
+    std::advance(start, dis(g));
+    return *start;
+}
+
+template<typename RandomGenerator>
+int DegreeController::select_random_degree(std::vector<std::vector<int>>::iterator start, std::vector<std::vector<int>>::iterator end, RandomGenerator& g) {
+    std::uniform_int_distribution<> dis(0, std::distance(start, end) - 1);
+    std::advance(start, dis(g));
+    return select_random_vertex(start->begin(), start->end(), g);
+}
+
+int DegreeController::select_random_degree(std::vector<std::vector<int>>::iterator start, std::vector<std::vector<int>>::iterator end) {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    return select_random_degree(start, end, gen);
+}
+
 
 
 

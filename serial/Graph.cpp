@@ -41,12 +41,16 @@ Graph::Graph(Graph & g_arg)
     degCont = new DegreeController(compressedSparseMatrix->numberOfRows, neighBits);
     std::cout << degCont->toString();
     edgesLeftToCover = compressedSparseMatrix->column_indices.size()/2;
-    
 }
 
 void Graph::UpdateNeighBits(){
 
 }
+
+int Graph::GetRandomVertex(){
+    return degCont->GetRandomVertex();
+}
+
 
 COO * Graph::GetCOO(){
     return coordinateFormat;

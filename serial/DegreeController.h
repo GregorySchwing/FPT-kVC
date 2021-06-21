@@ -5,6 +5,8 @@
 #include <vector>
 #include "CSR.h"
 #include "NeighborsBinaryDataStructure.h"
+#include  <random>
+#include  <iterator>
 
 class DegreeController{
     
@@ -18,6 +20,7 @@ class DegreeController{
 
         std::string toString();
         std::vector< std::vector<int> > & GetTempDegCont();
+        int GetRandomVertex();
 
     private:
         std::list<DegreeNode> degreeController;
@@ -29,6 +32,12 @@ class DegreeController{
         int numVerts;
         CSR * compressedSparseMatrixRef;
         //void CSR2VecofVecs(CSR * compressedSparseMatrix);
+
+        template<typename RandomGenerator>
+        int select_random_vertex(std::vector<int>::iterator start, std::vector<int>::iterator end, RandomGenerator& g);
+        template<typename RandomGenerator>
+        int select_random_degree(std::vector<std::vector<int>>::iterator start, std::vector<std::vector<int>>::iterator end, RandomGenerator& g);
+        int select_random_degree(std::vector<std::vector<int>>::iterator start, std::vector<std::vector<int>>::iterator end);
 
 };
 #endif

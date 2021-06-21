@@ -4,6 +4,8 @@
 #include "Graph.h"
 #include <iostream>
 
+/* This class applies the kernelization used in Cheetham. */
+
 class SequentialKernelization {
     public:
         SequentialKernelization(Graph & g_arg, int k_arg);

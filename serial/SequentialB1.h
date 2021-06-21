@@ -10,18 +10,12 @@
 class SequentialB1 {
 public:
     SequentialB1(   Graph & g_arg, 
-                    SequentialKernelization & sk_arg, 
-                    int k_arg, 
                     int k_prime_arg);
 private:
-    /* Indicates whether at a given node the vertex v or the neighbours of v
-    are included in the cover */
-    bool * boundedSearchTreeChoiceIndicator; 
-    int * verticesEdgesCovered; 
+    void DFS(std::vector<int> & path, int rootVertex);
+    SequentialB1 * parent;
     Graph & g;
-    int k;
     int k_prime;
-    SequentialKernelization & sk;
 };
 
 #endif
