@@ -3,8 +3,8 @@
 #include "serial/CSR.h"
 #include "serial/DCSR.h"
 #include "serial/SequentialKernelization.h"
-
 #include "serial/SequentialBuss.h"
+#include "serial/SequentialB1.h"
 
 //#include "gpu/COO.cuh"
 
@@ -23,7 +23,8 @@ int main(int argc, char *argv[])
 
     /* Create Induced Subgraph */
     Graph gPrime(g);
-    
+    SequentialB1 sb1(gPrime, sk.GetKPrime());
+
     //SequentialBuss sb(g, k, sk.GetKPrime());
     //sb.PrintVCSets();
 

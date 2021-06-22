@@ -13,7 +13,7 @@ public:
                     int k_prime_arg);
 private:
     /* DFS of maximum length 3. No simple cycles u -> v -> u */
-    void DFS(std::vector<int> & path, int rootVertex, int & counter);
+    void DFS(std::vector<int> & path, int rootVertex);
     SequentialB1 * parent;
     Graph & g;
     int k_prime;
