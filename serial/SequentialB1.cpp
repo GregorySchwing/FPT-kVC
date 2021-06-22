@@ -9,7 +9,7 @@ SequentialB1::SequentialB1( Graph & g_arg,
     int randomVertex = g.GetRandomVertex();
     std::cout << randomVertex << " ";
 
-    //DFS(path, randomVertex, counter);
+    DFS(path, randomVertex, counter);
     for (auto & v : path)
         std::cout << v << " ";
     std::cout << std::endl;

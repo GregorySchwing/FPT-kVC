@@ -71,6 +71,7 @@ template<typename RandomGenerator>
 int DegreeController::select_random_vertex(std::vector<int>::iterator start, std::vector<int>::iterator end, RandomGenerator& g) {
     std::uniform_int_distribution<> dis(0, std::distance(start, end) - 1);
     std::advance(start, dis(g));
+    std::cout << "random vertex " << *start << std::endl;
     return *start;
 }
 
@@ -82,8 +83,8 @@ int DegreeController::select_random_degree(RandomGenerator& g) {
     auto start = mapKeys.begin();
     std::advance(start, dis(g));
     std::cout << "Deg " << *start << std::endl;
-    return *start;
-    //return select_random_vertex(degMap[*start].begin(), degMap[*start].end(), g);
+    //return *start;
+    return select_random_vertex(degMap[*start].begin(), degMap[*start].end(), g);
 }
 
 int DegreeController::select_random_degree() {

@@ -89,9 +89,9 @@ int Graph::GetRandomOutgoingEdge(int v, std::vector<int> & path){
     std::mt19937 g(rd());
     std::shuffle(outgoingEdges.begin(), outgoingEdges.end(), g);
     std::vector<int>::iterator it = outgoingEdges.begin();
-    
+
     while (it != outgoingEdges.end()){
-        if (*it == path.back())
+        if (path.size() > 0 && *it == path.back())
             ++it;
         else
             return *it;
