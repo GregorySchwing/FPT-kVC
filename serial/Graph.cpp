@@ -91,9 +91,13 @@ int Graph::GetRandomOutgoingEdge(int v, std::vector<int> & path){
     std::vector<int>::iterator it = outgoingEdges.begin();
 
     while (it != outgoingEdges.end()){
-        if (path.size() > 0 && *it == path.back())
+        /* To prevent simple paths, must at least have 2 entries, 
+        assuming there are no self edges, since the first entry, v,
+        is randomly chosen and the second entry is a random out edge */
+        if (path.size() > 1 && *it == path.rbegin()[1]) {
+            //std::cout << "Wouldve been a simple path, skipping " << *it << std::endl;
             ++it;
-        else
+        } else
             return *it;
     }
 

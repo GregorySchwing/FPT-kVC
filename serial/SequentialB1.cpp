@@ -22,12 +22,11 @@ void SequentialB1::DFS(std::vector<int> & path, int rootVertex, int & counter){
         return;
 
     int randomOutgoingEdge = g.GetRandomOutgoingEdge(rootVertex, path);
-
     if (randomOutgoingEdge < 0) {
         return;
     } else {
         path.push_back(randomOutgoingEdge);
         ++counter;
-        DFS(path, randomOutgoingEdge, counter);
+        return DFS(path, randomOutgoingEdge, counter);
     }
 }
