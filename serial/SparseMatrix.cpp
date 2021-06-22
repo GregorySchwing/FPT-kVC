@@ -12,3 +12,7 @@ SparseMatrix::SparseMatrix(const SparseMatrix & s, int edgesLeftToCover):size(ed
     values.reserve(edgesLeftToCover);
     size = edgesLeftToCover;
 }
+
+/* No optimization by reserving vectors, size and values must be set */
+SparseMatrix::SparseMatrix(){}
+

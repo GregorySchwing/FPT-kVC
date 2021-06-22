@@ -54,7 +54,7 @@ Graph::Graph(Graph & g_arg)
 Graph::Graph(Graph & g_arg, std::vector<int> & verticesToDelete)
 {        
     /* This should use the edgesLeftToCover constructor of COO */
-    compressedSparseMatrix = new CSR(*(g_arg.GetCSR()), g_arg.GetEdgesLeftToCover());             
+    compressedSparseMatrix = new CSR(*(g_arg.GetCSR()), verticesToDelete);             
     std::cout << compressedSparseMatrix->toString();
     neighBits = new NeighborsBinaryDataStructure(compressedSparseMatrix);
     /* If we use the Asymetric */

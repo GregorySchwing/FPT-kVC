@@ -12,6 +12,8 @@ class SparseMatrix {
         SparseMatrix(int numberOfRows, int numberOfColumns);
         /* Copy Constructor */
         SparseMatrix(const SparseMatrix & s);
+        /* No optimization by reserving vectors, size and values must be set */
+        explicit SparseMatrix();
         /* SpRef */
         SparseMatrix(const SparseMatrix & s, int edgesLeftToCover);
         virtual std::string toString() = 0;

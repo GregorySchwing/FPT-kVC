@@ -45,14 +45,13 @@ CSR::CSR(const CSR & c, int edgesLeftToCover):SparseMatrix(c, edgesLeftToCover){
 }
 
 /* For branch owned G'' induced subgraph */
-CSR::CSR(const CSR & c, std::vector<int> & verticesToDelete, std::vector<int> valuesToModify){
+/* Currently not reserving the column_indices and values vectors */
+CSR::CSR(const CSR & c, std::vector<int> & verticesToDelete){
+    std::vector<int> valuesToModify = c.values;
     row_offsets.reserve(c.numberOfRows + 1);
     for (auto & v: verticesToDelete)
         removeVertexEdges(v, valuesToModify);
 
-        
-    
-    column_indices.reserve(edgesLeftToCover);
     int count = 0;
     row_offsets.push_back(count);
     for (int i = 0; i < c.numberOfRows + 1; ++i){
