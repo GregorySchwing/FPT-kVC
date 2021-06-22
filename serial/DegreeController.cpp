@@ -6,8 +6,7 @@ DegreeController::DegreeController(int numVerts_arg, NeighborsBinaryDataStructur
 }
 
 DegreeController::DegreeController(int numVerts_arg, CSR * compressedSparseMatrix) : 
-numVerts(numVerts_arg), 
-compressedSparseMatrixRef(compressedSparseMatrix)
+numVerts(numVerts_arg)
 {
     AllocateVecofVecs(numVerts);
     CSR2VecofVecs(compressedSparseMatrix);

@@ -14,6 +14,7 @@ public:
 private:
     /* DFS of maximum length 3. No simple cycles u -> v -> u */
     void DFS(std::vector<int> & path, int rootVertex);
+    int classifyPath(std::vector<int> & path);
     SequentialB1 * parent;
     Graph & g;
     int k_prime;

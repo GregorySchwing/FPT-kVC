@@ -26,3 +26,14 @@ void SequentialB1::DFS(std::vector<int> & path, int rootVertex){
         return DFS(path, randomOutgoingEdge);
     }
 }
+
+int SequentialB1::classifyPath(std::vector<int> & path){
+    if (path.size()==2)
+        return 3;
+    else if (path.size()==3)
+        return 2;
+    else if (path.front() == path.back())
+        return 1;
+    else
+        return 0;
+}

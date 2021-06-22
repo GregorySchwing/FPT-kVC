@@ -26,7 +26,7 @@ class DegreeController{
         int GetRandomVertex();
 
     private:
-        std::list<DegreeNode> degreeController;
+        //std::list<DegreeNode> degreeController;
         std::vector< std::vector<int> > degContVecOfVecs;
         std::map< int, std::vector<int> > degMap;
         std::set<int> mapKeys;
@@ -36,7 +36,6 @@ class DegreeController{
         void CreateDegreeController(NeighborsBinaryDataStructure * neighBits);
         void UpdateDegreeController(NeighborsBinaryDataStructure * neighBits);
         int numVerts;
-        CSR * compressedSparseMatrixRef;
 
         template<typename RandomGenerator>
         int select_random_vertex(std::vector<int>::iterator start, std::vector<int>::iterator end, RandomGenerator& g);
