@@ -13,6 +13,7 @@ class Graph {
     public:
         Graph(int vertexCount);
         Graph(Graph & g_arg);
+        Graph(Graph & g_arg, std::vector<int> & verticesToDelete);
 
         DegreeController * GetDegreeController();
         int GetEdgesLeftToCover();

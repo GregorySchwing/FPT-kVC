@@ -35,7 +35,7 @@ Graph::Graph(int vertexCount)
     edgesLeftToCover = compressedSparseMatrix->column_indices.size()/2;
 }
 
-/* Constructor to make induced subgraph G' */
+/* Constructor to make induced subgraph G' post-kernelization */
 Graph::Graph(Graph & g_arg)
 {        
     /* This should use the edgesLeftToCover constructor of COO */
@@ -50,7 +50,7 @@ Graph::Graph(Graph & g_arg)
     edgesLeftToCover = compressedSparseMatrix->column_indices.size()/2;
 }
 
-/* Constructor to make induced subgraph G' */
+/* Constructor to make induced subgraph G'' for each branch */
 Graph::Graph(Graph & g_arg, std::vector<int> & verticesToDelete)
 {        
     /* This should use the edgesLeftToCover constructor of COO */

@@ -27,6 +27,7 @@ CSR::CSR(const CSR & c):SparseMatrix(c){
     values = c.values;    
 }
 
+/* For post-kernelization G' induced subgraph */
 CSR::CSR(const CSR & c, int edgesLeftToCover):SparseMatrix(c, edgesLeftToCover){
     row_offsets.reserve(c.numberOfRows + 1);
     column_indices.reserve(edgesLeftToCover);
@@ -38,6 +39,28 @@ CSR::CSR(const CSR & c, int edgesLeftToCover):SparseMatrix(c, edgesLeftToCover){
                 ++count; 
                 column_indices.push_back(c.column_indices[j]);
                 values.push_back(c.values[j]);
+            }
+        row_offsets.push_back(count);
+    }
+}
+
+/* For branch owned G'' induced subgraph */
+CSR::CSR(const CSR & c, std::vector<int> & verticesToDelete, std::vector<int> valuesToModify){
+    row_offsets.reserve(c.numberOfRows + 1);
+    for (auto & v: verticesToDelete)
+        removeVertexEdges(v, valuesToModify);
+
+        
+    
+    column_indices.reserve(edgesLeftToCover);
+    int count = 0;
+    row_offsets.push_back(count);
+    for (int i = 0; i < c.numberOfRows + 1; ++i){
+        for (int j = c.row_offsets[i]; j < c.row_offsets[i+1]; ++j)
+            if (valuesToModify[j] != 0){
+                ++count; 
+                column_indices.push_back(c.column_indices[j]);
+                values.push_back(valuesToModify[j]);
             }
         row_offsets.push_back(count);
     }
@@ -64,6 +87,27 @@ void CSR::removeVertexEdges(int u){
     }
 }
 
+
+void CSR::removeVertexEdges(int u, std::vector<int> & valuesToModify){
+    int v, i, j;
+    /* i - out going vertices of u */
+    for (i = 0; i < row_offsets[u+1]-row_offsets[u]; ++i){
+        /* Get neighbor vertex */
+        v = column_indices[row_offsets[u]+i];
+        /* Set (u,v) to 0 */
+        valuesToModify[row_offsets[u] + i] = 0;
+
+        j = 0;
+        /* Find u in v's list of edges */
+        /* j - out going vertices of v */
+
+        while (column_indices[row_offsets[v] + j] != u){
+            ++j;
+        }
+        /* Set (v,u) to 0 */
+        valuesToModify[row_offsets[v] + j] = 0;
+    }
+}
 
 void CSR::insertElements(const SparseMatrix & s){
 
