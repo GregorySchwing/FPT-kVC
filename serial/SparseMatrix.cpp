@@ -14,5 +14,7 @@ SparseMatrix::SparseMatrix(const SparseMatrix & s, int edgesLeftToCover):size(ed
 }
 
 /* No optimization by reserving vectors, size and values must be set */
-SparseMatrix::SparseMatrix(){}
+SparseMatrix::SparseMatrix(int numberOfRows):numberOfRows(numberOfRows){
+
+}
 

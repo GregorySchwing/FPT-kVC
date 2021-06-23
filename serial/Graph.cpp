@@ -53,8 +53,9 @@ Graph::Graph(Graph & g_arg)
 /* Constructor to make induced subgraph G'' for each branch */
 Graph::Graph(Graph & g_arg, std::vector<int> & verticesToDelete)
 {        
-    /* This should use the edgesLeftToCover constructor of COO */
-    compressedSparseMatrix = new CSR(*(g_arg.GetCSR()), verticesToDelete);             
+    std::cout << "Called the delete verts constructor" << std::endl;
+    compressedSparseMatrix = new CSR(*(g_arg.GetCSR()), verticesToDelete);
+    std::cout << "Built the CSR" << std::endl;
     std::cout << compressedSparseMatrix->toString();
     neighBits = new NeighborsBinaryDataStructure(compressedSparseMatrix);
     /* If we use the Asymetric */
