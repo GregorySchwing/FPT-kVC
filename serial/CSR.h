@@ -18,7 +18,7 @@ class CSR : public SparseMatrix {
 
         std::string toString();
         void removeVertexEdges(int u);
-        void removeVertexEdges(int u, std::vector<int> & valuesToModify);
+        void removeVertexEdges(int u, std::vector<int> & valuesToModify, const CSR & c);
         void insertElements(const SparseMatrix & s);
         const CSR& castSparseMatrix(const SparseMatrix & s);
         std::vector<int> column_indices, row_offsets;

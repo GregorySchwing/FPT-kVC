@@ -49,9 +49,10 @@ CSR::CSR(const CSR & c, int edgesLeftToCover):SparseMatrix(c, edgesLeftToCover){
 CSR::CSR(const CSR & c, std::vector<int> & verticesToDelete):SparseMatrix(c.numberOfRows){
     std::vector<int> valuesToModify = c.values;
     row_offsets.reserve(c.numberOfRows + 1);
-    for (auto & v: verticesToDelete)
-        removeVertexEdges(v, valuesToModify);
-
+    for (auto & v: verticesToDelete){
+        std::cout << "Deleting vertex " << v << "'s edges." << std::endl;
+        removeVertexEdges(v, valuesToModify, c);
+    }
     int count = 0;
     row_offsets.push_back(count);
     for (int i = 0; i < c.numberOfRows + 1; ++i){
@@ -63,6 +64,8 @@ CSR::CSR(const CSR & c, std::vector<int> & verticesToDelete):SparseMatrix(c.numb
             }
         row_offsets.push_back(count);
     }
+
+    std::cout << "values.size(): " << values.size()<< " valuesToModify.size(): " << valuesToModify.size() << std::endl;
 }
 
 void CSR::removeVertexEdges(int u){
@@ -87,24 +90,28 @@ void CSR::removeVertexEdges(int u){
 }
 
 
-void CSR::removeVertexEdges(int u, std::vector<int> & valuesToModify){
+void CSR::removeVertexEdges(int u, std::vector<int> & valuesToModify, const CSR & c){
     int v, i, j;
+    std::cout << "vertex " << u << " has " << c.row_offsets[u+1]-c.row_offsets[u] << "edges." << std::endl;
     /* i - out going vertices of u */
-    for (i = 0; i < row_offsets[u+1]-row_offsets[u]; ++i){
+    for (i = 0; i < c.row_offsets[u+1]-c.row_offsets[u]; ++i){
         /* Get neighbor vertex */
-        v = column_indices[row_offsets[u]+i];
+        v = c.column_indices[c.row_offsets[u]+i];
         /* Set (u,v) to 0 */
-        valuesToModify[row_offsets[u] + i] = 0;
+        std::cout << "Set edge " << c.row_offsets[u] + i << "to 0" << std::endl;
+        valuesToModify[c.row_offsets[u] + i] = 0;
 
         j = 0;
         /* Find u in v's list of edges */
         /* j - out going vertices of v */
 
-        while (column_indices[row_offsets[v] + j] != u){
+        while (c.column_indices[c.row_offsets[v] + j] != u){
             ++j;
         }
         /* Set (v,u) to 0 */
-        valuesToModify[row_offsets[v] + j] = 0;
+        valuesToModify[c.row_offsets[v] + j] = 0;
+        std::cout << "Set edge " << c.row_offsets[v] + j << "to 0" << std::endl;
+
     }
 }
 
