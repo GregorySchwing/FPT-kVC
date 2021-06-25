@@ -1,13 +1,18 @@
 #include "SequentialB1.h"
 
 SequentialB1::SequentialB1( Graph * g_arg, 
+                            std::vector<int> verticesToRemove_arg,
                             int k_prime_arg,
                             SequentialB1 * parent_arg):
                             g(g_arg), 
+                            verticesToRemove(verticesToRemove_arg),
                             k_prime(k_prime_arg), 
-                            parent(parent_arg){
-    if(g->edgesLeftToCover == 0)
+                            parent(parent_arg),
+                            result(false){
+    if(g->edgesLeftToCover == 0){
+        result = true;
         return;
+    }
     std::vector<int> path;
     int randomVertex = g->GetRandomVertex();
     path.push_back(randomVertex);
@@ -29,13 +34,61 @@ SequentialB1::SequentialB1( Graph * g_arg,
     for (int i = 0; i < childrensVertices.size(); ++i){
         if (k_prime - childrensVertices[i].size() >= 0){
             std::cout << "Child " << i << std::endl;
-            children[i] = new SequentialB1(new Graph(*g, childrensVertices[i]), k_prime - childrensVertices[i].size(), this);
+            children[i] = new SequentialB1(new Graph(*g, childrensVertices[i]), childrensVertices[i], k_prime - childrensVertices[i].size(), this);
         } else{
             std::cout << "Child " << i << " is null" << std::endl;
             children[i] = NULL;
         }
     }
 }
+
+void SequentialB1::IterateTreeStructure(SequentialB1 * root){
+    SequentialB1 * next;
+    if(root->GetResult()){
+        std::cout << "Found an answer" << std::endl;
+        std::vector<int> answer;
+        TraverseUpTree(root, answer);
+        for (auto & v : answer)
+            std::cout << v << " ";
+        std::cout << std::endl;
+    }
+    for (int i = 0; i < root->GetNumberChildren(); ++i){
+        next = root->GetChild(i);
+        // If a child would have too many vertices, we just set it NULL
+        if(next != NULL)
+            IterateTreeStructure(next);
+    }
+}
+
+void SequentialB1::TraverseUpTree(SequentialB1 * leaf, std::vector<int> & answer){
+    for (auto & v : leaf->GetVerticesToRemove())
+        answer.push_back(v);
+    if(leaf->GetParent()!=NULL){
+        TraverseUpTree(leaf->GetParent(), answer);
+    }
+}
+
+SequentialB1 * SequentialB1::GetParent(){
+    return parent;
+}
+
+
+int SequentialB1::GetNumberChildren(){
+    return childrensVertices.size();
+}
+
+std::vector<int> SequentialB1::GetVerticesToRemove(){
+    return verticesToRemove;
+}
+
+SequentialB1 * SequentialB1::GetChild(int i){
+    return children[i];
+}
+
+bool SequentialB1::GetResult(){
+    return result;
+}
+
 
 /* DFS of maximum length 3. No simple cycles u -> v -> u */
 void SequentialB1::DFS(std::vector<int> & path, int rootVertex){
