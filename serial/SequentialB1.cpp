@@ -9,10 +9,16 @@ SequentialB1::SequentialB1( Graph * g_arg,
                             k_prime(k_prime_arg), 
                             parent(parent_arg),
                             result(false){
-    if(g->edgesLeftToCover == 0){
+    if (k_prime_arg <= 0 && g->edgesLeftToCover > 0){
+        result = false;
+        return;
+    }
+
+    if(k_prime_arg >= 0 && g->edgesLeftToCover == 0){
         result = true;
         return;
     }
+    
     std::vector<int> path;
     int randomVertex = g->GetRandomVertex();
     path.push_back(randomVertex);
@@ -23,17 +29,17 @@ SequentialB1::SequentialB1( Graph * g_arg,
     int caseNumber = classifyPath(path);
     std::cout << "Case number: " << caseNumber << std::endl;
     createVertexSetsForEachChild(caseNumber, path);
-    std::cout << "Printing Children Verts" << std::endl;
-    for (auto & v : childrensVertices[0])
-        std::cout << v << " ";
-    std::cout << std::endl;
-    std::cout << "Printed Children Verts" << std::endl;
 
     /* Pointers to the children */
     children = new SequentialB1*[childrensVertices.size()];
     for (int i = 0; i < childrensVertices.size(); ++i){
         if (k_prime - childrensVertices[i].size() >= 0){
             std::cout << "Child " << i << std::endl;
+            std::cout << "Printing Children Verts" << std::endl;
+            for (auto & v : childrensVertices[i])
+                std::cout << v << " ";
+            std::cout << std::endl;
+            std::cout << "Printed Children Verts" << std::endl;
             children[i] = new SequentialB1(new Graph(*g, childrensVertices[i]), childrensVertices[i], k_prime - childrensVertices[i].size(), this);
         } else{
             std::cout << "Child " << i << " is null" << std::endl;

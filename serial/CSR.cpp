@@ -33,7 +33,7 @@ CSR::CSR(const CSR & c, int edgesLeftToCover):SparseMatrix(c, edgesLeftToCover){
     column_indices.reserve(edgesLeftToCover);
     int count = 0;
     row_offsets.push_back(count);
-    for (int i = 0; i < c.numberOfRows + 1; ++i){
+    for (int i = 0; i < c.numberOfRows; ++i){
         for (int j = c.row_offsets[i]; j < c.row_offsets[i+1]; ++j)
             if (c.values[j] != 0){
                 ++count; 
@@ -55,7 +55,7 @@ CSR::CSR(const CSR & c, std::vector<int> & verticesToDelete):SparseMatrix(c.numb
     }
     int count = 0;
     row_offsets.push_back(count);
-    for (int i = 0; i < c.numberOfRows + 1; ++i){
+    for (int i = 0; i < c.numberOfRows; ++i){
         for (int j = c.row_offsets[i]; j < c.row_offsets[i+1]; ++j)
             if (valuesToModify[j] != 0){
                 ++count; 
@@ -64,7 +64,7 @@ CSR::CSR(const CSR & c, std::vector<int> & verticesToDelete):SparseMatrix(c.numb
             }
         row_offsets.push_back(count);
     }
-
+    size = column_indices.size();
     std::cout << "values.size(): " << values.size()<< " valuesToModify.size(): " << valuesToModify.size() << std::endl;
 }
 
