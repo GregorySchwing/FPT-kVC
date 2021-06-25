@@ -6,7 +6,8 @@ SequentialB1::SequentialB1( Graph * g_arg,
                             g(g_arg), 
                             k_prime(k_prime_arg), 
                             parent(parent_arg){
-
+    if(g->edgesLeftToCover == 0)
+        return;
     std::vector<int> path;
     int randomVertex = g->GetRandomVertex();
     path.push_back(randomVertex);
@@ -25,13 +26,14 @@ SequentialB1::SequentialB1( Graph * g_arg,
 
     /* Pointers to the children */
     children = new SequentialB1*[childrensVertices.size()];
-    Graph gDP(*g, childrensVertices[0]);
-    ///\children[0] = new SequentialB1(new Graph(*g, childrensVertices[i]), k_prime - childrensVertices[i].size(), this);
     for (int i = 0; i < childrensVertices.size(); ++i){
-        //if (k_prime - childrensVertices[i].size() >= 0)
-            //children[i] = new SequentialB1(new Graph(*g, childrensVertices[i]), k_prime - childrensVertices[i].size(), this);
-        //else
-            //children[i] = NULL;
+        if (k_prime - childrensVertices[i].size() >= 0){
+            std::cout << "Child " << i << std::endl;
+            children[i] = new SequentialB1(new Graph(*g, childrensVertices[i]), k_prime - childrensVertices[i].size(), this);
+        } else{
+            std::cout << "Child " << i << " is null" << std::endl;
+            children[i] = NULL;
+        }
     }
 }
 
