@@ -11,8 +11,10 @@
 int main(int argc, char *argv[])
 {
     /* Num edges, N, N, random entries? */
+    std::cout << "Building G" << std::endl;
     Graph g(10);
     int k = 4;
+    std::cout << "Building PK" << std::endl;
     ParallelKernelization sk(g, k);
 
 }

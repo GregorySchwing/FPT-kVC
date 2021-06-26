@@ -7,6 +7,64 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
         printf(" hello(%d) ", ID);
         printf(" world(%d) \n", ID);
     }
+    numberOfProcessors = omp_get_max_threads();
+    numberOfElements = g.GetCOO()->row_indices.size();
+    blockSize = numberOfElements/numberOfProcessors;
+
+    int max = 0;
+    for (int i = 0; i < numberOfElements; ++i){
+        if (g.GetCOO()->row_indices[i] > max)
+            max = g.GetCOO()->row_indices[i];
+    }
+
+    std::cout << "Max : " << max << std::endl;
+
+    B_row_indices.resize(numberOfElements);
+    B_column_indices.resize(numberOfElements);
+    B_values.resize(numberOfElements);
+
+    C.resize(max+1, 0);
+
+    std::cout << "C" << std::endl;
+    for (auto & v : C)
+        std::cout << v << " ";
+    std::cout << std::endl;
+
+    std::cout << "Before sort" << std::endl;
+    for (auto & v : g.GetCOO()->row_indices)
+        std::cout << v << " ";
+    std::cout << std::endl;
+
+    for (auto & v : g.GetCOO()->column_indices)
+        std::cout << v << " ";
+    std::cout << std::endl;
+
+    for (auto & v : g.GetCOO()->values)
+        std::cout << v << " ";
+    std::cout << std::endl;
+
+    CountingSort(   max,
+                    g.GetCOO()->row_indices,
+                    g.GetCOO()->column_indices,
+                    g.GetCOO()->values,
+                    B_row_indices,
+                    B_column_indices,
+                    B_values,
+                    C
+                );
+
+    std::cout << "After sort" << std::endl;
+    for (int i = 0; i < B_row_indices.size(); ++i)
+        std::cout << B_row_indices[i] << " ";
+    std::cout << std::endl;
+
+    for (int i = 0; i < B_row_indices.size(); ++i)
+        std::cout << B_column_indices[i] << " ";
+    std::cout << std::endl;
+
+    for (int i = 0; i < B_row_indices.size(); ++i)
+        std::cout << B_values[i] << " ";
+    std::cout << std::endl;
     /*
     std::cout << "Build VC" << std::endl;
     noSolutionExists = CardinalityOfSetDegreeGreaterK(g.GetDegreeController());
@@ -25,6 +83,54 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
     noSolutionExists = GPrimeEdgesGreaterKTimesKPrime();
     printf("%s\n", noSolutionExists ? "|G'(E)| > k*k', no solution exists" : "|G'(E)| <= k*k', a solution may exist");
     */            
+}
+
+void ParallelKernelization::CountingSort(int max,
+                        std::vector<int> & A_row_indices,
+                        std::vector<int> & A_column_indices,
+                        std::vector<int> & A_values,
+                        std::vector<int> & B_row_indices_ref,
+                        std::vector<int> & B_column_indices_ref,
+                        std::vector<int> & B_values_ref,
+                        std::vector<int> & C_ref)
+{
+    for (int i = 0; i < numberOfElements; ++i){
+        ++C_ref[A_row_indices[i]];
+    }
+
+    //std::cout << "C[i] now contains the number elements equal to i." << std::endl;
+    for (int i = 1; i < max+1; ++i){
+        C_ref[i] = C_ref[i] + C_ref[i-1];
+    }
+
+    //std::cout << "C[i] now contains the number of elements less than or equal to i." << std::endl;
+
+    /* C_ref[A_row_indices[i]]]-1 , because the values of C_ref are from [1, n] -> [0,n)*/
+    for (int i = B_row_indices.size(); i > 0; --i){
+        B_row_indices_ref[C_ref[A_row_indices[i]]-1] = A_row_indices[i];
+        B_column_indices_ref[C_ref[A_row_indices[i]]-1] = A_column_indices[i];
+        B_values_ref[C_ref[A_row_indices[i]]-1] = A_values[i];
+        --C_ref[A_row_indices[i]];
+    }
+}
+
+void ParallelKernelization::RadixSort(){
+
+}
+
+int ParallelKernelization::GetStartingIndexInA(int processorID){
+    return processorID*blockSize;
+}
+
+int ParallelKernelization::GetEndingIndexInA(int processorID){
+    if (processorID == numberOfProcessors)
+        return numberOfElements;
+    else
+        return (processorID+1)*blockSize;
+}
+
+int ParallelKernelization::GetBlockSize(){
+    return blockSize;
 }
 
 bool ParallelKernelization::CardinalityOfSetDegreeGreaterK(DegreeController * degCont){

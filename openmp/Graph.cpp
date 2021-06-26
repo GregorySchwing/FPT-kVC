@@ -21,7 +21,7 @@ Graph::Graph(int vertexCount)
 
     coordinateFormat->size = coordinateFormat->column_indices.size();
     // vlog(e)
-    edgesLeftToCover = compressedSparseMatrix->column_indices.size()/2;
+    //edgesLeftToCover = compressedSparseMatrix->column_indices.size()/2;
 
     std::cout << coordinateFormat->toString();
 }
