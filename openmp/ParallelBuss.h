@@ -1,5 +1,5 @@
-#ifndef SEQUENTIALBUSS_H
-#define SEQUENTIALBUSS_H
+#ifndef PARALLELBUSS_H
+#define PARALLELBUSS_H
 
 /* Vertex Cover Using Buss’ algorithm */
 #include "Graph.h"
@@ -9,10 +9,10 @@
 #include <algorithm>
 #include <string>
 /* For : http://rosettacode.org/wiki/Combinations#C.2B.2B */
-class SequentialBuss {
+class ParallelBuss {
     public:
-        SequentialBuss(Graph & g_arg, int k_arg, int k_prime_arg);
-        ~SequentialBuss();
+        ParallelBuss(Graph & g_arg, int k_arg, int k_prime_arg);
+        ~ParallelBuss();
         void PrintVCSets();
         /* Thanks to our asymmetric CSR, the edges in these sets will be disjoint from
             the edges covered by the kernelization step. */

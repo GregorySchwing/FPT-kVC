@@ -1,7 +1,7 @@
-#include "SequentialBuss.h"
+#include "ParallelBuss.h"
 
 /* Vertex Cover Using Buss’ algorithm */
-SequentialBuss::SequentialBuss(Graph & g_arg, int k_arg, int k_prime_arg):g(g_arg), k(k_arg), k_prime(k_prime_arg){
+ParallelBuss::ParallelBuss(Graph & g_arg, int k_arg, int k_prime_arg):g(g_arg), k(k_arg), k_prime(k_prime_arg){
 
     /* G(V) - Verts with degree > k = GPrimeVertices <= 2k^2 */
     SetGPrimeVertices();
@@ -23,12 +23,12 @@ SequentialBuss::SequentialBuss(Graph & g_arg, int k_arg, int k_prime_arg):g(g_ar
     //PrintEdgeSets();
     UnionKernelEdgesAndBFSEdges();
 }
-SequentialBuss::~SequentialBuss(){
+ParallelBuss::~ParallelBuss(){
     delete[] results;
     delete[] combinations;
 }
 
-void SequentialBuss::SetGPrimeVertices(){
+void ParallelBuss::SetGPrimeVertices(){
     std::vector< std::vector<int> > & tempDegCont = (g.GetDegreeController())->GetTempDegCont();
     std::vector< std::vector<int> >::const_iterator it = tempDegCont.cbegin();
     std::cout << "G'(V) = {";
@@ -41,7 +41,7 @@ void SequentialBuss::SetGPrimeVertices(){
     }
     std::cout << "}";
 }
-void SequentialBuss::GenerateEdgeSets(){
+void ParallelBuss::GenerateEdgeSets(){
     //std::cout << "|G'(V)| " << verticesOfGPrime.size() << " k_prime " << k_prime << " |G'(V)| Choose k_prime " << NumberOfGPrimeVerticesChooseKPrime << std::endl;
     /* Iterate through all k_prime-combinations of vertices */
     int u,v;
@@ -60,7 +60,7 @@ void SequentialBuss::GenerateEdgeSets(){
     }
 }
 
-void SequentialBuss::PrintEdgeSets(){
+void ParallelBuss::PrintEdgeSets(){
     for (int x = 0; x < NumberOfGPrimeVerticesChooseKPrime; ++x){
         for (std::set<std::pair<int,int>>::iterator it = vectorOfSetsOfEdgesCoveredByBuss[x].begin();
             it != vectorOfSetsOfEdgesCoveredByBuss[x].end();
@@ -71,7 +71,7 @@ void SequentialBuss::PrintEdgeSets(){
     }
 }
 
-void SequentialBuss::UnionKernelEdgesAndBFSEdges(){
+void ParallelBuss::UnionKernelEdgesAndBFSEdges(){
     int totalEdgeCount = g.GetCSR()->column_indices.size()/2;
     for (int x = 0; x < NumberOfGPrimeVerticesChooseKPrime; ++x){
         vectorOfSetsOfEdgesCoveredByBuss[x].insert(g.edgesCoveredByKernelization.begin(), g.edgesCoveredByKernelization.end());
@@ -82,7 +82,7 @@ void SequentialBuss::UnionKernelEdgesAndBFSEdges(){
     }
 }
 
-void SequentialBuss::PrintVCSets(){
+void ParallelBuss::PrintVCSets(){
     bool anyAnswerExists = false;
     int VCCount = 0;
     for (int x = 0; x < NumberOfGPrimeVerticesChooseKPrime; ++x){
@@ -103,7 +103,7 @@ void SequentialBuss::PrintVCSets(){
 
 
 /* http://rosettacode.org/wiki/Combinations#C.2B.2B */
-void SequentialBuss::PopulateCombinations(int * combinations_arg, std::vector<int> & gPrimeVertices, int k_prime){
+void ParallelBuss::PopulateCombinations(int * combinations_arg, std::vector<int> & gPrimeVertices, int k_prime){
     std::string bitmask(k_prime, 1); // k_prime leading 1's
     bitmask.resize(gPrimeVertices.size(), 0); // N-K trailing 0's
     int rowI = 0;
@@ -128,7 +128,7 @@ void SequentialBuss::PopulateCombinations(int * combinations_arg, std::vector<in
 }
 
 /* https://stackoverflow.com/questions/1505675/power-of-an-integer-in-c */
-int SequentialBuss::myPow(int x, unsigned int p)
+int ParallelBuss::myPow(int x, unsigned int p)
 {
   if (p == 0) return 1;
   if (p == 1) return x;
@@ -138,7 +138,7 @@ int SequentialBuss::myPow(int x, unsigned int p)
     else return x * tmp * tmp;
 }
 
-int SequentialBuss::choose(int n, int k){
+int ParallelBuss::choose(int n, int k){
     if (k == 0) return 1;
     return (n * choose(n - 1, k - 1)) / k;
 }

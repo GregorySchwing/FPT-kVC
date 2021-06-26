@@ -21,18 +21,9 @@ Graph::Graph(int vertexCount)
 
     coordinateFormat->size = coordinateFormat->column_indices.size();
     // vlog(e)
-    coordinateFormat->sortMyself();
-    compressedSparseMatrix = new CSR(*coordinateFormat);             
-    std::cout << coordinateFormat->toString();
-    std::cout << compressedSparseMatrix->toString();
-    neighBits = new NeighborsBinaryDataStructure(compressedSparseMatrix);
-    /* If we use the Asymetric */
-    //degCont = new DegreeController(compressedSparseMatrix->numberOfRows, neighBits);
-    /* If we use the Symetric */
-    degCont = new DegreeController(compressedSparseMatrix->numberOfRows, compressedSparseMatrix);
-    
-    std::cout << degCont->toString();
     edgesLeftToCover = compressedSparseMatrix->column_indices.size()/2;
+
+    std::cout << coordinateFormat->toString();
 }
 
 /* Constructor to make induced subgraph G' post-kernelization */

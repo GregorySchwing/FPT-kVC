@@ -1,25 +1,25 @@
 
-#ifndef Sequential_B1_H
-#define Sequential_B1_H
+#ifndef Parallel_B1_H
+#define Parallel_B1_H
 
 #include "Graph.h"
-#include "SequentialKernelization.h"
+#include "ParallelKernelization.h"
 #include <iostream>
 
 
-class SequentialB1 {
+class ParallelB1 {
 public:
-    SequentialB1(   Graph * g_arg, 
+    ParallelB1(   Graph * g_arg, 
                     std::vector<int> verticesToRemove,
                     int k_prime_arg,
-                    SequentialB1 * parent_arg = NULL);
+                    ParallelB1 * parent_arg = NULL);
 
-    void IterateTreeStructure(SequentialB1 * root);
-    void TraverseUpTree(SequentialB1 * leaf, std::vector<int> & answer);
+    void IterateTreeStructure(ParallelB1 * root);
+    void TraverseUpTree(ParallelB1 * leaf, std::vector<int> & answer);
     int GetNumberChildren();
     std::vector<int> GetVerticesToRemove();
-    SequentialB1 * GetChild(int i);
-    SequentialB1 * GetParent();
+    ParallelB1 * GetChild(int i);
+    ParallelB1 * GetParent();
     bool GetResult();
 
 
@@ -32,7 +32,7 @@ private:
     int k_prime;
     std::vector<int> verticesToRemove;
     std::vector< std::vector<int> > childrensVertices;
-    SequentialB1 * parent, ** children;
+    ParallelB1 * parent, ** children;
     bool result;
 
 };

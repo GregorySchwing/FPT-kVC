@@ -1,9 +1,9 @@
-#include "SequentialB1.h"
+#include "ParallelB1.h"
 
-SequentialB1::SequentialB1( Graph * g_arg, 
+ParallelB1::ParallelB1( Graph * g_arg, 
                             std::vector<int> verticesToRemove_arg,
                             int k_prime_arg,
-                            SequentialB1 * parent_arg):
+                            ParallelB1 * parent_arg):
                             g(g_arg), 
                             verticesToRemove(verticesToRemove_arg),
                             k_prime(k_prime_arg), 
@@ -31,7 +31,7 @@ SequentialB1::SequentialB1( Graph * g_arg,
     createVertexSetsForEachChild(caseNumber, path);
 
     /* Pointers to the children */
-    children = new SequentialB1*[childrensVertices.size()];
+    children = new ParallelB1*[childrensVertices.size()];
     for (int i = 0; i < childrensVertices.size(); ++i){
         if (k_prime - childrensVertices[i].size() >= 0){
             std::cout << "Child " << i << std::endl;
@@ -40,7 +40,7 @@ SequentialB1::SequentialB1( Graph * g_arg,
                 std::cout << v << " ";
             std::cout << std::endl;
             std::cout << "Printed Children Verts" << std::endl;
-            children[i] = new SequentialB1(new Graph(*g, childrensVertices[i]), childrensVertices[i], k_prime - childrensVertices[i].size(), this);
+            children[i] = new ParallelB1(new Graph(*g, childrensVertices[i]), childrensVertices[i], k_prime - childrensVertices[i].size(), this);
         } else{
             std::cout << "Child " << i << " is null" << std::endl;
             children[i] = NULL;
@@ -48,8 +48,8 @@ SequentialB1::SequentialB1( Graph * g_arg,
     }
 }
 
-void SequentialB1::IterateTreeStructure(SequentialB1 * root){
-    SequentialB1 * next;
+void ParallelB1::IterateTreeStructure(ParallelB1 * root){
+    ParallelB1 * next;
     if(root->GetResult()){
         std::cout << "Found an answer" << std::endl;
         std::vector<int> answer;
@@ -66,7 +66,7 @@ void SequentialB1::IterateTreeStructure(SequentialB1 * root){
     }
 }
 
-void SequentialB1::TraverseUpTree(SequentialB1 * leaf, std::vector<int> & answer){
+void ParallelB1::TraverseUpTree(ParallelB1 * leaf, std::vector<int> & answer){
     for (auto & v : leaf->GetVerticesToRemove())
         answer.push_back(v);
     if(leaf->GetParent()!=NULL){
@@ -74,30 +74,30 @@ void SequentialB1::TraverseUpTree(SequentialB1 * leaf, std::vector<int> & answer
     }
 }
 
-SequentialB1 * SequentialB1::GetParent(){
+ParallelB1 * ParallelB1::GetParent(){
     return parent;
 }
 
 
-int SequentialB1::GetNumberChildren(){
+int ParallelB1::GetNumberChildren(){
     return childrensVertices.size();
 }
 
-std::vector<int> SequentialB1::GetVerticesToRemove(){
+std::vector<int> ParallelB1::GetVerticesToRemove(){
     return verticesToRemove;
 }
 
-SequentialB1 * SequentialB1::GetChild(int i){
+ParallelB1 * ParallelB1::GetChild(int i){
     return children[i];
 }
 
-bool SequentialB1::GetResult(){
+bool ParallelB1::GetResult(){
     return result;
 }
 
 
 /* DFS of maximum length 3. No simple cycles u -> v -> u */
-void SequentialB1::DFS(std::vector<int> & path, int rootVertex){
+void ParallelB1::DFS(std::vector<int> & path, int rootVertex){
     if (path.size() == 4)
         return;
 
@@ -110,7 +110,7 @@ void SequentialB1::DFS(std::vector<int> & path, int rootVertex){
     }
 }
 
-int SequentialB1::classifyPath(std::vector<int> & path){
+int ParallelB1::classifyPath(std::vector<int> & path){
     if (path.size()==2)
         return 3;
     else if (path.size()==3)
@@ -121,7 +121,7 @@ int SequentialB1::classifyPath(std::vector<int> & path){
         return 0;
 }
 
-void SequentialB1::createVertexSetsForEachChild(int caseNumber, std::vector<int> & path){
+void ParallelB1::createVertexSetsForEachChild(int caseNumber, std::vector<int> & path){
     if (caseNumber == 0) {
         /* 3 Children */
         childrensVertices.resize(3);

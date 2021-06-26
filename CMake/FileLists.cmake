@@ -1,5 +1,5 @@
 set(sources_cpu_serial 
-    Main.cpp
+    MainSerial.cpp
     serial/COO.cpp
     serial/CSR.cpp
     serial/DegreeController.cpp
@@ -7,23 +7,21 @@ set(sources_cpu_serial
     serial/NeighborsBinaryDataStructure.cpp
     serial/SequentialB1.cpp   
     serial/SequentialBuss.cpp
-    serial/SequentialDFKernelization.cpp
     serial/SequentialKernelization.cpp
     serial/SparseMatrix.cpp
    )
 
 set(sources_cpu_parallel 
-    Main.cpp
-    serial/COO.cpp
-    serial/CSR.cpp
-    serial/DegreeController.cpp
-    serial/Graph.cpp
-    serial/NeighborsBinaryDataStructure.cpp
-    serial/SequentialB1.cpp   
-    serial/SequentialBuss.cpp
-    serial/SequentialDFKernelization.cpp
-    serial/SequentialKernelization.cpp
-    serial/SparseMatrix.cpp
+    MainOpenMP.cpp
+    openmp/COO.cpp
+    openmp/CSR.cpp
+    openmp/DegreeController.cpp
+    openmp/Graph.cpp
+    openmp/NeighborsBinaryDataStructure.cpp
+    openmp/ParallelB1.cpp   
+    openmp/ParallelBuss.cpp
+    openmp/ParallelKernelization.cpp
+    openmp/SparseMatrix.cpp
    )
 
 set(headers_cpu_serial 
@@ -34,7 +32,6 @@ set(headers_cpu_serial
     serial/NeighborsBinaryDataStructure.h
     serial/SequentialB1.h
     serial/SequentialBuss.h
-    serial/SequentialDFKernelization.h
     serial/SequentialKernelization.h
     serial/SparseMatrix.h
    )
