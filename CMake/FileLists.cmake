@@ -1,4 +1,4 @@
-set(sources 
+set(sources_cpu_serial 
     Main.cpp
     serial/COO.cpp
     serial/CSR.cpp
@@ -12,7 +12,21 @@ set(sources
     serial/SparseMatrix.cpp
    )
 
-set(headers
+set(sources_cpu_parallel 
+    Main.cpp
+    serial/COO.cpp
+    serial/CSR.cpp
+    serial/DegreeController.cpp
+    serial/Graph.cpp
+    serial/NeighborsBinaryDataStructure.cpp
+    serial/SequentialB1.cpp   
+    serial/SequentialBuss.cpp
+    serial/SequentialDFKernelization.cpp
+    serial/SequentialKernelization.cpp
+    serial/SparseMatrix.cpp
+   )
+
+set(headers_cpu_serial 
     serial/COO.h
     serial/CSR.h
     serial/DegreeController.h
@@ -23,6 +37,18 @@ set(headers
     serial/SequentialDFKernelization.h
     serial/SequentialKernelization.h
     serial/SparseMatrix.h
+   )
+
+set(headers_cpu_parallel 
+    openmp/COO.h
+    openmp/CSR.h
+    openmp/DegreeController.h
+    openmp/Graph.h
+    openmp/NeighborsBinaryDataStructure.h
+    openmp/ParallelB1.h
+    openmp/ParallelBuss.h
+    openmp/ParallelKernelization.h
+    openmp/SparseMatrix.h
    )
 
 set(libHeaders
