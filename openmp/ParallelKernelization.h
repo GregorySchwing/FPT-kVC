@@ -9,7 +9,28 @@
 class ParallelKernelization {
     public:
         ParallelKernelization(Graph & g_arg, int k_arg);
-        void RadixSort();
+        void ParallelRadixSortWorker(int procID,
+                        int beginIndex,
+                        int endIndex,
+                        int digit,
+                        int base,
+                        std::vector<int> & A_row_indices,
+                        std::vector<int> & A_column_indices,
+                        std::vector<int> & A_values,
+                        std::vector<int> & B_row_indices_ref,
+                        std::vector<int> & B_column_indices_ref,
+                        std::vector<int> & B_values_ref,
+                        std::vector<int> & C_ref);
+
+        void ParallelRadixSortWrapper(int procID,
+                int beginIndex,
+                int endIndex,
+                std::vector<int> & A_row_indices,
+                std::vector<int> & A_column_indices,
+                std::vector<int> & A_values,
+                std::vector<int> & B_row_indices_ref,
+                std::vector<int> & B_column_indices_ref,
+                std::vector<int> & B_values_ref);
         int GetKPrime();
         std::vector<int> & GetS();
         bool noSolutionExists;

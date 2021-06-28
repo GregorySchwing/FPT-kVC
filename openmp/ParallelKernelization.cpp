@@ -1,4 +1,6 @@
 #include "ParallelKernelization.h"
+#include<cmath>
+
 
 ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg), k(k_arg){
     #pragma omp parallel
@@ -78,7 +80,7 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
     testVectorsRows[procID].resize(GetEndingIndexInA(procID) - GetStartingIndexInA(procID));
     testVectorsColumns[procID].resize(GetEndingIndexInA(procID) - GetStartingIndexInA(procID));
     testVectorsValues[procID].resize(GetEndingIndexInA(procID) - GetStartingIndexInA(procID));
-
+/*
     printf("thread (%d) : size (%lu)\n", procID, testVectorsRows[procID].size());
     CountingSortParallel(
                     procID,
@@ -92,7 +94,20 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
                     testVectorsValues[procID]);
 
     }
-
+*/
+    printf(" Calling RadixSortWrapper (%d) ", procID);
+    ParallelRadixSortWrapper(
+                    procID,
+                    GetStartingIndexInA(procID),
+                    GetEndingIndexInA(procID),
+                    A_row_indices,
+                    A_col_indices,
+                    A_values,
+                    testVectorsRows[procID],
+                    testVectorsColumns[procID],
+                    testVectorsValues[procID]);
+    }
+    
     for (int i = 0; i < numberOfProcessors; ++i)
     {
         std::cout << "proc " << i << std::endl;
@@ -206,7 +221,92 @@ void ParallelKernelization::CountingSortParallel(
     }
 }
 
-void ParallelKernelization::RadixSort(){
+void ParallelKernelization::ParallelRadixSortWrapper(int procID,
+                int beginIndex,
+                int endIndex,
+                std::vector<int> & A_row_indices,
+                std::vector<int> & A_column_indices,
+                std::vector<int> & A_values,
+                std::vector<int> & B_row_indices_ref,
+                std::vector<int> & B_column_indices_ref,
+                std::vector<int> & B_values_ref){
+
+    /* Get longest integer length */
+    int maxLength = 0, size = 0;
+    for (int i = beginIndex; i < endIndex; ++i){
+        if (A_row_indices[i] == 0)
+            size = 1;
+        else
+            size = trunc(log10(A_row_indices[i])) + 1;
+        if (size > maxLength)
+            maxLength = size;
+    }
+
+    std::cout << "MAXL" << maxLength << std::endl;
+
+    int base = 10;
+    int digit;
+    std::vector<int> C_ref(base+1, 0);
+
+    for (int digit = 0; digit < maxLength; ++digit){
+        ParallelRadixSortWorker(procID,
+                        beginIndex,
+                        endIndex,
+                        digit,
+                        base,
+                        A_row_indices,
+                        A_column_indices,
+                        A_values,
+                        B_row_indices_ref,
+                        B_column_indices_ref,
+                        B_values_ref,
+                        C_ref);
+    }
+}
+
+void ParallelKernelization::ParallelRadixSortWorker(int procID,
+                int beginIndex,
+                int endIndex,
+                int digit,
+                int base,
+                std::vector<int> & A_row_indices,
+                std::vector<int> & A_column_indices,
+                std::vector<int> & A_values,
+                std::vector<int> & B_row_indices_ref,
+                std::vector<int> & B_column_indices_ref,
+                std::vector<int> & B_values_ref,
+                std::vector<int> & C_ref){
+
+    C_ref.clear();
+    int entry;
+    for (int i = beginIndex; i < endIndex; ++i){
+        if (digit == 0)
+            entry = A_row_indices[i] % base;
+        else
+            entry = (A_row_indices[i]/(digit*base)) % base;
+
+        std::cout << "entry " << entry << std::endl;
+        ++C_ref[entry];
+    }
+
+    std::cout << "C[i] now contains the number elements equal to i." << std::endl;
+    for (int i = 1; i < base+1; ++i){
+        C_ref[i] = C_ref[i] + C_ref[i-1];
+    }
+
+    /* C_ref[A_row_indices[i]]]-1 , because the values of C_ref are from [1, n] -> [0,n)*/
+    for (int i = endIndex; i > beginIndex; --i){
+        B_row_indices_ref[C_ref[A_row_indices[i]]-1] = A_row_indices[i];
+        B_column_indices_ref[C_ref[A_row_indices[i]]-1] = A_column_indices[i];
+        B_values_ref[C_ref[A_row_indices[i]]-1] = A_values[i];
+        --C_ref[A_row_indices[i]];
+    }
+
+    for (int i = endIndex; i > beginIndex; --i){
+        A_row_indices[i] = B_row_indices_ref[i];
+        A_column_indices[i] = B_column_indices_ref[i];
+        A_values[i] = B_values_ref[i];
+    }
 
 }
 
