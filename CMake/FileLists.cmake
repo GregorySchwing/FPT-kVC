@@ -24,6 +24,12 @@ set(sources_cpu_parallel
     openmp/SparseMatrix.cpp
    )
 
+set(sources_gpu 
+    Main.cu
+    gpu/COO.cu
+    gpu/CSR.cu
+   )
+
 set(headers_cpu_serial 
     serial/COO.h
     serial/CSR.h
@@ -46,6 +52,11 @@ set(headers_cpu_parallel
     openmp/ParallelBuss.h
     openmp/ParallelKernelization.h
     openmp/SparseMatrix.h
+   )
+
+set(headers_gpu 
+    gpu/COO.cuh
+    gpu/CSR.cuh
    )
 
 set(libHeaders

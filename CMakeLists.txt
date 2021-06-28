@@ -64,6 +64,7 @@ endif()
 # Setup Serial version
 include(${PROJECT_SOURCE_DIR}/CMake/CPUSerial.cmake)
 include(${PROJECT_SOURCE_DIR}/CMake/CPUParallel.cmake)
+include(${PROJECT_SOURCE_DIR}/CMake/GPU.cmake)
 
 # find OpenMP and set it up
 find_package(OpenMP)

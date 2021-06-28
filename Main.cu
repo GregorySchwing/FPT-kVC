@@ -1,8 +1,8 @@
 
 
 //#include "holder.cu"
-#include "COO.cuh"
-#include "CSR.cuh"
+#include "gpu/COO.cuh"
+#include "gpu/CSR.cuh"
 
 
 int main(int argc, char *argv[])
