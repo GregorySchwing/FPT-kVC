@@ -58,13 +58,14 @@ include(CheckLanguage)
 check_language(CUDA)
 if (CMAKE_CUDA_COMPILER)
     enable_language(CUDA)
+    MESSAGE(STATUS "Cuda version: ${CUDA_VERSION}")
+    find_package(CUDAToolkit)       
     include(${PROJECT_SOURCE_DIR}/CMake/GPU.cmake)
 endif()
 
 # Setup Serial version
 include(${PROJECT_SOURCE_DIR}/CMake/CPUSerial.cmake)
 include(${PROJECT_SOURCE_DIR}/CMake/CPUParallel.cmake)
-include(${PROJECT_SOURCE_DIR}/CMake/GPU.cmake)
 
 # find OpenMP and set it up
 find_package(OpenMP)
