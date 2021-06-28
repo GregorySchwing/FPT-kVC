@@ -14,7 +14,7 @@ class ParallelKernelization {
         std::vector<int> & GetS();
         bool noSolutionExists;
     private:
-        void CountingSort(int max,
+        void CountingSortSerial(int max,
                         std::vector<int> & A_row_indices,
                         std::vector<int> & A_column_indices,
                         std::vector<int> & A_values,
@@ -22,6 +22,7 @@ class ParallelKernelization {
                         std::vector<int> & B_column_indices_ref,
                         std::vector<int> & B_values_ref,
                         std::vector<int> & C_ref);
+        
         int GetStartingIndexInA(int processorID);
         int GetEndingIndexInA(int processorID);
         int GetBlockSize();

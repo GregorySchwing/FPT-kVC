@@ -43,7 +43,7 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
         std::cout << v << " ";
     std::cout << std::endl;
 
-    CountingSort(   max,
+    CountingSortSerial(   max,
                     g.GetCOO()->row_indices,
                     g.GetCOO()->column_indices,
                     g.GetCOO()->values,
@@ -63,7 +63,7 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
     std::cout << std::endl;
 
     for (int i = 0; i < B_row_indices.size(); ++i)
-        std::cout << B_values[i] << " ";
+        std::cout << B_row_indices[i] << " ";
     std::cout << std::endl;
     /*
     std::cout << "Build VC" << std::endl;
@@ -85,7 +85,7 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
     */            
 }
 
-void ParallelKernelization::CountingSort(int max,
+void ParallelKernelization::CountingSortSerial(int max,
                         std::vector<int> & A_row_indices,
                         std::vector<int> & A_column_indices,
                         std::vector<int> & A_values,
