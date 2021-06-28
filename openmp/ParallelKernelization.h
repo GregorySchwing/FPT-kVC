@@ -22,9 +22,21 @@ class ParallelKernelization {
                         std::vector<int> & B_column_indices_ref,
                         std::vector<int> & B_values_ref,
                         std::vector<int> & C_ref);
+
+        void CountingSortParallel(
+                        int procID,
+                        int beginIndex,
+                        int endIndex,
+                        std::vector<int> & A_row_indices,
+                        std::vector<int> & A_column_indices,
+                        std::vector<int> & A_values,
+                        std::vector<int> & B_row_indices_ref,
+                        std::vector<int> & B_column_indices_ref,
+                        std::vector<int> & B_values_ref);
+        
         
         int GetStartingIndexInA(int processorID);
-        int GetEndingIndexInA(int processorID);
+        int GetEndingIndexInA(int processorID); 
         int GetBlockSize();
 
         int numberOfElements, numberOfProcessors, blockSize;

@@ -17,6 +17,10 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
             max = g.GetCOO()->row_indices[i];
     }
 
+    std::vector<int> & A_row_indices = g.GetCOO()->row_indices;
+    std::vector<int> & A_col_indices = g.GetCOO()->column_indices;
+    std::vector<int> & A_values = g.GetCOO()->values;
+
     std::cout << "Max : " << max << std::endl;
 
     B_row_indices.resize(numberOfElements);
@@ -24,6 +28,8 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
     B_values.resize(numberOfElements);
 
     C.resize(max+1, 0);
+
+/*
 
     std::cout << "C" << std::endl;
     for (auto & v : C)
@@ -42,17 +48,59 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
     for (auto & v : g.GetCOO()->values)
         std::cout << v << " ";
     std::cout << std::endl;
+*/
 
     CountingSortSerial(   max,
-                    g.GetCOO()->row_indices,
-                    g.GetCOO()->column_indices,
-                    g.GetCOO()->values,
+                    A_row_indices,
+                    A_col_indices,
+                    A_values,
                     B_row_indices,
                     B_column_indices,
                     B_values,
                     C
                 );
 
+    std::vector<std::vector<int>> testVectorsRows(numberOfProcessors);
+    std::vector<std::vector<int>> testVectorsColumns(numberOfProcessors);
+    std::vector<std::vector<int>> testVectorsValues(numberOfProcessors);
+
+    #pragma omp parallel for default(none) shared(testVectorsRows, \
+                    testVectorsColumns, testVectorsValues, \
+                    A_row_indices, A_col_indices, A_values)
+    //shared(boxAxes, cellStartIndex, \
+    //reduction(+:tempREn, tempLJEn)
+    for (int i = 0; i < numberOfProcessors; ++i)
+    {
+        int procID = omp_get_thread_num();
+        printf(" hello(%d) ", procID);
+        printf(" world(%d) \n", procID);
+
+    testVectorsRows[procID].resize(GetEndingIndexInA(procID) - GetStartingIndexInA(procID));
+    testVectorsColumns[procID].resize(GetEndingIndexInA(procID) - GetStartingIndexInA(procID));
+    testVectorsValues[procID].resize(GetEndingIndexInA(procID) - GetStartingIndexInA(procID));
+
+    printf("thread (%d) : size (%lu)\n", procID, testVectorsRows[procID].size());
+    CountingSortParallel(
+                    procID,
+                    GetStartingIndexInA(procID),
+                    GetEndingIndexInA(procID),
+                    A_row_indices,
+                    A_col_indices,
+                    A_values,
+                    testVectorsRows[procID],
+                    testVectorsColumns[procID],
+                    testVectorsValues[procID]);
+
+    }
+
+    for (int i = 0; i < numberOfProcessors; ++i)
+    {
+        std::cout << "proc " << i << std::endl;
+        for (auto & v : testVectorsRows[i])
+            std::cout << v << " ";
+        std::cout << std::endl;
+    }
+/*
     std::cout << "After sort" << std::endl;
     for (int i = 0; i < B_row_indices.size(); ++i)
         std::cout << B_row_indices[i] << " ";
@@ -65,6 +113,7 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
     for (int i = 0; i < B_row_indices.size(); ++i)
         std::cout << B_row_indices[i] << " ";
     std::cout << std::endl;
+*/
     /*
     std::cout << "Build VC" << std::endl;
     noSolutionExists = CardinalityOfSetDegreeGreaterK(g.GetDegreeController());
@@ -114,6 +163,49 @@ void ParallelKernelization::CountingSortSerial(int max,
     }
 }
 
+void ParallelKernelization::CountingSortParallel(
+                int procID,
+                int beginIndex,
+                int endIndex,
+                std::vector<int> & A_row_indices,
+                std::vector<int> & A_column_indices,
+                std::vector<int> & A_values,
+                std::vector<int> & B_row_indices_ref,
+                std::vector<int> & B_column_indices_ref,
+                std::vector<int> & B_values_ref){
+
+    //std::cout << "procID : " << procID << " beginIndex " << beginIndex << " endIndex " << endIndex << std::endl;
+
+    int max = 0;
+    for (int i = beginIndex; i < endIndex; ++i){
+        if (A_row_indices[i] > max)
+            max = A_row_indices[i];
+    }
+
+
+
+    std::vector<int> C_ref(max+1, 0);
+
+    for (int i = beginIndex; i < endIndex; ++i){
+        ++C_ref[A_row_indices[i]];
+    }
+
+    //std::cout << "C[i] now contains the number elements equal to i." << std::endl;
+    for (int i = 1; i < max+1; ++i){
+        C_ref[i] = C_ref[i] + C_ref[i-1];
+    }
+
+    //std::cout << "C[i] now contains the number of elements less than or equal to i." << std::endl;
+
+    /* C_ref[A_row_indices[i]]]-1 , because the values of C_ref are from [1, n] -> [0,n)*/
+    for (int i = endIndex; i > beginIndex; --i){
+        B_row_indices_ref[C_ref[A_row_indices[i]]-1] = A_row_indices[i];
+        B_column_indices_ref[C_ref[A_row_indices[i]]-1] = A_column_indices[i];
+        B_values_ref[C_ref[A_row_indices[i]]-1] = A_values[i];
+        --C_ref[A_row_indices[i]];
+    }
+}
+
 void ParallelKernelization::RadixSort(){
 
 }
@@ -123,7 +215,7 @@ int ParallelKernelization::GetStartingIndexInA(int processorID){
 }
 
 int ParallelKernelization::GetEndingIndexInA(int processorID){
-    if (processorID == numberOfProcessors)
+    if (processorID == numberOfProcessors-1)
         return numberOfElements;
     else
         return (processorID+1)*blockSize;
