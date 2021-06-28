@@ -67,7 +67,7 @@ macro(DO_FIND_BOOST_ROOT)
 	endif()
 
 	set(BOOST_ROOT_DIR "${PROJECT_SOURCE_DIR}/lib/boost")
-	find_path(BOOST_INCLUDE_DIR boost/config.hpp ${BOOST_ROOT_DIR}/include)
+	find_path(BOOST_INCLUDE_DIR config.hpp ${BOOST_ROOT_DIR}/include)
 	FIND_PACKAGE_HANDLE_STANDARD_ARGS(Boost DEFAULT_MSG
 		BOOST_INCLUDE_DIR
 	)
