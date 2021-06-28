@@ -18,7 +18,7 @@
 #include <sstream>      // std::stringstream
 // We'll use a 3-tuple to store our 3d vector type
 // rows, cols, vals
-#include <cusp/array1d.h> 
+//#include <cusp/array1d.h> 
 
 class COO
 {

@@ -12,26 +12,48 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
     numberOfProcessors = omp_get_max_threads();
     numberOfElements = g.GetCOO()->row_indices.size();
     blockSize = numberOfElements/numberOfProcessors;
-
-    int max = 0;
-    for (int i = 0; i < numberOfElements; ++i){
-        if (g.GetCOO()->row_indices[i] > max)
-            max = g.GetCOO()->row_indices[i];
+    rowBlockSize = g.GetCSR()->numberOfRows/numberOfProcessors;
+    numberOfRows = g.GetCSR()->numberOfRows;
+    std::vector<int> degrees(g.GetCSR()->numberOfRows);
+    std::vector<int> vertexKeys(g.GetCSR()->numberOfRows);
+    std::iota (std::begin(vertexKeys), std::end(vertexKeys), 0); // Fill with 0, 1, ..., 99.
+    for (int i = 0; i < numberOfRows; ++i){
+        degrees[i] = g.GetCSR()->row_offsets[i+1] - g.GetCSR()->row_offsets[i];
     }
 
-    std::vector<int> & A_row_indices = g.GetCOO()->row_indices;
-    std::vector<int> & A_col_indices = g.GetCOO()->column_indices;
-    std::vector<int> & A_values = g.GetCOO()->values;
+    std::cout << "degrees " << std::endl;
+    for (auto & v : degrees)
+        std::cout << v << " ";
+    std::cout << std::endl;
+
+    std::cout << "vertexKeys " << std::endl;
+    for (auto & v : vertexKeys)
+        std::cout << v << " ";
+    std::cout << std::endl;
+
+    int max = 0;
+    for (int i = 0; i < numberOfRows; ++i){
+        if (degrees[i] > max)
+            max = degrees[i];
+    }
+
+    std::vector<int> & A_row_indices = degrees;
+    std::vector<int> & A_col_indices = vertexKeys;
+    std::vector<int> & A_values = vertexKeys;
 
     std::cout << "Max : " << max << std::endl;
 
+    B_row_indices.resize(numberOfRows);
+    B_column_indices.resize(numberOfRows);
+    B_values.resize(numberOfRows);
+
+    C.resize(max+1, 0);
+/*
     B_row_indices.resize(numberOfElements);
     B_column_indices.resize(numberOfElements);
     B_values.resize(numberOfElements);
 
-    C.resize(max+1, 0);
 
-/*
 
     std::cout << "C" << std::endl;
     for (auto & v : C)
@@ -53,15 +75,15 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
 */
 
     CountingSortSerial(   max,
-                    A_row_indices,
-                    A_col_indices,
-                    A_values,
+                    degrees,
+                    vertexKeys,
+                    vertexKeys,
                     B_row_indices,
                     B_column_indices,
                     B_values,
                     C
                 );
-
+/*
     std::vector<std::vector<int>> testVectorsRows(numberOfProcessors);
     std::vector<std::vector<int>> testVectorsColumns(numberOfProcessors);
     std::vector<std::vector<int>> testVectorsValues(numberOfProcessors);
@@ -80,6 +102,7 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
     testVectorsRows[procID].resize(GetEndingIndexInA(procID) - GetStartingIndexInA(procID));
     testVectorsColumns[procID].resize(GetEndingIndexInA(procID) - GetStartingIndexInA(procID));
     testVectorsValues[procID].resize(GetEndingIndexInA(procID) - GetStartingIndexInA(procID));
+*/
 /*
     printf("thread (%d) : size (%lu)\n", procID, testVectorsRows[procID].size());
     CountingSortParallel(
@@ -94,7 +117,7 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
                     testVectorsValues[procID]);
 
     }
-*/
+
     printf(" Calling RadixSortWrapper (%d) ", procID);
     ParallelRadixSortWrapper(
                     procID,
@@ -115,7 +138,8 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
             std::cout << v << " ";
         std::cout << std::endl;
     }
-/*
+*/
+
     std::cout << "After sort" << std::endl;
     for (int i = 0; i < B_row_indices.size(); ++i)
         std::cout << B_row_indices[i] << " ";
@@ -125,10 +149,6 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
         std::cout << B_column_indices[i] << " ";
     std::cout << std::endl;
 
-    for (int i = 0; i < B_row_indices.size(); ++i)
-        std::cout << B_row_indices[i] << " ";
-    std::cout << std::endl;
-*/
     /*
     std::cout << "Build VC" << std::endl;
     noSolutionExists = CardinalityOfSetDegreeGreaterK(g.GetDegreeController());
@@ -158,19 +178,18 @@ void ParallelKernelization::CountingSortSerial(int max,
                         std::vector<int> & B_values_ref,
                         std::vector<int> & C_ref)
 {
-    for (int i = 0; i < numberOfElements; ++i){
+    for (int i = 0; i < A_row_indices.size(); ++i){
         ++C_ref[A_row_indices[i]];
     }
 
-    //std::cout << "C[i] now contains the number elements equal to i." << std::endl;
+    std::cout << "C[i] now contains the number elements equal to i." << std::endl;
     for (int i = 1; i < max+1; ++i){
         C_ref[i] = C_ref[i] + C_ref[i-1];
     }
 
-    //std::cout << "C[i] now contains the number of elements less than or equal to i." << std::endl;
-
+    std::cout << "C[i] now contains the number of elements less than or equal to i." << std::endl;
     /* C_ref[A_row_indices[i]]]-1 , because the values of C_ref are from [1, n] -> [0,n)*/
-    for (int i = B_row_indices.size(); i > 0; --i){
+    for (int i = B_row_indices.size()-1; i >= 0; --i){
         B_row_indices_ref[C_ref[A_row_indices[i]]-1] = A_row_indices[i];
         B_column_indices_ref[C_ref[A_row_indices[i]]-1] = A_column_indices[i];
         B_values_ref[C_ref[A_row_indices[i]]-1] = A_values[i];

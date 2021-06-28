@@ -38,7 +38,6 @@ endif()
 
 # Set Source and Header files
 include(${PROJECT_SOURCE_DIR}/CMake/FileLists.cmake)
-
 # find Boost, and if not found download and install serialization library for checkpointing
 # Set Source and Header files
 #set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/FindBoost.cmake")

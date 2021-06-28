@@ -60,7 +60,7 @@ class ParallelKernelization {
         int GetEndingIndexInA(int processorID); 
         int GetBlockSize();
 
-        int numberOfElements, numberOfProcessors, blockSize;
+        int numberOfElements, numberOfProcessors, blockSize, rowBlockSize, numberOfRows;
         int kPrime;
         Graph & g;
         int k;
