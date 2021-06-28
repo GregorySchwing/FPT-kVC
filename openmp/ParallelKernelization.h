@@ -75,7 +75,8 @@ class ParallelKernelization {
         std::vector<int> B_values; 
         std::vector<int> C;
 
-        bool CardinalityOfSetDegreeGreaterK(DegreeController * degCont);
+        bool CardinalityOfSetDegreeGreaterK(std::vector<int> & degrees,
+                                            std::vector<int> & vertexKeys);
         int GetSetOfVerticesDegreeGreaterK(int k, std::vector<int> & S, DegreeController * degCont);
         void PrintS();
         void PrintEdgesOfS();

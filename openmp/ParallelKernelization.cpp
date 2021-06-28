@@ -138,7 +138,7 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
             std::cout << v << " ";
         std::cout << std::endl;
     }
-*/
+
 
     std::cout << "After sort" << std::endl;
     for (int i = 0; i < B_row_indices.size(); ++i)
@@ -148,14 +148,24 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
     for (int i = 0; i < B_row_indices.size(); ++i)
         std::cout << B_column_indices[i] << " ";
     std::cout << std::endl;
+*/
 
-    /*
+    std::cout << "degrees " << std::endl;
+    for (auto & v : B_row_indices)
+        std::cout << v << " ";
+    std::cout << std::endl;
+
+    std::cout << "vertexKeys " << std::endl;
+    for (auto & v : B_column_indices)
+        std::cout << v << " ";
+    std::cout << std::endl;
+
     std::cout << "Build VC" << std::endl;
-    noSolutionExists = CardinalityOfSetDegreeGreaterK(g.GetDegreeController());
+    noSolutionExists = CardinalityOfSetDegreeGreaterK(B_row_indices, B_column_indices);
     printf("%s\n", noSolutionExists ? "b > k, no solution exists" : "b <= k, a solution may exist");
     if (noSolutionExists)
         exit(0);
-    PrintS();            
+    /*    PrintS();            
     std::cout << "Removing S from G" << std::endl;
     //SetEdgesOfS(g.GetCSR());
     SetEdgesOfSSym(g.GetCSR());
@@ -344,9 +354,25 @@ int ParallelKernelization::GetBlockSize(){
     return blockSize;
 }
 
-bool ParallelKernelization::CardinalityOfSetDegreeGreaterK(DegreeController * degCont){
+bool ParallelKernelization::CardinalityOfSetDegreeGreaterK(std::vector<int> & degrees,
+                                                           std::vector<int> & vertexKeys){
     S.clear();
-    b = GetSetOfVerticesDegreeGreaterK(k, S, degCont);
+    std::vector<int>::iterator up;
+    up=std::upper_bound (degrees.begin(), degrees.end(), k); // 
+    b = degrees.end() - up;
+    std::cout << "cardinality of B " << (degrees.end() - up) << '\n'; 
+    std::vector<int>::iterator upCopy(up);
+ 
+    while(upCopy != degrees.end()){
+        S.push_back(vertexKeys[upCopy - degrees.begin()]);
+        upCopy++;
+    }
+    std::cout << "S = {"; 
+    for (auto & v : S)
+        std::cout << v << ", ";
+    std::cout << "}" << std::endl; 
+
+    //b = GetSetOfVerticesDegreeGreaterK(k, S, degCont);
     if (b > k)
         return true;
     else
