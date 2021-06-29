@@ -1,5 +1,43 @@
 #include "ParallelB1.h"
 
+/* First call, vertices have already been removed */
+ParallelB1::ParallelB1( Graph * g_arg, 
+                        int k_prime_arg,
+                        ParallelB1 * parent_arg):
+                        g(g_arg), 
+                        k_prime(k_prime_arg), 
+                        parent(parent_arg),
+                        result(false){
+    
+    std::vector<int> path;
+    int randomVertex = g->GetRandomVertex();
+    path.push_back(randomVertex);
+    DFS(path, randomVertex);
+    for (auto & v : path)
+        std::cout << v << " ";
+    std::cout << std::endl;
+    int caseNumber = classifyPath(path);
+    std::cout << "Case number: " << caseNumber << std::endl;
+    createVertexSetsForEachChild(caseNumber, path);
+
+    /* Pointers to the children */
+    children = new ParallelB1*[childrensVertices.size()];
+    for (int i = 0; i < childrensVertices.size(); ++i){
+        if (k_prime - childrensVertices[i].size() >= 0){
+            std::cout << "Child " << i << std::endl;
+            std::cout << "Printing Children Verts" << std::endl;
+            for (auto & v : childrensVertices[i])
+                std::cout << v << " ";
+            std::cout << std::endl;
+            std::cout << "Printed Children Verts" << std::endl;
+            children[i] = new ParallelB1(new Graph(*g, childrensVertices[i]), childrensVertices[i], k_prime - childrensVertices[i].size(), this);
+        } else{
+            std::cout << "Child " << i << " is null" << std::endl;
+            children[i] = NULL;
+        }
+    }
+}
+
 ParallelB1::ParallelB1( Graph * g_arg, 
                             std::vector<int> verticesToRemove_arg,
                             int k_prime_arg,

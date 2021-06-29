@@ -32,6 +32,11 @@ class Graph {
         CSR * compressedSparseMatrix;
         DegreeController * degCont;
         NeighborsBinaryDataStructure * neighBits;
+        // Every vertex touched by an edge removed should be checked after for being degree 0
+        // and then removed if so, clearly the vertices chosen by the algorithm for removing
+        // are also removed
+        void removeVertex(int vertexToRemove, std::vector<int> & verticesRemaining);
+        std::vector<int> verticesRemaining;
 
 };
 #endif

@@ -26,6 +26,14 @@ Graph::Graph(int vertexCount)
     std::cout << coordinateFormat->toString();
     std::cout << compressedSparseMatrix->toString();
     edgesLeftToCover = compressedSparseMatrix->column_indices.size()/2;
+    verticesRemaining.resize(vertexCount);
+    std::iota (std::begin(verticesRemaining), std::end(verticesRemaining), 0); // Fill with 0, 1, ..., 99.
+    removeVertex(2, verticesRemaining);
+    std::cout << "remove vertex 2" << std::endl;
+    for (auto & v : verticesRemaining)
+        std::cout << v << " ";
+    std::cout << std::endl;
+    exit(1);
 }
 
 /* Constructor to make induced subgraph G' post-kernelization */
@@ -119,4 +127,15 @@ CSR * Graph::GetCSR(){
     return compressedSparseMatrix;
 }
 
+void Graph::removeVertex(int vertexToRemove, std::vector<int> & verticesRemaining){
+        std::vector<int>::iterator low;
+        low = std::lower_bound( std::begin(verticesRemaining), 
+                                std::end(verticesRemaining), 
+                                vertexToRemove);
+        if (low == std::end(verticesRemaining))
+            std::cout << "couldnt find " << vertexToRemove << std::endl;
+        else
+            verticesRemaining.erase(low);
+        
+}
 

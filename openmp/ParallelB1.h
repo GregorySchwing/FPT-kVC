@@ -9,10 +9,16 @@
 
 class ParallelB1 {
 public:
+    ParallelB1( Graph * g_arg, 
+                int k_prime_arg,
+                ParallelB1 * parent_arg = NULL);
+
     ParallelB1(   Graph * g_arg, 
                     std::vector<int> verticesToRemove,
                     int k_prime_arg,
                     ParallelB1 * parent_arg = NULL);
+
+
 
     void IterateTreeStructure(ParallelB1 * root);
     void TraverseUpTree(ParallelB1 * leaf, std::vector<int> & answer);
