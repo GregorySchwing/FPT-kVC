@@ -73,7 +73,7 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
         std::cout << v << " ";
     std::cout << std::endl;
 */
-
+    // Sort by degree
     CountingSortSerial(   max,
                     degrees,
                     vertexKeys,
@@ -165,18 +165,17 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
     printf("%s\n", noSolutionExists ? "b > k, no solution exists" : "b <= k, a solution may exist");
     if (noSolutionExists)
         exit(0);
-    /*    PrintS();            
+    PrintS();            
     std::cout << "Removing S from G" << std::endl;
     //SetEdgesOfS(g.GetCSR());
     SetEdgesOfSSym(g.GetCSR());
-    PrintEdgesOfS();
-    SetEdgesLeftToCover();
+    //PrintEdgesOfS();
+    SetEdgesLeftToCover(g.GetCSR());
     std::cout << g.edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
     kPrime = k - b;
     std::cout << "Setting k' = k - b = " << kPrime << std::endl;
     noSolutionExists = GPrimeEdgesGreaterKTimesKPrime();
-    printf("%s\n", noSolutionExists ? "|G'(E)| > k*k', no solution exists" : "|G'(E)| <= k*k', a solution may exist");
-    */            
+    printf("%s\n", noSolutionExists ? "|G'(E)| > k*k', no solution exists" : "|G'(E)| <= k*k', a solution may exist");          
 }
 
 void ParallelKernelization::CountingSortSerial(int max,
@@ -356,23 +355,7 @@ int ParallelKernelization::GetBlockSize(){
 
 bool ParallelKernelization::CardinalityOfSetDegreeGreaterK(std::vector<int> & degrees,
                                                            std::vector<int> & vertexKeys){
-    S.clear();
-    std::vector<int>::iterator up;
-    up=std::upper_bound (degrees.begin(), degrees.end(), k); // 
-    b = degrees.end() - up;
-    std::cout << "cardinality of B " << (degrees.end() - up) << '\n'; 
-    std::vector<int>::iterator upCopy(up);
- 
-    while(upCopy != degrees.end()){
-        S.push_back(vertexKeys[upCopy - degrees.begin()]);
-        upCopy++;
-    }
-    std::cout << "S = {"; 
-    for (auto & v : S)
-        std::cout << v << ", ";
-    std::cout << "}" << std::endl; 
-
-    //b = GetSetOfVerticesDegreeGreaterK(k, S, degCont);
+    b = GetSetOfVerticesDegreeGreaterK(degrees, vertexKeys);
     if (b > k)
         return true;
     else
@@ -380,26 +363,18 @@ bool ParallelKernelization::CardinalityOfSetDegreeGreaterK(std::vector<int> & de
 }
 
 /* Use the Count function of dynamic bitset */
-int ParallelKernelization::GetSetOfVerticesDegreeGreaterK(int k, std::vector<int> & S, DegreeController * degCont){
-    std::vector< std::vector<int> > & tempDegCont = degCont->GetTempDegCont();
-    std::vector< std::vector<int> >::reverse_iterator it = tempDegCont.rbegin();
-    int cardinalityOfS = 0;
-    int iteration = 0;
-    // This scans the degree controller from N-1 to k + 1.
-    // We construct S, which is the set of vertices with deg > k
-    // Hence we iterate over all vertices with degree(N-1) to k + 1
-    // We early terminate is |S| > k
-    while(it != (tempDegCont.rend() - k - 1)  && cardinalityOfS <= k){
-        std::cout << "Iteration " << iteration << " (vertices w degree " << tempDegCont.size() - iteration - 1 << " ) : ";
-        //appending elements of vector of vertices of deg(x) to vector S
-        // while deg(x) > k and cardinalityOfS <= k
-        for (auto & e : *it)
-            std::cout << e << " ";
-        std::cout <<std::endl;
-        S.insert(S.end(), it->begin(), it->end());
-        cardinalityOfS+=it->size();
-        iteration++;
-        it++;
+int ParallelKernelization::GetSetOfVerticesDegreeGreaterK(std::vector<int> & degrees,
+                                                           std::vector<int> & vertexKeys){    
+    S.clear();
+    std::vector<int>::iterator up;
+    up=std::upper_bound (degrees.begin(), degrees.end(), k); // 
+    int cardinalityOfS = degrees.end() - up;
+    std::cout << "cardinality of B " << (degrees.end() - up) << '\n'; 
+    std::vector<int>::iterator upCopy(up);
+ 
+    while(upCopy != degrees.end()){
+        S.push_back(vertexKeys[upCopy - degrees.begin()]);
+        upCopy++;
     }
     return cardinalityOfS;
 }
@@ -441,10 +416,28 @@ void ParallelKernelization::SetEdgesOfS(CSR * csr){
 
 void ParallelKernelization::SetEdgesOfSSym(CSR * csr){
     int v;
+    std::vector<int>::iterator low;
+
+    // We mask all the edges of each vertex in S, 
+    // then we mask the in-edges of all vertices in S
+    // It is possible there is overlap between these.
+    // So we may need atomic operations for in-edges if we parallelize
+    // We are just overwriting 1 to 0 though, so it's less sensitive 
+    // to race conditions, just have to be concerned about data corruption
+    // This is also why we cant simply decrement a degree counter,
+    // In case a vertex's in edge is another vertex's out edge
+    
     for (auto u : S){
         for (int i = csr->row_offsets[u]; i < csr->row_offsets[u+1]; ++i){
             v = csr->column_indices[i];
-            g.edgesCoveredByKernelization.insert(std::make_pair(u,v));
+            //!!!!!   a must be sorted by cols within rows.       
+            low = std::lower_bound( csr->column_indices.begin() + csr->row_offsets[v], 
+                                    csr->column_indices.begin() + csr->row_offsets[v+1], 
+                                    u);
+            csr->values[i] = 0;
+            int tmp = low - (csr->column_indices.begin() + csr->row_offsets[v]);
+            std::cout << "tmp " << tmp << std::endl;
+            csr->values[csr->row_offsets[v] + (low - (csr->column_indices.begin() + csr->row_offsets[v]))] = 0;
         }
     }
 }
@@ -458,13 +451,17 @@ int ParallelKernelization::GetKPrime(){
 }
 
 
-void ParallelKernelization::SetEdgesLeftToCover(){
-    g.edgesLeftToCover -= GetCardinalityOfSEdges();
+void ParallelKernelization::SetEdgesLeftToCover(CSR * csr){
+    int count = 0;
+    for (int i = 0; i < numberOfElements; ++i)
+        count += csr->values[i];
+
+    g.edgesLeftToCover = count;
 }
 
 bool ParallelKernelization::GPrimeEdgesGreaterKTimesKPrime(){
     int kTimesKPrime = k * kPrime;
-    if (g.edgesLeftToCover > kTimesKPrime)
+    if (g.edgesLeftToCover/2 > kTimesKPrime)
         return true;
     return false;
 }

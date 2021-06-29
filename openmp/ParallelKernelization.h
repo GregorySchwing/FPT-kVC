@@ -77,13 +77,14 @@ class ParallelKernelization {
 
         bool CardinalityOfSetDegreeGreaterK(std::vector<int> & degrees,
                                             std::vector<int> & vertexKeys);
-        int GetSetOfVerticesDegreeGreaterK(int k, std::vector<int> & S, DegreeController * degCont);
+        int GetSetOfVerticesDegreeGreaterK(std::vector<int> & degrees,
+                                            std::vector<int> & vertexKeys);
         void PrintS();
         void PrintEdgesOfS();
 
         void SetEdgesOfS(CSR * csr);
         void SetEdgesOfSSym(CSR * csr);
-        void SetEdgesLeftToCover();
+        void SetEdgesLeftToCover(CSR * csr);
         int GetCardinalityOfSEdges();
         bool GPrimeEdgesGreaterKTimesKPrime();
 };
