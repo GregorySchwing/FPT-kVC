@@ -2,7 +2,11 @@
 #include<cmath>
 
 
-ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg), k(k_arg){
+ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg), k(k_arg), 
+    row_offsets(g.GetCSR()->row_offsets), 
+    column_indices(g.GetCSR()->column_indices), 
+    values(g.GetCSR()->values)
+{
     #pragma omp parallel
     {
         int ID = omp_get_thread_num();
@@ -16,11 +20,12 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
     numberOfRows = g.GetCSR()->numberOfRows;
     std::vector<int> degrees(g.GetCSR()->numberOfRows);
     std::vector<int> vertexKeys(g.GetCSR()->numberOfRows);
+
     std::iota (std::begin(vertexKeys), std::end(vertexKeys), 0); // Fill with 0, 1, ..., 99.
     for (int i = 0; i < numberOfRows; ++i){
-        degrees[i] = g.GetCSR()->row_offsets[i+1] - g.GetCSR()->row_offsets[i];
+        degrees[i] = row_offsets[i+1] - row_offsets[i];
     }
-
+    newDegrees.resize(numberOfRows);
     std::cout << "degrees " << std::endl;
     for (auto & v : degrees)
         std::cout << v << " ";
@@ -167,15 +172,46 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
         exit(0);
     PrintS();            
     std::cout << "Removing S from G" << std::endl;
-    //SetEdgesOfS(g.GetCSR());
-    SetEdgesOfSSym(g.GetCSR());
-    //PrintEdgesOfS();
-    SetEdgesLeftToCover(g.GetCSR());
+    //SetEdgesOfSSym(g.GetCSR());
+    //SetEdgesLeftToCover(g.GetCSR());
+
+    SetEdgesOfSSymParallel();
+    SetEdgesLeftToCoverParallel();
     std::cout << g.edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
     kPrime = k - b;
     std::cout << "Setting k' = k - b = " << kPrime << std::endl;
     noSolutionExists = GPrimeEdgesGreaterKTimesKPrime();
-    printf("%s\n", noSolutionExists ? "|G'(E)| > k*k', no solution exists" : "|G'(E)| <= k*k', a solution may exist");          
+    if(noSolutionExists)
+        std::cout << "|G'(E)| > k*k', no solution exists" << std::endl;
+    else{
+        std::cout << "|G'(E)| <= k*k', a solution may exist" << std::endl;
+
+        //newColumnIndices.resize(g.edgesLeftToCover);
+        // Temporary, used for checking, will be replaced by vector of all 1's
+        //newValues.resize(g.edgesLeftToCover);
+        newColumnIndices.resize(26);
+        // Temporary, used for checking, will be replaced by vector of all 1's
+        newValues.resize(26);
+        SetNewRowOffsets();
+        int row; 
+        
+        #pragma omp parallel for default(none) \
+                            shared(row_offsets, column_indices, values, \
+                            newDegrees, newRowOffsets, newColumnIndices, newValues) \
+                            private (row)
+        for (row = 0; row < numberOfRows; ++row)
+        {
+            CountingSortParallelRowwiseValues(row,
+                                            row_offsets[row],
+                                            row_offsets[row+1],
+                                            row_offsets,
+                                            column_indices,
+                                            values,
+                                            newRowOffsets,
+                                            newColumnIndices,
+                                            newValues);
+        }
+    }
 }
 
 void ParallelKernelization::CountingSortSerial(int max,
@@ -246,6 +282,49 @@ void ParallelKernelization::CountingSortParallel(
         B_column_indices_ref[C_ref[A_row_indices[i]]-1] = A_column_indices[i];
         B_values_ref[C_ref[A_row_indices[i]]-1] = A_values[i];
         --C_ref[A_row_indices[i]];
+    }
+}
+
+void ParallelKernelization::CountingSortParallelRowwiseValues(
+                int rowID,
+                int beginIndex,
+                int endIndex,
+                std::vector<int> & A_row_offsets,
+                std::vector<int> & A_column_indices,
+                std::vector<int> & A_values,
+                std::vector<int> & B_row_indices_ref,
+                std::vector<int> & B_column_indices_ref,
+                std::vector<int> & B_values_ref){
+
+    //std::cout << "procID : " << procID << " beginIndex " << beginIndex << " endIndex " << endIndex << std::endl;
+
+    int max = 1;
+
+    std::vector<int> C_ref(max+1, 0);
+
+    for (int i = beginIndex; i < endIndex; ++i){
+        ++C_ref[A_values[i]];
+    }
+
+    //std::cout << "C[i] now contains the number elements equal to i." << std::endl;
+    for (int i = 1; i < max+1; ++i){
+        C_ref[i] = C_ref[i] + C_ref[i-1];
+    }
+/*
+    if (C_ref[1] == B_row_indices_ref[rowID+1])
+        std::cout << "row " << rowID << " equal" << std::endl;
+
+    else
+        std::cout << "row " << rowID << "not equal" << std::endl;
+*/
+    //std::cout << "C[i] now contains the number of elements less than or equal to i." << std::endl;
+
+    /* C_ref[A_row_indices[i]]]-1 , because the values of C_ref are from [1, n] -> [0,n) */
+    for (int i = endIndex-1; i >= beginIndex; --i){
+        //B_row_indices_ref[C_ref[A_values[i]]-1] = A_row_indices[i];
+        B_column_indices_ref[beginIndex + C_ref[A_values[i]]-1] = A_column_indices[i];
+        B_values_ref[beginIndex + C_ref[A_values[i]]-1] = A_values[i];
+        --C_ref[A_values[i]];
     }
 }
 
@@ -400,11 +479,11 @@ void ParallelKernelization::PrintEdgesOfS(){
     std::cout << "}" << std::endl;
 }
 
-void ParallelKernelization::SetEdgesOfS(CSR * csr){
+void ParallelKernelization::SetEdgesOfS(){
     int v;
     for (auto u : S){
-        for (int i = csr->row_offsets[u]; i < csr->row_offsets[u+1]; ++i){
-            v = csr->column_indices[i];
+        for (int i = row_offsets[u]; i < row_offsets[u+1]; ++i){
+            v = column_indices[i];
             if (u < v){
                 g.edgesCoveredByKernelization.insert(std::make_pair(u,v));
             } else {
@@ -414,7 +493,7 @@ void ParallelKernelization::SetEdgesOfS(CSR * csr){
     }
 }
 
-void ParallelKernelization::SetEdgesOfSSym(CSR * csr){
+void ParallelKernelization::SetEdgesOfSSym(){
     int v;
     std::vector<int>::iterator low;
 
@@ -428,16 +507,53 @@ void ParallelKernelization::SetEdgesOfSSym(CSR * csr){
     // In case a vertex's in edge is another vertex's out edge
     
     for (auto u : S){
-        for (int i = csr->row_offsets[u]; i < csr->row_offsets[u+1]; ++i){
-            v = csr->column_indices[i];
+        for (int i = row_offsets[u]; i < row_offsets[u+1]; ++i){
+            v = column_indices[i];
             //!!!!!   a must be sorted by cols within rows.       
-            low = std::lower_bound( csr->column_indices.begin() + csr->row_offsets[v], 
-                                    csr->column_indices.begin() + csr->row_offsets[v+1], 
+            low = std::lower_bound( column_indices.begin() + row_offsets[v], 
+                                    column_indices.begin() + row_offsets[v+1], 
                                     u);
-            csr->values[i] = 0;
-            int tmp = low - (csr->column_indices.begin() + csr->row_offsets[v]);
+            values[i] = 0;
+            int tmp = low - (column_indices.begin() + row_offsets[v]);
             std::cout << "tmp " << tmp << std::endl;
-            csr->values[csr->row_offsets[v] + (low - (csr->column_indices.begin() + csr->row_offsets[v]))] = 0;
+            values[row_offsets[v] + (low - (column_indices.begin() + row_offsets[v]))] = 0;
+        }
+    }
+}
+
+void ParallelKernelization::SetEdgesOfSSymParallel(){
+    int v, intraRowOffset;
+    std::vector<int>::iterator low;
+    // We mask all the edges of each vertex in S, 
+    // then we mask the in-edges of all vertices in S
+    // It is possible there is overlap between these.
+    // So we may need atomic operations for in-edges if we parallelize
+    // We are just overwriting 1 to 0 though, so it's less sensitive 
+    // to race conditions, just have to be concerned about data corruption
+    // This is also why we cant simply decrement a degree counter,
+    // In case a vertex's in edge is another vertex's out edge
+
+    // These atomic operations are the case for an asymmetric adjacency matrix
+    // with an auxilliary data structure that returns the edges of a vertex
+    // without duplicating edges (in & out)
+    #pragma omp parallel for default(none) shared(row_offsets, \
+    column_indices, values) private (low, v, intraRowOffset)
+    for (auto u : S)
+    {
+        for (int i = row_offsets[u]; i < row_offsets[u+1]; ++i){
+            v = column_indices[i];
+            //!!!!!   a must be sorted by cols within rows.       
+            low = std::lower_bound( column_indices.begin() + row_offsets[v], 
+                                    column_indices.begin() + row_offsets[v+1], 
+                                    u);
+            intraRowOffset = low - (column_indices.begin() + row_offsets[v]);
+            //std::cout << "tmp " << intraRowOffset << std::endl;
+            // Set out-edge
+            #pragma omp atomic write
+                values[i] = 0;
+            // Set in-edge
+            #pragma omp atomic write
+                values[row_offsets[v] + intraRowOffset] = 0;
         }
     }
 }
@@ -451,12 +567,37 @@ int ParallelKernelization::GetKPrime(){
 }
 
 
-void ParallelKernelization::SetEdgesLeftToCover(CSR * csr){
+void ParallelKernelization::SetEdgesLeftToCover(){
     int count = 0;
     for (int i = 0; i < numberOfElements; ++i)
-        count += csr->values[i];
+        count += values[i];
 
     g.edgesLeftToCover = count;
+}
+
+void ParallelKernelization::SetEdgesLeftToCoverParallel(){
+    int count = 0, i = 0, j = 0;
+    std::vector<int> & newDegs = newDegrees;
+    #pragma omp parallel for default(none) shared(row_offsets, values, newDegs) private (i, j) \
+    reduction(+:count)
+    for (i = 0; i < numberOfRows; ++i)
+    {
+        for (j = row_offsets[i]; j < row_offsets[i+1]; ++j)
+            newDegs[i] += values[j];
+        count += newDegs[i];
+    }
+    g.edgesLeftToCover = count;
+}
+
+void ParallelKernelization::SetNewRowOffsets(){
+    int i = 0;
+    std::vector<int> & newDegs = newDegrees;
+    std::vector<int> & newRowOffs = newRowOffsets;
+    newRowOffs.resize(numberOfRows+1);
+    for (i = 1; i <= numberOfRows; ++i)
+    {
+        newRowOffs[i] = newDegs[i-1] + newRowOffs[i-1];
+    }
 }
 
 bool ParallelKernelization::GPrimeEdgesGreaterKTimesKPrime(){

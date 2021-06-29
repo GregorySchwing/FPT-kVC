@@ -23,5 +23,5 @@ int main(int argc, char *argv[])
     CSR c3(c2);
     std::cout << c3.toString() << std::endl;
 
-
+    
 }
