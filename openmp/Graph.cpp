@@ -28,12 +28,7 @@ Graph::Graph(int vertexCount)
     edgesLeftToCover = compressedSparseMatrix->column_indices.size()/2;
     verticesRemaining.resize(vertexCount);
     std::iota (std::begin(verticesRemaining), std::end(verticesRemaining), 0); // Fill with 0, 1, ..., 99.
-    removeVertex(2, verticesRemaining);
-    std::cout << "remove vertex 2" << std::endl;
-    for (auto & v : verticesRemaining)
-        std::cout << v << " ";
-    std::cout << std::endl;
-    exit(1);
+
 }
 
 /* Constructor to make induced subgraph G' post-kernelization */
@@ -70,6 +65,11 @@ Graph::Graph(Graph & g_arg, std::vector<int> & verticesToDelete)
 void Graph::UpdateNeighBits(){
 
 }
+
+std::vector<int> & Graph::GetRemainingVertices(){
+    return verticesRemaining;
+}
+
 
 int Graph::GetRandomVertex(){
     return degCont->GetRandomVertex();

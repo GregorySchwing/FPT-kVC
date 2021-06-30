@@ -5,7 +5,8 @@
 ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg), k(k_arg), 
     row_offsets(g.GetCSR()->row_offsets), 
     column_indices(g.GetCSR()->column_indices), 
-    values(g.GetCSR()->values)
+    values(g.GetCSR()->values),
+    verticesRemaining(g.GetRemainingVertices())
 {
     #pragma omp parallel
     {
@@ -174,7 +175,6 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
     std::cout << "Removing S from G" << std::endl;
     //SetEdgesOfSSym(g.GetCSR());
     //SetEdgesLeftToCover(g.GetCSR());
-
     SetEdgesOfSSymParallel();
     SetEdgesLeftToCoverParallel();
     std::cout << g.edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
@@ -211,6 +211,8 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
                                             newColumnIndices,
                                             newValues);
         }
+
+        RemoveSVertices();
     }
 }
 
@@ -560,6 +562,14 @@ void ParallelKernelization::SetEdgesOfSSymParallel(){
         }
     }
 }
+
+void ParallelKernelization::RemoveSVertices(){
+    for (auto u : S)
+    {
+        g.removeVertex(u, verticesRemaining);
+    }
+}
+
 
 int ParallelKernelization::GetCardinalityOfSEdges(){
     return g.edgesCoveredByKernelization.size();

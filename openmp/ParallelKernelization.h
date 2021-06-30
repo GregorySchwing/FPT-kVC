@@ -69,6 +69,7 @@ class ParallelKernelization {
         int GetStartingIndexInA(int processorID);
         int GetEndingIndexInA(int processorID); 
         int GetBlockSize();
+        void RemoveSVertices();
 
         int numberOfElements, numberOfProcessors, blockSize, rowBlockSize, numberOfRows;
         int kPrime;
@@ -76,7 +77,7 @@ class ParallelKernelization {
         int k;
         int b;
         std::vector<int> S;
-        std::vector<int> & row_offsets, & column_indices, & values;
+        std::vector<int> & row_offsets, & column_indices, & values, & verticesRemaining;
         std::vector<int> newDegrees, newRowOffsets, newColumnIndices, newValues;
         // n, number of entries
         // A, B = [1 . . n]

@@ -23,9 +23,11 @@ class Graph {
         int GetRandomOutgoingEdge(int v, std::vector<int> & path);
         CSR * GetCSR();
         COO * GetCOO();
+        std::vector<int> & GetRemainingVertices();
         void UpdateNeighBits();
         int edgesLeftToCover;
         std::set<std::pair<int,int>> edgesCoveredByKernelization;
+        void removeVertex(int vertexToRemove, std::vector<int> & verticesRemaining);
 
     private:
         COO * coordinateFormat;
@@ -35,7 +37,6 @@ class Graph {
         // Every vertex touched by an edge removed should be checked after for being degree 0
         // and then removed if so, clearly the vertices chosen by the algorithm for removing
         // are also removed
-        void removeVertex(int vertexToRemove, std::vector<int> & verticesRemaining);
         std::vector<int> verticesRemaining;
 
 };
