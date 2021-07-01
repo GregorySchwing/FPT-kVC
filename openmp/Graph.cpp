@@ -37,12 +37,6 @@ Graph::Graph(Graph & g_arg)
     /* This should use the edgesLeftToCover constructor of COO */
     compressedSparseMatrix = new CSR(*(g_arg.GetCSR()), g_arg.GetEdgesLeftToCover());             
     std::cout << compressedSparseMatrix->toString();
-    neighBits = new NeighborsBinaryDataStructure(compressedSparseMatrix);
-    /* If we use the Asymetric */
-    //degCont = new DegreeController(compressedSparseMatrix->numberOfRows, neighBits);
-    /* If we use the Symetric */
-    degCont = new DegreeController(compressedSparseMatrix->numberOfRows, compressedSparseMatrix);
-    std::cout << degCont->toString();
     edgesLeftToCover = compressedSparseMatrix->column_indices.size()/2;
 }
 
@@ -53,17 +47,7 @@ Graph::Graph(Graph & g_arg, std::vector<int> & verticesToDelete)
     compressedSparseMatrix = new CSR(*(g_arg.GetCSR()), verticesToDelete);
     std::cout << "Built the CSR" << std::endl;
     std::cout << compressedSparseMatrix->toString();
-    neighBits = new NeighborsBinaryDataStructure(compressedSparseMatrix);
-    /* If we use the Asymetric */
-    //degCont = new DegreeController(compressedSparseMatrix->numberOfRows, neighBits);
-    /* If we use the Symetric */
-    degCont = new DegreeController(compressedSparseMatrix->numberOfRows, compressedSparseMatrix);
-    std::cout << degCont->toString();
     edgesLeftToCover = compressedSparseMatrix->column_indices.size()/2;
-}
-
-void Graph::UpdateNeighBits(){
-
 }
 
 std::vector<int> & Graph::GetRemainingVertices(){
@@ -72,16 +56,14 @@ std::vector<int> & Graph::GetRemainingVertices(){
 
 
 int Graph::GetRandomVertex(){
-    return degCont->GetRandomVertex();
+    //return degCont->GetRandomVertex();
+        return 1;
+
 }
 
 
 COO * Graph::GetCOO(){
     return coordinateFormat;
-}
-
-DegreeController * Graph::GetDegreeController(){
-    return degCont;
 }
 
 int Graph::GetEdgesLeftToCover(){

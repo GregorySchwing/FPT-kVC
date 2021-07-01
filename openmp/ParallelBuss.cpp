@@ -29,6 +29,7 @@ ParallelBuss::~ParallelBuss(){
 }
 
 void ParallelBuss::SetGPrimeVertices(){
+    /*
     std::vector< std::vector<int> > & tempDegCont = (g.GetDegreeController())->GetTempDegCont();
     std::vector< std::vector<int> >::const_iterator it = tempDegCont.cbegin();
     std::cout << "G'(V) = {";
@@ -39,7 +40,7 @@ void ParallelBuss::SetGPrimeVertices(){
         }
         it++;
     }
-    std::cout << "}";
+    std::cout << "}";*/
 }
 void ParallelBuss::GenerateEdgeSets(){
     //std::cout << "|G'(V)| " << verticesOfGPrime.size() << " k_prime " << k_prime << " |G'(V)| Choose k_prime " << NumberOfGPrimeVerticesChooseKPrime << std::endl;
