@@ -213,7 +213,8 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
                                             newValues);
         }
 
-        RemoveSVertices();
+        RemoveDegreeZeroVertices();
+        //RemoveSVertices();
     }
 }
 
@@ -553,6 +554,13 @@ void ParallelKernelization::RemoveSVertices(){
     for (auto u : S)
     {
         g.removeVertex(u, verticesRemaining);
+    }
+}
+
+void ParallelKernelization::RemoveDegreeZeroVertices(){
+    for (int i = 0; i < numberOfRows; ++i){
+        if(newRowOffsets[i+1] - newRowOffsets[i] == 0)
+            g.removeVertex(i, verticesRemaining);
     }
 }
 

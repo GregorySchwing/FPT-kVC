@@ -70,6 +70,7 @@ class ParallelKernelization {
         int GetEndingIndexInA(int processorID); 
         int GetBlockSize();
         void RemoveSVertices();
+        void RemoveDegreeZeroVertices();
 
         int numberOfElements, numberOfProcessors, blockSize, rowBlockSize, numberOfRows;
         int kPrime;
