@@ -133,7 +133,7 @@ void Graph::removeVertex(int vertexToRemove, std::vector<int> & verticesRemainin
                                 std::end(verticesRemaining), 
                                 vertexToRemove);
         if (low == std::end(verticesRemaining))
-            std::cout << "couldnt find " << vertexToRemove << std::endl;
+            return;
         else
             verticesRemaining.erase(low);
         

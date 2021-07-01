@@ -176,7 +176,7 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
     //SetEdgesOfSSym(g.GetCSR());
     //SetEdgesLeftToCover(g.GetCSR());
     vertexTouchedByRemovedEdge.resize(numberOfRows);
-    SetEdgesOfSSymParallel(vertexTouchedByRemovedEdge);
+    SetEdgesOfSSymParallel();
     SetEdgesLeftToCoverParallel();
     std::cout << g.edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
     kPrime = k - b;
@@ -499,18 +499,9 @@ void ParallelKernelization::SetEdgesOfS(){
     }
 }
 
-void ParallelKernelization::SetEdgesOfSSym(std::vector<int> & vertexTouchedByRemovedEdge){
+void ParallelKernelization::SetEdgesOfSSym(){
     int v;
     std::vector<int>::iterator low;
-
-    // We mask all the edges of each vertex in S, 
-    // then we mask the in-edges of all vertices in S
-    // It is possible there is overlap between these.
-    // So we may need atomic operations for in-edges if we parallelize
-    // We are just overwriting 1 to 0 though, so it's less sensitive 
-    // to race conditions, just have to be concerned about data corruption
-    // This is also why we cant simply decrement a degree counter,
-    // In case a vertex's in edge is another vertex's out edge
     
     for (auto u : S){
         for (int i = row_offsets[u]; i < row_offsets[u+1]; ++i){
@@ -520,19 +511,17 @@ void ParallelKernelization::SetEdgesOfSSym(std::vector<int> & vertexTouchedByRem
                                     column_indices.begin() + row_offsets[v+1], 
                                     u);
             values[i] = 0;
-            int tmp = low - (column_indices.begin() + row_offsets[v]);
-            std::cout << "tmp " << tmp << std::endl;
             values[row_offsets[v] + (low - (column_indices.begin() + row_offsets[v]))] = 0;
         }
     }
 }
 
-void ParallelKernelization::SetEdgesOfSSymParallel(std::vector<int> & vertexTouchedByRemovedEdge){
+void ParallelKernelization::SetEdgesOfSSymParallel(){
     int v, intraRowOffset;
     std::vector<int>::iterator low;
     // Set out-edges
     #pragma omp parallel for default(none) shared(row_offsets, \
-    column_indices, values) private ( v)
+    column_indices, values) private (v)
     for (auto u : S)
     {
         for (int i = row_offsets[u]; i < row_offsets[u+1]; ++i){

@@ -95,8 +95,8 @@ class ParallelKernelization {
         void PrintEdgesOfS();
 
         void SetEdgesOfS();
-        void SetEdgesOfSSym(std::vector<int> & vertexTouchedByRemovedEdge);
-        void SetEdgesOfSSymParallel(std::vector<int> & vertexTouchedByRemovedEdge);
+        void SetEdgesOfSSym();
+        void SetEdgesOfSSymParallel();
         void SetEdgesLeftToCover();
         void SetEdgesLeftToCoverParallel();
         void SetNewRowOffsets();
