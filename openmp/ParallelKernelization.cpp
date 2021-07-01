@@ -175,7 +175,8 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
     std::cout << "Removing S from G" << std::endl;
     //SetEdgesOfSSym(g.GetCSR());
     //SetEdgesLeftToCover(g.GetCSR());
-    SetEdgesOfSSymParallel();
+    vertexTouchedByRemovedEdge.resize(numberOfRows);
+    SetEdgesOfSSymParallel(vertexTouchedByRemovedEdge);
     SetEdgesLeftToCoverParallel();
     std::cout << g.edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
     kPrime = k - b;
@@ -498,7 +499,7 @@ void ParallelKernelization::SetEdgesOfS(){
     }
 }
 
-void ParallelKernelization::SetEdgesOfSSym(){
+void ParallelKernelization::SetEdgesOfSSym(std::vector<int> & vertexTouchedByRemovedEdge){
     int v;
     std::vector<int>::iterator low;
 
@@ -526,39 +527,35 @@ void ParallelKernelization::SetEdgesOfSSym(){
     }
 }
 
-void ParallelKernelization::SetEdgesOfSSymParallel(){
+void ParallelKernelization::SetEdgesOfSSymParallel(std::vector<int> & vertexTouchedByRemovedEdge){
     int v, intraRowOffset;
     std::vector<int>::iterator low;
-    // We mask all the edges of each vertex in S, 
-    // then we mask the in-edges of all vertices in S
-    // It is possible there is overlap between these.
-    // So we may need atomic operations for in-edges if we parallelize
-    // We are just overwriting 1 to 0 though, so it's less sensitive 
-    // to race conditions, just have to be concerned about data corruption
-    // This is also why we cant simply decrement a degree counter,
-    // In case a vertex's in edge is another vertex's out edge
+    // Set out-edges
+    #pragma omp parallel for default(none) shared(row_offsets, \
+    column_indices, values) private ( v)
+    for (auto u : S)
+    {
+        for (int i = row_offsets[u]; i < row_offsets[u+1]; ++i){
+            v = column_indices[i];
+            values[i] = 0;
+        }
+    }
 
-    // These atomic operations are the case for an asymmetric adjacency matrix
-    // with an auxilliary data structure that returns the edges of a vertex
-    // without duplicating edges (in & out)
+    // Set in-edges
     #pragma omp parallel for default(none) shared(row_offsets, \
     column_indices, values) private (low, v, intraRowOffset)
     for (auto u : S)
     {
         for (int i = row_offsets[u]; i < row_offsets[u+1]; ++i){
             v = column_indices[i];
+            /* Break this into 2 independent for loops */
             //!!!!!   a must be sorted by cols within rows.       
             low = std::lower_bound( column_indices.begin() + row_offsets[v], 
                                     column_indices.begin() + row_offsets[v+1], 
                                     u);
             intraRowOffset = low - (column_indices.begin() + row_offsets[v]);
-            //std::cout << "tmp " << intraRowOffset << std::endl;
-            // Set out-edge
-            #pragma omp atomic write
-                values[i] = 0;
             // Set in-edge
-            #pragma omp atomic write
-                values[row_offsets[v] + intraRowOffset] = 0;
+            values[row_offsets[v] + intraRowOffset] = 0;
         }
     }
 }

@@ -9,7 +9,7 @@ SequentialB1::SequentialB1( Graph * g_arg,
                             k_prime(k_prime_arg), 
                             parent(parent_arg),
                             result(false){
-    if (k_prime_arg <= 0 && g->edgesLeftToCover > 0){
+    if (k_prime_arg <= 0 && g->edgesLeftToCover >= 0){
         result = false;
         return;
     }

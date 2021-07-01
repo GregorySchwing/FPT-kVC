@@ -78,7 +78,7 @@ class ParallelKernelization {
         int b;
         std::vector<int> S;
         std::vector<int> & row_offsets, & column_indices, & values, & verticesRemaining;
-        std::vector<int> newDegrees, newRowOffsets, newColumnIndices, newValues;
+        std::vector<int> newDegrees, newRowOffsets, newColumnIndices, newValues, vertexTouchedByRemovedEdge;
         // n, number of entries
         // A, B = [1 . . n]
         // C = [0 .. k], k = max(A)
@@ -95,8 +95,8 @@ class ParallelKernelization {
         void PrintEdgesOfS();
 
         void SetEdgesOfS();
-        void SetEdgesOfSSym();
-        void SetEdgesOfSSymParallel();
+        void SetEdgesOfSSym(std::vector<int> & vertexTouchedByRemovedEdge);
+        void SetEdgesOfSSymParallel(std::vector<int> & vertexTouchedByRemovedEdge);
         void SetEdgesLeftToCover();
         void SetEdgesLeftToCoverParallel();
         void SetNewRowOffsets();
