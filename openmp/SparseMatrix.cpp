@@ -45,3 +45,8 @@ values_ref(values_ref_arg){
     values.resize(values_ref_arg.size(), 1);
 }
 
+
+int SparseMatrix::GetNumberOfRows(){
+    return numberOfRows;
+}
+

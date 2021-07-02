@@ -169,13 +169,14 @@ void Graph::SetEdgesOfSSymParallel(std::vector<int> & S){
         }
     }
 }
-/*
+
 
 void Graph::SetEdgesLeftToCoverParallel(){
-    int count = 0, i = 0, j = 0;
+    int count = 0, i = 0, j = 0, numberOfRows = compressedSparseMatrix->GetNumberOfRows();
     std::vector<int> & newDegs = newDegrees;
-    std::vector<int> & row_offsets = compressedSparseMatrix->GetOldRowOffSets();
-    #pragma omp parallel for default(none) shared(row_offsets, values, newDegs) private (i, j) \
+    std::vector<int> & values = compressedSparseMatrix->GetNewValRef();;
+    std::vector<int> & row_offsets = compressedSparseMatrix->GetOldRowOffRef();
+    #pragma omp parallel for default(none) shared(row_offsets, values, newDegs, numberOfRows) private (i, j) \
     reduction(+:count)
     for (i = 0; i < numberOfRows; ++i)
     {
@@ -183,9 +184,9 @@ void Graph::SetEdgesLeftToCoverParallel(){
             newDegs[i] += values[j];
         count += newDegs[i];
     }
-    g.edgesLeftToCover = count;
+    edgesLeftToCover = count;
 }
-
+/*
 void Graph::SetNewRowOffsets(){
     int i = 0;
     std::vector<int> & newDegs = newDegrees;

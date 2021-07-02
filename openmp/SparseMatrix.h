@@ -18,6 +18,10 @@ class SparseMatrix {
         SparseMatrix(int numberOfRows, std::vector<int> & values_ref_arg);
         /* SpRef */
         SparseMatrix(const SparseMatrix & s, int edgesLeftToCover);
+
+        int GetNumberOfRows();
+
+
         virtual std::string toString() = 0;
         virtual void insertElements(const SparseMatrix & s) = 0;
         int numberOfRows, numberOfColumns, size;
