@@ -28,21 +28,23 @@ class Graph {
         int edgesLeftToCover;
         std::set<std::pair<int,int>> edgesCoveredByKernelization;
         void removeVertex(int vertexToRemove, std::vector<int> & verticesRemaining);
+        void PrepareGPrime();
 
 
     private:
-
+        int numberOfRows;
         COO * coordinateFormat;
         CSR * compressedSparseMatrix;
         // Every vertex touched by an edge removed should be checked after for being degree 0
         // and then removed if so, clearly the vertices chosen by the algorithm for removing
         // are also removed
-        std::vector<int> verticesRemaining, newDegrees;
-        std::vector<int> newRowOffsets, newColumnIndices, newValues, vertexTouchedByRemovedEdge;
+        std::vector<int> verticesRemaining, newDegrees, vertexTouchedByRemovedEdge;
+
+        //std::vector<int> newRowOffsets, newColumnIndices, newValues, ;
 
         void SetEdgesOfSSymParallel(std::vector<int> & S);
         void SetEdgesLeftToCoverParallel();
-        void SetNewRowOffsets();
+        void SetNewRowOffsets(std::vector<int> & newRowOffsetsRef);
         void CountingSortParallelRowwiseValues(
                 int procID,
                 int beginIndex,
@@ -53,7 +55,7 @@ class Graph {
                 std::vector<int> & B_row_indices_ref,
                 std::vector<int> & B_column_indices_ref,
                 std::vector<int> & B_values_ref);
-        void RemoveDegreeZeroVertices();
+        void RemoveDegreeZeroVertices(std::vector<int> & newRowOffsets);
 
 };
 #endif

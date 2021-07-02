@@ -62,7 +62,7 @@ ParallelB1::ParallelB1( Graph * g_arg,
         result = true;
         return;
     } else {
-        //SetNewRowOffsets();
+        g->PrepareGPrime();
     }
 
     std::vector<int> path;

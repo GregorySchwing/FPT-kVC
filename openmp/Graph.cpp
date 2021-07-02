@@ -34,6 +34,7 @@ Graph::Graph(int vertexCount)
 /* Constructor to make induced subgraph G' post-kernelization */
 Graph::Graph(Graph & g_arg)
 {        
+    numberOfRows = compressedSparseMatrix->GetNumberOfRows();
     /* This should use the edgesLeftToCover constructor of COO */
     compressedSparseMatrix = new CSR(*(g_arg.GetCSR()), g_arg.GetEdgesLeftToCover());             
     std::cout << compressedSparseMatrix->toString();
@@ -173,9 +174,9 @@ void Graph::SetEdgesOfSSymParallel(std::vector<int> & S){
 
 
 void Graph::SetEdgesLeftToCoverParallel(){
-    int count = 0, i = 0, j = 0, numberOfRows = compressedSparseMatrix->GetNumberOfRows();
+    int count = 0, i = 0, j = 0;
     std::vector<int> & newDegs = newDegrees;
-    std::vector<int> & values = compressedSparseMatrix->GetNewValRef();;
+    std::vector<int> & values = compressedSparseMatrix->GetNewValRef();
     std::vector<int> & row_offsets = compressedSparseMatrix->GetOldRowOffRef();
     #pragma omp parallel for default(none) shared(row_offsets, values, newDegs, numberOfRows) private (i, j) \
     reduction(+:count)
@@ -189,12 +190,12 @@ void Graph::SetEdgesLeftToCoverParallel(){
 }
 
 /* Called if edgesLeftToCover > 0 */
-void Graph::SetNewRowOffsets(){
-    int i = 0, numberOfRows = compressedSparseMatrix->GetNumberOfRows();
-    newRowOffsets.resize(numberOfRows+1);
+void Graph::SetNewRowOffsets(std::vector<int> & newRowOffsetsRef){
+    int i = 0;
+    newRowOffsetsRef.resize(numberOfRows+1);
     for (i = 1; i <= numberOfRows; ++i)
     {
-        newRowOffsets[i] = newDegrees[i-1] + newRowOffsets[i-1];
+        newRowOffsetsRef[i] = newDegrees[i-1] + newRowOffsetsRef[i-1];
     }
 }
 
@@ -235,10 +236,49 @@ void Graph::CountingSortParallelRowwiseValues(
     }
 }
 
-void Graph::RemoveDegreeZeroVertices(){
-    int i = 0, numberOfRows = compressedSparseMatrix->GetNumberOfRows();
+void Graph::RemoveDegreeZeroVertices(std::vector<int> & newRowOffsets){
+    int i = 0;
     for (i = 0; i < numberOfRows; ++i){
         if(newRowOffsets[i+1] - newRowOffsets[i] == 0)
             removeVertex(i, verticesRemaining);
     }
+}
+
+void Graph::PrepareGPrime(){
+        
+        compressedSparseMatrix->GetNewColRef().resize(edgesLeftToCover);
+        // Temporary, used for checking, will be replaced by vector of all 1's
+
+
+        std::vector<int> & row_offsets = compressedSparseMatrix->GetOldRowOffRef();
+        std::vector<int> & column_indices = compressedSparseMatrix->GetOldColRef();
+        std::vector<int> & values = compressedSparseMatrix->GetNewValRef();
+        
+        std::vector<int> & newRowOffsets = compressedSparseMatrix->GetNewColRef();
+        std::vector<int> & newColumnIndices = compressedSparseMatrix->GetNewColRef();
+        //std::vector<int> & newValuesRef;
+
+        std::vector<int> newValues;
+        newValues.resize(edgesLeftToCover);
+        SetNewRowOffsets(newRowOffsets);
+        int row; 
+        
+        #pragma omp parallel for default(none) \
+                            shared(row_offsets, column_indices, values, \
+                            newDegrees, newRowOffsets, newColumnIndices, newValues) \
+                            private (row)
+        for (row = 0; row < numberOfRows; ++row)
+        {
+            CountingSortParallelRowwiseValues(row,
+                                            row_offsets[row],
+                                            row_offsets[row+1],
+                                            row_offsets,
+                                            column_indices,
+                                            values,
+                                            newRowOffsets,
+                                            newColumnIndices,
+                                            newValues);
+        }
+
+        RemoveDegreeZeroVertices(newRowOffsets);
 }
