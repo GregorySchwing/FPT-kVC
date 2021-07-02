@@ -15,7 +15,7 @@ class Graph {
         Graph(Graph & g_arg);
         Graph(Graph & g_arg, std::vector<int> & verticesToDelete);
 /* Constructor to make induced subgraph G'' for each branch */
-        Graph(CSR & csr_arg, std::vector<int> & verticesToDelete);
+        Graph(CSR * csr_arg, std::vector<int> & verticesToDelete);
     
         int GetEdgesLeftToCover();
         int GetRandomVertex();
@@ -23,16 +23,14 @@ class Graph {
         int GetOutgoingEdge(int v, int outEdgeIndex);
         int GetRandomOutgoingEdge(int v, std::vector<int> & path);
         CSR * GetCSR();
-        std::vector<int> & GetRowOffRef();
-        std::vector<int> & GetColRef();
-        std::vector<int> & GetValRef();
-
         COO * GetCOO();
         std::vector<int> & GetRemainingVertices();
         int edgesLeftToCover;
         std::set<std::pair<int,int>> edgesCoveredByKernelization;
         void removeVertex(int vertexToRemove, std::vector<int> & verticesRemaining);
-
+        void SetEdgesOfSSymParallel(std::vector<int> & S);
+        //void SetEdgesLeftToCoverParallel();
+        //void SetNewRowOffsets();
     private:
         COO * coordinateFormat;
         CSR * compressedSparseMatrix;

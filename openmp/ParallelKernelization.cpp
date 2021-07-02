@@ -643,3 +643,21 @@ int ParallelKernelization::GetRandomOutgoingEdge(int v, std::vector<int> & path)
 
     return -1;
 }
+
+std::vector<int> & ParallelKernelization::GetRowOffRef(){
+    return row_offsets;
+}
+std::vector<int> & ParallelKernelization::GetColRef(){
+    return column_indices;
+}
+std::vector<int> & ParallelKernelization::GetValRef(){
+    return values;
+}
+std::vector<int> & ParallelKernelization::GetVerticesRemainingRef(){
+    return verticesRemaining;
+}
+
+int ParallelKernelization::GetNumberOfRows(){
+    return numberOfRows;
+}
+

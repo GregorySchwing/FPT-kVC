@@ -51,11 +51,13 @@ Graph::Graph(Graph & g_arg, std::vector<int> & verticesToDelete)
 }
 
 /* Constructor to make induced subgraph G'' for each branch */
-Graph::Graph(CSR & csr_arg, std::vector<int> & verticesToDelete)
+// Called the CSR delete verts constructor in the method call
+
+Graph::Graph(CSR * csr_arg, std::vector<int> & verticesToDelete):
+    compressedSparseMatrix(csr_arg)
 {        
-    std::cout << "Called the delete verts constructor" << std::endl;
-    compressedSparseMatrix = new CSR(csr_arg, verticesToDelete);
-    std::cout << "Built the CSR" << std::endl;
+    // Sets some of the entries in values[] to 0
+    SetEdgesOfSSymParallel(verticesToDelete); 
     std::cout << compressedSparseMatrix->toString();
     edgesLeftToCover = compressedSparseMatrix->column_indices.size()/2;
 }
@@ -131,14 +133,68 @@ void Graph::removeVertex(int vertexToRemove, std::vector<int> & verticesRemainin
         
 }
 
-std::vector<int> & Graph::GetRowOffRef(){
-    return compressedSparseMatrix->row_offsets_ref;
+void Graph::SetEdgesOfSSymParallel(std::vector<int> & S){
+    int v, intraRowOffset;
+    std::vector<int>::iterator low;
+    std::vector<int> & row_offsets_ref = compressedSparseMatrix->GetOldRowOffRef();
+    std::vector<int> & column_indices_ref = compressedSparseMatrix->GetOldColRef();
+    std::vector<int> & values = compressedSparseMatrix->GetNewValRef();
+
+    // Set out-edges
+    #pragma omp parallel for default(none) shared(row_offsets_ref, \
+    column_indices_ref, values, S) private (v)
+    for (auto u : S)
+    {
+        for (int i = row_offsets_ref[u]; i < row_offsets_ref[u+1]; ++i){
+            v = column_indices_ref[i];
+            values[i] = 0;
+        }
+    }
+
+    // Set in-edges
+    #pragma omp parallel for default(none) shared(row_offsets_ref, \
+    column_indices_ref, values, S) private (low, v, intraRowOffset)
+    for (auto u : S)
+    {
+        for (int i = row_offsets_ref[u]; i < row_offsets_ref[u+1]; ++i){
+            v = column_indices_ref[i];
+            /* Break this into 2 independent for loops */
+            //!!!!!   a must be sorted by cols within rows.       
+            low = std::lower_bound( column_indices_ref.begin() + row_offsets_ref[v], 
+                                    column_indices_ref.begin() + row_offsets_ref[v+1], 
+                                    u);
+            intraRowOffset = low - (column_indices_ref.begin() + row_offsets_ref[v]);
+            // Set in-edge
+            values[row_offsets_ref[v] + intraRowOffset] = 0;
+        }
+    }
+}
+/*
+
+void Graph::SetEdgesLeftToCoverParallel(){
+    int count = 0, i = 0, j = 0;
+    std::vector<int> & newDegs = newDegrees;
+    std::vector<int> & row_offsets = compressedSparseMatrix->GetOldRowOffSets();
+    #pragma omp parallel for default(none) shared(row_offsets, values, newDegs) private (i, j) \
+    reduction(+:count)
+    for (i = 0; i < numberOfRows; ++i)
+    {
+        for (j = row_offsets[i]; j < row_offsets[i+1]; ++j)
+            newDegs[i] += values[j];
+        count += newDegs[i];
+    }
+    g.edgesLeftToCover = count;
 }
 
-std::vector<int> & Graph::GetColRef(){
-    return compressedSparseMatrix->column_indices_ref;
+void Graph::SetNewRowOffsets(){
+    int i = 0;
+    std::vector<int> & newDegs = newDegrees;
+    std::vector<int> & newRowOffs = compressedSparseMatrix->GetRowOffSets();
+    newRowOffs.resize(numberOfRows+1);
+    for (i = 1; i <= numberOfRows; ++i)
+    {
+        newRowOffs[i] = newDegs[i-1] + newRowOffs[i-1];
+    }
 }
 
-std::vector<int> & Graph::GetValRef(){
-    return compressedSparseMatrix->values_ref;
-}
+*/

@@ -42,6 +42,6 @@ values_ref(values){
 SparseMatrix::SparseMatrix(int numberOfRows, std::vector<int> & values_ref_arg):
 numberOfRows(numberOfRows),
 values_ref(values_ref_arg){
-
+    values.resize(values_ref_arg.size(), 1);
 }
 

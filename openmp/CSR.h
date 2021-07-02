@@ -19,6 +19,13 @@ class CSR : public SparseMatrix {
         /* For branch owned G'' induced subgraph */
         CSR(const CSR & c, std::vector<int> & verticesToDelete);
 
+        std::vector<int> & GetOldRowOffRef();
+        std::vector<int> & GetNewRowOffRef();
+        std::vector<int> & GetOldColRef();
+        std::vector<int> & GetNewColRef();
+        std::vector<int> & GetOldValRef();
+        std::vector<int> & GetNewValRef();
+
         std::string toString();
         void removeVertexEdges(int u);
         void removeVertexEdges(int u, std::vector<int> & valuesToModify, const CSR & c);

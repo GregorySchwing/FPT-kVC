@@ -37,10 +37,13 @@ CSR::CSR(int numberOfRows,
         std::vector<int> & row_offsets_ref,
         std::vector<int> & column_indices_ref,
         std::vector<int> & values_ref):
+// Creates the local copy of values vector of size : values_ref.size() 
 SparseMatrix(numberOfRows, values_ref),
-column_indices_ref(column_indices),
-row_offsets_ref(row_offsets)
-{}
+row_offsets_ref(row_offsets_ref),
+column_indices_ref(column_indices_ref)
+{
+    // Nothing to do
+}
 
 /* For post-kernelization G' induced subgraph */
 CSR::CSR(const CSR & c, int edgesLeftToCover):SparseMatrix(c, edgesLeftToCover),
@@ -203,4 +206,29 @@ std::string CSR::toString(){
     ss << std::endl;
     myMatrix = ss.str();
     return myMatrix;
+}
+
+
+std::vector<int> & CSR::GetOldRowOffRef(){
+    return row_offsets_ref;
+}
+
+std::vector<int> & CSR::GetOldColRef(){
+    return column_indices_ref;
+}
+
+std::vector<int> & CSR::GetOldValRef(){
+    return values_ref;
+}
+
+std::vector<int> & CSR::GetNewRowOffRef(){
+    return row_offsets;
+}
+
+std::vector<int> & CSR::GetNewColRef(){
+    return column_indices;
+}
+
+std::vector<int> & CSR::GetNewValRef(){
+    return values;
 }

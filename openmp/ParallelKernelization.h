@@ -25,6 +25,11 @@ class ParallelKernelization {
         int GetRandomOutgoingEdge(int v, std::vector<int> & path);
         /* These are only called on the Kernel to B1 transition */
         bool noSolutionExists;
+        std::vector<int> & GetRowOffRef();
+        std::vector<int> & GetColRef();
+        std::vector<int> & GetValRef();
+        std::vector<int> & GetVerticesRemainingRef();
+        int GetNumberOfRows();
 
     private:
         void ParallelRadixSortWorker(int procID,
@@ -108,5 +113,6 @@ class ParallelKernelization {
         void SetNewRowOffsets();
         int GetCardinalityOfSEdges();
         bool GPrimeEdgesGreaterKTimesKPrime();
+
 };
 #endif

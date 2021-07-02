@@ -18,23 +18,49 @@ ParallelB1::ParallelB1( int k_prime_arg,
     int caseNumber = classifyPath(path);
     std::cout << "Case number: " << caseNumber << std::endl;
     createVertexSetsForEachChild(caseNumber, path);
+    
+    // Pointers to the children 
+    children = new ParallelB1*[childrensVertices.size()];
+    for (int i = 0; i < childrensVertices.size(); ++i){
+        if (k_prime - childrensVertices[i].size() >= 0){
+            std::cout << "Child " << i << std::endl;
+            std::cout << "Printing Children Verts" << std::endl;
+            for (auto & v : childrensVertices[i])
+                std::cout << v << " ";
+            std::cout << std::endl;
+            std::cout << "Printed Children Verts" << std::endl;
 
+            CSR * new_csr = new CSR(pk_arg->GetNumberOfRows(),
+                                pk_arg->GetRowOffRef(), 
+                                pk_arg->GetColRef(), 
+                                pk_arg->GetValRef());
+        
+            children[i] = new ParallelB1(new Graph(new_csr, pk_arg->GetVerticesRemainingRef()),
+                                        k_prime - childrensVertices[i].size(), 
+                                        this,
+                                        childrensVertices[i], 
+                                        pk_arg->GetVerticesRemainingRef());
+        } else{
+            std::cout << "Child " << i << " is null" << std::endl;
+            children[i] = NULL;
+        }
+    }
 }
 
-/* All calls after Kernel to B1 transition, vertices have NOT been removed 
-ParallelB1::ParallelB1( CSR
+/* All calls after Kernel to B1 transition, vertices have NOT been removed */
+ParallelB1::ParallelB1( Graph * g_arg,
                         int k_prime_arg,
                         ParallelB1 * parent_arg,
                         std::vector<int> & verticesToRemove,
-                        std::vector<int> verticesRemaining,
-                        std::
+                        std::vector<int> verticesRemaining
                         ):
                         k_prime(k_prime_arg), 
                         parent(parent_arg),
                         result(false){
     
     std::vector<int> path;
-    int randomVertex = pk->GetRandomVertex();
+    int randomVertex = 1;
+    // int randomVertex = pk->GetRandomVertex();
     path.push_back(randomVertex);
     for (auto & v : path)
         std::cout << v << " ";
@@ -53,14 +79,14 @@ ParallelB1::ParallelB1( CSR
                 std::cout << v << " ";
             std::cout << std::endl;
             std::cout << "Printed Children Verts" << std::endl;
-            children[i] = new ParallelB1(new Graph(*g, childrensVertices[i]), childrensVertices[i], k_prime - childrensVertices[i].size(), this);
+            //children[i] = new ParallelB1(new Graph(*g, childrensVertices[i]), childrensVertices[i], k_prime - childrensVertices[i].size(), this);
         } else{
             std::cout << "Child " << i << " is null" << std::endl;
             children[i] = NULL;
         }
     }
 }
-*/
+
 /* DFS of maximum length 3. No simple cycles u -> v -> u */
 void ParallelB1::DFS(std::vector<int> & path, int rootVertex){
     if (path.size() == 4)
@@ -134,39 +160,3 @@ void ParallelB1::createVertexSetsForEachChild(int caseNumber, std::vector<int> &
 }
 
 
-void ParallelB1::SetEdgesOfSSymParallel(std::vector<int> & S){
-    int v, intraRowOffset;
-    std::vector<int>::iterator low;
-    std::vector<int> & row_offsets_ref = g->GetRowOffRef();
-    std::vector<int> & column_indices_ref = g->GetColRef();
-    std::vector<int> & values_ref = g->GetValRef();
-
-    // Set out-edges
-    #pragma omp parallel for default(none) shared(row_offsets_ref, \
-    column_indices_ref, values_ref, S) private (v)
-    for (auto u : S)
-    {
-        for (int i = row_offsets_ref[u]; i < row_offsets_ref[u+1]; ++i){
-            v = column_indices_ref[i];
-            values_ref[i] = 0;
-        }
-    }
-
-    // Set in-edges
-    #pragma omp parallel for default(none) shared(row_offsets_ref, \
-    column_indices_ref, values_ref, S) private (low, v, intraRowOffset)
-    for (auto u : S)
-    {
-        for (int i = row_offsets_ref[u]; i < row_offsets_ref[u+1]; ++i){
-            v = column_indices_ref[i];
-            /* Break this into 2 independent for loops */
-            //!!!!!   a must be sorted by cols within rows.       
-            low = std::lower_bound( column_indices_ref.begin() + row_offsets_ref[v], 
-                                    column_indices_ref.begin() + row_offsets_ref[v+1], 
-                                    u);
-            intraRowOffset = low - (column_indices_ref.begin() + row_offsets_ref[v]);
-            // Set in-edge
-            values_ref[row_offsets_ref[v] + intraRowOffset] = 0;
-        }
-    }
-}

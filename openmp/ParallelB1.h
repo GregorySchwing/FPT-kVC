@@ -40,7 +40,6 @@ private:
     void DFS(std::vector<int> & path, int rootVertex);  
     int classifyPath(std::vector<int> & path);
     void createVertexSetsForEachChild(int caseNumber, std::vector<int> & path);
-    void SetEdgesOfSSymParallel(std::vector<int> & S);
 
     Graph * g;
     ParallelKernelization * pk;
