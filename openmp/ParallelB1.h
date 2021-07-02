@@ -9,10 +9,10 @@
 
 class ParallelB1 {
 public:
-    ParallelB1( Graph * g_arg, 
-                int k_prime_arg,
+    ParallelB1( int k_prime_arg,
+                ParallelKernelization * pk_arg,
                 ParallelB1 * parent_arg = NULL);
-
+/*
     ParallelB1(   Graph * g_arg, 
                     std::vector<int> verticesToRemove,
                     int k_prime_arg,
@@ -27,14 +27,13 @@ public:
     ParallelB1 * GetChild(int i);
     ParallelB1 * GetParent();
     bool GetResult();
-
+*/
 
 private:
     /* DFS of maximum length 3. No simple cycles u -> v -> u */
-    void DFS(std::vector<int> & path, int rootVertex);
-    int classifyPath(std::vector<int> & path);
-    void createVertexSetsForEachChild(int caseNumber, std::vector<int> & path);
-    Graph * g;
+    void DFS(std::vector<int> & path, int rootVertex);    
+    //Graph * g;
+    ParallelKernelization * pk;
     int k_prime;
     std::vector<int> verticesToRemove;
     std::vector< std::vector<int> > childrensVertices;

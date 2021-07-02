@@ -20,7 +20,12 @@ class ParallelKernelization {
                 std::vector<int> & B_values_ref);
         int GetKPrime();
         std::vector<int> & GetS();
+        /* These are only called on the Kernel to B1 transition */
+        int GetRandomVertex();
+        int GetRandomOutgoingEdge(int v, std::vector<int> & path);
+        /* These are only called on the Kernel to B1 transition */
         bool noSolutionExists;
+
     private:
         void ParallelRadixSortWorker(int procID,
                     int beginIndex,
