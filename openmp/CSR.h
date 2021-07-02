@@ -22,6 +22,8 @@ class CSR : public SparseMatrix {
         void insertElements(const SparseMatrix & s);
         const CSR& castSparseMatrix(const SparseMatrix & s);
         std::vector<int> column_indices, row_offsets;
+        std::vector<int> & column_indices_ref, & row_offsets_ref;
+
 };
 
 #endif

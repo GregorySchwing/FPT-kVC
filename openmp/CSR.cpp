@@ -1,6 +1,10 @@
 #include "CSR.h"
 
-CSR::CSR(const COO & c):SparseMatrix(c){
+CSR::CSR(const COO & c):SparseMatrix(c),
+column_indices_ref(column_indices),
+row_offsets_ref(row_offsets)
+
+{
     row_offsets.resize(numberOfRows + 1);
     column_indices.resize(size);
     values.resize(size);
@@ -21,14 +25,18 @@ CSR::CSR(const COO & c):SparseMatrix(c){
     values = c.values;    
 }
 
-CSR::CSR(const CSR & c):SparseMatrix(c){
+CSR::CSR(const CSR & c):SparseMatrix(c),
+column_indices_ref(column_indices),
+row_offsets_ref(row_offsets){
     row_offsets = c.row_offsets;
     column_indices = c.column_indices;
     values = c.values;    
 }
 
 /* For post-kernelization G' induced subgraph */
-CSR::CSR(const CSR & c, int edgesLeftToCover):SparseMatrix(c, edgesLeftToCover){
+CSR::CSR(const CSR & c, int edgesLeftToCover):SparseMatrix(c, edgesLeftToCover),
+column_indices_ref(column_indices),
+row_offsets_ref(row_offsets){
     row_offsets.reserve(c.numberOfRows + 1);
     column_indices.reserve(edgesLeftToCover);
     int count = 0;
@@ -46,7 +54,9 @@ CSR::CSR(const CSR & c, int edgesLeftToCover):SparseMatrix(c, edgesLeftToCover){
 
 /* For branch owned G'' induced subgraph */
 /* Currently not reserving the column_indices and values vectors */
-CSR::CSR(const CSR & c, std::vector<int> & verticesToDelete):SparseMatrix(c.numberOfRows){
+CSR::CSR(const CSR & c, std::vector<int> & verticesToDelete):SparseMatrix(c.numberOfRows),
+column_indices_ref(column_indices),
+row_offsets_ref(row_offsets){
     std::vector<int> valuesToModify = c.values;
     row_offsets.reserve(c.numberOfRows + 1);
     for (auto & v: verticesToDelete){
