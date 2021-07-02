@@ -49,7 +49,6 @@ private:
     ParallelB1 * parent, ** children;
     bool result;
 
-    std::vector<int> newDegrees, newRowOffsets, newColumnIndices, newValues, vertexTouchedByRemovedEdge;
 };
 
 #endif

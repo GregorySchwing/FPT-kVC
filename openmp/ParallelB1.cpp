@@ -58,6 +58,13 @@ ParallelB1::ParallelB1( Graph * g_arg,
                         parent(parent_arg),
                         result(false){
     
+    if(g_arg->edgesLeftToCover == 0){
+        result = true;
+        return;
+    } else {
+        //SetNewRowOffsets();
+    }
+
     std::vector<int> path;
     int randomVertex = 1;
     // int randomVertex = pk->GetRandomVertex();
@@ -158,5 +165,8 @@ void ParallelB1::createVertexSetsForEachChild(int caseNumber, std::vector<int> &
 
     }
 }
+
+
+
 
 

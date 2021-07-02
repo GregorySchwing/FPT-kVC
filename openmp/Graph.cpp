@@ -58,19 +58,20 @@ Graph::Graph(CSR * csr_arg, std::vector<int> & verticesToDelete):
 {        
     // Sets some of the entries in values[] to 0
     SetEdgesOfSSymParallel(verticesToDelete); 
+    // Get an accurate number of edges left so we can 
+    // decide if we are done before starting next branch
+    SetEdgesLeftToCoverParallel();
     std::cout << compressedSparseMatrix->toString();
-    edgesLeftToCover = compressedSparseMatrix->column_indices.size()/2;
+    std::cout << edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
 }
 
 std::vector<int> & Graph::GetRemainingVertices(){
     return verticesRemaining;
 }
 
-
 int Graph::GetRandomVertex(){
     //return degCont->GetRandomVertex();
-        return 1;
-
+    return 1;
 }
 
 
@@ -186,16 +187,58 @@ void Graph::SetEdgesLeftToCoverParallel(){
     }
     edgesLeftToCover = count;
 }
-/*
+
+/* Called if edgesLeftToCover > 0 */
 void Graph::SetNewRowOffsets(){
-    int i = 0;
-    std::vector<int> & newDegs = newDegrees;
-    std::vector<int> & newRowOffs = compressedSparseMatrix->GetRowOffSets();
-    newRowOffs.resize(numberOfRows+1);
+    int i = 0, numberOfRows = compressedSparseMatrix->GetNumberOfRows();
+    newRowOffsets.resize(numberOfRows+1);
     for (i = 1; i <= numberOfRows; ++i)
     {
-        newRowOffs[i] = newDegs[i-1] + newRowOffs[i-1];
+        newRowOffsets[i] = newDegrees[i-1] + newRowOffsets[i-1];
     }
 }
 
-*/
+
+void Graph::CountingSortParallelRowwiseValues(
+                int rowID,
+                int beginIndex,
+                int endIndex,
+                std::vector<int> & A_row_offsets,
+                std::vector<int> & A_column_indices,
+                std::vector<int> & A_values,
+                std::vector<int> & B_row_indices_ref,
+                std::vector<int> & B_column_indices_ref,
+                std::vector<int> & B_values_ref){
+
+    //std::cout << "procID : " << procID << " beginIndex " << beginIndex << " endIndex " << endIndex << std::endl;
+
+    int max = 1;
+
+    std::vector<int> C_ref(max+1, 0);
+
+    for (int i = beginIndex; i < endIndex; ++i){
+        ++C_ref[A_values[i]];
+    }
+
+    //std::cout << "C[i] now contains the number elements equal to i." << std::endl;
+    for (int i = 1; i < max+1; ++i){
+        C_ref[i] = C_ref[i] + C_ref[i-1];
+    }
+    /* C_ref[A_row_indices[i]]]-1 , because the values of C_ref are from [1, n] -> [0,n) */
+    for (int i = endIndex-1; i >= beginIndex; --i){
+        if (A_values[i]){
+            std::cout << (B_row_indices_ref[rowID] - C_ref[0] + C_ref[1] -1) << std::endl;
+            B_column_indices_ref[B_row_indices_ref[rowID] - C_ref[0] + C_ref[1]-1] = A_column_indices[i];
+            B_values_ref[B_row_indices_ref[rowID] - C_ref[0] + C_ref[1]-1] = A_values[i];
+            --C_ref[A_values[i]];
+        }
+    }
+}
+
+void Graph::RemoveDegreeZeroVertices(){
+    int i = 0, numberOfRows = compressedSparseMatrix->GetNumberOfRows();
+    for (i = 0; i < numberOfRows; ++i){
+        if(newRowOffsets[i+1] - newRowOffsets[i] == 0)
+            removeVertex(i, verticesRemaining);
+    }
+}
