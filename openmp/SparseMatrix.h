@@ -19,7 +19,7 @@ class SparseMatrix {
         virtual std::string toString() = 0;
         virtual void insertElements(const SparseMatrix & s) = 0;
         int numberOfRows, numberOfColumns, size;
-        std::vector<int> values;
+        std::vector<int> values, & values_ref;
 };
 
 #endif
