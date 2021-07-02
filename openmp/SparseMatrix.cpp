@@ -37,3 +37,11 @@ values_ref(values){
 
 }
 
+
+/* SPM by reference */
+SparseMatrix::SparseMatrix(int numberOfRows, std::vector<int> & values_ref_arg):
+numberOfRows(numberOfRows),
+values_ref(values_ref_arg){
+
+}
+

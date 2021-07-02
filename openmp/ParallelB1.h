@@ -12,6 +12,12 @@ public:
     ParallelB1( int k_prime_arg,
                 ParallelKernelization * pk_arg,
                 ParallelB1 * parent_arg = NULL);
+
+    ParallelB1( Graph * g_arg,
+                int k_prime_arg,
+                ParallelB1 * parent_arg,
+                std::vector<int> & verticesToRemove,
+                std::vector<int> verticesRemaining);
 /*
     ParallelB1(   Graph * g_arg, 
                     std::vector<int> verticesToRemove,
@@ -31,8 +37,12 @@ public:
 
 private:
     /* DFS of maximum length 3. No simple cycles u -> v -> u */
-    void DFS(std::vector<int> & path, int rootVertex);    
-    //Graph * g;
+    void DFS(std::vector<int> & path, int rootVertex);  
+    int classifyPath(std::vector<int> & path);
+    void createVertexSetsForEachChild(int caseNumber, std::vector<int> & path);
+    void SetEdgesOfSSymParallel(std::vector<int> & S);
+
+    Graph * g;
     ParallelKernelization * pk;
     int k_prime;
     std::vector<int> verticesToRemove;
@@ -40,6 +50,7 @@ private:
     ParallelB1 * parent, ** children;
     bool result;
 
+    std::vector<int> newDegrees, newRowOffsets, newColumnIndices, newValues, vertexTouchedByRemovedEdge;
 };
 
 #endif

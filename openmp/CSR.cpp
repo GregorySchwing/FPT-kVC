@@ -33,6 +33,15 @@ row_offsets_ref(row_offsets){
     values = c.values;    
 }
 
+CSR::CSR(int numberOfRows,
+        std::vector<int> & row_offsets_ref,
+        std::vector<int> & column_indices_ref,
+        std::vector<int> & values_ref):
+SparseMatrix(numberOfRows, values_ref),
+column_indices_ref(column_indices),
+row_offsets_ref(row_offsets)
+{}
+
 /* For post-kernelization G' induced subgraph */
 CSR::CSR(const CSR & c, int edgesLeftToCover):SparseMatrix(c, edgesLeftToCover),
 column_indices_ref(column_indices),

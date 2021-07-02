@@ -50,6 +50,16 @@ Graph::Graph(Graph & g_arg, std::vector<int> & verticesToDelete)
     edgesLeftToCover = compressedSparseMatrix->column_indices.size()/2;
 }
 
+/* Constructor to make induced subgraph G'' for each branch */
+Graph::Graph(CSR & csr_arg, std::vector<int> & verticesToDelete)
+{        
+    std::cout << "Called the delete verts constructor" << std::endl;
+    compressedSparseMatrix = new CSR(csr_arg, verticesToDelete);
+    std::cout << "Built the CSR" << std::endl;
+    std::cout << compressedSparseMatrix->toString();
+    edgesLeftToCover = compressedSparseMatrix->column_indices.size()/2;
+}
+
 std::vector<int> & Graph::GetRemainingVertices(){
     return verticesRemaining;
 }
@@ -121,3 +131,14 @@ void Graph::removeVertex(int vertexToRemove, std::vector<int> & verticesRemainin
         
 }
 
+std::vector<int> & Graph::GetRowOffRef(){
+    return compressedSparseMatrix->row_offsets_ref;
+}
+
+std::vector<int> & Graph::GetColRef(){
+    return compressedSparseMatrix->column_indices_ref;
+}
+
+std::vector<int> & Graph::GetValRef(){
+    return compressedSparseMatrix->values_ref;
+}

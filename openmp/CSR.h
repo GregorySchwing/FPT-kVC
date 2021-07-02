@@ -12,7 +12,10 @@ class CSR : public SparseMatrix {
         CSR(const CSR & c);
         /* For post-kernelization G' induced subgraph */
         CSR(const CSR & c, int edgesLeftToCover);
-
+        CSR(int numberOfRows,
+            std::vector<int> & row_offsets_ref,
+            std::vector<int> & column_indices_ref,
+            std::vector<int> & values_ref);
         /* For branch owned G'' induced subgraph */
         CSR(const CSR & c, std::vector<int> & verticesToDelete);
 
