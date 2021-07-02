@@ -15,11 +15,8 @@ set(sources_cpu_parallel
     MainOpenMP.cpp
     openmp/COO.cpp
     openmp/CSR.cpp
-    openmp/DegreeController.cpp
     openmp/Graph.cpp
-    openmp/NeighborsBinaryDataStructure.cpp
     openmp/ParallelB1.cpp   
-    openmp/ParallelBuss.cpp
     openmp/ParallelKernelization.cpp
     openmp/SparseMatrix.cpp
    )
@@ -45,11 +42,8 @@ set(headers_cpu_serial
 set(headers_cpu_parallel 
     openmp/COO.h
     openmp/CSR.h
-    openmp/DegreeController.h
     openmp/Graph.h
-    openmp/NeighborsBinaryDataStructure.h
     openmp/ParallelB1.h
-    openmp/ParallelBuss.h
     openmp/ParallelKernelization.h
     openmp/SparseMatrix.h
    )

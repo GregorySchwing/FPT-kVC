@@ -1,9 +1,7 @@
 #include "openmp/Graph.h"
 #include "openmp/COO.h"
 #include "openmp/CSR.h"
-#include "openmp/DCSR.h"
 #include "openmp/ParallelKernelization.h"
-#include "openmp/ParallelBuss.h"
 #include "openmp/ParallelB1.h"
 
 //#include "gpu/COO.cuh"
