@@ -89,8 +89,10 @@ class ParallelKernelization {
         int k;
         int b;
         std::vector<int> S;
+        // These are now in Graph like all other usages of G
         //std::vector<int> & row_offsets, & column_indices, & values, & verticesRemaining;
-        std::vector<int> newRowOffsets, newColumnIndices, newValues, vertexTouchedByRemovedEdge;
+        //std::vector<int> newRowOffsets, newColumnIndices, newValues, vertexTouchedByRemovedEdge;
+        
         // n, number of entries
         // A, B = [1 . . n]
         // C = [0 .. k], k = max(A)
