@@ -33,6 +33,7 @@ row_offsets_ref(row_offsets){
     values = c.values;    
 }
 
+/* For K to B1 transition */
 CSR::CSR(int numberOfRows,
         std::vector<int> & row_offsets_ref,
         std::vector<int> & column_indices_ref,
@@ -45,49 +46,16 @@ column_indices_ref(column_indices_ref)
     // Nothing to do
 }
 
-/* For post-kernelization G' induced subgraph */
-CSR::CSR(const CSR & c, int edgesLeftToCover):SparseMatrix(c, edgesLeftToCover),
-column_indices_ref(column_indices),
-row_offsets_ref(row_offsets){
-    row_offsets.reserve(c.numberOfRows + 1);
-    column_indices.reserve(edgesLeftToCover);
-    int count = 0;
-    row_offsets.push_back(count);
-    for (int i = 0; i < c.numberOfRows; ++i){
-        for (int j = c.row_offsets[i]; j < c.row_offsets[i+1]; ++j)
-            if (c.values[j] != 0){
-                ++count; 
-                column_indices.push_back(c.column_indices[j]);
-                values.push_back(c.values[j]);
-            }
-        row_offsets.push_back(count);
-    }
-}
-
-/* For branch owned G'' induced subgraph */
-/* Currently not reserving the column_indices and values vectors */
-CSR::CSR(const CSR & c, std::vector<int> & verticesToDelete):SparseMatrix(c.numberOfRows),
-column_indices_ref(column_indices),
-row_offsets_ref(row_offsets){
-    std::vector<int> valuesToModify = c.values;
-    row_offsets.reserve(c.numberOfRows + 1);
-    for (auto & v: verticesToDelete){
-        std::cout << "Deleting vertex " << v << "'s edges." << std::endl;
-        removeVertexEdges(v, valuesToModify, c);
-    }
-    int count = 0;
-    row_offsets.push_back(count);
-    for (int i = 0; i < c.numberOfRows; ++i){
-        for (int j = c.row_offsets[i]; j < c.row_offsets[i+1]; ++j)
-            if (valuesToModify[j] != 0){
-                ++count; 
-                column_indices.push_back(c.column_indices[j]);
-                values.push_back(valuesToModify[j]);
-            }
-        row_offsets.push_back(count);
-    }
-    size = column_indices.size();
-    std::cout << "values.size(): " << values.size()<< " valuesToModify.size(): " << valuesToModify.size() << std::endl;
+/* For B1 to B1 transition */
+CSR::CSR(int numberOfRows,
+         CSR & c,
+         std::vector<int> & values_ref_arg) :
+// Creates the local copy of values vector of size : values_ref.size() 
+SparseMatrix(numberOfRows, values_ref_arg),
+row_offsets_ref(c.row_offsets_ref),
+column_indices_ref(c.column_indices_ref)
+{
+    // Nothing to do
 }
 
 void CSR::removeVertexEdges(int u){

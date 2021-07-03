@@ -12,6 +12,7 @@ ParallelB1::ParallelB1( int k_prime_arg,
     std::vector<int> path;
     int randomVertex = pk->GetRandomVertex();
     path.push_back(randomVertex);
+    DFS(path, randomVertex);
     for (auto & v : path)
         std::cout << v << " ";
     std::cout << std::endl;
@@ -66,9 +67,9 @@ ParallelB1::ParallelB1( Graph * g_arg,
     }
 
     std::vector<int> path;
-    int randomVertex = 1;
-    // int randomVertex = pk->GetRandomVertex();
+    int randomVertex = GetRandomVertex(verticesRemaining);
     path.push_back(randomVertex);
+    DFS(path, randomVertex);
     for (auto & v : path)
         std::cout << v << " ";
     std::cout << std::endl;
@@ -86,7 +87,15 @@ ParallelB1::ParallelB1( Graph * g_arg,
                 std::cout << v << " ";
             std::cout << std::endl;
             std::cout << "Printed Children Verts" << std::endl;
-            //children[i] = new ParallelB1(new Graph(*g, childrensVertices[i]), childrensVertices[i], k_prime - childrensVertices[i].size(), this);
+            CSR * new_csr = new CSR(g->GetNumberOfRows(),
+                    g->GetCSR()->GetNewRowOffRef(), 
+                    g->GetCSR()->GetNewColRef(), 
+                    g->GetCondensedNewValRef());
+            children[i] = new ParallelB1(new Graph(new_csr, g->GetRemainingVerticesRef()),
+                                        k_prime - childrensVertices[i].size(), 
+                                        this,
+                                        childrensVertices[i], 
+                                        g->GetRemainingVerticesRef());
         } else{
             std::cout << "Child " << i << " is null" << std::endl;
             children[i] = NULL;
@@ -166,7 +175,7 @@ void ParallelB1::createVertexSetsForEachChild(int caseNumber, std::vector<int> &
     }
 }
 
-
-
-
-
+int ParallelB1::GetRandomVertex(std::vector<int> & verticesRemaining){
+    int index = rand() % verticesRemaining.size();
+    return verticesRemaining[index];
+}

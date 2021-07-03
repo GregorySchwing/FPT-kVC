@@ -105,13 +105,11 @@ class ParallelKernelization {
         void PrintS();
         void PrintEdgesOfS();
 
-        void SetEdgesOfS();
         void SetEdgesOfSSym();
         void SetEdgesOfSSymParallel();
         void SetEdgesLeftToCover();
         void SetEdgesLeftToCoverParallel();
         void SetNewRowOffsets();
-        int GetCardinalityOfSEdges();
         bool GPrimeEdgesGreaterKTimesKPrime();
 
 };

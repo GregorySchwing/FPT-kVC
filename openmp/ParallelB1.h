@@ -40,6 +40,7 @@ private:
     void DFS(std::vector<int> & path, int rootVertex);  
     int classifyPath(std::vector<int> & path);
     void createVertexSetsForEachChild(int caseNumber, std::vector<int> & path);
+    int GetRandomVertex(std::vector<int> & verticesRemaining);
 
     Graph * g;
     ParallelKernelization * pk;

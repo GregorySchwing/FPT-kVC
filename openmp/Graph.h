@@ -13,22 +13,21 @@ class Graph {
     public:
         Graph(int vertexCount);
         Graph(Graph & g_arg);
-        Graph(Graph & g_arg, std::vector<int> & verticesToDelete);
 /* Constructor to make induced subgraph G'' for each branch */
         Graph(CSR * csr_arg, std::vector<int> & verticesToDelete);
-    
+        std::vector<int> & GetRemainingVerticesRef();
         int GetEdgesLeftToCover();
-        int GetRandomVertex();
         int GetDegree(int v);
         int GetOutgoingEdge(int v, int outEdgeIndex);
         int GetRandomOutgoingEdge(int v, std::vector<int> & path);
         CSR * GetCSR();
         COO * GetCOO();
-        std::vector<int> & GetRemainingVertices();
         int edgesLeftToCover;
         std::set<std::pair<int,int>> edgesCoveredByKernelization;
         void removeVertex(int vertexToRemove, std::vector<int> & verticesRemaining);
         void PrepareGPrime();
+        int GetNumberOfRows();
+        std::vector<int> & GetCondensedNewValRef();
 
 
     private:
@@ -38,7 +37,7 @@ class Graph {
         // Every vertex touched by an edge removed should be checked after for being degree 0
         // and then removed if so, clearly the vertices chosen by the algorithm for removing
         // are also removed
-        std::vector<int> verticesRemaining, newDegrees, vertexTouchedByRemovedEdge;
+        std::vector<int> verticesRemaining, newDegrees, newValues, vertexTouchedByRemovedEdge;
 
         //std::vector<int> newRowOffsets, newColumnIndices, newValues, ;
 

@@ -31,26 +31,6 @@ Graph::Graph(int vertexCount)
 
 }
 
-/* Constructor to make induced subgraph G' post-kernelization */
-Graph::Graph(Graph & g_arg)
-{        
-    numberOfRows = compressedSparseMatrix->GetNumberOfRows();
-    /* This should use the edgesLeftToCover constructor of COO */
-    compressedSparseMatrix = new CSR(*(g_arg.GetCSR()), g_arg.GetEdgesLeftToCover());             
-    std::cout << compressedSparseMatrix->toString();
-    edgesLeftToCover = compressedSparseMatrix->column_indices.size()/2;
-}
-
-/* Constructor to make induced subgraph G'' for each branch */
-Graph::Graph(Graph & g_arg, std::vector<int> & verticesToDelete)
-{        
-    std::cout << "Called the delete verts constructor" << std::endl;
-    compressedSparseMatrix = new CSR(*(g_arg.GetCSR()), verticesToDelete);
-    std::cout << "Built the CSR" << std::endl;
-    std::cout << compressedSparseMatrix->toString();
-    edgesLeftToCover = compressedSparseMatrix->column_indices.size()/2;
-}
-
 /* Constructor to make induced subgraph G'' for each branch */
 // Called the CSR delete verts constructor in the method call
 
@@ -66,15 +46,9 @@ Graph::Graph(CSR * csr_arg, std::vector<int> & verticesToDelete):
     std::cout << edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
 }
 
-std::vector<int> & Graph::GetRemainingVertices(){
+std::vector<int> & Graph::GetRemainingVerticesRef(){
     return verticesRemaining;
 }
-
-int Graph::GetRandomVertex(){
-    //return degCont->GetRandomVertex();
-    return 1;
-}
-
 
 COO * Graph::GetCOO(){
     return coordinateFormat;
@@ -92,6 +66,11 @@ int Graph::GetDegree(int v){
 int Graph::GetOutgoingEdge(int v, int outEdgeIndex){
     return compressedSparseMatrix->column_indices[compressedSparseMatrix->row_offsets[v] + outEdgeIndex];
 }
+
+int Graph::GetNumberOfRows(){
+    return numberOfRows;
+}
+
 
 int Graph::GetRandomOutgoingEdge(int v, std::vector<int> & path){
 
@@ -258,7 +237,6 @@ void Graph::PrepareGPrime(){
         std::vector<int> & newColumnIndices = compressedSparseMatrix->GetNewColRef();
         //std::vector<int> & newValuesRef;
 
-        std::vector<int> newValues;
         newValues.resize(edgesLeftToCover);
         SetNewRowOffsets(newRowOffsets);
         int row; 
@@ -281,4 +259,8 @@ void Graph::PrepareGPrime(){
         }
 
         RemoveDegreeZeroVertices(newRowOffsets);
+}
+
+std::vector<int> & Graph::GetCondensedNewValRef(){
+    return newValues;
 }
