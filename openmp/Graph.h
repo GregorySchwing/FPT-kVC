@@ -19,7 +19,11 @@ class Graph {
         int GetEdgesLeftToCover();
         int GetDegree(int v);
         int GetOutgoingEdge(int v, int outEdgeIndex);
+        
         int GetRandomOutgoingEdge(int v, std::vector<int> & path);
+        void DFS(std::vector<int> & path, int rootVertex);
+
+
         CSR * GetCSR();
         COO * GetCOO();
         int edgesLeftToCover;

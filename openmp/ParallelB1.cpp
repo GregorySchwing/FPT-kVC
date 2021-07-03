@@ -12,7 +12,7 @@ ParallelB1::ParallelB1( int k_prime_arg,
     std::vector<int> path;
     int randomVertex = pk->GetRandomVertex();
     path.push_back(randomVertex);
-    DFS(path, randomVertex);
+    //DFS(path, randomVertex);
     for (auto & v : path)
         std::cout << v << " ";
     std::cout << std::endl;
@@ -36,7 +36,7 @@ ParallelB1::ParallelB1( int k_prime_arg,
                                 pk_arg->GetColRef(), 
                                 pk_arg->GetValRef());
         
-            children[i] = new ParallelB1(new Graph(new_csr, pk_arg->GetVerticesRemainingRef()),
+            children[i] = new ParallelB1(new Graph(new_csr, childrensVertices[i]),
                                         k_prime - childrensVertices[i].size(), 
                                         this,
                                         childrensVertices[i], 
@@ -69,7 +69,7 @@ ParallelB1::ParallelB1( Graph * g_arg,
     std::vector<int> path;
     int randomVertex = GetRandomVertex(verticesRemaining);
     path.push_back(randomVertex);
-    DFS(path, randomVertex);
+    g->DFS(path, randomVertex);
     for (auto & v : path)
         std::cout << v << " ";
     std::cout << std::endl;
@@ -91,7 +91,7 @@ ParallelB1::ParallelB1( Graph * g_arg,
                     g->GetCSR()->GetNewRowOffRef(), 
                     g->GetCSR()->GetNewColRef(), 
                     g->GetCondensedNewValRef());
-            children[i] = new ParallelB1(new Graph(new_csr, g->GetRemainingVerticesRef()),
+            children[i] = new ParallelB1(new Graph(new_csr, childrensVertices[i]),
                                         k_prime - childrensVertices[i].size(), 
                                         this,
                                         childrensVertices[i], 
@@ -103,19 +103,7 @@ ParallelB1::ParallelB1( Graph * g_arg,
     }
 }
 
-/* DFS of maximum length 3. No simple cycles u -> v -> u */
-void ParallelB1::DFS(std::vector<int> & path, int rootVertex){
-    if (path.size() == 4)
-        return;
 
-    int randomOutgoingEdge = pk->GetRandomOutgoingEdge(rootVertex, path);
-    if (randomOutgoingEdge < 0) {
-        return;
-    } else {
-        path.push_back(randomOutgoingEdge);
-        return DFS(path, randomOutgoingEdge);
-    }
-}
 
 int ParallelB1::classifyPath(std::vector<int> & path){
     if (path.size()==2)

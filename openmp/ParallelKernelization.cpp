@@ -494,31 +494,6 @@ bool ParallelKernelization::GPrimeEdgesGreaterKTimesKPrime(){
     return false;
 }
 
-
-int ParallelKernelization::GetRandomOutgoingEdge(int v, std::vector<int> & path){
-
-    std::vector<int> outgoingEdges(newColumnIndices[newRowOffsets[v]],
-                        newColumnIndices[newRowOffsets[v+1]]);
-
-    std::random_device rd;
-    std::mt19937 g(rd());
-    std::shuffle(outgoingEdges.begin(), outgoingEdges.end(), g);
-    std::vector<int>::iterator it = outgoingEdges.begin();
-
-    while (it != outgoingEdges.end()){
-        /* To prevent simple paths, must at least have 2 entries, 
-        assuming there are no self edges, since the first entry, v,
-        is randomly chosen and the second entry is a random out edge */
-        if (path.size() > 1 && *it == path.rbegin()[1]) {
-            //std::cout << "Wouldve been a simple path, skipping " << *it << std::endl;
-            ++it;
-        } else
-            return *it;
-    }
-
-    return -1;
-}
-
 std::vector<int> & ParallelKernelization::GetRowOffRef(){
     return row_offsets;
 }

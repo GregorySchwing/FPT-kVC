@@ -264,3 +264,17 @@ void Graph::PrepareGPrime(){
 std::vector<int> & Graph::GetCondensedNewValRef(){
     return newValues;
 }
+
+/* DFS of maximum length 3. No simple cycles u -> v -> u */
+void Graph::DFS(std::vector<int> & path, int rootVertex){
+    if (path.size() == 4)
+        return;
+
+    int randomOutgoingEdge = GetRandomOutgoingEdge(rootVertex, path);
+    if (randomOutgoingEdge < 0) {
+        return;
+    } else {
+        path.push_back(randomOutgoingEdge);
+        return DFS(path, randomOutgoingEdge);
+    }
+}

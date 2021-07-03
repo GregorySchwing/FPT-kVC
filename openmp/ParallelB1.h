@@ -36,8 +36,6 @@ public:
 */
 
 private:
-    /* DFS of maximum length 3. No simple cycles u -> v -> u */
-    void DFS(std::vector<int> & path, int rootVertex);  
     int classifyPath(std::vector<int> & path);
     void createVertexSetsForEachChild(int caseNumber, std::vector<int> & path);
     int GetRandomVertex(std::vector<int> & verticesRemaining);
