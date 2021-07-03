@@ -2,53 +2,40 @@
 #include<cmath>
 
 
-ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg), k(k_arg), 
-    row_offsets(g.GetCSR()->new_row_offsets), 
-    column_indices(g.GetCSR()->new_column_indices), 
-    values(g.GetCSR()->new_values),
-    verticesRemaining(g.GetRemainingVerticesRef())
+ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg), k(k_arg)
 {
     numberOfRows = g.GetCSR()->numberOfRows;
 
+    std::vector<int> & old_degree_ref = g_arg.GetNewDegRef();
+
     // Sorted as pairs (deg_0, v_0) , (deg_1, v_1) ...
-    std::vector<int> degrees(numberOfRows);
-    std::vector<int> vertexKeys(numberOfRows);
     // Could use thrust
-
+    std::vector<int> vertexKeys(numberOfRows);
     std::iota (std::begin(vertexKeys), std::end(vertexKeys), 0); // Fill with 0, 1, ..., 99.
-    for (int i = 0; i < numberOfRows; ++i){
-        degrees[i] = row_offsets[i+1] - row_offsets[i];
-    }
-    newDegrees.resize(numberOfRows);
 
-    int max = 0;
+    int max_degree = 0;
     for (int i = 0; i < numberOfRows; ++i){
-        if (degrees[i] > max)
-            max = degrees[i];
+        if (old_degree_ref[i] > max_degree)
+            max_degree = old_degree_ref[i];
     }
 
-    std::vector<int> & A_row_indices = degrees;
-    std::vector<int> & A_col_indices = vertexKeys;
-    std::vector<int> & A_values = vertexKeys;
-
-    std::cout << "Max : " << max << std::endl;
+    std::cout << "Max : " << max_degree << std::endl;
 
     B_row_indices.resize(numberOfRows);
     B_column_indices.resize(numberOfRows);
     B_values.resize(numberOfRows);
 
-    C.resize(max+1, 0);
+    C.resize(max_degree+1, 0);
 
     // Sort by degree
-    CountingSortSerial(   max,
-                    degrees,
-                    vertexKeys,
-                    vertexKeys,
-                    B_row_indices,
-                    B_column_indices,
-                    B_values,
-                    C
-                );
+    CountingSortSerial( max_degree,
+                        old_degree_ref,
+                        vertexKeys,
+                        vertexKeys,
+                        B_row_indices,
+                        B_column_indices,
+                        B_values,
+                        C);
 
     std::cout << "Build VC" << std::endl;
     noSolutionExists = CardinalityOfSetDegreeGreaterK(B_row_indices, B_column_indices);
@@ -57,6 +44,7 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
         exit(0);
     PrintS();            
     std::cout << "Removing S from G" << std::endl;
+    /*
     vertexTouchedByRemovedEdge.resize(numberOfRows);
     SetEdgesOfSSymParallel();
     SetEdgesLeftToCoverParallel();
@@ -81,8 +69,8 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
         int row; 
         
         #pragma omp parallel for default(none) \
-                            shared(row_offsets, column_indices, values, \
-                            newDegrees, newRowOffsets, newColumnIndices, newValues) \
+                            shared( row_offsets, column_indices, values, \
+                                    newRowOffsets, newColumnIndices, newValues) \
                             private (row)
         for (row = 0; row < numberOfRows; ++row)
         {
@@ -98,7 +86,7 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
         }
         RemoveDegreeZeroVertices();
         //RemoveSVertices();
-    }
+    }*/
 }
 
 void ParallelKernelization::CountingSortSerial(int max,
@@ -297,11 +285,6 @@ void ParallelKernelization::ParallelRadixSortWorker(int procID,
 
 }
 
-int ParallelKernelization::GetRandomVertex(){
-    int index = rand() % verticesRemaining.size();
-    return verticesRemaining[index];
-}
-
 bool ParallelKernelization::CardinalityOfSetDegreeGreaterK(std::vector<int> & degrees,
                                                            std::vector<int> & vertexKeys){
     b = GetSetOfVerticesDegreeGreaterK(degrees, vertexKeys);
@@ -341,6 +324,11 @@ void ParallelKernelization::PrintS(){
     std::cout << "}" << std::endl;
 }
 
+int ParallelKernelization::GetKPrime(){
+    return kPrime;
+}
+/*
+
 void ParallelKernelization::PrintEdgesOfS(){
     std::cout << "E(S) = {";
     int i, u, v;
@@ -352,6 +340,11 @@ void ParallelKernelization::PrintEdgesOfS(){
         }
     }
     std::cout << "}" << std::endl;
+}
+
+int ParallelKernelization::GetRandomVertex(){
+    int index = rand() % verticesRemaining.size();
+    return verticesRemaining[index];
 }
 
 void ParallelKernelization::SetEdgesOfSSym(){
@@ -392,7 +385,7 @@ void ParallelKernelization::SetEdgesOfSSymParallel(){
     {
         for (int i = row_offsets[u]; i < row_offsets[u+1]; ++i){
             v = column_indices[i];
-            /* Break this into 2 independent for loops */
+            // Break this into 2 independent for loops 
             //!!!!!   a must be sorted by cols within rows.       
             low = std::lower_bound( column_indices.begin() + row_offsets[v], 
                                     column_indices.begin() + row_offsets[v+1], 
@@ -416,10 +409,6 @@ void ParallelKernelization::RemoveDegreeZeroVertices(){
         if(newRowOffsets[i+1] - newRowOffsets[i] == 0)
             g.removeVertex(i, verticesRemaining);
     }
-}
-
-int ParallelKernelization::GetKPrime(){
-    return kPrime;
 }
 
 
@@ -475,7 +464,7 @@ std::vector<int> & ParallelKernelization::GetValRef(){
 std::vector<int> & ParallelKernelization::GetVerticesRemainingRef(){
     return verticesRemaining;
 }
-
+*/
 int ParallelKernelization::GetNumberOfRows(){
     return numberOfRows;
 }

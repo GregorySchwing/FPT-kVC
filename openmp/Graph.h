@@ -16,6 +16,8 @@ class Graph {
 /* Constructor to make induced subgraph G'' for each branch */
         Graph(Graph * g_arg, std::vector<int> & verticesToDelete);
         std::vector<int> & GetRemainingVerticesRef();
+        std::vector<int> & GetNewDegRef();
+
         int GetEdgesLeftToCover();
         int GetDegree(int v);
         int GetOutgoingEdge(int v, int outEdgeIndex);

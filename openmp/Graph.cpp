@@ -8,14 +8,17 @@ old_degrees_ref(new_degrees)
 
     /* Eventually replace this with an initialization from file */
     BuildTheExampleCOO(coordinateFormat);
-
     compressedSparseMatrix = new CSR(*coordinateFormat);             
     std::cout << coordinateFormat->toString();
     std::cout << compressedSparseMatrix->toString();
     edgesLeftToCover = compressedSparseMatrix->new_column_indices.size()/2;
     verticesRemaining.resize(vertexCount);
     std::iota (std::begin(verticesRemaining), std::end(verticesRemaining), 0); // Fill with 0, 1, ..., 99.
-
+    std::vector<int> & new_row_offsets = compressedSparseMatrix->new_row_offsets;
+    new_degrees.resize(numberOfRows);
+    for (int i = 0; i < numberOfRows; ++i){
+        new_degrees[i] = new_row_offsets[i+1] - new_row_offsets[i];
+    }
 }
 
 /* Constructor to make induced subgraph G'' for each branch */
@@ -285,4 +288,8 @@ void Graph::BuildTheExampleCOO(COO * coordinateFormat){
     coordinateFormat->size = coordinateFormat->new_column_indices.size();
     // vlog(e)
     coordinateFormat->sortMyself();
+}
+
+std::vector<int> & Graph::GetNewDegRef(){
+    return new_degrees;
 }

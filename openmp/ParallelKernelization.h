@@ -20,14 +20,16 @@ class ParallelKernelization {
                 std::vector<int> & B_values_ref);
         int GetKPrime();
         std::vector<int> & GetS();
-        /* These are only called on the Kernel to B1 transition */
-        int GetRandomVertex();
-        /* These are only called on the Kernel to B1 transition */
+
         bool noSolutionExists;
+        /*
+                // These are only called on the Kernel to B1 transition 
+
+        int GetRandomVertex();
         std::vector<int> & GetRowOffRef();
         std::vector<int> & GetColRef();
         std::vector<int> & GetValRef();
-        std::vector<int> & GetVerticesRemainingRef();
+        std::vector<int> & GetVerticesRemainingRef();*/
         int GetNumberOfRows();
 
     private:
@@ -79,13 +81,16 @@ class ParallelKernelization {
         void RemoveDegreeZeroVertices();
 
         int numberOfElements, numberOfRows;
+
+        //std::vector<int> degrees, newDegrees
+
         int kPrime;
         Graph & g;
         int k;
         int b;
         std::vector<int> S;
-        std::vector<int> & row_offsets, & column_indices, & values, & verticesRemaining;
-        std::vector<int> newDegrees, newRowOffsets, newColumnIndices, newValues, vertexTouchedByRemovedEdge;
+        //std::vector<int> & row_offsets, & column_indices, & values, & verticesRemaining;
+        std::vector<int> newRowOffsets, newColumnIndices, newValues, vertexTouchedByRemovedEdge;
         // n, number of entries
         // A, B = [1 . . n]
         // C = [0 .. k], k = max(A)
@@ -99,14 +104,15 @@ class ParallelKernelization {
         int GetSetOfVerticesDegreeGreaterK(std::vector<int> & degrees,
                                             std::vector<int> & vertexKeys);
         void PrintS();
-        void PrintEdgesOfS();
 
+        /*
+        void PrintEdgesOfS();
         void SetEdgesOfSSym();
         void SetEdgesOfSSymParallel();
         void SetEdgesLeftToCover();
         void SetEdgesLeftToCoverParallel();
         void SetNewRowOffsets();
         bool GPrimeEdgesGreaterKTimesKPrime();
-
+        */
 };
 #endif

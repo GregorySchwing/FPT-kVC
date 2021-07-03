@@ -10,7 +10,8 @@ ParallelB1::ParallelB1( int k_prime_arg,
                         result(false){
     
     std::vector<int> path;
-    int randomVertex = pk->GetRandomVertex();
+    //int randomVertex = pk->GetRandomVertex();
+    int randomVertex = 1;
     path.push_back(randomVertex);
     //DFS(path, randomVertex);
     for (auto & v : path)

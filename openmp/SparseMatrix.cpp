@@ -14,11 +14,13 @@ numberOfColumns(numberOfColumns),
 old_values_ref(new_values)
 {};
 
-
+/* Only used for creating first CSR from a COO */
 SparseMatrix::SparseMatrix(SparseMatrix & s):
 size(s.size), 
 numberOfRows(s.numberOfRows), 
 numberOfColumns(s.numberOfColumns),
+// Circular since there is no branching structure 
+// preventing us from writing on the values
 old_values_ref(s.new_values){
     //new_values = s.new_values;
 }
