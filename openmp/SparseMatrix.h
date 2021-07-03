@@ -16,8 +16,6 @@ class SparseMatrix {
         SparseMatrix(int numberOfRows);
         /* SPM by reference */
         SparseMatrix(int numberOfRows, std::vector<int> & values_ref_arg);
-        /* SpRef */
-        SparseMatrix(const SparseMatrix & s, int edgesLeftToCover);
 
         int GetNumberOfRows();
 
@@ -25,9 +23,9 @@ class SparseMatrix {
         virtual std::string toString() = 0;
         int numberOfRows, numberOfColumns, size;
         // These are for the current matrix
-        std::vector<int> & values_ref;
+        std::vector<int> & old_values_ref;
         // These are for the next matrix
-        std::vector<int> values;
+        std::vector<int> new_values;
 };
 
 #endif

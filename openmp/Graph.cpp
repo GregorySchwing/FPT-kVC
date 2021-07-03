@@ -7,38 +7,22 @@ old_degrees_ref(new_degrees)
     coordinateFormat = new COO(vertexCount, vertexCount);
 
     /* Eventually replace this with an initialization from file */
-    coordinateFormat->addEdgeSymmetric(0,1,1);
-    coordinateFormat->addEdgeSymmetric(0,4,1);
-    coordinateFormat->addEdgeSymmetric(1,4,1);
-    coordinateFormat->addEdgeSymmetric(1,5,1);
-    coordinateFormat->addEdgeSymmetric(1,6,1);
-    coordinateFormat->addEdgeSymmetric(2,4,1);
-    coordinateFormat->addEdgeSymmetric(2,6,1);
-    coordinateFormat->addEdgeSymmetric(3,5,1);
-    coordinateFormat->addEdgeSymmetric(3,6,1);
-    coordinateFormat->addEdgeSymmetric(4,7,1);
-    coordinateFormat->addEdgeSymmetric(4,8,1);
-    coordinateFormat->addEdgeSymmetric(5,8,1);
-    coordinateFormat->addEdgeSymmetric(6,9,1);
+    BuildTheExampleCOO(coordinateFormat);
 
-    coordinateFormat->size = coordinateFormat->column_indices.size();
-    // vlog(e)
-    coordinateFormat->sortMyself();
     compressedSparseMatrix = new CSR(*coordinateFormat);             
     std::cout << coordinateFormat->toString();
     std::cout << compressedSparseMatrix->toString();
-    edgesLeftToCover = compressedSparseMatrix->column_indices.size()/2;
+    edgesLeftToCover = compressedSparseMatrix->new_column_indices.size()/2;
     verticesRemaining.resize(vertexCount);
     std::iota (std::begin(verticesRemaining), std::end(verticesRemaining), 0); // Fill with 0, 1, ..., 99.
 
 }
 
 /* Constructor to make induced subgraph G'' for each branch */
-// Called the CSR delete verts constructor in the method call
-
 Graph::Graph(Graph * g_arg, std::vector<int> & verticesToDelete):
+    // Sets the old references of the new csr 
+    // to point to the new references of the argument
     compressedSparseMatrix(g_arg->GetCSR()),
-    // Will change the CSR arg to a G so the old deg ref is available.
     old_degrees_ref(g_arg->new_degrees)
 {        
     // Sets some of the entries in values[] to 0
@@ -64,11 +48,11 @@ int Graph::GetEdgesLeftToCover(){
 
 
 int Graph::GetDegree(int v){
-    return compressedSparseMatrix->row_offsets[v+1] - compressedSparseMatrix->row_offsets[v];
+    return compressedSparseMatrix->old_row_offsets_ref[v+1] - compressedSparseMatrix->old_row_offsets_ref[v];
 }
 
 int Graph::GetOutgoingEdge(int v, int outEdgeIndex){
-    return compressedSparseMatrix->column_indices[compressedSparseMatrix->row_offsets[v] + outEdgeIndex];
+    return compressedSparseMatrix->old_column_indices_ref[compressedSparseMatrix->old_row_offsets_ref[v] + outEdgeIndex];
 }
 
 int Graph::GetNumberOfRows(){
@@ -78,8 +62,8 @@ int Graph::GetNumberOfRows(){
 
 int Graph::GetRandomOutgoingEdge(int v, std::vector<int> & path){
 
-    std::vector<int> outgoingEdges(&compressedSparseMatrix->column_indices[compressedSparseMatrix->row_offsets[v]],
-                        &compressedSparseMatrix->column_indices[compressedSparseMatrix->row_offsets[v+1]]);
+    std::vector<int> outgoingEdges(&compressedSparseMatrix->old_column_indices_ref[compressedSparseMatrix->old_row_offsets_ref[v]],
+                        &compressedSparseMatrix->old_column_indices_ref[compressedSparseMatrix->old_row_offsets_ref[v+1]]);
 
     std::random_device rd;
     std::mt19937 g(rd());
@@ -281,4 +265,24 @@ void Graph::DFS(std::vector<int> & path, int rootVertex){
         path.push_back(randomOutgoingEdge);
         return DFS(path, randomOutgoingEdge);
     }
+}
+
+void Graph::BuildTheExampleCOO(COO * coordinateFormat){
+    coordinateFormat->addEdgeSymmetric(0,1,1);
+    coordinateFormat->addEdgeSymmetric(0,4,1);
+    coordinateFormat->addEdgeSymmetric(1,4,1);
+    coordinateFormat->addEdgeSymmetric(1,5,1);
+    coordinateFormat->addEdgeSymmetric(1,6,1);
+    coordinateFormat->addEdgeSymmetric(2,4,1);
+    coordinateFormat->addEdgeSymmetric(2,6,1);
+    coordinateFormat->addEdgeSymmetric(3,5,1);
+    coordinateFormat->addEdgeSymmetric(3,6,1);
+    coordinateFormat->addEdgeSymmetric(4,7,1);
+    coordinateFormat->addEdgeSymmetric(4,8,1);
+    coordinateFormat->addEdgeSymmetric(5,8,1);
+    coordinateFormat->addEdgeSymmetric(6,9,1);
+
+    coordinateFormat->size = coordinateFormat->new_column_indices.size();
+    // vlog(e)
+    coordinateFormat->sortMyself();
 }

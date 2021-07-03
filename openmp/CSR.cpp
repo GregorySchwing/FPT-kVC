@@ -5,21 +5,21 @@ CSR::CSR(COO & c):
 // Sets values_ref(c.values) in SM constructor
 SparseMatrix(c),
 // Didn't exist in COO or SM so we have a cicular ref
-row_offsets_ref(row_offsets),
+old_row_offsets_ref(new_row_offsets),
 // Reference to COO col inds
-column_indices_ref(c.column_indices)
+old_column_indices_ref(c.new_column_indices)
 {
-    row_offsets.resize(numberOfRows + 1);
+    new_row_offsets.resize(numberOfRows + 1);
     int row_size = 0;
     int row = 0;
     int index = 0;
-    row_offsets[0] = 0;
+    new_row_offsets[0] = 0;
     while(row < numberOfRows){
-        if(c.row_indices[index] == row){
+        if(c.new_row_indices[index] == row){
             row_size++;
             index++;
         } else {
-            row_offsets[row+1] = row_size;
+            new_row_offsets[row+1] = row_size;
             row++;
         }
     }
@@ -27,24 +27,11 @@ column_indices_ref(c.column_indices)
 
 /* Building the next graph */
 CSR::CSR(CSR & c):
-SparseMatrix(numberOfRows, c.values),
-row_offsets_ref(c.row_offsets),
-column_indices_ref(c.column_indices)
+SparseMatrix(numberOfRows, c.new_values),
+old_row_offsets_ref(c.new_row_offsets),
+old_column_indices_ref(c.new_column_indices)
 {
  
-}
-
-/* For K to B1 transition */
-CSR::CSR(int numberOfRows,
-        std::vector<int> & row_offsets_ref,
-        std::vector<int> & column_indices_ref,
-        std::vector<int> & values_ref):
-// Creates the local copy of values vector of size : values_ref.size() 
-SparseMatrix(numberOfRows, values_ref),
-row_offsets_ref(row_offsets_ref),
-column_indices_ref(column_indices_ref)
-{
-    // Nothing to do
 }
 
 /* For B1 to B1 transition */
@@ -53,8 +40,8 @@ CSR::CSR(int numberOfRows,
          std::vector<int> & values_ref_arg) :
 // Creates the local copy of values vector of size : values_ref.size() 
 SparseMatrix(numberOfRows, values_ref_arg),
-row_offsets_ref(c.row_offsets_ref),
-column_indices_ref(c.column_indices_ref)
+old_row_offsets_ref(c.new_row_offsets),
+old_column_indices_ref(c.new_column_indices)
 {
     // Nothing to do
 }
@@ -67,18 +54,18 @@ std::string CSR::toString(){
     ss << "\t\tCSR Matrix" << std::endl;
 
     ss << "Row offsets" << std::endl;
-    for(int i = 0; i< row_offsets_ref.size(); i++){
-        ss << "\t" << row_offsets_ref[i];
+    for(int i = 0; i< old_row_offsets_ref.size(); i++){
+        ss << "\t" << old_row_offsets_ref[i];
     }
     ss << std::endl;
     ss << "Column indices" << std::endl;
-    for(int i = 0; i< column_indices_ref.size(); i++){
-        ss << "\t" << column_indices_ref[i];
+    for(int i = 0; i< old_column_indices_ref.size(); i++){
+        ss << "\t" << old_column_indices_ref[i];
     }
     ss << std::endl;
     ss << "values" << std::endl;
-    for(int i = 0; i< values_ref.size(); i++){
-        ss << "\t" << values_ref[i];
+    for(int i = 0; i< old_values_ref.size(); i++){
+        ss << "\t" << old_values_ref[i];
     }
     ss << std::endl;
     myMatrix = ss.str();
@@ -87,25 +74,25 @@ std::string CSR::toString(){
 
 
 std::vector<int> & CSR::GetOldRowOffRef(){
-    return row_offsets_ref;
+    return old_row_offsets_ref;
 }
 
 std::vector<int> & CSR::GetOldColRef(){
-    return column_indices_ref;
+    return old_column_indices_ref;
 }
 
 std::vector<int> & CSR::GetOldValRef(){
-    return values_ref;
+    return old_values_ref;
 }
 
 std::vector<int> & CSR::GetNewRowOffRef(){
-    return row_offsets;
+    return new_row_offsets;
 }
 
 std::vector<int> & CSR::GetNewColRef(){
-    return column_indices;
+    return new_column_indices;
 }
 
 std::vector<int> & CSR::GetNewValRef(){
-    return values;
+    return new_values;
 }

@@ -3,9 +3,9 @@
 
 
 ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg), k(k_arg), 
-    row_offsets(g.GetCSR()->row_offsets), 
-    column_indices(g.GetCSR()->column_indices), 
-    values(g.GetCSR()->values),
+    row_offsets(g.GetCSR()->new_row_offsets), 
+    column_indices(g.GetCSR()->new_column_indices), 
+    values(g.GetCSR()->new_values),
     verticesRemaining(g.GetRemainingVerticesRef())
 {
     numberOfRows = g.GetCSR()->numberOfRows;

@@ -25,7 +25,7 @@ public:
     void addEdgeSymmetric(int u, int v, int weight);
 
     //COO& SpMV(COO & c);
-    std::vector<int> column_indices, row_indices;
+    std::vector<int> new_column_indices, new_row_indices;
 private:
 bool isSorted;
 };

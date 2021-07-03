@@ -48,6 +48,8 @@ class Graph {
         // Following the CSR design pattern, the new degrees
         std::vector<int> new_degrees;
 
+
+        void BuildTheExampleCOO(COO * coordinateFormat);
         void SetEdgesOfSSymParallel(std::vector<int> & S);
         void SetEdgesLeftToCoverParallel();
         void SetNewRowOffsets(std::vector<int> & newRowOffsetsRef);

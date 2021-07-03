@@ -11,13 +11,6 @@ class CSR : public SparseMatrix {
         CSR(COO & c);
         CSR(CSR & c);
 
-        /* For post-kernelization G' induced subgraph */
-        CSR(int numberOfRows,
-            std::vector<int> & row_offsets_ref,
-            std::vector<int> & column_indices_ref,
-            std::vector<int> & values_ref);
-
-
         /* For branch owned G'' induced subgraph */
         CSR(int numberOfRows,
             CSR & c,
@@ -32,9 +25,9 @@ class CSR : public SparseMatrix {
 
         std::string toString();
         // These are for the next CSR
-        std::vector<int> column_indices, row_offsets;
+        std::vector<int> new_column_indices, new_row_offsets;
         // These are the current CSR
-        std::vector<int> & column_indices_ref, & row_offsets_ref;
+        std::vector<int> & old_column_indices_ref, & old_row_offsets_ref;
 
 };
 
