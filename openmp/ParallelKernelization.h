@@ -74,14 +74,11 @@ class ParallelKernelization {
                 std::vector<int> & B_column_indices_ref,
                 std::vector<int> & B_values_ref);
         
-        
-        int GetStartingIndexInA(int processorID);
-        int GetEndingIndexInA(int processorID); 
-        int GetBlockSize();
+
         void RemoveSVertices();
         void RemoveDegreeZeroVertices();
 
-        int numberOfElements, numberOfProcessors, blockSize, rowBlockSize, numberOfRows;
+        int numberOfElements, numberOfRows;
         int kPrime;
         Graph & g;
         int k;

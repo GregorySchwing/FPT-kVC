@@ -42,8 +42,11 @@ class Graph {
         // and then removed if so, clearly the vertices chosen by the algorithm for removing
         // are also removed
         std::vector<int> verticesRemaining, newDegrees, newValues, vertexTouchedByRemovedEdge;
-
-        //std::vector<int> newRowOffsets, newColumnIndices, newValues, ;
+        
+        // Following the CSR design pattern, a reference to the old degrees
+        std::vector<int> & old_degrees_ref;
+        // Following the CSR design pattern, the new degrees
+        std::vector<int> new_degrees;
 
         void SetEdgesOfSSymParallel(std::vector<int> & S);
         void SetEdgesLeftToCoverParallel();

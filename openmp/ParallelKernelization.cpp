@@ -8,34 +8,18 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
     values(g.GetCSR()->values),
     verticesRemaining(g.GetRemainingVerticesRef())
 {
-    #pragma omp parallel
-    {
-        int ID = omp_get_thread_num();
-        printf(" hello(%d) ", ID);
-        printf(" world(%d) \n", ID);
-    }
-    numberOfProcessors = omp_get_max_threads();
-    numberOfElements = g.GetCOO()->row_indices.size();
-    blockSize = numberOfElements/numberOfProcessors;
-    rowBlockSize = g.GetCSR()->numberOfRows/numberOfProcessors;
     numberOfRows = g.GetCSR()->numberOfRows;
-    std::vector<int> degrees(g.GetCSR()->numberOfRows);
-    std::vector<int> vertexKeys(g.GetCSR()->numberOfRows);
+
+    // Sorted as pairs (deg_0, v_0) , (deg_1, v_1) ...
+    std::vector<int> degrees(numberOfRows);
+    std::vector<int> vertexKeys(numberOfRows);
+    // Could use thrust
 
     std::iota (std::begin(vertexKeys), std::end(vertexKeys), 0); // Fill with 0, 1, ..., 99.
     for (int i = 0; i < numberOfRows; ++i){
         degrees[i] = row_offsets[i+1] - row_offsets[i];
     }
     newDegrees.resize(numberOfRows);
-    std::cout << "degrees " << std::endl;
-    for (auto & v : degrees)
-        std::cout << v << " ";
-    std::cout << std::endl;
-
-    std::cout << "vertexKeys " << std::endl;
-    for (auto & v : vertexKeys)
-        std::cout << v << " ";
-    std::cout << std::endl;
 
     int max = 0;
     for (int i = 0; i < numberOfRows; ++i){
@@ -311,21 +295,6 @@ void ParallelKernelization::ParallelRadixSortWorker(int procID,
         A_values[i] = B_values_ref[i];
     }
 
-}
-
-int ParallelKernelization::GetStartingIndexInA(int processorID){
-    return processorID*blockSize;
-}
-
-int ParallelKernelization::GetEndingIndexInA(int processorID){
-    if (processorID == numberOfProcessors-1)
-        return numberOfElements;
-    else
-        return (processorID+1)*blockSize;
-}
-
-int ParallelKernelization::GetBlockSize(){
-    return blockSize;
 }
 
 int ParallelKernelization::GetRandomVertex(){

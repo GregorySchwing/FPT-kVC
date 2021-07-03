@@ -1,6 +1,8 @@
 #include "Graph.h"
 
-Graph::Graph(int vertexCount)
+Graph::Graph(int vertexCount): 
+// Circular reference since there are no old degrees.
+old_degrees_ref(new_degrees)
 {
     coordinateFormat = new COO(vertexCount, vertexCount);
 
@@ -35,7 +37,9 @@ Graph::Graph(int vertexCount)
 // Called the CSR delete verts constructor in the method call
 
 Graph::Graph(CSR * csr_arg, std::vector<int> & verticesToDelete):
-    compressedSparseMatrix(csr_arg)
+    compressedSparseMatrix(csr_arg),
+    // Will change the CSR arg to a G so the old deg ref is available.
+    old_degrees_ref(new_degrees)
 {        
     // Sets some of the entries in values[] to 0
     SetEdgesOfSSymParallel(verticesToDelete); 
