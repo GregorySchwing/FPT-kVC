@@ -11,7 +11,7 @@ class SparseMatrix {
         /* Will use AddEdge to build, thus size is dynamic */
         SparseMatrix(int numberOfRows, int numberOfColumns);
         /* Copy Constructor */
-        SparseMatrix(const SparseMatrix & s);
+        SparseMatrix(SparseMatrix & s);
         /* No optimization by reserving vectors, size and values must be set */
         SparseMatrix(int numberOfRows);
         /* SPM by reference */
@@ -23,9 +23,11 @@ class SparseMatrix {
 
 
         virtual std::string toString() = 0;
-        virtual void insertElements(const SparseMatrix & s) = 0;
         int numberOfRows, numberOfColumns, size;
-        std::vector<int> values, & values_ref;
+        // These are for the current matrix
+        std::vector<int> & values_ref;
+        // These are for the next matrix
+        std::vector<int> values;
 };
 
 #endif

@@ -8,8 +8,8 @@
 
 class CSR : public SparseMatrix {
     public:
-        CSR(const COO & c);
-        CSR(const CSR & c);
+        CSR(COO & c);
+        CSR(CSR & c);
 
         /* For post-kernelization G' induced subgraph */
         CSR(int numberOfRows,
@@ -31,11 +31,9 @@ class CSR : public SparseMatrix {
         std::vector<int> & GetNewValRef();
 
         std::string toString();
-        void removeVertexEdges(int u);
-        void removeVertexEdges(int u, std::vector<int> & valuesToModify, const CSR & c);
-        void insertElements(const SparseMatrix & s);
-        const CSR& castSparseMatrix(const SparseMatrix & s);
+        // These are for the next CSR
         std::vector<int> column_indices, row_offsets;
+        // These are the current CSR
         std::vector<int> & column_indices_ref, & row_offsets_ref;
 
 };

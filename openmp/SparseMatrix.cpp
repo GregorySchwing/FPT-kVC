@@ -13,12 +13,12 @@ numberOfRows(numberOfRows),
 numberOfColumns(numberOfColumns),
 values_ref(values)
 {};
-SparseMatrix::SparseMatrix(const SparseMatrix & s):
+SparseMatrix::SparseMatrix(SparseMatrix & s):
 size(s.size), 
 numberOfRows(s.numberOfRows), 
 numberOfColumns(s.numberOfColumns),
-values_ref(values){
-    values = s.values;
+values_ref(s.values){
+    //values = s.values;
 }
 /* Induced Subgraph - SpRef - Only reserve so we only have to make 1 pass over the edges */
 SparseMatrix::SparseMatrix(const SparseMatrix & s, int edgesLeftToCover):
