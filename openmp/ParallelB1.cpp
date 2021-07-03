@@ -30,7 +30,7 @@ ParallelB1::ParallelB1( int k_prime_arg,
                 std::cout << v << " ";
             std::cout << std::endl;
             std::cout << "Printed Children Verts" << std::endl;
-
+/*
             CSR * new_csr = new CSR(pk_arg->GetNumberOfRows(),
                                 pk_arg->GetRowOffRef(), 
                                 pk_arg->GetColRef(), 
@@ -41,6 +41,7 @@ ParallelB1::ParallelB1( int k_prime_arg,
                                         this,
                                         childrensVertices[i], 
                                         pk_arg->GetVerticesRemainingRef());
+*/
         } else{
             std::cout << "Child " << i << " is null" << std::endl;
             children[i] = NULL;
@@ -87,6 +88,7 @@ ParallelB1::ParallelB1( Graph * g_arg,
                 std::cout << v << " ";
             std::cout << std::endl;
             std::cout << "Printed Children Verts" << std::endl;
+/*
             CSR * new_csr = new CSR(g->GetNumberOfRows(),
                     g->GetCSR()->GetNewRowOffRef(), 
                     g->GetCSR()->GetNewColRef(), 
@@ -96,6 +98,7 @@ ParallelB1::ParallelB1( Graph * g_arg,
                                         this,
                                         childrensVertices[i], 
                                         g->GetRemainingVerticesRef());
+*/
         } else{
             std::cout << "Child " << i << " is null" << std::endl;
             children[i] = NULL;

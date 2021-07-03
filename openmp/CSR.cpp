@@ -25,12 +25,13 @@ column_indices_ref(c.column_indices)
     }
 }
 
-CSR::CSR(CSR & c):SparseMatrix(c),
-column_indices_ref(column_indices),
-row_offsets_ref(row_offsets){
-    row_offsets = c.row_offsets;
-    column_indices = c.column_indices;
-    values = c.values;    
+/* Building the next graph */
+CSR::CSR(CSR & c):
+SparseMatrix(numberOfRows, c.values),
+row_offsets_ref(c.row_offsets),
+column_indices_ref(c.column_indices)
+{
+ 
 }
 
 /* For K to B1 transition */

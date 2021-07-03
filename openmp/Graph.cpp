@@ -36,10 +36,10 @@ old_degrees_ref(new_degrees)
 /* Constructor to make induced subgraph G'' for each branch */
 // Called the CSR delete verts constructor in the method call
 
-Graph::Graph(CSR * csr_arg, std::vector<int> & verticesToDelete):
-    compressedSparseMatrix(csr_arg),
+Graph::Graph(Graph * g_arg, std::vector<int> & verticesToDelete):
+    compressedSparseMatrix(g_arg->GetCSR()),
     // Will change the CSR arg to a G so the old deg ref is available.
-    old_degrees_ref(new_degrees)
+    old_degrees_ref(g_arg->new_degrees)
 {        
     // Sets some of the entries in values[] to 0
     SetEdgesOfSSymParallel(verticesToDelete); 
@@ -158,7 +158,7 @@ void Graph::SetEdgesOfSSymParallel(std::vector<int> & S){
 
 void Graph::SetEdgesLeftToCoverParallel(){
     int count = 0, i = 0, j = 0;
-    std::vector<int> & newDegs = newDegrees;
+    std::vector<int> & newDegs = new_degrees;
     std::vector<int> & values = compressedSparseMatrix->GetNewValRef();
     std::vector<int> & row_offsets = compressedSparseMatrix->GetOldRowOffRef();
     #pragma omp parallel for default(none) shared(row_offsets, values, newDegs, numberOfRows) private (i, j) \
@@ -178,7 +178,7 @@ void Graph::SetNewRowOffsets(std::vector<int> & newRowOffsetsRef){
     newRowOffsetsRef.resize(numberOfRows+1);
     for (i = 1; i <= numberOfRows; ++i)
     {
-        newRowOffsetsRef[i] = newDegrees[i-1] + newRowOffsetsRef[i-1];
+        newRowOffsetsRef[i] = new_degrees[i-1] + newRowOffsetsRef[i-1];
     }
 }
 
@@ -247,7 +247,7 @@ void Graph::PrepareGPrime(){
         
         #pragma omp parallel for default(none) \
                             shared(row_offsets, column_indices, values, \
-                            newDegrees, newRowOffsets, newColumnIndices, newValues) \
+                            new_degrees, newRowOffsets, newColumnIndices, newValues) \
                             private (row)
         for (row = 0; row < numberOfRows; ++row)
         {

@@ -14,7 +14,7 @@ class Graph {
         Graph(int vertexCount);
         Graph(Graph & g_arg);
 /* Constructor to make induced subgraph G'' for each branch */
-        Graph(CSR * csr_arg, std::vector<int> & verticesToDelete);
+        Graph(Graph * g_arg, std::vector<int> & verticesToDelete);
         std::vector<int> & GetRemainingVerticesRef();
         int GetEdgesLeftToCover();
         int GetDegree(int v);
@@ -41,7 +41,7 @@ class Graph {
         // Every vertex touched by an edge removed should be checked after for being degree 0
         // and then removed if so, clearly the vertices chosen by the algorithm for removing
         // are also removed
-        std::vector<int> verticesRemaining, newDegrees, newValues, vertexTouchedByRemovedEdge;
+        std::vector<int> verticesRemaining, newValues, vertexTouchedByRemovedEdge;
         
         // Following the CSR design pattern, a reference to the old degrees
         std::vector<int> & old_degrees_ref;
