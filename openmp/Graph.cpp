@@ -31,14 +31,11 @@ Graph::Graph(Graph * g_arg, std::vector<int> & verticesToDelete):
     // Sets the old references of the new csr 
     // to point to the new references of the argument
     compressedSparseMatrix(new CSR(g_arg->GetCSR())),
-    old_degrees_ref(g_arg->new_degrees)
+    old_degrees_ref(g_arg->new_degrees),
+    vertexCount(g_arg->vertexCount)
 {        
     std::cout << "Entered constructor of G induced" << std::endl;
-    std::cout << "GetNewValRef" << std::endl;
-    for ( auto & v : compressedSparseMatrix->GetNewValRef())
-        std::cout << v << " ";
-    std::cout << std::endl;
-
+    new_degrees.resize(vertexCount);
     std::cout << compressedSparseMatrix->toString();
 
     // Sets some of the entries in values[] to 0

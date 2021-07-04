@@ -14,5 +14,8 @@ int main(int argc, char *argv[])
     int k = 4;
     std::cout << "Building PK" << std::endl;
     ParallelKernelization sk(g, k);
-    ParallelB1(sk.GetKPrime(), &sk);
+    Graph * gPrime = new Graph(&g, sk.GetS());
+
+    //ParallelB1(new Graph(g, sk.GetS()), sk.GetKPrime(), &sk);
+    //ParallelB1(sk.GetKPrime(), &sk);
 }
