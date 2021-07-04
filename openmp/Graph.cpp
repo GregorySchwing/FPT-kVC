@@ -116,8 +116,23 @@ void Graph::removeVertex(int vertexToRemove, std::vector<int> & verticesRemainin
                                 vertexToRemove);
         if (low == std::end(verticesRemaining))
             return;
-        else
+        else{
+            std::cout << "Begginning of a call" << std::endl;
+            std::cout << "vertexToRemove " << vertexToRemove << std::endl;
+
+            std::cout << "Before Erasing " << low - std::begin(verticesRemaining) << std::endl;
+            for ( auto & v : verticesRemaining )
+                std::cout << v << " ";
+            std::cout << std::endl;
+
+            std::cout << "Erasing " << low - std::begin(verticesRemaining) << std::endl;
             verticesRemaining.erase(low);
+            std::cout << "After Erasing " << low - std::begin(verticesRemaining) << std::endl;
+            for ( auto & v : verticesRemaining )
+                std::cout << v << " ";
+            std::cout << std::endl;
+            std::cout << "End of a call" << std::endl;
+        }
         
 }
 
@@ -335,8 +350,7 @@ bool Graph::GPrimeEdgesGreaterKTimesKPrime(int k, int kPrime){
 }
 
 int Graph::GetRandomVertex(){
-        std::cout << "verticesRemaining.size() " << verticesRemaining.size() << std::endl;
-
+    std::cout << "verticesRemaining.size() " << verticesRemaining.size() << std::endl;
     int index = rand() % verticesRemaining.size();
     return verticesRemaining[index];
 }
