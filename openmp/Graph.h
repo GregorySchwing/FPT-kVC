@@ -49,7 +49,7 @@ class Graph {
         std::vector<int> & old_degrees_ref;
         // Following the CSR design pattern, the new degrees
         std::vector<int> new_degrees;
-
+        int vertexCount;
 
         void BuildTheExampleCOO(COO * coordinateFormat);
         void SetEdgesOfSSymParallel(std::vector<int> & S);

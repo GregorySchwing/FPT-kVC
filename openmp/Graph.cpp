@@ -2,7 +2,8 @@
 
 Graph::Graph(int vertexCount): 
 // Circular reference since there are no old degrees.
-old_degrees_ref(new_degrees)
+old_degrees_ref(new_degrees),
+numberOfRows(vertexCount)
 {
     coordinateFormat = new COO(vertexCount, vertexCount);
 
@@ -14,14 +15,11 @@ old_degrees_ref(new_degrees)
     edgesLeftToCover = compressedSparseMatrix->new_column_indices.size()/2;
     verticesRemaining.resize(vertexCount);
     std::iota (std::begin(verticesRemaining), std::end(verticesRemaining), 0); // Fill with 0, 1, ..., 99.
-    std::cout << "grabbing nros" << std::endl;
     std::vector<int> & new_row_offsets = compressedSparseMatrix->new_row_offsets;
     new_degrees.resize(numberOfRows);
     for (int i = 0; i < numberOfRows; ++i){
         new_degrees[i] = new_row_offsets[i+1] - new_row_offsets[i];
     }
-    std::cout << "set degs" << std::endl;
-
 }
 
 /* Constructor to make induced subgraph G'' for each branch */
