@@ -34,6 +34,8 @@ class Graph {
         void PrepareGPrime();
         int GetVertexCount();
         std::vector<int> & GetCondensedNewValRef();
+        void PrintEdgesOfS();
+        bool GPrimeEdgesGreaterKTimesKPrime(int k, int kPrime);
 
 
     private:

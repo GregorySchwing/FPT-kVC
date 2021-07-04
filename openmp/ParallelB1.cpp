@@ -1,16 +1,22 @@
 #include "ParallelB1.h"
 
 ParallelB1::ParallelB1( Graph * g_arg,
-                        int k_prime_arg,
+                        int k_arg,
                         std::vector<int> & verticesToRemove,
                         std::vector<int> verticesRemaining,
                         ParallelB1 * parent_arg):
-                        k_prime(k_prime_arg), 
+                        g(g_arg),
+                        k(k_arg), 
                         parent(parent_arg),
                         result(false){
     
     if (parent_arg == NULL){
-        std::cout << "This is the first call, so I need to check the kernelization criteria for edges" << std::endl;
+        g->PrintEdgesOfS();   
+        std::cout << g->edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
+        std::cout << "verticesToRemove.size() " << verticesToRemove.size() << std::endl;
+        //k = k_arg - verticesToRemove.size();
+        std::cout << "Setting k' = k - b = " << k_arg << std::endl;
+        bool noSolutionExists = g->GPrimeEdgesGreaterKTimesKPrime(k_arg, k_arg - verticesToRemove.size());
         exit(1);
     }
 
@@ -35,7 +41,7 @@ ParallelB1::ParallelB1( Graph * g_arg,
     // Pointers to the children 
     children = new ParallelB1*[childrensVertices.size()];
     for (int i = 0; i < childrensVertices.size(); ++i){
-        if (k_prime - childrensVertices[i].size() >= 0){
+        if (k - childrensVertices[i].size() >= 0){
             std::cout << "Child " << i << std::endl;
             std::cout << "Printing Children Verts" << std::endl;
             for (auto & v : childrensVertices[i])

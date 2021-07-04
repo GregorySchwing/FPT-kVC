@@ -308,3 +308,23 @@ void Graph::BuildTheExampleCOO(COO * coordinateFormat){
 std::vector<int> & Graph::GetNewDegRef(){
     return new_degrees;
 }
+
+void Graph::PrintEdgesOfS(){
+    std::cout << "E(S) = {";
+    int i, u, v;
+    for (u = 0; u < vertexCount; ++u){
+        for (i = compressedSparseMatrix->old_row_offsets_ref[u]; i < compressedSparseMatrix->old_row_offsets_ref[u+1]; ++i){
+            v = compressedSparseMatrix->old_column_indices_ref[i];
+            if(!compressedSparseMatrix->new_values[i])
+                std::cout << "(" << u << ", " << v << "), ";
+        }
+    }
+    std::cout << "}" << std::endl;
+}
+
+bool Graph::GPrimeEdgesGreaterKTimesKPrime(int k, int kPrime){
+    int kTimesKPrime = k * kPrime;
+    if (edgesLeftToCover/2 > kTimesKPrime)
+        return true;
+    return false;
+}

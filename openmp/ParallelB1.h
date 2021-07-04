@@ -10,7 +10,7 @@
 class ParallelB1 {
 public:
     ParallelB1( Graph * g_arg,
-                int k_prime_arg,
+                int k,
                 std::vector<int> & verticesToRemove,
                 std::vector<int> verticesRemaining,
                 ParallelB1 * parent_arg = NULL);
@@ -37,7 +37,7 @@ private:
     int GetRandomVertex(std::vector<int> & verticesRemaining);
 
     Graph * g;
-    int k_prime;
+    int k;
     std::vector<int> verticesToRemove;
     std::vector< std::vector<int> > childrensVertices;
     ParallelB1 * parent, ** children;
