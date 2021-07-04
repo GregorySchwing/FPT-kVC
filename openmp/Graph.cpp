@@ -221,6 +221,7 @@ void Graph::CountingSortParallelRowwiseValues(
     }
 }
 
+// Highly unoptimized, but should work for now
 void Graph::RemoveDegreeZeroVertices(std::vector<int> & newRowOffsets){
     int i = 0;
     for (i = 0; i < vertexCount; ++i){

@@ -44,12 +44,15 @@ class Graph {
         // Every vertex touched by an edge removed should be checked after for being degree 0
         // and then removed if so, clearly the vertices chosen by the algorithm for removing
         // are also removed
-        std::vector<int> verticesRemaining, newValues, vertexTouchedByRemovedEdge;
+        std::vector<int> verticesRemaining, vertexTouchedByRemovedEdge;
         
         // Following the CSR design pattern, a reference to the old degrees
         std::vector<int> & old_degrees_ref;
         // Following the CSR design pattern, the new degrees
         std::vector<int> new_degrees;
+
+        std::vector<int> newValues;
+        
         int vertexCount;
 
         void BuildTheExampleCOO(COO * coordinateFormat);

@@ -2,22 +2,40 @@
 
 ParallelB1::ParallelB1( Graph * g_arg,
                         int k_arg,
-                        std::vector<int> & verticesToRemove,
-                        std::vector<int> verticesRemaining,
+                        std::vector<int> & verticesToRemove_arg,
+                        //std::vector<int> verticesRemaining_arg,
                         ParallelB1 * parent_arg):
                         g(g_arg),
                         k(k_arg), 
+                        verticesToRemoveRef(verticesToRemove_arg),
+                        //verticesRemainingRef()
                         parent(parent_arg),
                         result(false){
+
+    //verticesRemaining = verticesRemaining_arg;
     
     if (parent_arg == NULL){
         g->PrintEdgesOfS();   
         std::cout << g->edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
-        std::cout << "verticesToRemove.size() " << verticesToRemove.size() << std::endl;
+        std::cout << "verticesToRemove.size() " << verticesToRemoveRef.size() << std::endl;
         //k = k_arg - verticesToRemove.size();
-        std::cout << "Setting k' = k - b = " << k_arg << std::endl;
-        bool noSolutionExists = g->GPrimeEdgesGreaterKTimesKPrime(k_arg, k_arg - verticesToRemove.size());
-        exit(1);
+        std::cout << "Setting k' = k - b = " << k_arg - verticesToRemoveRef.size() << std::endl;
+        bool noSolutionExists = g->GPrimeEdgesGreaterKTimesKPrime(k_arg, k_arg - verticesToRemoveRef.size());
+        if(noSolutionExists){
+            std::cout << "|G'(E)| > k*k', no solution exists" << std::endl;
+            return;
+        } else{
+            std::cout << "|G'(E)| <= k*k', a solution may exist" << std::endl;
+        }
+        g->PrepareGPrime();
+        std::vector<int> emptyVector;
+        // Pointers to the children 
+        children = new ParallelB1*[1];
+        children[0] = new ParallelB1(g,
+                                    k_arg - verticesToRemoveRef.size(), 
+                                    emptyVector,
+                                    this);
+        return;
     }
 
     if(g_arg->edgesLeftToCover == 0){
@@ -28,7 +46,9 @@ ParallelB1::ParallelB1( Graph * g_arg,
     }
 
     std::vector<int> path;
-    int randomVertex = GetRandomVertex(verticesRemaining);
+    int randomVertex = 1;
+
+    //int randomVertex = GetRandomVertex(verticesRemaining);
     path.push_back(randomVertex);
     g->DFS(path, randomVertex);
     for (auto & v : path)

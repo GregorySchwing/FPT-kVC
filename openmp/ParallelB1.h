@@ -10,9 +10,9 @@
 class ParallelB1 {
 public:
     ParallelB1( Graph * g_arg,
-                int k,
-                std::vector<int> & verticesToRemove,
-                std::vector<int> verticesRemaining,
+                int k_arg,
+                std::vector<int> & verticesToRemove_arg,
+                //std::vector<int> verticesRemaining_arg,
                 ParallelB1 * parent_arg = NULL);
 /*
     ParallelB1(   Graph * g_arg, 
@@ -38,7 +38,10 @@ private:
 
     Graph * g;
     int k;
-    std::vector<int> verticesToRemove;
+    std::vector<int> & verticesToRemoveRef;
+    // Set from the graph provided as a arg, 
+    // makes get random vertex constant time
+    //std::vector<int> & verticesRemaining;
     std::vector< std::vector<int> > childrensVertices;
     ParallelB1 * parent, ** children;
     bool result;
