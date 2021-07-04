@@ -11,7 +11,6 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
 
     LinearTimeDegreeSort ltds(numberOfRows, old_degree_ref);
 
-
     std::cout << "Build VC" << std::endl;
     noSolutionExists = CardinalityOfSetDegreeGreaterK(ltds.GetDegreeRef(), ltds.GetVertexKeyRef());
     printf("%s\n", noSolutionExists ? "b > k, no solution exists" : "b <= k, a solution may exist");

@@ -23,11 +23,6 @@ old_column_indices_ref(c.new_column_indices)
             row++;
         }
     }
-    std::cout << "nros" << std::endl;
-    for (auto & v : new_row_offsets){
-        std::cout << v << " ";
-    }
-    std::cout << std::endl;
 }
 
 /* Building the next graph */
