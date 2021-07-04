@@ -35,6 +35,7 @@ Graph::Graph(Graph * g_arg, std::vector<int> & verticesToDelete):
     vertexCount(g_arg->vertexCount)
 {        
     std::cout << "Entered constructor of G induced" << std::endl;
+    verticesRemaining = g_arg->verticesRemaining;
     new_degrees.resize(vertexCount);
     std::cout << compressedSparseMatrix->toString();
 
@@ -213,7 +214,6 @@ void Graph::CountingSortParallelRowwiseValues(
     /* C_ref[A_row_indices[i]]]-1 , because the values of C_ref are from [1, n] -> [0,n) */
     for (int i = endIndex-1; i >= beginIndex; --i){
         if (A_values[i]){
-            std::cout << (B_row_indices_ref[rowID] - C_ref[0] + C_ref[1] -1) << std::endl;
             B_column_indices_ref[B_row_indices_ref[rowID] - C_ref[0] + C_ref[1]-1] = A_column_indices[i];
             B_values_ref[B_row_indices_ref[rowID] - C_ref[0] + C_ref[1]-1] = A_values[i];
             --C_ref[A_values[i]];
@@ -265,7 +265,11 @@ void Graph::PrepareGPrime(){
         }
 
         RemoveDegreeZeroVertices(newRowOffsets);
-
+        // We dont need the values array anymore
+        // Reset with a small vector of all 1's
+        // Maybe a temporary sol'n
+        values.clear();
+        values.resize(edgesLeftToCover, 1);
 }
 
 std::vector<int> & Graph::GetCondensedNewValRef(){

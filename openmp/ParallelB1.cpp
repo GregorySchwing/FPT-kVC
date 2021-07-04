@@ -34,11 +34,11 @@ ParallelB1::ParallelB1( Graph * g_arg,
 
         std::vector<int> emptyVector;
         // Pointers to the children 
-        children = new ParallelB1*[1];/*
-        children[0] = new ParallelB1(g,
+        children = new ParallelB1*[1];
+        children[0] = new ParallelB1(new Graph(g,emptyVector),
                                     k - verticesToRemoveRef.size(), 
                                     emptyVector,
-                                    this); */
+                                    this); 
         return;
     }
 
@@ -51,6 +51,8 @@ ParallelB1::ParallelB1( Graph * g_arg,
 
     std::vector<int> path;
     int randomVertex = g->GetRandomVertex();
+    std::cout << "randomVertex: " << randomVertex << std::endl;
+
     path.push_back(randomVertex);
     g->DFS(path, randomVertex);
     for (auto & v : path)
