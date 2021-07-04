@@ -34,7 +34,6 @@ public:
 private:
     int classifyPath(std::vector<int> & path);
     void createVertexSetsForEachChild(int caseNumber, std::vector<int> & path);
-    int GetRandomVertex(std::vector<int> & verticesRemaining);
 
     Graph * g;
     int k;

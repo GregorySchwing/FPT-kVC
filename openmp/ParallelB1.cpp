@@ -19,8 +19,8 @@ ParallelB1::ParallelB1( Graph * g_arg,
         std::cout << g->edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
         std::cout << "verticesToRemove.size() " << verticesToRemoveRef.size() << std::endl;
         //k = k_arg - verticesToRemove.size();
-        std::cout << "Setting k' = k - b = " << k_arg - verticesToRemoveRef.size() << std::endl;
-        bool noSolutionExists = g->GPrimeEdgesGreaterKTimesKPrime(k_arg, k_arg - verticesToRemoveRef.size());
+        std::cout << "Setting k' = k - b = " << k - verticesToRemoveRef.size() << std::endl;
+        bool noSolutionExists = g->GPrimeEdgesGreaterKTimesKPrime(k, k - verticesToRemoveRef.size());
         if(noSolutionExists){
             std::cout << "|G'(E)| > k*k', no solution exists" << std::endl;
             return;
@@ -32,7 +32,7 @@ ParallelB1::ParallelB1( Graph * g_arg,
         // Pointers to the children 
         children = new ParallelB1*[1];
         children[0] = new ParallelB1(g,
-                                    k_arg - verticesToRemoveRef.size(), 
+                                    k - verticesToRemoveRef.size(), 
                                     emptyVector,
                                     this);
         return;
@@ -46,9 +46,7 @@ ParallelB1::ParallelB1( Graph * g_arg,
     }
 
     std::vector<int> path;
-    int randomVertex = 1;
-
-    //int randomVertex = GetRandomVertex(verticesRemaining);
+    int randomVertex = g->GetRandomVertex();
     path.push_back(randomVertex);
     g->DFS(path, randomVertex);
     for (auto & v : path)
@@ -73,11 +71,11 @@ ParallelB1::ParallelB1( Graph * g_arg,
                     g->GetCSR()->GetNewRowOffRef(), 
                     g->GetCSR()->GetNewColRef(), 
                     g->GetCondensedNewValRef());
-            children[i] = new ParallelB1(new Graph(new_csr, childrensVertices[i]),
-                                        k_prime - childrensVertices[i].size(), 
-                                        this,
+            children[i] = new ParallelB1(new Graph(g, childrensVertices[i]),
+                                        k - childrensVertices[i].size(), 
                                         childrensVertices[i], 
-                                        g->GetRemainingVerticesRef());
+                                        this,
+);
 */
         } else{
             std::cout << "Child " << i << " is null" << std::endl;
@@ -146,7 +144,3 @@ void ParallelB1::createVertexSetsForEachChild(int caseNumber, std::vector<int> &
     }
 }
 
-int ParallelB1::GetRandomVertex(std::vector<int> & verticesRemaining){
-    int index = rand() % verticesRemaining.size();
-    return verticesRemaining[index];
-}

@@ -36,6 +36,7 @@ class Graph {
         std::vector<int> & GetCondensedNewValRef();
         void PrintEdgesOfS();
         bool GPrimeEdgesGreaterKTimesKPrime(int k, int kPrime);
+        int GetRandomVertex();
 
 
     private:
@@ -52,7 +53,7 @@ class Graph {
         std::vector<int> new_degrees;
 
         std::vector<int> newValues;
-        
+
         int vertexCount;
 
         void BuildTheExampleCOO(COO * coordinateFormat);

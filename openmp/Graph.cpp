@@ -235,7 +235,6 @@ void Graph::PrepareGPrime(){
         compressedSparseMatrix->GetNewColRef().resize(edgesLeftToCover);
         // Temporary, used for checking, will be replaced by vector of all 1's
 
-
         std::vector<int> & row_offsets = compressedSparseMatrix->GetOldRowOffRef();
         std::vector<int> & column_indices = compressedSparseMatrix->GetOldColRef();
         std::vector<int> & values = compressedSparseMatrix->GetNewValRef();
@@ -266,6 +265,7 @@ void Graph::PrepareGPrime(){
         }
 
         RemoveDegreeZeroVertices(newRowOffsets);
+
 }
 
 std::vector<int> & Graph::GetCondensedNewValRef(){
@@ -328,4 +328,9 @@ bool Graph::GPrimeEdgesGreaterKTimesKPrime(int k, int kPrime){
     if (edgesLeftToCover/2 > kTimesKPrime)
         return true;
     return false;
+}
+
+int Graph::GetRandomVertex(){
+    int index = rand() % verticesRemaining.size();
+    return verticesRemaining[index];
 }

@@ -17,6 +17,6 @@ int main(int argc, char *argv[])
     Graph * gPrime = new Graph(&g, sk.GetS());
     ParallelB1(gPrime, 
                 k, 
-                sk.GetS(), 
-                gPrime->GetRemainingVerticesRef());
+                sk.GetS());
+                //, gPrime->GetRemainingVerticesRef());
 }
