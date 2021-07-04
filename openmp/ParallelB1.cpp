@@ -72,17 +72,11 @@ ParallelB1::ParallelB1( Graph * g_arg,
                 std::cout << v << " ";
             std::cout << std::endl;
             std::cout << "Printed Children Verts" << std::endl;
-/*
-            CSR * new_csr = new CSR(g->GetNumberOfRows(),
-                    g->GetCSR()->GetNewRowOffRef(), 
-                    g->GetCSR()->GetNewColRef(), 
-                    g->GetCondensedNewValRef());
             children[i] = new ParallelB1(new Graph(g, childrensVertices[i]),
                                         k - childrensVertices[i].size(), 
                                         childrensVertices[i], 
-                                        this,
-);
-*/
+                                        this);
+
         } else{
             std::cout << "Child " << i << " is null" << std::endl;
             children[i] = NULL;
