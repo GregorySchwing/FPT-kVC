@@ -11,9 +11,9 @@ class ParallelB1 {
 public:
     ParallelB1( Graph * g_arg,
                 int k_prime_arg,
-                ParallelB1 * parent_arg,
                 std::vector<int> & verticesToRemove,
-                std::vector<int> verticesRemaining);
+                std::vector<int> verticesRemaining,
+                ParallelB1 * parent_arg = NULL);
 /*
     ParallelB1(   Graph * g_arg, 
                     std::vector<int> verticesToRemove,

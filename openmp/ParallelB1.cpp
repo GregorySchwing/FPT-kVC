@@ -2,14 +2,18 @@
 
 ParallelB1::ParallelB1( Graph * g_arg,
                         int k_prime_arg,
-                        ParallelB1 * parent_arg,
                         std::vector<int> & verticesToRemove,
-                        std::vector<int> verticesRemaining
-                        ):
+                        std::vector<int> verticesRemaining,
+                        ParallelB1 * parent_arg):
                         k_prime(k_prime_arg), 
                         parent(parent_arg),
                         result(false){
     
+    if (parent_arg == NULL){
+        std::cout << "This is the first call, so I need to check the kernelization criteria for edges" << std::endl;
+        exit(1);
+    }
+
     if(g_arg->edgesLeftToCover == 0){
         result = true;
         return;

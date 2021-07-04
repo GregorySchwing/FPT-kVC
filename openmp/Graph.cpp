@@ -44,6 +44,11 @@ Graph::Graph(Graph * g_arg, std::vector<int> & verticesToDelete):
     // decide if we are done before starting next branch
     SetEdgesLeftToCoverParallel();
     std::cout << compressedSparseMatrix->toString();
+    std::cout << "new vals" << std::endl;
+    for (auto & v : compressedSparseMatrix->new_values)
+        std::cout << v << " ";
+    std::cout << std::endl;
+
     std::cout << edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
 }
 

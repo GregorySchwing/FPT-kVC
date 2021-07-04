@@ -16,6 +16,9 @@ int main(int argc, char *argv[])
     ParallelKernelization sk(g, k);
     Graph * gPrime = new Graph(&g, sk.GetS());
 
-    //ParallelB1(new Graph(g, sk.GetS()), sk.GetKPrime(), &sk);
+    ParallelB1(gPrime, 
+                sk.GetKPrime(), 
+                sk.GetS(), 
+                gPrime->GetRemainingVerticesRef());
     //ParallelB1(sk.GetKPrime(), &sk);
 }
