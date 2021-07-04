@@ -5,7 +5,7 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
 {
     std::cout << "Entered PK" << std::endl;
 
-    numberOfRows = g.GetCSR()->numberOfRows;
+    numberOfRows = g.GetCSR().numberOfRows;
 
     std::vector<int> & old_degree_ref = g_arg.GetNewDegRef();
 
@@ -17,7 +17,7 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
     if (noSolutionExists)
         exit(0);
     PrintS();            
-    std::cout << "Removing S from G" << std::endl;
+   // std::cout << "Removing S from G" << std::endl;
 
 
     /*

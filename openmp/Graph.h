@@ -26,18 +26,17 @@ class Graph {
         void DFS(std::vector<int> & path, int rootVertex);
 
 
-        CSR * GetCSR();
+        CSR & GetCSR();
         COO * GetCOO();
         int edgesLeftToCover;
         std::set<std::pair<int,int>> edgesCoveredByKernelization;
         void removeVertex(int vertexToRemove, std::vector<int> & verticesRemaining);
         void PrepareGPrime();
-        int GetNumberOfRows();
+        int GetVertexCount();
         std::vector<int> & GetCondensedNewValRef();
 
 
     private:
-        int numberOfRows;
         COO * coordinateFormat;
         CSR * compressedSparseMatrix;
         // Every vertex touched by an edge removed should be checked after for being degree 0

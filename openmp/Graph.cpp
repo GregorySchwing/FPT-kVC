@@ -3,7 +3,7 @@
 Graph::Graph(int vertexCount): 
 // Circular reference since there are no old degrees.
 old_degrees_ref(new_degrees),
-numberOfRows(vertexCount)
+vertexCount(vertexCount)
 {
     coordinateFormat = new COO(vertexCount, vertexCount);
 
@@ -11,13 +11,17 @@ numberOfRows(vertexCount)
     BuildTheExampleCOO(coordinateFormat);
     compressedSparseMatrix = new CSR(*coordinateFormat);             
     std::cout << coordinateFormat->toString();
+    std::cout << "coordinateFormat->old_value_ref.size() " << coordinateFormat->old_values_ref.size() << std::endl;
+    std::cout << "coordinateFormat->new_values.size() " << coordinateFormat->new_values.size() << std::endl;
+    std::cout << "compressedSparseMatrix->old_value_ref.size() " << compressedSparseMatrix->old_values_ref.size() << std::endl;
+    std::cout << "compressedSparseMatrix->new_values.size() " << compressedSparseMatrix->new_values.size() << std::endl;
     std::cout << compressedSparseMatrix->toString();
     edgesLeftToCover = compressedSparseMatrix->new_column_indices.size()/2;
     verticesRemaining.resize(vertexCount);
     std::iota (std::begin(verticesRemaining), std::end(verticesRemaining), 0); // Fill with 0, 1, ..., 99.
     std::vector<int> & new_row_offsets = compressedSparseMatrix->new_row_offsets;
-    new_degrees.resize(numberOfRows);
-    for (int i = 0; i < numberOfRows; ++i){
+    new_degrees.resize(vertexCount);
+    for (int i = 0; i < vertexCount; ++i){
         new_degrees[i] = new_row_offsets[i+1] - new_row_offsets[i];
     }
 }
@@ -26,9 +30,18 @@ numberOfRows(vertexCount)
 Graph::Graph(Graph * g_arg, std::vector<int> & verticesToDelete):
     // Sets the old references of the new csr 
     // to point to the new references of the argument
-    compressedSparseMatrix(g_arg->GetCSR()),
+    compressedSparseMatrix(new CSR(g_arg->GetCSR())),
     old_degrees_ref(g_arg->new_degrees)
 {        
+    std::cout << "Entered constructor of G induced" << std::endl;
+        std::cout << "GetNewValRef" << std::endl;
+
+    for ( auto & v : compressedSparseMatrix->GetNewValRef())
+        std::cout << v << " ";
+    std::cout << std::endl;
+
+    std::cout << compressedSparseMatrix->toString();
+
     // Sets some of the entries in values[] to 0
     SetEdgesOfSSymParallel(verticesToDelete); 
     // Get an accurate number of edges left so we can 
@@ -59,8 +72,8 @@ int Graph::GetOutgoingEdge(int v, int outEdgeIndex){
     return compressedSparseMatrix->old_column_indices_ref[compressedSparseMatrix->old_row_offsets_ref[v] + outEdgeIndex];
 }
 
-int Graph::GetNumberOfRows(){
-    return numberOfRows;
+int Graph::GetVertexCount(){
+    return vertexCount;
 }
 
 
@@ -90,8 +103,8 @@ int Graph::GetRandomOutgoingEdge(int v, std::vector<int> & path){
 
 
 /* The edges */
-CSR * Graph::GetCSR(){
-    return compressedSparseMatrix;
+CSR & Graph::GetCSR(){
+    return *compressedSparseMatrix;
 }
 
 void Graph::removeVertex(int vertexToRemove, std::vector<int> & verticesRemaining){
@@ -149,9 +162,9 @@ void Graph::SetEdgesLeftToCoverParallel(){
     std::vector<int> & newDegs = new_degrees;
     std::vector<int> & values = compressedSparseMatrix->GetNewValRef();
     std::vector<int> & row_offsets = compressedSparseMatrix->GetOldRowOffRef();
-    #pragma omp parallel for default(none) shared(row_offsets, values, newDegs, numberOfRows) private (i, j) \
+    #pragma omp parallel for default(none) shared(row_offsets, values, newDegs, vertexCount) private (i, j) \
     reduction(+:count)
-    for (i = 0; i < numberOfRows; ++i)
+    for (i = 0; i < vertexCount; ++i)
     {
         for (j = row_offsets[i]; j < row_offsets[i+1]; ++j)
             newDegs[i] += values[j];
@@ -163,8 +176,8 @@ void Graph::SetEdgesLeftToCoverParallel(){
 /* Called if edgesLeftToCover > 0 */
 void Graph::SetNewRowOffsets(std::vector<int> & newRowOffsetsRef){
     int i = 0;
-    newRowOffsetsRef.resize(numberOfRows+1);
-    for (i = 1; i <= numberOfRows; ++i)
+    newRowOffsetsRef.resize(vertexCount+1);
+    for (i = 1; i <= vertexCount; ++i)
     {
         newRowOffsetsRef[i] = new_degrees[i-1] + newRowOffsetsRef[i-1];
     }
@@ -209,7 +222,7 @@ void Graph::CountingSortParallelRowwiseValues(
 
 void Graph::RemoveDegreeZeroVertices(std::vector<int> & newRowOffsets){
     int i = 0;
-    for (i = 0; i < numberOfRows; ++i){
+    for (i = 0; i < vertexCount; ++i){
         if(newRowOffsets[i+1] - newRowOffsets[i] == 0)
             removeVertex(i, verticesRemaining);
     }
@@ -237,7 +250,7 @@ void Graph::PrepareGPrime(){
                             shared(row_offsets, column_indices, values, \
                             new_degrees, newRowOffsets, newColumnIndices, newValues) \
                             private (row)
-        for (row = 0; row < numberOfRows; ++row)
+        for (row = 0; row < vertexCount; ++row)
         {
             CountingSortParallelRowwiseValues(row,
                                             row_offsets[row],
@@ -286,7 +299,7 @@ void Graph::BuildTheExampleCOO(COO * coordinateFormat){
     coordinateFormat->addEdgeSymmetric(5,8,1);
     coordinateFormat->addEdgeSymmetric(6,9,1);
 
-    coordinateFormat->size = coordinateFormat->new_column_indices.size();
+    coordinateFormat->size = coordinateFormat->new_values.size();
     // vlog(e)
     coordinateFormat->sortMyself();
 }

@@ -9,10 +9,6 @@
 
 class ParallelB1 {
 public:
-    ParallelB1( int k_prime_arg,
-                ParallelKernelization * pk_arg,
-                ParallelB1 * parent_arg = NULL);
-
     ParallelB1( Graph * g_arg,
                 int k_prime_arg,
                 ParallelB1 * parent_arg,
@@ -41,7 +37,6 @@ private:
     int GetRandomVertex(std::vector<int> & verticesRemaining);
 
     Graph * g;
-    ParallelKernelization * pk;
     int k_prime;
     std::vector<int> verticesToRemove;
     std::vector< std::vector<int> > childrensVertices;

@@ -11,11 +11,6 @@ class CSR : public SparseMatrix {
         CSR(COO & c);
         CSR(CSR & c);
 
-        /* For branch owned G'' induced subgraph */
-        CSR(int numberOfRows,
-            CSR & c,
-            std::vector<int> & values_ref_arg);
-
         std::vector<int> & GetOldRowOffRef();
         std::vector<int> & GetNewRowOffRef();
         std::vector<int> & GetOldColRef();

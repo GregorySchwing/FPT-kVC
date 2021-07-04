@@ -20,6 +20,7 @@ class ParallelKernelization {
                 std::vector<int> & B_column_indices_ref,
                 std::vector<int> & B_values_ref);
         int GetKPrime();
+        
         std::vector<int> & GetS();
 
         bool noSolutionExists;

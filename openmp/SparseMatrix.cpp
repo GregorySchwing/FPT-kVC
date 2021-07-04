@@ -19,18 +19,23 @@ SparseMatrix::SparseMatrix(SparseMatrix & s):
 size(s.size), 
 numberOfRows(s.numberOfRows), 
 numberOfColumns(s.numberOfColumns),
-// Circular since there is no branching structure 
-// preventing us from writing on the values
+// A Reference for read-only purposes
 old_values_ref(s.new_values){
-    //new_values = s.new_values;
+    std::cout << "setting size, numRows, numCols, oldValRef, and newVals" << std::endl;
+    // A copy for writing purposes
+    new_values = s.new_values;
 }
 
-/* SPM by reference */
+/* SPM by reference 
 SparseMatrix::SparseMatrix(int numberOfRows, std::vector<int> & values_ref_arg):
-numberOfRows(numberOfRows),
+numberOfRows(s.numberOfRows), 
+numberOfColumns(s.numberOfColumns),
 old_values_ref(values_ref_arg){
+    // New Values are always a write-able copy of old_values_ref
+    // A chance for optimization is to set this by reference in
+    // Cases where there is only 1 branch
     new_values.resize(values_ref_arg.size(), 1);
-}
+}*/
 
 
 int SparseMatrix::GetNumberOfRows(){

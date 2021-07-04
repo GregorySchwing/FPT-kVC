@@ -27,25 +27,12 @@ old_column_indices_ref(c.new_column_indices)
 
 /* Building the next graph */
 CSR::CSR(CSR & c):
-SparseMatrix(numberOfRows, c.new_values),
+SparseMatrix(c),
 old_row_offsets_ref(c.new_row_offsets),
 old_column_indices_ref(c.new_column_indices)
 {
- 
+ std::cout << "numberOfRows " << c.numberOfRows << std::endl;
 }
-
-/* For B1 to B1 transition */
-CSR::CSR(int numberOfRows,
-         CSR & c,
-         std::vector<int> & values_ref_arg) :
-// Creates the local copy of values vector of size : values_ref.size() 
-SparseMatrix(numberOfRows, values_ref_arg),
-old_row_offsets_ref(c.new_row_offsets),
-old_column_indices_ref(c.new_column_indices)
-{
-    // Nothing to do
-}
-
 
 std::string CSR::toString(){
     std::stringstream ss;
