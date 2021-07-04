@@ -4,6 +4,7 @@
 #include "Graph.h"
 #include <iostream>
 #include "omp.h"
+#include "LinearTimeDegreeSort.h"
 /* This class applies the kernelization used in Cheetham. */
 
 class ParallelKernelization {
@@ -45,14 +46,7 @@ class ParallelKernelization {
                     std::vector<int> & B_column_indices_ref,
                     std::vector<int> & B_values_ref,
                     std::vector<int> & C_ref);
-        void CountingSortSerial(int max,
-                        std::vector<int> & A_row_indices,
-                        std::vector<int> & A_column_indices,
-                        std::vector<int> & A_values,
-                        std::vector<int> & B_row_indices_ref,
-                        std::vector<int> & B_column_indices_ref,
-                        std::vector<int> & B_values_ref,
-                        std::vector<int> & C_ref);
+
 
         void CountingSortParallel(
                         int procID,
@@ -96,10 +90,7 @@ class ParallelKernelization {
         // n, number of entries
         // A, B = [1 . . n]
         // C = [0 .. k], k = max(A)
-        std::vector<int> B_row_indices;
-        std::vector<int> B_column_indices; 
-        std::vector<int> B_values; 
-        std::vector<int> C;
+
 
         bool CardinalityOfSetDegreeGreaterK(std::vector<int> & degrees,
                                             std::vector<int> & vertexKeys);
