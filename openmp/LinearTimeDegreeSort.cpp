@@ -32,6 +32,14 @@ LinearTimeDegreeSort::LinearTimeDegreeSort(int numberOfRows, std::vector<int> & 
 
 }
 
+std::vector<int> & LinearTimeDegreeSort::GetDegreeRef(){
+    return B_row_indices;
+}
+
+std::vector<int> & LinearTimeDegreeSort::GetVertexKeyRef(){
+    return B_column_indices;
+}
+
 
 void LinearTimeDegreeSort::CountingSortSerial(int max,
                         std::vector<int> & A_row_indices,

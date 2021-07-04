@@ -3,21 +3,23 @@
 
 ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg), k(k_arg)
 {
+    std::cout << "Entered PK" << std::endl;
+
     numberOfRows = g.GetCSR()->numberOfRows;
 
     std::vector<int> & old_degree_ref = g_arg.GetNewDegRef();
-    std::vector<int> vertexKeys(numberOfRows);
-    std::iota (std::begin(vertexKeys), std::end(vertexKeys), 0); // Fill with 0, 1, ..., 99.
 
-/*
+    LinearTimeDegreeSort ltds(numberOfRows, old_degree_ref);
+
+
     std::cout << "Build VC" << std::endl;
-    noSolutionExists = CardinalityOfSetDegreeGreaterK(B_row_indices, B_column_indices);
+    noSolutionExists = CardinalityOfSetDegreeGreaterK(ltds.GetDegreeRef(), ltds.GetVertexKeyRef());
     printf("%s\n", noSolutionExists ? "b > k, no solution exists" : "b <= k, a solution may exist");
     if (noSolutionExists)
         exit(0);
     PrintS();            
     std::cout << "Removing S from G" << std::endl;
-*/
+
 
     /*
     vertexTouchedByRemovedEdge.resize(numberOfRows);
