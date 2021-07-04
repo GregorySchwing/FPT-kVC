@@ -43,13 +43,16 @@ ParallelB1::ParallelB1( Graph * g_arg,
     }
 
     if(g_arg->edgesLeftToCover == 0){
+        std::cout << "Found an answer" << std::endl;
         result = true;
         return;
     } else {
+        std::cout << "Prepping G Prime" << std::endl;
         g->PrepareGPrime();
     }
 
     std::vector<int> path;
+    std::cout << "Grabbing a randomVertex: " <<  std::endl;
     int randomVertex = g->GetRandomVertex();
     std::cout << "randomVertex: " << randomVertex << std::endl;
 
@@ -71,7 +74,6 @@ ParallelB1::ParallelB1( Graph * g_arg,
             for (auto & v : childrensVertices[i])
                 std::cout << v << " ";
             std::cout << std::endl;
-            std::cout << "Printed Children Verts" << std::endl;
             children[i] = new ParallelB1(new Graph(g, childrensVertices[i]),
                                         k - childrensVertices[i].size(), 
                                         childrensVertices[i], 

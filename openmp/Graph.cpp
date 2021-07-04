@@ -335,6 +335,8 @@ bool Graph::GPrimeEdgesGreaterKTimesKPrime(int k, int kPrime){
 }
 
 int Graph::GetRandomVertex(){
+        std::cout << "verticesRemaining.size() " << verticesRemaining.size() << std::endl;
+
     int index = rand() % verticesRemaining.size();
     return verticesRemaining[index];
 }
