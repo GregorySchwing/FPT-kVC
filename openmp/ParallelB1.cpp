@@ -28,13 +28,17 @@ ParallelB1::ParallelB1( Graph * g_arg,
             std::cout << "|G'(E)| <= k*k', a solution may exist" << std::endl;
         }
         g->PrepareGPrime();
+        std::cout << "g->compressedSparseMatrix->new_row_offsets.size()" << g->GetCSR().GetNewRowOffRef().size() << std::endl;
+        std::cout << "g->compressedSparseMatrix->new_column_indices.size()" << g->GetCSR().GetNewColRef().size() << std::endl;
+        std::cout << "g->compressedSparseMatrix->new_values.size()" << g->GetCSR().GetNewValRef().size() << std::endl;
+
         std::vector<int> emptyVector;
         // Pointers to the children 
-        children = new ParallelB1*[1];
+        children = new ParallelB1*[1];/*
         children[0] = new ParallelB1(g,
                                     k - verticesToRemoveRef.size(), 
                                     emptyVector,
-                                    this);
+                                    this); */
         return;
     }
 

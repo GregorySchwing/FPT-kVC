@@ -80,8 +80,8 @@ int Graph::GetVertexCount(){
 
 int Graph::GetRandomOutgoingEdge(int v, std::vector<int> & path){
 
-    std::vector<int> outgoingEdges(&compressedSparseMatrix->old_column_indices_ref[compressedSparseMatrix->old_row_offsets_ref[v]],
-                        &compressedSparseMatrix->old_column_indices_ref[compressedSparseMatrix->old_row_offsets_ref[v+1]]);
+    std::vector<int> outgoingEdges(&compressedSparseMatrix->new_column_indices[compressedSparseMatrix->new_row_offsets[v]],
+                        &compressedSparseMatrix->new_column_indices[compressedSparseMatrix->new_row_offsets[v+1]]);
 
     std::random_device rd;
     std::mt19937 g(rd());
@@ -239,7 +239,7 @@ void Graph::PrepareGPrime(){
         std::vector<int> & column_indices = compressedSparseMatrix->GetOldColRef();
         std::vector<int> & values = compressedSparseMatrix->GetNewValRef();
         
-        std::vector<int> & newRowOffsets = compressedSparseMatrix->GetNewColRef();
+        std::vector<int> & newRowOffsets = compressedSparseMatrix->GetNewRowOffRef();
         std::vector<int> & newColumnIndices = compressedSparseMatrix->GetNewColRef();
         //std::vector<int> & newValuesRef;
 
