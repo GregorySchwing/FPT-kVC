@@ -9,6 +9,10 @@ old_row_offsets_ref(new_row_offsets),
 // Reference to COO col inds
 old_column_indices_ref(c.new_column_indices)
 {
+    // Only make a copy of the column indices
+    // When going from COO to CSR
+    new_column_indices = c.new_column_indices;
+
     new_row_offsets.resize(numberOfRows + 1);
     int row_size = 0;
     int row = 0;
@@ -32,6 +36,8 @@ old_row_offsets_ref(c.new_row_offsets),
 old_column_indices_ref(c.new_column_indices)
 {
  std::cout << "numberOfRows " << c.numberOfRows << std::endl;
+  std::cout << "c.new_column_indices.size() " << c.new_column_indices.size()  << std::endl;
+
 }
 
 std::string CSR::toString(){
