@@ -16,6 +16,7 @@ set(sources_cpu_parallel
     openmp/COO.cpp
     openmp/CSR.cpp
     openmp/Graph.cpp
+    openmp/LinearTimeDegreeSort.cpp
     openmp/ParallelB1.cpp   
     openmp/ParallelKernelization.cpp
     openmp/SparseMatrix.cpp
@@ -43,6 +44,7 @@ set(headers_cpu_parallel
     openmp/COO.h
     openmp/CSR.h
     openmp/Graph.h
+    openmp/LinearTimeDegreeSort.h
     openmp/ParallelB1.h
     openmp/ParallelKernelization.h
     openmp/SparseMatrix.h
