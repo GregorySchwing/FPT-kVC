@@ -3,10 +3,13 @@
 //#include "holder.cu"
 #include "gpu/COO.cuh"
 #include "gpu/CSR.cuh"
-
+//#include "gpu/Graph.cuh"
+//#include "gpu/ParallelKernelization.h"
+//#include "gpu/ParallelB1.h"
 
 int main(int argc, char *argv[])
 {
+    /*
     int N = atoi(argv[1]);
     int numEntries = atoi(argv[2]);
 
@@ -22,6 +25,6 @@ int main(int argc, char *argv[])
     std::cout << "Creating CSR" << std::endl;
     CSR c3(c2);
     std::cout << c3.toString() << std::endl;
-
+    */
     
 }

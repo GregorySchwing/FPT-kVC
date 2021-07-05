@@ -26,6 +26,8 @@ set(sources_gpu
     Main.cu
     gpu/COO.cu
     gpu/CSR.cu
+    gpu/Graph.cu
+    gpu/SparseMatrix.cu
    )
 
 set(headers_cpu_serial 
@@ -53,6 +55,8 @@ set(headers_cpu_parallel
 set(headers_gpu 
     gpu/COO.cuh
     gpu/CSR.cuh
+    gpu/Graph.cuh
+    gpu/SparseMatrix.cuh
    )
 
 set(libHeaders

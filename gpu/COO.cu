@@ -20,7 +20,7 @@ struct cmp : public std::binary_function<Int3,Int3,bool>
 };
 
 
-COO::COO(int dimensions, int numberOfEntries): dimensions(dimensions), numberOfEntries(numberOfEntries){
+COO::COO(int dimensions, int numberOfEntries): SparseMatrix(size, dimensions, dimensions), dimensions(dimensions), numberOfEntries(numberOfEntries){
     
 // allocate storage for 4 values (uninitialized)    
 //    cusp::array1d<float, cusp::host_memory> A(4, -1.0f); 

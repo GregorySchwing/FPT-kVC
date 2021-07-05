@@ -1,6 +1,7 @@
 #ifndef COO_CUH
 #define COO_CUH
-//#include "SparseMatrix.h"
+#include "SparseMatrix.cuh"
+
 #include <cstdlib> /* rand */
 #include <vector>
 #include <string>
@@ -20,7 +21,7 @@
 // rows, cols, vals
 //#include <cusp/array1d.h> 
 
-class COO
+class COO final : public SparseMatrix
 {
 public:
     COO(int dimensions, int numberOfEntries);
