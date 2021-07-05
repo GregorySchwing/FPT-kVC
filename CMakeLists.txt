@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 3.8)
 
 project(FPT)
 
-include_directories(serial)
-include_directories(lib/boost/include)
-include_directories(lib/boost)
-include_directories(lib)
+#include_directories(serial)
+#include_directories(lib/boost/include)
+#include_directories(lib/boost)
+#include_directories(lib)
 
 
 #Out-of-source build
@@ -43,13 +43,11 @@ include(${PROJECT_SOURCE_DIR}/CMake/FileLists.cmake)
 #set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/FindBoost.cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
 message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
-find_package(Boost)
-
-if(Boost_FOUND)
-    message(STATUS "Boost_INCLUDE_DIRS: ${BOOST_INCLUDE_DIRS}")
-endif()
-
-include_directories(${BOOST_INCLUDE_DIRS})
+#find_package(Boost)
+#if(Boost_FOUND)
+#    message(STATUS "Boost_INCLUDE_DIRS: ${BOOST_INCLUDE_DIRS}")
+#endif()
+#include_directories(${BOOST_INCLUDE_DIRS})
 
 
 # Find if CUDA exists and what is the version number
@@ -63,7 +61,7 @@ if (CMAKE_CUDA_COMPILER)
 endif()
 
 # Setup Serial version
-include(${PROJECT_SOURCE_DIR}/CMake/CPUSerial.cmake)
+#include(${PROJECT_SOURCE_DIR}/CMake/CPUSerial.cmake)
 include(${PROJECT_SOURCE_DIR}/CMake/CPUParallel.cmake)
 
 # find OpenMP and set it up

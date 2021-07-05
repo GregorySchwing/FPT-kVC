@@ -5,9 +5,10 @@
 #include <vector>
 #include "COO.h"
 #include "CSR.h"
-#include "DegreeController.h"
-#include "NeighborsBinaryDataStructure.h"
 #include <set>
+#include <cstdlib> /* rand */
+#include  <random>
+#include  <iterator>
 
 class Graph {
     public:
