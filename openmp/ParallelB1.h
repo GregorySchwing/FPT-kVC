@@ -14,14 +14,6 @@ public:
                 std::vector<int> & verticesToRemove_arg,
                 //std::vector<int> verticesRemaining_arg,
                 ParallelB1 * parent_arg = NULL);
-/*
-    ParallelB1(   Graph * g_arg, 
-                    std::vector<int> verticesToRemove,
-                    int k_prime_arg,
-                    ParallelB1 * parent_arg = NULL);
-
-
-
     void IterateTreeStructure(ParallelB1 * root);
     void TraverseUpTree(ParallelB1 * leaf, std::vector<int> & answer);
     int GetNumberChildren();
@@ -29,7 +21,6 @@ public:
     ParallelB1 * GetChild(int i);
     ParallelB1 * GetParent();
     bool GetResult();
-*/
 
 private:
     int classifyPath(std::vector<int> & path);
@@ -37,10 +28,7 @@ private:
 
     Graph * g;
     int k;
-    std::vector<int> & verticesToRemoveRef;
-    // Set from the graph provided as a arg, 
-    // makes get random vertex constant time
-    //std::vector<int> & verticesRemaining;
+    std::vector<int> verticesToRemove;
     std::vector< std::vector<int> > childrensVertices;
     ParallelB1 * parent, ** children;
     bool result;
