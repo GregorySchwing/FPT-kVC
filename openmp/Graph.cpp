@@ -237,15 +237,27 @@ void Graph::CountingSortParallelRowwiseValues(
 }
 
 // Highly unoptimized, but should work for now
-void Graph::RemoveDegreeZeroVertices(std::vector<int> & newRowOffsets){
-    int i = 0;
-    for (i = 0; i < vertexCount; ++i){
-        if(newRowOffsets[i+1] - newRowOffsets[i] == 0)
-            removeVertex(i, verticesRemaining);
+void Graph::RemoveNewlyDegreeZeroVertices(  std::vector<int> & verticesToRemove,
+                                            std::vector<int> & oldRowOffsets, 
+                                            std::vector<int> & oldColumnIndices, 
+                                            std::vector<int> & newRowOffsets){
+    int i = 0, j;
+    std::vector<int> hasntBeenRemoved(vertexCount, 1);
+    for (auto & v :verticesToRemove){
+        removeVertex(v, verticesRemaining);
+        hasntBeenRemoved[v] = 0;
+        for (i = oldRowOffsets[v]; i < oldRowOffsets[v+1]; ++i){
+            j = oldColumnIndices[i];
+            if(newRowOffsets[j+1] - newRowOffsets[j] == 0)
+                if (hasntBeenRemoved[j]){
+                    removeVertex(j, verticesRemaining);
+                    hasntBeenRemoved[j] = 0;
+                }
+        }
     }
 }
 
-void Graph::PrepareGPrime(){
+void Graph::PrepareGPrime(std::vector<int> & verticesToRemoveRef){
         
         compressedSparseMatrix->GetNewColRef().resize(edgesLeftToCover);
         // Temporary, used for checking, will be replaced by vector of all 1's
@@ -278,8 +290,14 @@ void Graph::PrepareGPrime(){
                                             newColumnIndices,
                                             newValues);
         }
+        std::cout << "removing the vertices in verticesToRemoveRef: " << std::endl;
+        for (auto & v : verticesToRemoveRef)
+            std::cout << v << " ";
+        std::cout << std::endl;
+        std::cout << "Along with all their neighbors that are now deg 0 " << std::endl;
+        RemoveNewlyDegreeZeroVertices(verticesToRemoveRef, row_offsets, column_indices, newRowOffsets);
+        std::cout << "Done" << std::endl;
 
-        RemoveDegreeZeroVertices(newRowOffsets);
         // We dont need the values array anymore
         // Reset with a small vector of all 1's
         // Maybe a temporary sol'n

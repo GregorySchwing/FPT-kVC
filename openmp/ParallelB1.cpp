@@ -27,7 +27,7 @@ ParallelB1::ParallelB1( Graph * g_arg,
         } else{
             std::cout << "|G'(E)| <= k*k', a solution may exist" << std::endl;
         }
-        g->PrepareGPrime();
+        g->PrepareGPrime(verticesToRemoveRef);
         std::cout << "g->compressedSparseMatrix->new_row_offsets.size()" << g->GetCSR().GetNewRowOffRef().size() << std::endl;
         std::cout << "g->compressedSparseMatrix->new_column_indices.size()" << g->GetCSR().GetNewColRef().size() << std::endl;
         std::cout << "g->compressedSparseMatrix->new_values.size()" << g->GetCSR().GetNewValRef().size() << std::endl;
@@ -48,7 +48,7 @@ ParallelB1::ParallelB1( Graph * g_arg,
         return;
     } else {
         std::cout << "Prepping G Prime" << std::endl;
-        g->PrepareGPrime();
+        g->PrepareGPrime(verticesToRemoveRef);
     }
 
     std::vector<int> path;

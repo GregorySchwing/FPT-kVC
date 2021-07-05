@@ -31,7 +31,7 @@ class Graph {
         int edgesLeftToCover;
         std::set<std::pair<int,int>> edgesCoveredByKernelization;
         void removeVertex(int vertexToRemove, std::vector<int> & verticesRemaining);
-        void PrepareGPrime();
+        void PrepareGPrime(std::vector<int> & verticesToRemoveRef);
         int GetVertexCount();
         std::vector<int> & GetCondensedNewValRef();
         void PrintEdgesOfS();
@@ -70,7 +70,10 @@ class Graph {
                 std::vector<int> & B_row_indices_ref,
                 std::vector<int> & B_column_indices_ref,
                 std::vector<int> & B_values_ref);
-        void RemoveDegreeZeroVertices(std::vector<int> & newRowOffsets);
+        void RemoveNewlyDegreeZeroVertices(     std::vector<int> & verticesToRemove,
+                                                std::vector<int> & oldRowOffsets, 
+                                                std::vector<int> & oldColumnIndices, 
+                                                std::vector<int> & newRowOffsets);
 
 };
 #endif
