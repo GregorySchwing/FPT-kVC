@@ -1,7 +1,7 @@
 #include "CSVIterator.h"
 
-CSVIterator::CSVIterator(std::istream& str)  :m_str(str.good()?&str:NULL) { ++(*this); }
-CSVIterator::CSVIterator()                   :m_str(NULL) {}
+CSVIterator::CSVIterator(std::istream& str, char sep)  : m_row(sep), m_str(str.good()?&str:NULL)  { ++(*this); }
+CSVIterator::CSVIterator()                   : m_row(), m_str(NULL) {}
 
 // Pre Increment
 CSVIterator& CSVIterator::operator++()               {if (m_str) { if (!((*m_str) >> m_row)){m_str = NULL;}}return *this;}

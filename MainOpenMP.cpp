@@ -21,8 +21,9 @@ int main(int argc, char *argv[])
                 //, gPrime->GetRemainingVerticesRef());
     pb1.IterateTreeStructure(&pb1);
 */
-    std::ifstream       file("test.csv");
-    for(auto& row: CSVRange(file))
+    char sep = ' ';
+    std::ifstream       file("0.edges");
+    for(auto& row: CSVRange(file, sep))
     {
         std::cout << "4th Element(" << row[0] << ")\n";
     }

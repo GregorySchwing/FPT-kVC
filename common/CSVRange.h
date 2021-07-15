@@ -7,9 +7,10 @@ class CSVRange
 {
     std::istream&   stream;
     public:
-        CSVRange(std::istream& str);
+        CSVRange(std::istream& str, char sep = ',');
         CSVIterator begin() const;
         CSVIterator end()   const;
+        char sep;
 };
 
 #endif

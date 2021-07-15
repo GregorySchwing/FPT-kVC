@@ -11,6 +11,8 @@
 class CSVRow
 {
     public:
+        CSVRow(char sep = ',');
+
         std::string operator[](std::size_t index) const;
         std::size_t size() const;
         std::istream& readNextRow(std::istream& str);
@@ -22,5 +24,6 @@ class CSVRow
     private:
         std::string         m_line;
         std::vector<int>    m_data;
+        char sep;
 };
 #endif

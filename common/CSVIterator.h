@@ -12,7 +12,7 @@ class CSVIterator
         typedef CSVRow*                     pointer;
         typedef CSVRow&                     reference;
 
-        CSVIterator(std::istream& str);
+        CSVIterator(std::istream& str, char sep = ',');
         CSVIterator();
 
         // Pre Increment
