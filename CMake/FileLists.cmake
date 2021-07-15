@@ -1,3 +1,15 @@
+set(sources_common
+    common/CSVIterator.cpp
+    common/CSVRange.cpp
+    common/CSVRow.cpp
+)
+
+set(headers_common
+    common/CSVIterator.h
+    common/CSVRange.h
+    common/CSVRow.h
+)
+
 set(sources_cpu_serial 
     MainSerial.cpp
     serial/COO.cpp
