@@ -29,6 +29,10 @@ COO::COO(int size, int numberOfRows, int numberOfColumns, bool populate):SparseM
 COO::COO(int numberOfRows, int numberOfColumns):SparseMatrix(numberOfRows, numberOfColumns){
 }
 
+COO::COO():SparseMatrix(){
+    std::cout << "Building COO from file/online" << std::endl;
+}
+
 /* Copy Constructor */
 COO::COO(COO & coo_arg):SparseMatrix(coo_arg){
     new_column_indices = coo_arg.new_column_indices;

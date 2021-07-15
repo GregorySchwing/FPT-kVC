@@ -15,6 +15,8 @@ public:
     COO(COO & coo_arg);
     /* SpRef Operation */
     COO(COO & coo_arg, int edgesLeftToCover);
+    /* From file */
+    COO();
 
     std::string toString();
     void sortMyself();

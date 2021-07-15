@@ -9,22 +9,21 @@ vertexCount(vertexCount)
 
     /* Eventually replace this with an initialization from file */
     BuildTheExampleCOO(coordinateFormat);
-    compressedSparseMatrix = new CSR(*coordinateFormat);             
-    std::cout << coordinateFormat->toString();
-    std::cout << "coordinateFormat->old_value_ref.size() " << coordinateFormat->old_values_ref.size() << std::endl;
-    std::cout << "coordinateFormat->new_values.size() " << coordinateFormat->new_values.size() << std::endl;
-    std::cout << "compressedSparseMatrix->old_value_ref.size() " << compressedSparseMatrix->old_values_ref.size() << std::endl;
-    std::cout << "compressedSparseMatrix->new_values.size() " << compressedSparseMatrix->new_values.size() << std::endl;
-    std::cout << compressedSparseMatrix->toString();
-    edgesLeftToCover = compressedSparseMatrix->new_column_indices.size()/2;
-    verticesRemaining.resize(vertexCount);
-    std::iota (std::begin(verticesRemaining), std::end(verticesRemaining), 0); // Fill with 0, 1, ..., 99.
-    std::vector<int> & new_row_offsets = compressedSparseMatrix->new_row_offsets;
-    new_degrees.resize(vertexCount);
-    for (int i = 0; i < vertexCount; ++i){
-        new_degrees[i] = new_row_offsets[i+1] - new_row_offsets[i];
-    }
+    ProcessGraph(vertexCount);
 }
+
+Graph::Graph(std::string filename, char sep, int vertexCount):
+// Circular reference since there are no old degrees.
+old_degrees_ref(new_degrees)
+{
+    coordinateFormat = new COO();
+    /* Eventually replace this with an initialization from file */
+    BuildCOOFromFile(coordinateFormat, filename);
+    if(vertexCount == 0)
+        SetVertexCountFromEdges(coordinateFormat);
+    ProcessGraph(coordinateFormat->GetNumberOfRows());
+}
+
 
 /* Constructor to make induced subgraph G'' for each branch */
 Graph::Graph(Graph * g_arg, std::vector<int> & verticesToDelete):
@@ -51,6 +50,46 @@ Graph::Graph(Graph * g_arg, std::vector<int> & verticesToDelete):
     std::cout << std::endl;
 
     std::cout << edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
+}
+
+void Graph::ProcessGraph(int vertexCount){
+    compressedSparseMatrix = new CSR(*coordinateFormat);             
+    std::cout << coordinateFormat->toString();
+    std::cout << compressedSparseMatrix->toString();
+    edgesLeftToCover = compressedSparseMatrix->new_column_indices.size()/2;
+    verticesRemaining.resize(vertexCount);
+    std::iota (std::begin(verticesRemaining), std::end(verticesRemaining), 0); // Fill with 0, 1, ..., 99.
+    std::vector<int> & new_row_offsets = compressedSparseMatrix->new_row_offsets;
+    new_degrees.resize(vertexCount);
+    for (int i = 0; i < vertexCount; ++i){
+        new_degrees[i] = new_row_offsets[i+1] - new_row_offsets[i];
+    }
+}
+
+void Graph::SetVertexCountFromEdges(COO * coordinateFormat){
+    int min;
+    auto it = min_element(std::begin(coordinateFormat->new_row_indices), std::end(coordinateFormat->new_row_indices)); // C++11
+    min = *it;
+    it = max_element(std::begin(coordinateFormat->new_column_indices), std::end(coordinateFormat->new_column_indices)); // C++11
+    if(min > *it)
+        min = *it;
+    if(min != 0){
+        int scaleToRenumberAtZero = 0 - min;
+        for (auto & v : coordinateFormat->new_row_indices)
+            v += scaleToRenumberAtZero;
+        for (auto & v : coordinateFormat->new_column_indices)
+            v += scaleToRenumberAtZero;
+    }
+            
+    int max;
+    it = max_element(std::begin(coordinateFormat->new_row_indices), std::end(coordinateFormat->new_row_indices)); // C++11
+    max = *it;
+    it = max_element(std::begin(coordinateFormat->new_column_indices), std::end(coordinateFormat->new_column_indices)); // C++11
+    if(max < *it)
+        max = *it;
+    coordinateFormat->SetNumberOfRows(max);
+    this->vertexCount = max;
+
 }
 
 std::vector<int> & Graph::GetRemainingVerticesRef(){
@@ -337,6 +376,23 @@ void Graph::BuildTheExampleCOO(COO * coordinateFormat){
     coordinateFormat->addEdgeSymmetric(4,8,1);
     coordinateFormat->addEdgeSymmetric(5,8,1);
     coordinateFormat->addEdgeSymmetric(6,9,1);
+
+    coordinateFormat->size = coordinateFormat->new_values.size();
+    // vlog(e)
+    coordinateFormat->sortMyself();
+}
+
+void Graph::BuildCOOFromFile(COO * coordinateFormat, std::string filename){
+    char sep = ' ';
+    std::ifstream       file(filename);
+    std::string::size_type sz;   // alias of size_t
+    for(auto& row: CSVRange(file, sep))
+    {
+        //std::cout << "adding (" << std::stoi(row[0],&sz) 
+        //<< ", " << std::stoi(row[1],&sz) << ")" << std::endl; 
+        coordinateFormat->addEdgeSymmetric(std::stoi(row[0],&sz), 
+                                            std::stoi(row[1],&sz), 1);
+    }
 
     coordinateFormat->size = coordinateFormat->new_values.size();
     // vlog(e)

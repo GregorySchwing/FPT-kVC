@@ -9,10 +9,13 @@
 #include <cstdlib> /* rand */
 #include  <random>
 #include  <iterator>
+#include "../common/CSVRange.h"
 
 class Graph {
     public:
         Graph(int vertexCount);
+        Graph(std::string filename, char sep = ',', int vertexCount = 0);
+
         Graph(Graph & g_arg);
 /* Constructor to make induced subgraph G'' for each branch */
         Graph(Graph * g_arg, std::vector<int> & verticesToDelete);
@@ -41,6 +44,7 @@ class Graph {
 
 
     private:
+        int vertexCount;
         COO * coordinateFormat;
         CSR * compressedSparseMatrix;
         // Every vertex touched by an edge removed should be checked after for being degree 0
@@ -55,9 +59,10 @@ class Graph {
 
         std::vector<int> newValues;
 
-        int vertexCount;
-
         void BuildTheExampleCOO(COO * coordinateFormat);
+        void BuildCOOFromFile(COO * coordinateFormat, std::string filename);
+        void ProcessGraph(int vertexCount);
+        void SetVertexCountFromEdges(COO * coordinateFormat);
         void SetEdgesOfSSymParallel(std::vector<int> & S);
         void SetEdgesLeftToCoverParallel();
         void SetNewRowOffsets(std::vector<int> & newRowOffsetsRef);

@@ -87,6 +87,24 @@ ParallelB1::ParallelB1( Graph * g_arg,
     }
 }
 
+ParallelB1::~ParallelB1(){
+    ParallelB1 * next;
+    if(root->GetResult()){
+        std::cout << "Found an answer" << std::endl;
+        std::vector<int> answer;
+        TraverseUpTree(root, answer);
+        std::cout << "Printing answer :" << std::endl;
+        for (auto & v : answer)
+            std::cout << v << " ";
+        std::cout << std::endl;
+    }
+    for (int i = 0; i < root->GetNumberChildren(); ++i){
+        next = root->GetChild(i);
+        // If a child would have too many vertices, we just set it NULL
+        if(next != NULL)
+            IterateTreeStructure(next);
+    }
+}
 
 
 int ParallelB1::classifyPath(std::vector<int> & path){

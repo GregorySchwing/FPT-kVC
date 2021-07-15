@@ -1,22 +1,74 @@
 #include "ParallelKernelization.h"
 
 
-ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg), k(k_arg)
+ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg), k(k_arg), 
+old_degree_ref(g_arg.GetNewDegRef())
 {
     std::cout << "Entered PK" << std::endl;
-
     numberOfRows = g.GetCSR().numberOfRows;
 
-    std::vector<int> & old_degree_ref = g_arg.GetNewDegRef();
+    //std::vector<int> & old_degree_ref = ;
 
-    LinearTimeDegreeSort ltds(numberOfRows, old_degree_ref);
+    ltds = new LinearTimeDegreeSort(numberOfRows, old_degree_ref);
 
+         
+   // std::cout << "Removing S from G" << std::endl;
+
+
+    /*
+    vertexTouchedByRemovedEdge.resize(numberOfRows);
+    SetEdgesOfSSymParallel();
+    SetEdgesLeftToCoverParallel();
+    PrintEdgesOfS();
+    std::cout << g.edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
+    kPrime = k - b;
+    std::cout << "Setting k' = k - b = " << kPrime << std::endl;
+    noSolutionExists = GPrimeEdgesGreaterKTimesKPrime();
+    if(noSolutionExists)
+        std::cout << "|G'(E)| > k*k', no solution exists" << std::endl;
+    else{
+        std::cout << "|G'(E)| <= k*k', a solution may exist" << std::endl;
+
+        newColumnIndices.resize(g.edgesLeftToCover);
+        // Temporary, used for checking, will be replaced by vector of all 1's
+        newValues.resize(g.edgesLeftToCover);
+        //newColumnIndices.resize(26);
+        // Temporary, used for checking, will be replaced by vector of all 1's
+        //newValues.resize(26);
+        SetNewRowOffsets();
+
+        int row; 
+        
+        #pragma omp parallel for default(none) \
+                            shared( row_offsets, column_indices, values, \
+                                    newRowOffsets, newColumnIndices, newValues) \
+                            private (row)
+        for (row = 0; row < numberOfRows; ++row)
+        {
+            CountingSortParallelRowwiseValues(row,
+                                            row_offsets[row],
+                                            row_offsets[row+1],
+                                            row_offsets,
+                                            column_indices,
+                                            values,
+                                            newRowOffsets,
+                                            newColumnIndices,
+                                            newValues);
+        }
+        RemoveDegreeZeroVertices();
+        //RemoveSVertices();
+    }*/
+}
+
+
+bool ParallelKernelization::TestAValueOfK(int k_arg){
+    k = k_arg;
     std::cout << "Build VC" << std::endl;
-    noSolutionExists = CardinalityOfSetDegreeGreaterK(ltds.GetDegreeRef(), ltds.GetVertexKeyRef());
+    noSolutionExists = CardinalityOfSetDegreeGreaterK(ltds->GetDegreeRef(), ltds->GetVertexKeyRef());
     printf("%s\n", noSolutionExists ? "b > k, no solution exists" : "b <= k, a solution may exist");
-    if (noSolutionExists)
-        exit(0);
-    PrintS();            
+    return noSolutionExists;
+    //if (noSolutionExists)
+    //    exit(0);
    // std::cout << "Removing S from G" << std::endl;
 
 

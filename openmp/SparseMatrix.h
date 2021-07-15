@@ -14,10 +14,15 @@ class SparseMatrix {
         SparseMatrix(SparseMatrix & s);
         /* No optimization by reserving vectors, size and values must be set */
         SparseMatrix(int numberOfRows);
+
+        SparseMatrix();
+
+
         /* SPM by reference */
         //SparseMatrix(int numberOfRows, std::vector<int> & values_ref_arg);
 
         int GetNumberOfRows();
+        void SetNumberOfRows(int numberOfRows_arg);
 
 
         virtual std::string toString() = 0;

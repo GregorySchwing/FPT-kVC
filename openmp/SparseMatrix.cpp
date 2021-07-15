@@ -7,10 +7,15 @@ numberOfRows(numberOfRows),
 numberOfColumns(numberOfColumns),
 old_values_ref(new_values)
 {};
-/* Will use AddEdge to build, thus size is dynamic */
+
 SparseMatrix::SparseMatrix(int numberOfRows, int numberOfColumns):
 numberOfRows(numberOfRows), 
 numberOfColumns(numberOfColumns),
+old_values_ref(new_values)
+{};
+
+/* Will use AddEdge to build, thus size is dynamic */
+SparseMatrix::SparseMatrix():
 old_values_ref(new_values)
 {};
 
@@ -41,4 +46,9 @@ old_values_ref(values_ref_arg){
 int SparseMatrix::GetNumberOfRows(){
     return numberOfRows;
 }
+
+void SparseMatrix::SetNumberOfRows(int numberOfRows_arg){
+    numberOfRows = numberOfRows_arg;
+}
+
 

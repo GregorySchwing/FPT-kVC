@@ -14,6 +14,7 @@ public:
                 std::vector<int> & verticesToRemove_arg,
                 //std::vector<int> verticesRemaining_arg,
                 ParallelB1 * parent_arg = NULL);
+    ~ParallelB1();
     void IterateTreeStructure(ParallelB1 * root);
     void TraverseUpTree(ParallelB1 * leaf, std::vector<int> & answer);
     int GetNumberChildren();
