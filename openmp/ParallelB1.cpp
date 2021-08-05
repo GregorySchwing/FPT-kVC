@@ -86,7 +86,7 @@ ParallelB1::ParallelB1( Graph * g_arg,
         }
     }
 }
-
+/*
 ParallelB1::~ParallelB1(){
     ParallelB1 * next;
     if(root->GetResult()){
@@ -105,7 +105,7 @@ ParallelB1::~ParallelB1(){
             IterateTreeStructure(next);
     }
 }
-
+*/
 
 int ParallelB1::classifyPath(std::vector<int> & path){
     if (path.size()==2)

@@ -5,6 +5,7 @@
 #include <vector>
 #include <iostream>
 #include <numeric>
+#include <memory>
 
 class LinearTimeDegreeSort {
 public:

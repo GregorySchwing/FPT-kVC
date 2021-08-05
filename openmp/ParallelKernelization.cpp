@@ -9,9 +9,8 @@ old_degree_ref(g_arg.GetNewDegRef())
 
     //std::vector<int> & old_degree_ref = ;
 
-    ltds = new LinearTimeDegreeSort(numberOfRows, old_degree_ref);
-
-         
+    std::unique_ptr<LinearTimeDegreeSort> ltds(new LinearTimeDegreeSort(numberOfRows, old_degree_ref));
+     
    // std::cout << "Removing S from G" << std::endl;
 
 
