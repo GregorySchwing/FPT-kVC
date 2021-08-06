@@ -34,6 +34,16 @@ set(sources_cpu_parallel
     openmp/SparseMatrix.cpp
    )
 
+
+set(sources_simple_parallel 
+    MainSimpleParallel.cpp
+    simpleParallel/COO.cpp
+    simpleParallel/CSR.cpp
+    simpleParallel/Graph.cpp
+    simpleParallel/SparseMatrix.cpp
+    simpleParallel/ConnectednessTest.cpp
+   )
+
 set(sources_gpu 
     Main.cu
     gpu/COO.cu
@@ -62,6 +72,15 @@ set(headers_cpu_parallel
     openmp/ParallelB1.h
     openmp/ParallelKernelization.h
     openmp/SparseMatrix.h
+   )
+
+set(headers_simple_parallel 
+    simpleParallel/COO.h
+    simpleParallel/CSR.h
+    simpleParallel/Graph.h
+    simpleParallel/SparseMatrix.h
+    simpleParallel/ConnectednessTest.h
+
    )
 
 set(headers_gpu 
