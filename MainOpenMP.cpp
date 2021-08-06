@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
     pb1.IterateTreeStructure(&pb1);
 */
     std::cout << "Building G" << std::endl;
-    Graph g("0.edges");
+    Graph g("facebook_combined.txt");
     int k = 4;
     std::cout << "Building PK" << std::endl;
     ParallelKernelization sk(g, k);

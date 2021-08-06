@@ -28,7 +28,7 @@ numberOfColumns(s.numberOfColumns),
 old_values_ref(s.new_values){
     std::cout << "setting size, numRows, numCols, oldValRef, and newVals" << std::endl;
     // A copy for writing purposes
-    new_values = s.new_values;
+    new_values.reserve(s.size);
 }
 
 /* SPM by reference 
