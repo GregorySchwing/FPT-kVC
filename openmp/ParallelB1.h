@@ -7,7 +7,7 @@
 #include <iostream>
 
 
-class ParallelB1 : std::enable_shared_from_this<ParallelB1>{
+class ParallelB1 : public std::enable_shared_from_this<ParallelB1>{
 public:
     ParallelB1( std::shared_ptr<Graph> g_arg,
                 int k_arg,
@@ -15,7 +15,8 @@ public:
                 //std::vector<int> verticesRemaining_arg,
                 std::shared_ptr<ParallelB1> parent_arg = NULL);
     //~ParallelB1();
-    void IterateTreeStructure(std::shared_ptr<ParallelB1> root);
+    bool IterateTreeStructure(  std::shared_ptr<ParallelB1> root,
+                                std::vector<int> & answer);
     void TraverseUpTree(std::shared_ptr<ParallelB1> leaf, std::vector<int> & answer);
     int GetNumberChildren();
     std::vector<int> GetVerticesToRemove();

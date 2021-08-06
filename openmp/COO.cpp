@@ -22,7 +22,7 @@ COO::COO(int size, int numberOfRows, int numberOfColumns, bool populate):SparseM
             new_column_indices[i] = trialCol;
             new_values[i] =  std::rand() % size + 1;
         }
-        toString();
+        //toString();
     }
 }
 

@@ -15,7 +15,7 @@ ParallelB1::ParallelB1( std::shared_ptr<Graph> g_arg,
     //verticesRemaining = verticesRemaining_arg;
     
     if (parent_arg == NULL){
-        g->PrintEdgesOfS();   
+        //g->PrintEdgesOfS();   
         std::cout << g->edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
         std::cout << "verticesToRemove.size() " << verticesToRemove.size() << std::endl;
         //k = k_arg - verticesToRemove.size();
@@ -37,10 +37,11 @@ ParallelB1::ParallelB1( std::shared_ptr<Graph> g_arg,
         // Pointers to the children 
         ///children = new ParallelB1*[1];
         children.resize(1);
+        auto ptr = std::shared_ptr<ParallelB1>( this, [](ParallelB1*){} );
         std::shared_ptr<ParallelB1> child = std::make_shared<ParallelB1>(std::make_shared<Graph>(g,emptyVector),
                                     k - verticesToRemove.size(), 
                                     emptyVector,
-                                    shared_from_this());
+                                    ptr);
         children[0] = std::move(child);
         return;
     }
@@ -78,10 +79,11 @@ ParallelB1::ParallelB1( std::shared_ptr<Graph> g_arg,
             for (auto & v : childrensVertices[i])
                 std::cout << v << " ";
             std::cout << std::endl;
+            auto ptr = std::shared_ptr<ParallelB1>( this, [](ParallelB1*){} );
             std::shared_ptr<ParallelB1> child = std::make_shared<ParallelB1>(std::make_shared<Graph>(g,childrensVertices[i]),
                                         k - childrensVertices[i].size(), 
                                         childrensVertices[i], 
-                                        shared_from_this());
+                                        ptr);
             children[i] = std::move(child);
 
         } else{
@@ -170,24 +172,41 @@ void ParallelB1::createVertexSetsForEachChild(int caseNumber, std::vector<int> &
 }
 
 
-void ParallelB1::IterateTreeStructure(std::shared_ptr<ParallelB1> root){
+bool ParallelB1::IterateTreeStructure(  std::shared_ptr<ParallelB1> root,
+                                        std::vector<int> & answer){
     std::cout << "Called IterateTreeStructure" << std::endl;
-    std::shared_ptr<ParallelB1> next;
-    if(root->GetResult()){
-        std::cout << "Found an answer" << std::endl;
-        std::vector<int> answer;
-        TraverseUpTree(root, answer);
-        std::cout << "Printing answer :" << std::endl;
-        for (auto & v : answer)
-            std::cout << v << " ";
-        std::cout << std::endl;
-    }
-    for (int i = 0; i < root->GetNumberChildren(); ++i){
-        next = root->GetChild(i);
+    int child = 0;
+    int children = root->GetNumberChildren();
+    std::shared_ptr<ParallelB1> next = root->GetChild(child);
+    std::vector<int> childForBacktracking;
+    for (; child < children; ++child){
         // If a child would have too many vertices, we just set it NULL
-        if(next != NULL)
-            IterateTreeStructure(next);
+        next = GetChild(child);
+        if(next != NULL){
+            childForBacktracking.push_back(child);
+            children = next->GetNumberChildren();
+            child = 0;
+        // Backtrack up a level
+        } else {
+            if(next->GetResult()){
+                std::cout << "Found an answer" << std::endl;
+                TraverseUpTree(next, answer);
+                return true;
+            } else {
+                // Implicitly checks depth, early termination if at root
+                // If not at root check if for loop is exhausted
+                // If so, backtrack another level
+                while (childForBacktracking.size() > 0 && 
+                    childForBacktracking.back()+1 == next->GetParent()->GetNumberChildren()){
+                    next = next->GetParent();
+                    child = childForBacktracking.back();
+                    childForBacktracking.pop_back();
+                    children = next->GetNumberChildren();
+                }
+            }
+        }
     }
+    return false;
 }
 
 void ParallelB1::TraverseUpTree(std::shared_ptr<ParallelB1> leaf, std::vector<int> & answer){
