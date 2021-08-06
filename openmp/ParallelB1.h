@@ -9,7 +9,7 @@
 
 class ParallelB1 {
 public:
-    ParallelB1( Graph * g_arg,
+    ParallelB1( std::shared_ptr<Graph> g_arg,
                 int k_arg,
                 std::vector<int> & verticesToRemove_arg,
                 //std::vector<int> verticesRemaining_arg,
@@ -27,7 +27,8 @@ private:
     int classifyPath(std::vector<int> & path);
     void createVertexSetsForEachChild(int caseNumber, std::vector<int> & path);
 
-    Graph * g;
+    std::shared_ptr<Graph> g;
+
     int k;
     std::vector<int> verticesToRemove;
     std::vector< std::vector<int> > childrensVertices;

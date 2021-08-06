@@ -1,6 +1,6 @@
 #include "ParallelB1.h"
 
-ParallelB1::ParallelB1( Graph * g_arg,
+ParallelB1::ParallelB1( std::shared_ptr<Graph> g_arg,
                         int k_arg,
                         std::vector<int> & verticesToRemove_arg,
                         //std::vector<int> verticesRemaining_arg,
@@ -36,7 +36,7 @@ ParallelB1::ParallelB1( Graph * g_arg,
         childrensVertices.resize(1);
         // Pointers to the children 
         children = new ParallelB1*[1];
-        children[0] = new ParallelB1(new Graph(g,emptyVector),
+        children[0] = new ParallelB1(std::make_shared<Graph>(g,emptyVector),
                                     k - verticesToRemove.size(), 
                                     emptyVector,
                                     this); 
@@ -75,7 +75,7 @@ ParallelB1::ParallelB1( Graph * g_arg,
             for (auto & v : childrensVertices[i])
                 std::cout << v << " ";
             std::cout << std::endl;
-            children[i] = new ParallelB1(new Graph(g, childrensVertices[i]),
+            children[i] = new ParallelB1(std::make_shared<Graph>(g,childrensVertices[i]),
                                         k - childrensVertices[i].size(), 
                                         childrensVertices[i], 
                                         this);
