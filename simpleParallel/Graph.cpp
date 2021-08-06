@@ -407,10 +407,10 @@ void Graph::BuildCOOFromFile(COO * coordinateFormat, std::string filename){
     {
         //std::cout << "adding (" << std::stoi(row[0],&sz) 
         //<< ", " << std::stoi(row[1],&sz) << ")" << std::endl; 
-        //coordinateFormat->addEdgeSymmetric(std::stoi(row[0],&sz), 
-        //                                    std::stoi(row[1],&sz), 1);
-        coordinateFormat->addEdgeSimple(std::stoi(row[0],&sz), 
+        coordinateFormat->addEdgeSymmetric(std::stoi(row[0],&sz), 
                                             std::stoi(row[1],&sz), 1);
+        //coordinateFormat->addEdgeSimple(std::stoi(row[0],&sz), 
+        //                                    std::stoi(row[1],&sz), 1);
     }
 
     coordinateFormat->size = coordinateFormat->new_values.size();

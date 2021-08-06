@@ -42,6 +42,9 @@ set(sources_simple_parallel
     simpleParallel/Graph.cpp
     simpleParallel/SparseMatrix.cpp
     simpleParallel/ConnectednessTest.cpp
+    simpleParallel/ParallelKernelization.cpp
+    simpleParallel/LinearTimeDegreeSort.cpp
+
    )
 
 set(sources_gpu 
@@ -80,6 +83,8 @@ set(headers_simple_parallel
     simpleParallel/Graph.h
     simpleParallel/SparseMatrix.h
     simpleParallel/ConnectednessTest.h
+    simpleParallel/ParallelKernelization.h
+    simpleParallel/LinearTimeDegreeSort.cpp
 
    )
 

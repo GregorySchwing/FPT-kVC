@@ -10,7 +10,7 @@ along with this program, also can be found at <http://www.gnu.org/licenses/>.
 #include "ConnectednessTest.h"
 #include "Graph.h"
 
-#define debugAdjList 1 
+#define debugAdjList 0 
 
 //return if we fail to read anything
 const int READERROR = -1;
@@ -74,6 +74,8 @@ ConnectednessTest::ConnectednessTest(Graph * g, std::vector< std::vector<int> > 
     }
     std::sort(vectorOfConnectedComponents.begin(), vectorOfConnectedComponents.end());
     */
+    connectedComponents(vectorOfConnectedComponents);
+
 #if debugAdjList
 #ifndef NDEBUG
     std::cout << "Adjacency List" << std::endl;
@@ -91,8 +93,6 @@ ConnectednessTest::ConnectednessTest(Graph * g, std::vector< std::vector<int> > 
     }
 #endif    
 #endif
-    connectedComponents(vectorOfConnectedComponents);
-
 }
 
 // Destructor
