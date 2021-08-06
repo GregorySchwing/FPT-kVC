@@ -1,4 +1,5 @@
 #include "SparseMatrix.h"
+#include <memory>
 
 /* Will be useful for parallel builds */
 SparseMatrix::SparseMatrix(int size, int numberOfRows, int numberOfColumns):
@@ -19,7 +20,6 @@ SparseMatrix::SparseMatrix():
 old_values_ref(new_values)
 {};
 
-/* Only used for creating first CSR from a COO */
 SparseMatrix::SparseMatrix(SparseMatrix & s):
 size(s.size), 
 numberOfRows(s.numberOfRows), 

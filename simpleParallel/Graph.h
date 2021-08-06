@@ -17,7 +17,7 @@ class Graph {
         Graph(int vertexCount);
         Graph(std::string filename, char sep = ',', int vertexCount = 0);
 
-        Graph(Graph & g_arg);
+        Graph(Graph * g_arg);
 /* Constructor to make induced subgraph G'' for each branch */
         Graph(Graph * g_arg, std::vector<int> & verticesToDelete);
         std::vector<int> & GetRemainingVerticesRef();

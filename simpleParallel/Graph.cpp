@@ -40,6 +40,14 @@ old_degrees_ref(new_degrees)
     ProcessGraph(coordinateFormat->GetNumberOfRows());
 }
 
+/* Constructor to allocate space for G'' for each branch */
+Graph::Graph(Graph * g_arg):
+    compressedSparseMatrix(new CSR(g_arg->GetCSR())),
+    old_degrees_ref(g_arg->new_degrees),
+    vertexCount(g_arg->vertexCount)
+{}
+
+
 
 /* Constructor to make induced subgraph G'' for each branch */
 Graph::Graph(Graph * g_arg, std::vector<int> & verticesToDelete):

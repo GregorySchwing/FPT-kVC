@@ -35,9 +35,10 @@ SparseMatrix(c),
 old_row_offsets_ref(c.new_row_offsets),
 old_column_indices_ref(c.new_column_indices)
 {
- std::cout << "numberOfRows " << c.numberOfRows << std::endl;
-  std::cout << "c.new_column_indices.size() " << c.new_column_indices.size()  << std::endl;
-
+    new_row_offsets.reserve(c.new_row_offsets.capacity());
+    new_column_indices.reserve(c.new_column_indices.capacity());
+    std::cout << "numberOfRows " << c.numberOfRows << std::endl;
+    std::cout << "c.new_column_indices.size() " << c.new_column_indices.size()  << std::endl;
 }
 
 std::string CSR::toString(){
