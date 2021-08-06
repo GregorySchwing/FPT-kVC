@@ -8,8 +8,9 @@ old_degree_ref(g_arg->GetNewDegRef())
     numberOfRows = g->GetCSR().numberOfRows;
 
     //std::vector<int> & old_degree_ref = ;
+    ltds = std::make_unique<LinearTimeDegreeSort>(numberOfRows, old_degree_ref);
 
-    std::unique_ptr<LinearTimeDegreeSort> ltds(new LinearTimeDegreeSort(numberOfRows, old_degree_ref));
+    //std::unique_ptr<LinearTimeDegreeSort> ltds(new LinearTimeDegreeSort(numberOfRows, old_degree_ref));
      
    // std::cout << "Removing S from G" << std::endl;
 

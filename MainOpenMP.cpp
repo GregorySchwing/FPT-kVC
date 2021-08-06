@@ -21,22 +21,22 @@ int main(int argc, char *argv[])
     pb1.IterateTreeStructure(&pb1);
 */
     std::cout << "Building G" << std::endl;
-    Graph g("0.edges");
+    //Graph g("0.edges");
+    std::shared_ptr<Graph> g = std::make_shared<Graph>("0.edges");
     int k = 4;
     std::cout << "Building PK" << std::endl;
     ParallelKernelization sk(g, k);
-    for (int i = k; i < g.GetVertexCount(); ++i){
+    for (int i = k; i < g->GetVertexCount(); ++i){
     // If (noSolutionExists)
-    if (sk.TestAValueOfK(i))
-        continue;
+        if (sk.TestAValueOfK(i))
+            continue;
+        else {
+            sk.PrintS();            
 
-    sk.PrintS();            
-
-    Graph * gPrime = new Graph(&g, sk.GetS());
-    ParallelB1 pb1(gPrime, 
-                k, 
-                sk.GetS());
-                //, gPrime->GetRemainingVerticesRef());
-    pb1.IterateTreeStructure(&pb1);
+            std::shared_ptr<Graph> gPrime = std::make_shared<Graph>(g, sk.GetS()); 
+            std::shared_ptr<ParallelB1> pb1 = std::make_shared<ParallelB1>(gPrime, 
+                                                                        k, 
+                                                                        sk.GetS());
+        }
     }
 }

@@ -79,7 +79,6 @@ class ParallelKernelization {
         int numberOfElements, numberOfRows;
 
         //std::vector<int> degrees, newDegrees
-
         int kPrime;
         //Graph & g;
         std::shared_ptr<Graph> g;

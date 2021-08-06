@@ -7,20 +7,20 @@
 #include <iostream>
 
 
-class ParallelB1 {
+class ParallelB1 : std::enable_shared_from_this<ParallelB1>{
 public:
     ParallelB1( std::shared_ptr<Graph> g_arg,
                 int k_arg,
                 std::vector<int> & verticesToRemove_arg,
                 //std::vector<int> verticesRemaining_arg,
-                ParallelB1 * parent_arg = NULL);
+                std::shared_ptr<ParallelB1> parent_arg = NULL);
     //~ParallelB1();
-    void IterateTreeStructure(ParallelB1 * root);
-    void TraverseUpTree(ParallelB1 * leaf, std::vector<int> & answer);
+    void IterateTreeStructure(std::shared_ptr<ParallelB1> root);
+    void TraverseUpTree(std::shared_ptr<ParallelB1> leaf, std::vector<int> & answer);
     int GetNumberChildren();
     std::vector<int> GetVerticesToRemove();
-    ParallelB1 * GetChild(int i);
-    ParallelB1 * GetParent();
+    std::shared_ptr<ParallelB1> GetChild(int i);
+    std::shared_ptr<ParallelB1> GetParent();
     bool GetResult();
 
 private:
@@ -32,7 +32,8 @@ private:
     int k;
     std::vector<int> verticesToRemove;
     std::vector< std::vector<int> > childrensVertices;
-    ParallelB1 * parent, ** children;
+    std::shared_ptr<ParallelB1> parent;
+    std::vector<std::shared_ptr<ParallelB1>> children;
     bool result;
 
 };
