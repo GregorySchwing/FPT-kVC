@@ -1,10 +1,10 @@
 #include "ParallelB1.h"
 
-ParallelB1::ParallelB1( std::shared_ptr<Graph> g_arg,
+ParallelB1::ParallelB1( Graph * g_arg,
                         int k_arg,
                         std::vector<int> & verticesToRemove_arg,
                         //std::vector<int> verticesRemaining_arg,
-                        std::shared_ptr<ParallelB1> parent_arg):
+                        ParallelB1 * parent_arg):
                         g(g_arg),
                         k(k_arg), 
                         //verticesToRemove(verticesToRemove_arg),
@@ -15,7 +15,7 @@ ParallelB1::ParallelB1( std::shared_ptr<Graph> g_arg,
     //verticesRemaining = verticesRemaining_arg;
     
     if (parent_arg == NULL){
-        //g->PrintEdgesOfS();   
+        g->PrintEdgesOfS();   
         std::cout << g->edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
         std::cout << "verticesToRemove.size() " << verticesToRemove.size() << std::endl;
         //k = k_arg - verticesToRemove.size();
@@ -35,14 +35,11 @@ ParallelB1::ParallelB1( std::shared_ptr<Graph> g_arg,
         std::vector<int> emptyVector;
         childrensVertices.resize(1);
         // Pointers to the children 
-        ///children = new ParallelB1*[1];
-        children.resize(1);
-        auto ptr = std::shared_ptr<ParallelB1>( this, [](ParallelB1*){} );
-        std::shared_ptr<ParallelB1> child = std::make_shared<ParallelB1>(std::make_shared<Graph>(g,emptyVector),
+        children = new ParallelB1*[1];
+        children[0] = new ParallelB1(new Graph(g,emptyVector),
                                     k - verticesToRemove.size(), 
                                     emptyVector,
-                                    ptr);
-        children[0] = std::move(child);
+                                    this); 
         return;
     }
 
@@ -70,8 +67,7 @@ ParallelB1::ParallelB1( std::shared_ptr<Graph> g_arg,
     createVertexSetsForEachChild(caseNumber, path);
     
     // Pointers to the children 
-    children.resize(childrensVertices.size());
-    //children = new ParallelB1*[childrensVertices.size()];
+    children = new ParallelB1*[childrensVertices.size()];
     for (int i = 0; i < childrensVertices.size(); ++i){
         if (k - childrensVertices[i].size() >= 0){
             std::cout << "Child " << i << std::endl;
@@ -79,12 +75,10 @@ ParallelB1::ParallelB1( std::shared_ptr<Graph> g_arg,
             for (auto & v : childrensVertices[i])
                 std::cout << v << " ";
             std::cout << std::endl;
-            auto ptr = std::shared_ptr<ParallelB1>( this, [](ParallelB1*){} );
-            std::shared_ptr<ParallelB1> child = std::make_shared<ParallelB1>(std::make_shared<Graph>(g,childrensVertices[i]),
+            children[i] = new ParallelB1(new Graph(g, childrensVertices[i]),
                                         k - childrensVertices[i].size(), 
                                         childrensVertices[i], 
-                                        ptr);
-            children[i] = std::move(child);
+                                        this);
 
         } else{
             std::cout << "Child " << i << " is null" << std::endl;
@@ -92,26 +86,15 @@ ParallelB1::ParallelB1( std::shared_ptr<Graph> g_arg,
         }
     }
 }
-/*
+
 ParallelB1::~ParallelB1(){
-    ParallelB1 * next;
-    if(root->GetResult()){
-        std::cout << "Found an answer" << std::endl;
-        std::vector<int> answer;
-        TraverseUpTree(root, answer);
-        std::cout << "Printing answer :" << std::endl;
-        for (auto & v : answer)
-            std::cout << v << " ";
-        std::cout << std::endl;
+    for (int i = 0; i < GetNumberChildren(); ++i){
+        children[i]->~ParallelB1();
     }
-    for (int i = 0; i < root->GetNumberChildren(); ++i){
-        next = root->GetChild(i);
-        // If a child would have too many vertices, we just set it NULL
-        if(next != NULL)
-            IterateTreeStructure(next);
-    }
+    delete[] children;
+    
 }
-*/
+
 
 int ParallelB1::classifyPath(std::vector<int> & path){
     if (path.size()==2)
@@ -171,13 +154,12 @@ void ParallelB1::createVertexSetsForEachChild(int caseNumber, std::vector<int> &
     }
 }
 
-
-bool ParallelB1::IterateTreeStructure(  std::shared_ptr<ParallelB1> root,
+bool ParallelB1::IterateTreeStructure(  ParallelB1 * root,
                                         std::vector<int> & answer){
     std::cout << "Called IterateTreeStructure" << std::endl;
     int child = 0;
     int children = root->GetNumberChildren();
-    std::shared_ptr<ParallelB1> next = root->GetChild(child);
+    ParallelB1 * next = root->GetChild(child);
     std::vector<int> childForBacktracking;
     for (; child < children; ++child){
         // If a child would have too many vertices, we just set it NULL
@@ -209,7 +191,7 @@ bool ParallelB1::IterateTreeStructure(  std::shared_ptr<ParallelB1> root,
     return false;
 }
 
-void ParallelB1::TraverseUpTree(std::shared_ptr<ParallelB1> leaf, std::vector<int> & answer){
+void ParallelB1::TraverseUpTree(ParallelB1 * leaf, std::vector<int> & answer){
     for (auto & v : leaf->GetVerticesToRemove())
         answer.push_back(v);
     if(leaf->GetParent()!=NULL){
@@ -217,7 +199,7 @@ void ParallelB1::TraverseUpTree(std::shared_ptr<ParallelB1> leaf, std::vector<in
     }
 }
 
-std::shared_ptr<ParallelB1> ParallelB1::GetParent(){
+ParallelB1 * ParallelB1::GetParent(){
     return parent;
 }
 
@@ -230,7 +212,7 @@ std::vector<int> ParallelB1::GetVerticesToRemove(){
     return verticesToRemove;
 }
 
-std::shared_ptr<ParallelB1> ParallelB1::GetChild(int i){
+ParallelB1 * ParallelB1::GetChild(int i){
     return children[i];
 }
 

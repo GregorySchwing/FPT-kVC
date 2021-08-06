@@ -26,7 +26,7 @@ old_degrees_ref(new_degrees)
 
 
 /* Constructor to make induced subgraph G'' for each branch */
-Graph::Graph(std::shared_ptr<Graph> g_arg, std::vector<int> & verticesToDelete):
+Graph::Graph(Graph * g_arg, std::vector<int> & verticesToDelete):
     // Sets the old references of the new csr 
     // to point to the new references of the argument
     compressedSparseMatrix(new CSR(g_arg->GetCSR())),
@@ -36,17 +36,17 @@ Graph::Graph(std::shared_ptr<Graph> g_arg, std::vector<int> & verticesToDelete):
     std::cout << "Entered constructor of G induced" << std::endl;
     verticesRemaining = g_arg->verticesRemaining;
     new_degrees.resize(vertexCount);
-    //std::cout << compressedSparseMatrix->toString();
+    std::cout << compressedSparseMatrix->toString();
 
     // Sets some of the entries in values[] to 0
     SetEdgesOfSSymParallel(verticesToDelete); 
     // Get an accurate number of edges left so we can 
     // decide if we are done before starting next branch
     SetEdgesLeftToCoverParallel();
-    //std::cout << compressedSparseMatrix->toString();
+    std::cout << compressedSparseMatrix->toString();
     std::cout << "new vals" << std::endl;
-    //for (auto & v : compressedSparseMatrix->new_values)
-    //    std::cout << v << " ";
+    for (auto & v : compressedSparseMatrix->new_values)
+        std::cout << v << " ";
     std::cout << std::endl;
 
     std::cout << edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
@@ -54,8 +54,8 @@ Graph::Graph(std::shared_ptr<Graph> g_arg, std::vector<int> & verticesToDelete):
 
 void Graph::ProcessGraph(int vertexCount){
     compressedSparseMatrix = new CSR(*coordinateFormat);             
-    //std::cout << coordinateFormat->toString();
-    //std::cout << compressedSparseMatrix->toString();
+    std::cout << coordinateFormat->toString();
+    std::cout << compressedSparseMatrix->toString();
     edgesLeftToCover = compressedSparseMatrix->new_column_indices.size()/2;
     verticesRemaining.resize(vertexCount);
     std::iota (std::begin(verticesRemaining), std::end(verticesRemaining), 0); // Fill with 0, 1, ..., 99.

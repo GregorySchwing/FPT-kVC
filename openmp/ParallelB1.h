@@ -7,34 +7,31 @@
 #include <iostream>
 
 
-class ParallelB1 : public std::enable_shared_from_this<ParallelB1>{
+class ParallelB1 {
 public:
-    ParallelB1( std::shared_ptr<Graph> g_arg,
+    ParallelB1( Graph * g_arg,
                 int k_arg,
                 std::vector<int> & verticesToRemove_arg,
                 //std::vector<int> verticesRemaining_arg,
-                std::shared_ptr<ParallelB1> parent_arg = NULL);
-    //~ParallelB1();
-    bool IterateTreeStructure(  std::shared_ptr<ParallelB1> root,
-                                std::vector<int> & answer);
-    void TraverseUpTree(std::shared_ptr<ParallelB1> leaf, std::vector<int> & answer);
+                ParallelB1 * parent_arg = NULL);
+    ~ParallelB1();
+    bool IterateTreeStructure(ParallelB1 * root, std::vector<int> & answer);
+    void TraverseUpTree(ParallelB1 * leaf, std::vector<int> & answer);
     int GetNumberChildren();
     std::vector<int> GetVerticesToRemove();
-    std::shared_ptr<ParallelB1> GetChild(int i);
-    std::shared_ptr<ParallelB1> GetParent();
+    ParallelB1 * GetChild(int i);
+    ParallelB1 * GetParent();
     bool GetResult();
 
 private:
     int classifyPath(std::vector<int> & path);
     void createVertexSetsForEachChild(int caseNumber, std::vector<int> & path);
 
-    std::shared_ptr<Graph> g;
-
+    Graph * g;
     int k;
     std::vector<int> verticesToRemove;
     std::vector< std::vector<int> > childrensVertices;
-    std::shared_ptr<ParallelB1> parent;
-    std::vector<std::shared_ptr<ParallelB1>> children;
+    ParallelB1 * parent, ** children;
     bool result;
 
 };

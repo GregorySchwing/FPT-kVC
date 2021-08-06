@@ -9,7 +9,7 @@
 
 class ParallelKernelization {
     public:
-        ParallelKernelization(std::shared_ptr<Graph> g_arg, int k_arg);
+        ParallelKernelization(Graph & g_arg, int k_arg);
         void ParallelRadixSortWrapper(int procID,
                 int beginIndex,
                 int endIndex,
@@ -79,9 +79,9 @@ class ParallelKernelization {
         int numberOfElements, numberOfRows;
 
         //std::vector<int> degrees, newDegrees
+
         int kPrime;
-        //Graph & g;
-        std::shared_ptr<Graph> g;
+        Graph & g;
         int k;
         int b;
         std::vector<int> S;
@@ -98,8 +98,7 @@ class ParallelKernelization {
                                             std::vector<int> & vertexKeys);
         int GetSetOfVerticesDegreeGreaterK(std::vector<int> & degrees,
                                             std::vector<int> & vertexKeys);
-        //LinearTimeDegreeSort * ltds;
-        std::unique_ptr<LinearTimeDegreeSort> ltds;
+        LinearTimeDegreeSort * ltds;
         std::vector<int> & old_degree_ref;
         /*
         void PrintEdgesOfS();

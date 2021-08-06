@@ -10,7 +10,7 @@
 #include  <random>
 #include  <iterator>
 #include "../common/CSVRange.h"
-#include <memory>
+
 class Graph {
     public:
         Graph(int vertexCount);
@@ -18,7 +18,7 @@ class Graph {
 
         Graph(Graph & g_arg);
 /* Constructor to make induced subgraph G'' for each branch */
-        Graph(std::shared_ptr<Graph>, std::vector<int> & verticesToDelete);
+        Graph(Graph * g_arg, std::vector<int> & verticesToDelete);
         std::vector<int> & GetRemainingVerticesRef();
         std::vector<int> & GetNewDegRef();
 

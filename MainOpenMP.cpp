@@ -8,18 +8,16 @@
 
 bool KCoverExists(  std::vector<int> & answer,
                     ParallelKernelization & sk,
-                    std::shared_ptr<Graph> g,
+                    Graph * g,
                     int k){
     bool exists;
     sk.TestAValueOfK(k);
     sk.PrintS();            
-    std::shared_ptr<Graph> gPrime = 
-        std::make_shared<Graph>(g, sk.GetS()); 
-    std::shared_ptr<ParallelB1> pb1 = 
-        std::make_shared<ParallelB1>(gPrime, 
-                                        k, 
-                                        sk.GetS());
-    exists = pb1->IterateTreeStructure(pb1, answer);
+    Graph gPrime(g, sk.GetS()); 
+    ParallelB1 pb1(&gPrime, 
+                    k, 
+                    sk.GetS());
+    exists = pb1.IterateTreeStructure(&pb1, answer);
     if (exists) {
         std::cout << "solution found" << std::endl;
         std::cout << "Printing answer :" << std::endl;
@@ -36,7 +34,7 @@ int binarySearch(std::vector<int> & answer,
                     int minK, 
                     int maxK,
                     ParallelKernelization & sk,
-                    std::shared_ptr<Graph> g){
+                    Graph * g){
     int left = minK;
     int right = maxK;
     int m;
@@ -68,14 +66,13 @@ int main(int argc, char *argv[])
     pb1.IterateTreeStructure(&pb1);
 */
     std::cout << "Building G" << std::endl;
-    //Graph g("0.edges");
-    std::shared_ptr<Graph> g = std::make_shared<Graph>("0.edges");
+    Graph g("0.edges");
     int k = 4;
     std::cout << "Building PK" << std::endl;
     ParallelKernelization sk(g, k);
     int minK = 0;
-    int maxK = g->GetVertexCount();
-    for (int i = k; i < g->GetVertexCount(); ++i){
+    int maxK = g.GetVertexCount();
+    for (int i = k; i < g.GetVertexCount(); ++i){
         // If (noSolutionExists)
         // If (Also clears and sets S if a sol'n could exist)
         if (sk.TestAValueOfK(i))
@@ -91,5 +88,5 @@ int main(int argc, char *argv[])
                                 minK,
                                 maxK,
                                 sk,
-                                g);
+                                &g);
 }
