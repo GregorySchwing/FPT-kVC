@@ -26,7 +26,7 @@ old_degrees_ref(new_degrees)
 
 
 /* Constructor to make induced subgraph G'' for each branch */
-Graph::Graph(Graph * g_arg, std::vector<int> & verticesToDelete):
+Graph::Graph(std::shared_ptr<Graph> g_arg, std::vector<int> & verticesToDelete):
     // Sets the old references of the new csr 
     // to point to the new references of the argument
     compressedSparseMatrix(new CSR(g_arg->GetCSR())),

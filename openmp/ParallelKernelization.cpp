@@ -1,11 +1,11 @@
 #include "ParallelKernelization.h"
 
 
-ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg), k(k_arg), 
-old_degree_ref(g_arg.GetNewDegRef())
+ParallelKernelization::ParallelKernelization(std::shared_ptr<Graph> g_arg, int k_arg):g(g_arg), k(k_arg), 
+old_degree_ref(g_arg->GetNewDegRef())
 {
     std::cout << "Entered PK" << std::endl;
-    numberOfRows = g.GetCSR().numberOfRows;
+    numberOfRows = g->GetCSR().numberOfRows;
 
     //std::vector<int> & old_degree_ref = ;
 
@@ -19,7 +19,7 @@ old_degree_ref(g_arg.GetNewDegRef())
     SetEdgesOfSSymParallel();
     SetEdgesLeftToCoverParallel();
     PrintEdgesOfS();
-    std::cout << g.edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
+    std::cout << g->edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
     kPrime = k - b;
     std::cout << "Setting k' = k - b = " << kPrime << std::endl;
     noSolutionExists = GPrimeEdgesGreaterKTimesKPrime();
@@ -28,9 +28,9 @@ old_degree_ref(g_arg.GetNewDegRef())
     else{
         std::cout << "|G'(E)| <= k*k', a solution may exist" << std::endl;
 
-        newColumnIndices.resize(g.edgesLeftToCover);
+        newColumnIndices.resize(g->edgesLeftToCover);
         // Temporary, used for checking, will be replaced by vector of all 1's
-        newValues.resize(g.edgesLeftToCover);
+        newValues.resize(g->edgesLeftToCover);
         //newColumnIndices.resize(26);
         // Temporary, used for checking, will be replaced by vector of all 1's
         //newValues.resize(26);
@@ -76,7 +76,7 @@ bool ParallelKernelization::TestAValueOfK(int k_arg){
     SetEdgesOfSSymParallel();
     SetEdgesLeftToCoverParallel();
     PrintEdgesOfS();
-    std::cout << g.edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
+    std::cout << g->edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
     kPrime = k - b;
     std::cout << "Setting k' = k - b = " << kPrime << std::endl;
     noSolutionExists = GPrimeEdgesGreaterKTimesKPrime();
@@ -85,9 +85,9 @@ bool ParallelKernelization::TestAValueOfK(int k_arg){
     else{
         std::cout << "|G'(E)| <= k*k', a solution may exist" << std::endl;
 
-        newColumnIndices.resize(g.edgesLeftToCover);
+        newColumnIndices.resize(g->edgesLeftToCover);
         // Temporary, used for checking, will be replaced by vector of all 1's
-        newValues.resize(g.edgesLeftToCover);
+        newValues.resize(g->edgesLeftToCover);
         //newColumnIndices.resize(26);
         // Temporary, used for checking, will be replaced by vector of all 1's
         //newValues.resize(26);
@@ -343,7 +343,7 @@ void ParallelKernelization::PrintEdgesOfS(){
 }
 
 int ParallelKernelization::GetRandomVertex(){
-    int index = rand() % verticesRemaining.size();
+    int index = rand() % verticesRemaining->size();
     return verticesRemaining[index];
 }
 
@@ -400,14 +400,14 @@ void ParallelKernelization::SetEdgesOfSSymParallel(){
 void ParallelKernelization::RemoveSVertices(){
     for (auto u : S)
     {
-        g.removeVertex(u, verticesRemaining);
+        g->removeVertex(u, verticesRemaining);
     }
 }
 
 void ParallelKernelization::RemoveDegreeZeroVertices(){
     for (int i = 0; i < numberOfRows; ++i){
         if(newRowOffsets[i+1] - newRowOffsets[i] == 0)
-            g.removeVertex(i, verticesRemaining);
+            g->removeVertex(i, verticesRemaining);
     }
 }
 
@@ -417,7 +417,7 @@ void ParallelKernelization::SetEdgesLeftToCover(){
     for (int i = 0; i < numberOfElements; ++i)
         count += values[i];
 
-    g.edgesLeftToCover = count;
+    g->edgesLeftToCover = count;
 }
 
 void ParallelKernelization::SetEdgesLeftToCoverParallel(){
@@ -431,7 +431,7 @@ void ParallelKernelization::SetEdgesLeftToCoverParallel(){
             newDegs[i] += values[j];
         count += newDegs[i];
     }
-    g.edgesLeftToCover = count;
+    g->edgesLeftToCover = count;
 }
 
 void ParallelKernelization::SetNewRowOffsets(){
@@ -447,7 +447,7 @@ void ParallelKernelization::SetNewRowOffsets(){
 
 bool ParallelKernelization::GPrimeEdgesGreaterKTimesKPrime(){
     int kTimesKPrime = k * kPrime;
-    if (g.edgesLeftToCover/2 > kTimesKPrime)
+    if (g->edgesLeftToCover/2 > kTimesKPrime)
         return true;
     return false;
 }
