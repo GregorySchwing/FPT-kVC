@@ -5,6 +5,9 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include "../common/CSVRange.h"
+#include  <iterator>
+#include <algorithm> /* rand */
 
 class COO final : public SparseMatrix
 {
@@ -28,6 +31,9 @@ public:
     void addEdgeSymmetric(int u, int v, int weight);
     int GetNumberOfVertices();
     int GetNumberOfEdges();
+    void BuildTheExampleCOO();
+    void BuildCOOFromFile(std::string filename);
+    void SetVertexCountFromEdges();
     //COO& SpMV(COO & c);
     std::vector<int> new_column_indices, new_row_indices;
     int vertexCount;

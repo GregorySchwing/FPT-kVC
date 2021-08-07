@@ -2,6 +2,7 @@
 #include "simpleParallel/ParallelKernelization.h"
 #include <vector>
 #include <memory>
+#include "simpleParallel/ConnectednessTest.h"
 //#include "simpleParallel/COO.h"
 //#include "simpleParallel/CSR.h"
 //#include "gpu/COO.cuh"
@@ -12,6 +13,24 @@ int main(int argc, char *argv[])
     /* Num edges, N, N, random entries? */
     std::cout << "Building G" << std::endl;
     //Graph g("small.csv");
+    COO coordinateFormat;
+    std::string filename = "small.csv";
+    /* Eventually replace this with an initialization from file */
+    coordinateFormat.BuildCOOFromFile(filename);
+    coordinateFormat.SetVertexCountFromEdges();
+    std::vector< std::vector<int> > vectorOfConnectedComponents;
+    ConnectednessTest ct(coordinateFormat, vectorOfConnectedComponents);
+    if (vectorOfConnectedComponents.size() > 1){
+        std::cout << "Graph isn't connected" << std::endl;
+    } else {
+        std::cout << "Graph is connected" << std::endl;
+    }
+    CSR csr(coordinateFormat);
+    Graph g(csr);
+    std::cout << g.GetRemainingVerticesRef()[0] << std::endl;
+    //coordinateFormat.ProcessGraph(coordinateFormat.GetNumberOfRows());
+
+/*
     Graph * g = new Graph("small.csv");
     int k = 15;
     ///ParallelKernelization sk(g, k);
@@ -32,6 +51,7 @@ int main(int argc, char *argv[])
         << std::endl;
     std::cout << "graphs[1]->GetCSR().new_values.size() : " << graphs[1]->GetCSR().new_values.size()
         << std::endl;
+*/
     //Graph g(10);
     //bool exists = pb1.IterateTreeStructure(&pb1, answer);
     //if (exists){

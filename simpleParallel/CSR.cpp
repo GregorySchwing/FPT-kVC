@@ -2,6 +2,7 @@
 
 /* Must be sorted, which our COO constructor does by default */
 CSR::CSR(COO & c):
+vertexCount(c.vertexCount),
 // Sets values_ref(c.values) in SM constructor
 SparseMatrix(c),
 // Didn't exist in COO or SM so we have a cicular ref
@@ -65,7 +66,6 @@ std::string CSR::toString(){
     myMatrix = ss.str();
     return myMatrix;
 }
-
 
 std::vector<int> & CSR::GetOldRowOffRef(){
     return old_row_offsets_ref;

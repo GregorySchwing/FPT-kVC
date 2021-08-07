@@ -15,8 +15,8 @@ along with this program, also can be found at <http://www.gnu.org/licenses/>.
 #include <iostream>
 #include <limits.h>
 #include <algorithm>
+#include "COO.h"
 
-class Graph;
 
 // stores adjacency list items
 struct adjNode {
@@ -37,7 +37,7 @@ int nNodes;  // number of nodes in the graph
 int nEdges; // number of edges in the graph
 
 
-ConnectednessTest(Graph * g, std::vector< std::vector<int> > & vectorOfConnectedComponents);
+ConnectednessTest(COO & coo, std::vector< std::vector<int> > & vectorOfConnectedComponents);
 ~ConnectednessTest();
 adjNode* getAdjListNode(int value, int weight, adjNode* head);
 void display_AdjList(adjNode* ptr, int i);

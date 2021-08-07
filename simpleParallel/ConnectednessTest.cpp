@@ -24,18 +24,18 @@ adjNode* ConnectednessTest::getAdjListNode(int value, int weight, adjNode* head)
     return newNode;
 }
 
-ConnectednessTest::ConnectednessTest(Graph * g, std::vector< std::vector<int> > & vectorOfConnectedComponents){
+ConnectednessTest::ConnectednessTest(COO & coo, std::vector< std::vector<int> > & vectorOfConnectedComponents){
     
-    this->nNodes = g->GetVertexCount();
-    this->nEdges = g->GetCOO()->GetNumberOfEdges();
+    this->nNodes = coo.vertexCount;
+    this->nEdges = coo.GetNumberOfEdges();
 
 
     unsigned int atom0, atom1;
     int dummy;
     // Loads all the bonds into edges array
     
-    std::vector<int> & rows_ref = g->GetCOO()->new_row_indices;
-    std::vector<int> & cols_ref = g->GetCOO()->new_column_indices;
+    std::vector<int> & rows_ref = coo.new_row_indices;
+    std::vector<int> & cols_ref = coo.new_column_indices;
     
     // allocate new node
     head = new adjNode*[nNodes]();

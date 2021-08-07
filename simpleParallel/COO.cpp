@@ -40,6 +40,54 @@ COO::COO(COO & coo_arg):SparseMatrix(coo_arg){
     isSorted = coo_arg.isSorted;
 }
 
+
+void COO::BuildCOOFromFile(std::string filename){
+    char sep = ' ';
+    std::ifstream file(filename);
+    std::string::size_type sz;   // alias of size_t
+    for(auto& row: CSVRange(file, sep))
+    {
+        //std::cout << "adding (" << std::stoi(row[0],&sz) 
+        //<< ", " << std::stoi(row[1],&sz) << ")" << std::endl; 
+        addEdgeSymmetric(std::stoi(row[0],&sz), 
+                        std::stoi(row[1],&sz), 1);
+        //coordinateFormat->addEdgeSimple(std::stoi(row[0],&sz), 
+        //                                    std::stoi(row[1],&sz), 1);
+    }
+
+    size = new_values.size();
+    // vlog(e)
+    sortMyself();
+}
+
+void COO::SetVertexCountFromEdges(){
+    int min;
+    auto it = min_element(std::begin(new_row_indices), std::end(new_row_indices)); // C++11
+    min = *it;
+    it = max_element(std::begin(new_column_indices), std::end(new_column_indices)); // C++11
+    if(min > *it)
+        min = *it;
+    if(min != 0){
+        int scaleToRenumberAtZero = 0 - min;
+        for (auto & v : new_row_indices)
+            v += scaleToRenumberAtZero;
+        for (auto & v : new_column_indices)
+            v += scaleToRenumberAtZero;
+    }
+            
+    int max;
+    it = max_element(std::begin(new_row_indices), std::end(new_row_indices)); // C++11
+    max = *it;
+    it = max_element(std::begin(new_column_indices), std::end(new_column_indices)); // C++11
+    if(max < *it)
+        max = *it;
+
+    SetNumberOfRows(max+1);
+    vertexCount = max+1;
+
+}
+
+
 int COO::GetNumberOfVertices(){
     return vertexCount;
 }

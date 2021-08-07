@@ -23,6 +23,7 @@ class CSR : public SparseMatrix {
         std::vector<int> new_column_indices, new_row_offsets;
         // These are the current CSR
         std::vector<int> & old_column_indices_ref, & old_row_offsets_ref;
+        int vertexCount;
 
 };
 
