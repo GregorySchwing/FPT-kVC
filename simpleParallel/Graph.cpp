@@ -66,7 +66,7 @@ Graph::Graph(Graph & g_arg):
 
 }
 
-Graph::Graph(const Graph & other): csr(),
+Graph::Graph(const Graph & other): csr(other.csr),
     old_degrees_ref(new_degrees){
     std::cout << "Copied" << std::endl;
 
