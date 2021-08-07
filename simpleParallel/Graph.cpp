@@ -1,10 +1,5 @@
 #include "Graph.h"
 
-Graph::Graph(const Graph & other): csr(),
-    old_degrees_ref(new_degrees){
-
-}
-
 /*
 Graph::Graph(int vertexCount): 
 // Circular reference since there are no old degrees.
@@ -65,8 +60,17 @@ Graph::Graph(Graph & g_arg):
     csr(g_arg.csr),
     old_degrees_ref(g_arg.new_degrees),
     vertexCount(g_arg.vertexCount)
-{}
+{
 
+    std::cout << "Initialized" << std::endl;
+
+}
+
+Graph::Graph(const Graph & other): csr(),
+    old_degrees_ref(new_degrees){
+    std::cout << "Copied" << std::endl;
+
+}
 
 
 /* Constructor to make induced subgraph G'' for each branch

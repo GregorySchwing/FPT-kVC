@@ -20,6 +20,18 @@ SparseMatrix::SparseMatrix():
 old_values_ref(new_values)
 {};
 
+SparseMatrix::SparseMatrix(const SparseMatrix & s):
+size(s.size), 
+numberOfRows(s.numberOfRows), 
+numberOfColumns(s.numberOfColumns),
+// A Reference for read-only purposes
+old_values_ref(new_values){
+    std::cout << "setting size, numRows, numCols, oldValRef, and newVals" << std::endl;
+    // A copy for writing purposes
+    new_values.reserve(s.size);
+}
+
+
 SparseMatrix::SparseMatrix(SparseMatrix & s):
 size(s.size), 
 numberOfRows(s.numberOfRows), 
@@ -28,9 +40,8 @@ numberOfColumns(s.numberOfColumns),
 old_values_ref(s.new_values){
     std::cout << "setting size, numRows, numCols, oldValRef, and newVals" << std::endl;
     // A copy for writing purposes
-    new_values.reserve(s.size);
+    new_values = s.new_values;
 }
-
 /* SPM by reference 
 SparseMatrix::SparseMatrix(int numberOfRows, std::vector<int> & values_ref_arg):
 numberOfRows(s.numberOfRows), 

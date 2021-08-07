@@ -10,8 +10,10 @@ class SparseMatrix {
         SparseMatrix(int size, int numberOfRows, int numberOfColumns);
         /* Will use AddEdge to build, thus size is dynamic */
         SparseMatrix(int numberOfRows, int numberOfColumns);
-        /* Copy Constructor */
+
         SparseMatrix(SparseMatrix & s);
+        /* Copy Constructor */
+        SparseMatrix(const SparseMatrix & s);
         /* No optimization by reserving vectors, size and values must be set */
         SparseMatrix(int numberOfRows);
 

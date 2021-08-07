@@ -29,9 +29,9 @@ int main(int argc, char *argv[])
     Graph g(csr);
     std::cout << g.GetRemainingVerticesRef()[0] << std::endl;
     int k = 15;
-    ParallelKernelization sk(g, k);
-    sk.TestAValueOfK(k);
-    std::vector< Graph > graphs(5, Graph(csr));
+    //ParallelKernelization sk(g, k);
+    //sk.TestAValueOfK(k);
+    std::vector< Graph > graphs(5, Graph(g));
     //graphs.resize(5);
 
 

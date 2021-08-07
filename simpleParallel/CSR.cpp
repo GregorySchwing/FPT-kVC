@@ -1,14 +1,5 @@
 #include "CSR.h"
 
-CSR::CSR(const CSR & c): SparseMatrix(),
-    // Didn't exist in COO or SM so we have a cicular ref
-    old_row_offsets_ref(new_row_offsets),
-    // Reference to COO col inds
-    old_column_indices_ref(new_column_indices){
-
-}
-
-
 /* Must be sorted, which our COO constructor does by default */
 CSR::CSR():
 // Sets values_ref(c.values) in SM constructor
@@ -52,11 +43,25 @@ old_column_indices_ref(c.new_column_indices)
     }
 }
 
-/* Building the next graph */
+/* Building the first graph */
+/* Building the first graph */
 CSR::CSR(CSR & c):
 SparseMatrix(c),
-old_row_offsets_ref(c.new_row_offsets),
-old_column_indices_ref(c.new_column_indices)
+old_row_offsets_ref(new_row_offsets),
+old_column_indices_ref(new_column_indices)
+{
+    new_row_offsets = c.new_row_offsets;
+    new_column_indices = c.new_column_indices;
+    std::cout << "numberOfRows " << c.numberOfRows << std::endl;
+    std::cout << "c.new_column_indices.size() " << c.new_column_indices.size()  << std::endl;
+}
+
+
+
+CSR::CSR(const CSR & c):
+SparseMatrix(c),
+old_row_offsets_ref(new_row_offsets),
+old_column_indices_ref(new_column_indices)
 {
     new_row_offsets.reserve(c.new_row_offsets.capacity());
     new_column_indices.reserve(c.new_column_indices.capacity());
