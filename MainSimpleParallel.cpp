@@ -3,6 +3,8 @@
 #include <vector>
 #include <memory>
 #include "simpleParallel/ConnectednessTest.h"
+#include "simpleParallel/ParallelB1.h"
+
 //#include "simpleParallel/COO.h"
 //#include "simpleParallel/CSR.h"
 //#include "gpu/COO.cuh"
@@ -28,10 +30,13 @@ int main(int argc, char *argv[])
     CSR csr(coordinateFormat);
     Graph g(csr);
     std::cout << g.GetRemainingVerticesRef()[0] << std::endl;
-    int k = 15;
+    int k = 20;
     ParallelKernelization sk(g, k);
     sk.TestAValueOfK(k);
     std::vector< Graph > graphs(5, Graph(g));
+    for (auto & v : graphs)
+        std::cout << v.GetCSR().new_row_offsets.capacity() << std::endl;
+    ParallelB1::EdgeCountKernel(g, k, sk.GetS(), graphs[0]);
     //graphs.resize(5);
 
 
