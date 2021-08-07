@@ -1,4 +1,10 @@
 #include "Graph.h"
+
+Graph::Graph(const Graph & other): csr(),
+    old_degrees_ref(new_degrees){
+
+}
+
 /*
 Graph::Graph(int vertexCount): 
 // Circular reference since there are no old degrees.
@@ -47,7 +53,7 @@ old_degrees_ref(new_degrees)
   */
 /* Constructor to allocate space for G'' for each branch */
 Graph::Graph(CSR & csr):
-    csr_ref(csr),
+    csr(csr),
     old_degrees_ref(new_degrees),
     vertexCount(csr.vertexCount)
 {
@@ -56,7 +62,7 @@ Graph::Graph(CSR & csr):
 
 /* Constructor to allocate space for G'' for each branch */
 Graph::Graph(Graph & g_arg):
-    csr_ref(g_arg.csr_ref),
+    csr(g_arg.csr),
     old_degrees_ref(g_arg.new_degrees),
     vertexCount(g_arg.vertexCount)
 {}
@@ -74,16 +80,16 @@ Graph::Graph(Graph * g_arg, std::vector<int> & verticesToDelete):
     std::cout << "Entered constructor of G induced" << std::endl;
     verticesRemaining = g_arg->verticesRemaining;
     new_degrees.resize(vertexCount);
-    //std::cout << csr_ref.toString();
+    //std::cout << csr.toString();
 
     // Sets some of the entries in values[] to 0
     SetEdgesOfSSymParallel(verticesToDelete); 
     // Get an accurate number of edges left so we can 
     // decide if we are done before starting next branch
     SetEdgesLeftToCoverParallel();
-    //std::cout << csr_ref.toString();
+    //std::cout << csr.toString();
     std::cout << "new vals" << std::endl;
-    //for (auto & v : csr_ref.new_values)
+    //for (auto & v : csr.new_values)
     //    std::cout << v << " ";
     std::cout << std::endl;
 
@@ -91,10 +97,10 @@ Graph::Graph(Graph * g_arg, std::vector<int> & verticesToDelete):
 }
 */
 void Graph::ProcessGraph(int vertexCount){
-    edgesLeftToCover = csr_ref.new_column_indices.size()/2;
+    edgesLeftToCover = csr.new_column_indices.size()/2;
     verticesRemaining.resize(vertexCount);
     std::iota (std::begin(verticesRemaining), std::end(verticesRemaining), 0); // Fill with 0, 1, ..., 99.
-    std::vector<int> & new_row_offsets = csr_ref.new_row_offsets;
+    std::vector<int> & new_row_offsets = csr.new_row_offsets;
     new_degrees.resize(vertexCount);
     for (int i = 0; i < vertexCount; ++i){
         new_degrees[i] = new_row_offsets[i+1] - new_row_offsets[i];
@@ -138,11 +144,11 @@ int Graph::GetEdgesLeftToCover(){
 
 
 int Graph::GetDegree(int v){
-    return csr_ref.old_row_offsets_ref[v+1] - csr_ref.old_row_offsets_ref[v];
+    return csr.old_row_offsets_ref[v+1] - csr.old_row_offsets_ref[v];
 }
 
 int Graph::GetOutgoingEdge(int v, int outEdgeIndex){
-    return csr_ref.old_column_indices_ref[csr_ref.old_row_offsets_ref[v] + outEdgeIndex];
+    return csr.old_column_indices_ref[csr.old_row_offsets_ref[v] + outEdgeIndex];
 }
 
 int Graph::GetVertexCount(){
@@ -152,8 +158,8 @@ int Graph::GetVertexCount(){
 
 int Graph::GetRandomOutgoingEdge(int v, std::vector<int> & path){
 
-    std::vector<int> outgoingEdges(&csr_ref.new_column_indices[csr_ref.new_row_offsets[v]],
-                        &csr_ref.new_column_indices[csr_ref.new_row_offsets[v+1]]);
+    std::vector<int> outgoingEdges(&csr.new_column_indices[csr.new_row_offsets[v]],
+                        &csr.new_column_indices[csr.new_row_offsets[v+1]]);
 
     std::random_device rd;
     std::mt19937 g(rd());
@@ -177,7 +183,7 @@ int Graph::GetRandomOutgoingEdge(int v, std::vector<int> & path){
 
 /* The edges */
 CSR & Graph::GetCSR(){
-    return csr_ref;
+    return csr;
 }
 
 void Graph::removeVertex(int vertexToRemove, std::vector<int> & verticesRemaining){
@@ -210,9 +216,9 @@ void Graph::removeVertex(int vertexToRemove, std::vector<int> & verticesRemainin
 void Graph::SetEdgesOfSSymParallel(std::vector<int> & S){
     int v, intraRowOffset;
     std::vector<int>::iterator low;
-    std::vector<int> & row_offsets_ref = csr_ref.GetOldRowOffRef();
-    std::vector<int> & column_indices_ref = csr_ref.GetOldColRef();
-    std::vector<int> & values = csr_ref.GetNewValRef();
+    std::vector<int> & row_offsets_ref = csr.GetOldRowOffRef();
+    std::vector<int> & column_indices_ref = csr.GetOldColRef();
+    std::vector<int> & values = csr.GetNewValRef();
 
     // Set out-edges
     #pragma omp parallel for default(none) shared(row_offsets_ref, \
@@ -248,8 +254,8 @@ void Graph::SetEdgesOfSSymParallel(std::vector<int> & S){
 void Graph::SetEdgesLeftToCoverParallel(){
     int count = 0, i = 0, j = 0;
     std::vector<int> & newDegs = new_degrees;
-    std::vector<int> & values = csr_ref.GetNewValRef();
-    std::vector<int> & row_offsets = csr_ref.GetOldRowOffRef();
+    std::vector<int> & values = csr.GetNewValRef();
+    std::vector<int> & row_offsets = csr.GetOldRowOffRef();
     #pragma omp parallel for default(none) shared(row_offsets, values, newDegs, vertexCount) private (i, j) \
     reduction(+:count)
     for (i = 0; i < vertexCount; ++i)
@@ -330,15 +336,15 @@ void Graph::RemoveNewlyDegreeZeroVertices(  std::vector<int> & verticesToRemove,
 
 void Graph::PrepareGPrime(std::vector<int> & verticesToRemoveRef){
         
-        csr_ref.GetNewColRef().resize(edgesLeftToCover);
+        csr.GetNewColRef().resize(edgesLeftToCover);
         // Temporary, used for checking, will be replaced by vector of all 1's
 
-        std::vector<int> & row_offsets = csr_ref.GetOldRowOffRef();
-        std::vector<int> & column_indices = csr_ref.GetOldColRef();
-        std::vector<int> & values = csr_ref.GetNewValRef();
+        std::vector<int> & row_offsets = csr.GetOldRowOffRef();
+        std::vector<int> & column_indices = csr.GetOldColRef();
+        std::vector<int> & values = csr.GetNewValRef();
         
-        std::vector<int> & newRowOffsets = csr_ref.GetNewRowOffRef();
-        std::vector<int> & newColumnIndices = csr_ref.GetNewColRef();
+        std::vector<int> & newRowOffsets = csr.GetNewRowOffRef();
+        std::vector<int> & newColumnIndices = csr.GetNewColRef();
         //std::vector<int> & newValuesRef;
 
         newValues.resize(edgesLeftToCover);
@@ -441,9 +447,9 @@ void Graph::PrintEdgesOfS(){
     std::cout << "E(S) = {";
     int i, u, v;
     for (u = 0; u < vertexCount; ++u){
-        for (i = csr_ref.old_row_offsets_ref[u]; i < csr_ref.old_row_offsets_ref[u+1]; ++i){
-            v = csr_ref.old_column_indices_ref[i];
-            if(!csr_ref.new_values[i])
+        for (i = csr.old_row_offsets_ref[u]; i < csr.old_row_offsets_ref[u+1]; ++i){
+            v = csr.old_column_indices_ref[i];
+            if(!csr.new_values[i])
                 std::cout << "(" << u << ", " << v << "), ";
         }
     }

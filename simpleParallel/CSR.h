@@ -8,8 +8,11 @@
 
 class CSR : public SparseMatrix {
     public:
+        CSR();
         CSR(COO & c);
         CSR(CSR & c);
+        CSR(const CSR & c);
+
 
         std::vector<int> & GetOldRowOffRef();
         std::vector<int> & GetNewRowOffRef();

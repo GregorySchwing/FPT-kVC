@@ -28,7 +28,12 @@ int main(int argc, char *argv[])
     CSR csr(coordinateFormat);
     Graph g(csr);
     std::cout << g.GetRemainingVerticesRef()[0] << std::endl;
-    //coordinateFormat.ProcessGraph(coordinateFormat.GetNumberOfRows());
+    int k = 15;
+    ParallelKernelization sk(g, k);
+    sk.TestAValueOfK(k);
+    std::vector< Graph > graphs(5, Graph(csr));
+    //graphs.resize(5);
+
 
 /*
     Graph * g = new Graph("small.csv");

@@ -1,5 +1,27 @@
 #include "CSR.h"
 
+CSR::CSR(const CSR & c): SparseMatrix(),
+    // Didn't exist in COO or SM so we have a cicular ref
+    old_row_offsets_ref(new_row_offsets),
+    // Reference to COO col inds
+    old_column_indices_ref(new_column_indices){
+
+}
+
+
+/* Must be sorted, which our COO constructor does by default */
+CSR::CSR():
+// Sets values_ref(c.values) in SM constructor
+SparseMatrix(),
+// Didn't exist in COO or SM so we have a cicular ref
+old_row_offsets_ref(new_row_offsets),
+// Reference to COO col inds
+old_column_indices_ref(new_column_indices)
+{
+    
+}
+
+
 /* Must be sorted, which our COO constructor does by default */
 CSR::CSR(COO & c):
 vertexCount(c.vertexCount),
