@@ -19,6 +19,19 @@ int main(int argc, char *argv[])
     graphs.resize(5);
     graphs[0] = g;
     graphs[1] = new Graph(graphs[0]);
+    std::cout << "graphs[1]->GetCSR().new_column_indices.capacity() : " << graphs[1]->GetCSR().new_column_indices.capacity()
+        << std::endl;
+    std::cout << "graphs[1]->GetCSR().new_row_offsets.capacity() : " << graphs[1]->GetCSR().new_row_offsets.capacity()
+        << std::endl;
+    std::cout << "graphs[1]->GetCSR().new_values.capacity() : " << graphs[1]->GetCSR().new_values.capacity()
+        << std::endl;
+
+    std::cout << "graphs[1]->GetCSR().new_column_indices.size() : " << graphs[1]->GetCSR().new_column_indices.size()
+        << std::endl;
+    std::cout << "graphs[1]->GetCSR().new_row_offsets.size() : " << graphs[1]->GetCSR().new_row_offsets.size()
+        << std::endl;
+    std::cout << "graphs[1]->GetCSR().new_values.size() : " << graphs[1]->GetCSR().new_values.size()
+        << std::endl;
     //Graph g(10);
     //bool exists = pb1.IterateTreeStructure(&pb1, answer);
     //if (exists){
