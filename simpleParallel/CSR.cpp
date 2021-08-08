@@ -88,14 +88,25 @@ void CSR::PopulateNewVals(int edgesLeftToCover){
 void CSR::PopulateNewRefs(int edgesLeftToCover){
     int ZERO = 0;
     int ONE = 1;
-    std::vector<int> & new_row_offs = GetNewRowOffRef();
+    // See comment below
+    //std::vector<int> & new_row_offs = GetNewRowOffRef();
     std::vector<int> & new_col_vals = GetNewColRef();
     std::vector<int> & new_vals = GetNewValRef();
 
     for (int i = 0; i < edgesLeftToCover; ++i){
-        new_row_offs.push_back(ZERO);
+        //new_row_offs are calculated sequentially
+        // in CalculateNewRowOffs()
+        // so we dont need to push back zeros
+        // If we parallelize this through diffs from
+        // old, i.e. an n-array of the number of
+        // edges removed from each vertex
+        // we can add this line back
+        //new_row_offs.push_back(ZERO);
         new_col_vals.push_back(ZERO);
-        new_vals.push_back(ONE);
+        //new_vals.push_back(ONE);
+        // Once we test the CSPRV just push back all ones
+        // and no longer write the actual val
+        new_vals.push_back(ZERO);
     }
 }
 

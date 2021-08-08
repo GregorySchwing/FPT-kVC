@@ -85,6 +85,7 @@ void Graph::InitGNPrime(Graph & g_parent, std::vector<int> & verticesToDelete)
     // to point to the new references of the argument
     SetMyOldsToParentsNews(g_parent);
     PopulatePreallocatedMemoryGNPrime(g_parent);
+    PrepareGPrime(verticesToDelete);
     SetEdgesOfSSymParallel(verticesToDelete); 
     SetEdgesLeftToCoverParallel();
     std::cout << edgesLeftToCover/2 << " edges left in induced subgraph G'" << std::endl;
@@ -116,8 +117,12 @@ void Graph::PopulatePreallocatedMemoryGPrime(Graph & g_parent){
 void Graph::PopulatePreallocatedMemoryGNPrime(Graph & g_parent){
     for (auto & v : g_parent.GetNewDegRef())
         new_degrees.push_back(0);
-
     this->GetCSR().PopulateNewRefs(g_parent.GetEdgesLeftToCover());
+    // In this case, the new offsets needs to calculated
+    // In Gprime, old == new
+    // Here the old degrees need be recalculated before inducing gNprime
+    CalculateNewRowOffsets();
+
 }
 
 
@@ -280,7 +285,7 @@ void Graph::SetEdgesOfSSymParallel(std::vector<int> & S){
     }
 }
 
-
+// Sets the new degrees without the edges and the edges left to cover
 void Graph::SetEdgesLeftToCoverParallel(){
     int count = 0, i = 0, j = 0;
     std::vector<int> & newDegs = new_degrees;
@@ -298,12 +303,16 @@ void Graph::SetEdgesLeftToCoverParallel(){
 }
 
 /* Called if edgesLeftToCover > 0 */
-void Graph::SetNewRowOffsets(std::vector<int> & newRowOffsetsRef){
+void Graph::CalculateNewRowOffsets(){    
+    // Cuda load
+    // Parent's new degree ref
+    std::vector<int> & old_degrees = *old_degrees_ref;
+    std::vector<int> & new_row_offs = this->GetCSR().GetNewRowOffRef();
     int i = 0;
-    newRowOffsetsRef.resize(vertexCount+1);
+    new_row_offs.push_back(0);
     for (i = 1; i <= vertexCount; ++i)
     {
-        newRowOffsetsRef[i] = new_degrees[i-1] + newRowOffsetsRef[i-1];
+        new_row_offs.push_back(old_degrees[i-1] + new_row_offs[i-1]);
     }
 }
 
@@ -365,10 +374,7 @@ void Graph::RemoveNewlyDegreeZeroVertices(  std::vector<int> & verticesToRemove,
 }
 
 void Graph::PrepareGPrime(std::vector<int> & verticesToRemoveRef){
-        
-        csr.GetNewColRef().resize(edgesLeftToCover);
-        // Temporary, used for checking, will be replaced by vector of all 1's
-
+       
         // Here in cuda can be repaced by load to shared
         std::vector<int> & row_offsets = *(csr.GetOldRowOffRef());
         std::vector<int> & column_indices = *(csr.GetOldColRef());
@@ -376,10 +382,10 @@ void Graph::PrepareGPrime(std::vector<int> & verticesToRemoveRef){
         
         std::vector<int> & newRowOffsets = csr.GetNewRowOffRef();
         std::vector<int> & newColumnIndices = csr.GetNewColRef();
-        //std::vector<int> & newValuesRef;
+        // Eventually this line can be commented out
+        // and we no longer need to write in parallel in CSPRV
+        std::vector<int> & newValuesRef = csr.GetNewValRef();
 
-        newValues.resize(edgesLeftToCover);
-        SetNewRowOffsets(newRowOffsets);
         int row; 
         
         #pragma omp parallel for default(none) \

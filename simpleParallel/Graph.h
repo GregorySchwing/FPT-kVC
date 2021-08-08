@@ -77,7 +77,7 @@ void PopulatePreallocatedMemoryGNPrime(Graph & g_parent);
         void SetEdgesLeftToCoverParallel();
         void SetNewRowOffsets(std::vector<int> & newRowOffsetsRef);
         void SetOldDegRef(std::vector<int> & old_deg_ref);
-
+        void CalculateNewRowOffsets();
         void CountingSortParallelRowwiseValues(
                 int procID,
                 int beginIndex,

@@ -477,3 +477,6 @@ int ParallelKernelization::GetNumberOfRows(){
     return numberOfRows;
 }
 
+Graph & ParallelKernelization::GetGPrime(){
+    return gPrime;
+}

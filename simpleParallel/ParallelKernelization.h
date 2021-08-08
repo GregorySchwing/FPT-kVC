@@ -36,6 +36,7 @@ class ParallelKernelization {
         void PrintS();
         bool TestAValueOfK(int k_arg);
         bool EdgeCountKernel();
+        Graph & GetGPrime();
     private:
         void ParallelRadixSortWorker(int procID,
                     int beginIndex,
