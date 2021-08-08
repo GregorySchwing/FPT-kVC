@@ -1,37 +1,8 @@
 #include "ParallelB1.h"
 
-void ParallelB1::EdgeCountKernel( Graph & g_arg,
-                            int k_arg,
-                            std::vector<int> & verticesToRemove_arg,
-                            Graph & parent_g){
-        g_arg.InitGPrime(parent_g, verticesToRemove_arg);
-        std::cout << g_arg.edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
-        std::cout << "verticesToRemove_arg.size() " << verticesToRemove_arg.size() << std::endl;
-        std::cout << "Setting k' = k - b = " << k_arg - verticesToRemove_arg.size() << std::endl;
-        int kPrime = k_arg - verticesToRemove_arg.size();
-        bool noSolutionExists = g_arg.GPrimeEdgesGreaterKTimesKPrime(k_arg, kPrime);
-        if(noSolutionExists){
-            std::cout << "|G'(E)| > k*k', no solution exists" << std::endl;
-            return;
-        } else{
-            std::cout << "|G'(E)| <= k*k', a solution may exist" << std::endl;
-        }
-        /*
-        g->PrepareGPrime(verticesToRemove_arg);
-        std::cout << "g->compressedSparseMatrix->new_row_offsets.size()" << g->GetCSR().GetNewRowOffRef().size() << std::endl;
-        std::cout << "g->compressedSparseMatrix->new_column_indices.size()" << g->GetCSR().GetNewColRef().size() << std::endl;
-        std::cout << "g->compressedSparseMatrix->new_values.size()" << g->GetCSR().GetNewValRef().size() << std::endl;
-
-        std::vector<int> emptyVector;
-        childrensVertices.resize(1);
-        // Pointers to the children 
-        children = new ParallelB1*[1];
-        children[0] = new ParallelB1(new Graph(g,emptyVector),
-                                    k_arg - verticesToRemove_arg.size(), 
-                                    emptyVector,
-                                    this); 
-        */
-        return;
+void ParallelB1::InduceSubgraph( Graph & child_g,
+                                Graph & parent_g){
+    
 }
 
 int ParallelB1::classifyPath(std::vector<int> & path){

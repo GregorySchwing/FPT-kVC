@@ -9,9 +9,7 @@
 
 class ParallelB1 {
 public:
-void static EdgeCountKernel( Graph & g_arg,
-                            int k_arg,
-                            std::vector<int> & verticesToRemove_arg,
+void static InduceSubgraph( Graph & child_g,
                             Graph & parent_g);
 
 private:

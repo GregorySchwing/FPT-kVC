@@ -96,6 +96,9 @@ void Graph::InitGNPrime(Graph & g_parent)
     SetMyOldsToParentsNews(g_parent);
     PopulatePreallocatedMemoryGNPrime(g_parent);
     InduceSubgraph(g_parent.GetVerticesThisGraphIncludedInTheCover());
+    // This line is where we can use different methods
+
+    //
     std::vector<int> verticesToDelete;
     SetEdgesOfSSymParallel(verticesToDelete); 
     SetEdgesLeftToCoverParallel();

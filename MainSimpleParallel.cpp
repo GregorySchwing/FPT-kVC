@@ -41,9 +41,7 @@ int main(int argc, char *argv[])
     }
     Graph & gPrime = sk.GetGPrime(); 
     std::vector< Graph > graphs(5, Graph(gPrime));
-    std::vector<int> test;
-    test.push_back(1);
-    graphs[0].InitGNPrime(gPrime, test);
+    graphs[0].InitGNPrime(gPrime);
     /*ParallelB1::EdgeCountKernel(graphs[0], k, sk.GetS(), g);
     for (auto & v : graphs){
         std::cout << v.GetCSR().new_row_offsets.capacity() << std::endl;
