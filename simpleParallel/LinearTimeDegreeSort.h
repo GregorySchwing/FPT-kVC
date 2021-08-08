@@ -19,7 +19,7 @@ private:
     std::vector<int> C;
 
     void CountingSortSerial(int max,
-                    std::vector<int> & A_row_indices,
+                    const std::vector<int> & A_row_indices,
                     std::vector<int> & A_column_indices,
                     std::vector<int> & A_values,
                     std::vector<int> & B_row_indices_ref,

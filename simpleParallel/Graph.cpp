@@ -46,7 +46,7 @@ old_degrees_ref(new_degrees)
   
 }
   */
-/* Constructor to allocate space for G'' for each branch */
+/* Create first Graph */
 Graph::Graph(CSR & csr):
     csr(csr),
     old_degrees_ref(new_degrees),
@@ -62,15 +62,16 @@ Graph::Graph(Graph & g_arg):
     old_degrees_ref(g_arg.new_degrees),
     vertexCount(g_arg.vertexCount)
 {
-
+    new_degrees.reserve(old_degrees_ref.capacity());
     std::cout << "Initialized" << std::endl;
 
 }
 
 Graph::Graph(const Graph & other): csr(other.csr),
-    old_degrees_ref(other.GetNewDegRef()),
+    old_degrees_ref(new_degrees),
     vertexCount(other.vertexCount){
-    new_degrees.reserve(old_degrees_ref.capacity());
+    
+    new_degrees.reserve(other.GetNewDegRef().capacity());
     std::cout << "Copied" << std::endl;
 }
 
