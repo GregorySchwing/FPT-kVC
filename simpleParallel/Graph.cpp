@@ -56,7 +56,7 @@ Graph::Graph(CSR & csr):
     ProcessGraph(csr.numberOfRows);
 }
 
-/* Constructor to allocate space for G'' for each branch */
+/* Constructor to allocate space for G'' for each branch 
 Graph::Graph(Graph & g_arg):
     csr(g_arg.csr),
     old_degrees_ref(g_arg.new_degrees),
@@ -66,7 +66,7 @@ Graph::Graph(Graph & g_arg):
     std::cout << "Initialized" << std::endl;
 
 }
-
+*/
 Graph::Graph(const Graph & other): csr(other.csr),
     old_degrees_ref(new_degrees),
     vertexCount(other.vertexCount){

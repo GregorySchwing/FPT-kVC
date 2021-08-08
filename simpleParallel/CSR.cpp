@@ -66,6 +66,8 @@ old_column_indices_ref(new_column_indices)
     new_column_indices.reserve(c.new_column_indices.capacity());
     std::cout << "numberOfRows " << c.numberOfRows << std::endl;
     std::cout << "c.new_column_indices.size() " << c.new_column_indices.size()  << std::endl;
+    std::cout << "c.new_column_indices.capacity() " << c.new_column_indices.capacity()  << std::endl;
+
 }
 
 void CSR::SetOldRowOffRef(std::vector<int> & old_arg){

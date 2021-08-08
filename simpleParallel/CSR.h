@@ -10,7 +10,9 @@ class CSR : public SparseMatrix {
     public:
         CSR();
         CSR(COO & c);
+        // Build first Graph from CSR
         CSR(CSR & c);
+        // Copy constructor for allocating graph object
         CSR(const CSR & c);
 
 

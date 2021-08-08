@@ -4,7 +4,7 @@ void ParallelB1::EdgeCountKernel( Graph & g_arg,
                             int k_arg,
                             std::vector<int> & verticesToRemove_arg,
                             Graph & parent_g){
-        parent_g.Init(g_arg, verticesToRemove_arg);
+        g_arg.Init(parent_g, verticesToRemove_arg);
         std::cout << g_arg.edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
         std::cout << "verticesToRemove_arg.size() " << verticesToRemove_arg.size() << std::endl;
         std::cout << "Setting k' = k - b = " << k_arg - verticesToRemove_arg.size() << std::endl;

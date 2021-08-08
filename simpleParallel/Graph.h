@@ -18,7 +18,7 @@ class Graph {
        // Graph(std::string filename, char sep = ',', int vertexCount = 0);
 Graph(CSR & csr);
 Graph(const Graph & other);
-Graph(Graph & g_arg);
+//Graph(Graph & g_arg);
 void Init(Graph & g_parent, std::vector<int> & verticesToDelete);
 void SetMyOldsToParentsNews(Graph & g_parent);
 

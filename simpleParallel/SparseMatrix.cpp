@@ -26,7 +26,7 @@ numberOfRows(s.numberOfRows),
 numberOfColumns(s.numberOfColumns),
 // A Reference for read-only purposes
 old_values_ref(new_values){
-    std::cout << "setting size, numRows, numCols, oldValRef, and newVals" << std::endl;
+    std::cout << "Setting size, numRows, numCols - Reserving new_vals" << std::endl;
     // A copy for writing purposes
     new_values.reserve(s.size);
 }
@@ -36,9 +36,8 @@ SparseMatrix::SparseMatrix(SparseMatrix & s):
 size(s.size), 
 numberOfRows(s.numberOfRows), 
 numberOfColumns(s.numberOfColumns),
-// A Reference for read-only purposes
 old_values_ref(s.new_values){
-    std::cout << "setting size, numRows, numCols, oldValRef, and newVals" << std::endl;
+    std::cout << "Setting size, numRows, numCols, oldValRef, and newVals" << std::endl;
     // A copy for writing purposes
     new_values = s.new_values;
 }
