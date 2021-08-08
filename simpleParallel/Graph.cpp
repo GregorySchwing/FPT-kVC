@@ -64,14 +64,27 @@ Graph::Graph(const Graph & other): csr(other.csr),
 }
 
 
-/* Constructor to make induced subgraph G'' for each branch */
-void Graph::Init(Graph & g_parent, std::vector<int> & verticesToDelete)
+/* Constructor to make induced subgraph G' for each branch */
+void Graph::InitGPrime(Graph & g_parent, std::vector<int> & verticesToDelete)
 {        
     std::cout << "Entered constructor of G induced" << std::endl;
     // Sets the old references of the new csr 
     // to point to the new references of the argument
     SetMyOldsToParentsNews(g_parent);
-    PopulatePreallocatedMemory(g_parent);
+    PopulatePreallocatedMemoryGPrime(g_parent);
+    SetEdgesOfSSymParallel(verticesToDelete); 
+    SetEdgesLeftToCoverParallel();
+    std::cout << edgesLeftToCover/2 << " edges left in induced subgraph G'" << std::endl;
+}
+
+/* Constructor to make induced subgraph G'' for each branch */
+void Graph::InitGNPrime(Graph & g_parent, std::vector<int> & verticesToDelete)
+{        
+    std::cout << "Entered constructor of G induced" << std::endl;
+    // Sets the old references of the new csr 
+    // to point to the new references of the argument
+    SetMyOldsToParentsNews(g_parent);
+    PopulatePreallocatedMemoryGNPrime(g_parent);
     SetEdgesOfSSymParallel(verticesToDelete); 
     SetEdgesLeftToCoverParallel();
     std::cout << edgesLeftToCover/2 << " edges left in induced subgraph G'" << std::endl;
@@ -84,7 +97,7 @@ void Graph::SetMyOldsToParentsNews(Graph & g_parent){
     this->GetCSR().SetOldValRef(g_parent.GetCSR().GetNewValRef());
 }
 
-void Graph::PopulatePreallocatedMemory(Graph & g_parent){
+void Graph::PopulatePreallocatedMemoryGPrime(Graph & g_parent){
     for (auto & v : g_parent.GetNewDegRef())
         new_degrees.push_back(0);
 
@@ -98,6 +111,13 @@ void Graph::PopulatePreallocatedMemory(Graph & g_parent){
 
     this->GetCSR().PopulateNewVals(g_parent.GetEdgesLeftToCover());
     //std::cout << this->GetCSR().GetNewValRef().size() << std::endl;
+}
+
+void Graph::PopulatePreallocatedMemoryGNPrime(Graph & g_parent){
+    for (auto & v : g_parent.GetNewDegRef())
+        new_degrees.push_back(0);
+
+    this->GetCSR().PopulateNewRefs(g_parent.GetEdgesLeftToCover());
 }
 
 

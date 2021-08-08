@@ -28,6 +28,7 @@ class CSR : public SparseMatrix {
         void SetOldValRef(std::vector<int> & old_arg);
 
         void PopulateNewVals(int edgesLeftToCover);
+        void PopulateNewRefs(int edgesLeftToCover);
 
         std::string toString();
         // These are for the next CSR

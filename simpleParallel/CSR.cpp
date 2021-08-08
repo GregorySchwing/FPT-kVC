@@ -85,6 +85,20 @@ void CSR::PopulateNewVals(int edgesLeftToCover){
         new_vals.push_back(ONE);
 }
 
+void CSR::PopulateNewRefs(int edgesLeftToCover){
+    int ZERO = 0;
+    int ONE = 1;
+    std::vector<int> & new_row_offs = GetNewRowOffRef();
+    std::vector<int> & new_col_vals = GetNewColRef();
+    std::vector<int> & new_vals = GetNewValRef();
+
+    for (int i = 0; i < edgesLeftToCover; ++i){
+        new_row_offs.push_back(ZERO);
+        new_col_vals.push_back(ZERO);
+        new_vals.push_back(ONE);
+    }
+}
+
 
 std::string CSR::toString(){
     std::stringstream ss;

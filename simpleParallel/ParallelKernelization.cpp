@@ -119,7 +119,7 @@ bool ParallelKernelization::TestAValueOfK(int k_arg){
 }
 
 bool ParallelKernelization::EdgeCountKernel(){
-    gPrime.Init(g, GetS());
+    gPrime.InitGPrime(g, GetS());
     return gPrime.GPrimeEdgesGreaterKTimesKPrime(k, k - GetS().size());
 }
 
