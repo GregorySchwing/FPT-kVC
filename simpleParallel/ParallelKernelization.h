@@ -35,6 +35,7 @@ class ParallelKernelization {
         int GetNumberOfRows();
         void PrintS();
         bool TestAValueOfK(int k_arg);
+        Graph & EdgeCountKernel(Graph & g);
     private:
         void ParallelRadixSortWorker(int procID,
                     int beginIndex,
@@ -99,7 +100,8 @@ class ParallelKernelization {
         int GetSetOfVerticesDegreeGreaterK(std::vector<int> & degrees,
                                             std::vector<int> & vertexKeys);
         LinearTimeDegreeSort * ltds;
-        const std::vector<int> & old_degree_ref;
+        std::vector<int> & old_degree_ref;
+        Graph & gPrime;
         /*
         void PrintEdgesOfS();
         void SetEdgesOfSSym();

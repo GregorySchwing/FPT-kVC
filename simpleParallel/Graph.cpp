@@ -82,6 +82,11 @@ void Graph::Init(Graph & g_parent, std::vector<int> & verticesToDelete)
     // Sets the old references of the new csr 
     // to point to the new references of the argument
     SetMyOldsToParentsNews(g_parent);
+    PopulatePreallocatedMemory(g_parent);
+    SetEdgesOfSSymParallel(verticesToDelete); 
+    SetEdgesLeftToCoverParallel();
+    std::cout << edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
+
     /*
 
     verticesRemaining = g_arg->verticesRemaining;
@@ -109,6 +114,19 @@ void Graph::SetMyOldsToParentsNews(Graph & g_parent){
     this->GetCSR().SetOldColRef(g_parent.GetCSR().GetNewColRef());
     this->GetCSR().SetOldValRef(g_parent.GetCSR().GetNewValRef());
 }
+
+void Graph::PopulatePreallocatedMemory(Graph & g_parent){
+    std::vector<int> & new_row_offs = this->GetCSR().GetNewRowOffRef();
+    for (auto & v : g_parent.GetCSR().GetNewRowOffRef())
+        new_row_offs.push_back(v);
+
+    std::vector<int> & new_col_vals = this->GetCSR().GetNewColRef();
+    for (auto & v : g_parent.GetCSR().GetNewColRef())
+        new_col_vals.push_back(v);
+
+    this->GetCSR().PopulateNewVals(g_parent.GetEdgesLeftToCover());
+}
+
 
 void Graph::SetOldDegRef(std::vector<int> & old_deg_ref_arg){
     old_degrees_ref = &old_deg_ref_arg;

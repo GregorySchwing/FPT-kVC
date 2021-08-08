@@ -78,6 +78,14 @@ void CSR::SetOldValRef(std::vector<int> & old_arg){
     old_values_ref = &old_arg;
 }
 
+void CSR::PopulateNewVals(int edgesLeftToCover){
+    int ONE = 1;
+    std::vector<int> & new_vals = GetNewValRef();
+    for (int i = 0; i < edgesLeftToCover*2; ++i)
+        new_vals.push_back(ONE);
+}
+
+
 std::string CSR::toString(){
     std::stringstream ss;
     std::string myMatrix;

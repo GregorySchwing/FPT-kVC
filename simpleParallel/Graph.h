@@ -21,7 +21,7 @@ Graph(const Graph & other);
 //Graph(Graph & g_arg);
 void Init(Graph & g_parent, std::vector<int> & verticesToDelete);
 void SetMyOldsToParentsNews(Graph & g_parent);
-
+void PopulatePreallocatedMemory(Graph & g_parent);
 /* Constructor to make induced subgraph G'' for each branch */
      //   Graph(Graph * g_arg, std::vector<int> & verticesToDelete);
         std::vector<int> & GetRemainingVerticesRef();

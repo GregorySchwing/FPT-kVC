@@ -2,7 +2,8 @@
 
 
 ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg), k(k_arg), 
-old_degree_ref(g_arg.GetNewDegRef())
+old_degree_ref(g_arg.GetNewDegRef()),
+gPrime(g_arg)
 {
     std::cout << "Entered PK" << std::endl;
     numberOfRows = g.GetCSR().numberOfRows;
@@ -116,6 +117,12 @@ bool ParallelKernelization::TestAValueOfK(int k_arg){
         //RemoveSVertices();
     }*/
 }
+
+Graph & ParallelKernelization::EdgeCountKernel(Graph & g_arg){
+    gPrime.Init(g_arg, GetS());
+    return gPrime;
+}
+
 
 
 void ParallelKernelization::CountingSortParallel(
