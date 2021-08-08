@@ -378,7 +378,9 @@ void Graph::PrepareGPrime(std::vector<int> & verticesToRemoveRef){
         // Here in cuda can be repaced by load to shared
         std::vector<int> & row_offsets = *(csr.GetOldRowOffRef());
         std::vector<int> & column_indices = *(csr.GetOldColRef());
-        std::vector<int> & values = csr.GetNewValRef();
+        std::vector<int> & values = *(csr.GetOldValRef());
+
+        //std::vector<int> & values = csr.GetNewValRef();
         
         std::vector<int> & newRowOffsets = csr.GetNewRowOffRef();
         std::vector<int> & newColumnIndices = csr.GetNewColRef();
@@ -390,7 +392,7 @@ void Graph::PrepareGPrime(std::vector<int> & verticesToRemoveRef){
         
         #pragma omp parallel for default(none) \
                             shared(row_offsets, column_indices, values, \
-                            new_degrees, newRowOffsets, newColumnIndices, newValues) \
+                            new_degrees, newRowOffsets, newColumnIndices, newValuesRef) \
                             private (row)
         for (row = 0; row < vertexCount; ++row)
         {
@@ -402,7 +404,7 @@ void Graph::PrepareGPrime(std::vector<int> & verticesToRemoveRef){
                                             values,
                                             newRowOffsets,
                                             newColumnIndices,
-                                            newValues);
+                                            newValuesRef);
         }
         std::cout << "removing the vertices in verticesToRemoveRef: " << std::endl;
         //for (auto & v : verticesToRemoveRef)
