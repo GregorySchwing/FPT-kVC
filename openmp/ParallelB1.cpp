@@ -15,7 +15,7 @@ ParallelB1::ParallelB1( Graph * g_arg,
     //verticesRemaining = verticesRemaining_arg;
     
     if (parent_arg == NULL){
-        g->PrintEdgesOfS();   
+        //g->PrintEdgesOfS();   
         std::cout << g->edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
         std::cout << "verticesToRemove.size() " << verticesToRemove.size() << std::endl;
         //k = k_arg - verticesToRemove.size();

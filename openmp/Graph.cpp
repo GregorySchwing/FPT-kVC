@@ -36,17 +36,17 @@ Graph::Graph(Graph * g_arg, std::vector<int> & verticesToDelete):
     std::cout << "Entered constructor of G induced" << std::endl;
     verticesRemaining = g_arg->verticesRemaining;
     new_degrees.resize(vertexCount);
-    std::cout << compressedSparseMatrix->toString();
+    //std::cout << compressedSparseMatrix->toString();
 
     // Sets some of the entries in values[] to 0
     SetEdgesOfSSymParallel(verticesToDelete); 
     // Get an accurate number of edges left so we can 
     // decide if we are done before starting next branch
     SetEdgesLeftToCoverParallel();
-    std::cout << compressedSparseMatrix->toString();
+    //std::cout << compressedSparseMatrix->toString();
     std::cout << "new vals" << std::endl;
-    for (auto & v : compressedSparseMatrix->new_values)
-        std::cout << v << " ";
+    //for (auto & v : compressedSparseMatrix->new_values)
+    //    std::cout << v << " ";
     std::cout << std::endl;
 
     std::cout << edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
@@ -54,8 +54,8 @@ Graph::Graph(Graph * g_arg, std::vector<int> & verticesToDelete):
 
 void Graph::ProcessGraph(int vertexCount){
     compressedSparseMatrix = new CSR(*coordinateFormat);             
-    std::cout << coordinateFormat->toString();
-    std::cout << compressedSparseMatrix->toString();
+    //std::cout << coordinateFormat->toString();
+    //std::cout << compressedSparseMatrix->toString();
     edgesLeftToCover = compressedSparseMatrix->new_column_indices.size()/2;
     verticesRemaining.resize(vertexCount);
     std::iota (std::begin(verticesRemaining), std::end(verticesRemaining), 0); // Fill with 0, 1, ..., 99.
@@ -160,15 +160,15 @@ void Graph::removeVertex(int vertexToRemove, std::vector<int> & verticesRemainin
             std::cout << "vertexToRemove " << vertexToRemove << std::endl;
 
             std::cout << "Before Erasing " << low - std::begin(verticesRemaining) << std::endl;
-            for ( auto & v : verticesRemaining )
-                std::cout << v << " ";
+            //for ( auto & v : verticesRemaining )
+            //    std::cout << v << " ";
             std::cout << std::endl;
 
             std::cout << "Erasing " << low - std::begin(verticesRemaining) << std::endl;
             verticesRemaining.erase(low);
             std::cout << "After Erasing " << low - std::begin(verticesRemaining) << std::endl;
-            for ( auto & v : verticesRemaining )
-                std::cout << v << " ";
+            //for ( auto & v : verticesRemaining )
+            //    std::cout << v << " ";
             std::cout << std::endl;
             std::cout << "End of a call" << std::endl;
         }
@@ -330,8 +330,8 @@ void Graph::PrepareGPrime(std::vector<int> & verticesToRemoveRef){
                                             newValues);
         }
         std::cout << "removing the vertices in verticesToRemoveRef: " << std::endl;
-        for (auto & v : verticesToRemoveRef)
-            std::cout << v << " ";
+        //for (auto & v : verticesToRemoveRef)
+        //    std::cout << v << " ";
         std::cout << std::endl;
         std::cout << "Along with all their neighbors that are now deg 0 " << std::endl;
         RemoveNewlyDegreeZeroVertices(verticesToRemoveRef, row_offsets, column_indices, newRowOffsets);
