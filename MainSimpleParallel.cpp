@@ -33,13 +33,20 @@ int main(int argc, char *argv[])
     int k = 20;
     ParallelKernelization sk(g, k);
     sk.TestAValueOfK(k);
+    bool noSolutionExists = sk.EdgeCountKernel();
+    if(noSolutionExists){
+        std::cout << "|G'(E)| > k*k', no solution exists" << std::endl;
+    } else{
+        std::cout << "|G'(E)| <= k*k', a solution may exist" << std::endl;
+    }
     std::vector< Graph > graphs(5, Graph(g));
-    ParallelB1::EdgeCountKernel(graphs[0], k, sk.GetS(), g);
+
+    /*ParallelB1::EdgeCountKernel(graphs[0], k, sk.GetS(), g);
     for (auto & v : graphs){
         std::cout << v.GetCSR().new_row_offsets.capacity() << std::endl;
         std::cout << v.GetNewDegRef().capacity() << std::endl;
         std::cout << v.GetOldDegRef()->capacity() << std::endl;
-    }
+    }*/
     //graphs.resize(5);
 
 

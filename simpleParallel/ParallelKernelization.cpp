@@ -118,9 +118,9 @@ bool ParallelKernelization::TestAValueOfK(int k_arg){
     }*/
 }
 
-Graph & ParallelKernelization::EdgeCountKernel(Graph & g_arg){
-    gPrime.Init(g_arg, GetS());
-    return gPrime;
+bool ParallelKernelization::EdgeCountKernel(){
+    gPrime.Init(g, GetS());
+    return gPrime.GPrimeEdgesGreaterKTimesKPrime(k, k - GetS().size());
 }
 
 

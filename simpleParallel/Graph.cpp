@@ -56,17 +56,6 @@ Graph::Graph(CSR & csr):
     ProcessGraph(csr.numberOfRows);
 }
 
-/* Constructor to allocate space for G'' for each branch 
-Graph::Graph(Graph & g_arg):
-    csr(g_arg.csr),
-    old_degrees_ref(g_arg.new_degrees),
-    vertexCount(g_arg.vertexCount)
-{
-    new_degrees.reserve(old_degrees_ref.capacity());
-    std::cout << "Initialized" << std::endl;
-
-}
-*/
 Graph::Graph(const Graph & other): csr(other.csr),
     vertexCount(other.vertexCount){
     
@@ -85,27 +74,7 @@ void Graph::Init(Graph & g_parent, std::vector<int> & verticesToDelete)
     PopulatePreallocatedMemory(g_parent);
     SetEdgesOfSSymParallel(verticesToDelete); 
     SetEdgesLeftToCoverParallel();
-    std::cout << edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
-
-    /*
-
-    verticesRemaining = g_arg->verticesRemaining;
-    new_degrees.resize(vertexCount);
-    //std::cout << csr.toString();
-
-    // Sets some of the entries in values[] to 0
-    SetEdgesOfSSymParallel(verticesToDelete); 
-    // Get an accurate number of edges left so we can 
-    // decide if we are done before starting next branch
-    SetEdgesLeftToCoverParallel();
-    //std::cout << csr.toString();
-    std::cout << "new vals" << std::endl;
-    //for (auto & v : csr.new_values)
-    //    std::cout << v << " ";
-    std::cout << std::endl;
-
-    std::cout << edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
-    */
+    std::cout << edgesLeftToCover/2 << " edges left in induced subgraph G'" << std::endl;
 }
 
 void Graph::SetMyOldsToParentsNews(Graph & g_parent){
@@ -116,6 +85,9 @@ void Graph::SetMyOldsToParentsNews(Graph & g_parent){
 }
 
 void Graph::PopulatePreallocatedMemory(Graph & g_parent){
+    for (auto & v : g_parent.GetNewDegRef())
+        new_degrees.push_back(0);
+
     std::vector<int> & new_row_offs = this->GetCSR().GetNewRowOffRef();
     for (auto & v : g_parent.GetCSR().GetNewRowOffRef())
         new_row_offs.push_back(v);
@@ -125,6 +97,7 @@ void Graph::PopulatePreallocatedMemory(Graph & g_parent){
         new_col_vals.push_back(v);
 
     this->GetCSR().PopulateNewVals(g_parent.GetEdgesLeftToCover());
+    //std::cout << this->GetCSR().GetNewValRef().size() << std::endl;
 }
 
 
@@ -134,7 +107,7 @@ void Graph::SetOldDegRef(std::vector<int> & old_deg_ref_arg){
 
 
 void Graph::ProcessGraph(int vertexCount){
-    edgesLeftToCover = csr.new_column_indices.size()/2;
+    edgesLeftToCover = csr.new_column_indices.size();
     verticesRemaining.resize(vertexCount);
     std::iota (std::begin(verticesRemaining), std::end(verticesRemaining), 0); // Fill with 0, 1, ..., 99.
     std::vector<int> & new_row_offsets = csr.new_row_offsets;
