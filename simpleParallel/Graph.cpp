@@ -63,29 +63,40 @@ Graph::Graph(const Graph & other): csr(other.csr),
     std::cout << "Copied" << std::endl;
 }
 
+std::vector<int> & Graph::GetVerticesThisGraphIncludedInTheCover(){
+    return verticesToIncludeInCover;
+}
+
+void Graph::SetVerticesToIncludeInCover(std::vector<int> & verticesRef){
+    verticesToIncludeInCover = verticesRef;
+}
+
+
 
 /* Constructor to make induced subgraph G' for each branch */
-void Graph::InitGPrime(Graph & g_parent, std::vector<int> & verticesToDelete)
+void Graph::InitGPrime(Graph & g_parent, std::vector<int> & S)
 {        
     std::cout << "Entered constructor of G induced" << std::endl;
     // Sets the old references of the new csr 
     // to point to the new references of the argument
     SetMyOldsToParentsNews(g_parent);
     PopulatePreallocatedMemoryGPrime(g_parent);
-    SetEdgesOfSSymParallel(verticesToDelete); 
+    SetVerticesToIncludeInCover(S);
+    SetEdgesOfSSymParallel(S); 
     SetEdgesLeftToCoverParallel();
     std::cout << edgesLeftToCover/2 << " edges left in induced subgraph G'" << std::endl;
 }
 
 /* Constructor to make induced subgraph G'' for each branch */
-void Graph::InitGNPrime(Graph & g_parent, std::vector<int> & verticesToDelete)
+void Graph::InitGNPrime(Graph & g_parent)
 {        
     std::cout << "Entered constructor of G induced" << std::endl;
     // Sets the old references of the new csr 
     // to point to the new references of the argument
     SetMyOldsToParentsNews(g_parent);
     PopulatePreallocatedMemoryGNPrime(g_parent);
-    PrepareGPrime(verticesToDelete);
+    InduceSubgraph(g_parent.GetVerticesThisGraphIncludedInTheCover());
+    std::vector<int> verticesToDelete;
     SetEdgesOfSSymParallel(verticesToDelete); 
     SetEdgesLeftToCoverParallel();
     std::cout << edgesLeftToCover/2 << " edges left in induced subgraph G'" << std::endl;
@@ -373,14 +384,14 @@ void Graph::RemoveNewlyDegreeZeroVertices(  std::vector<int> & verticesToRemove,
     }
 }
 
-void Graph::PrepareGPrime(std::vector<int> & verticesToRemoveRef){
+void Graph::InduceSubgraph(std::vector<int> & verticesToRemoveRef){
        
         // Here in cuda can be repaced by load to shared
         std::vector<int> & row_offsets = *(csr.GetOldRowOffRef());
         std::vector<int> & column_indices = *(csr.GetOldColRef());
+        // Eventually this line can be commented out
+        // and we no longer need to write in parallel in CSPRV
         std::vector<int> & values = *(csr.GetOldValRef());
-
-        //std::vector<int> & values = csr.GetNewValRef();
         
         std::vector<int> & newRowOffsets = csr.GetNewRowOffRef();
         std::vector<int> & newColumnIndices = csr.GetNewColRef();
@@ -413,12 +424,6 @@ void Graph::PrepareGPrime(std::vector<int> & verticesToRemoveRef){
         std::cout << "Along with all their neighbors that are now deg 0 " << std::endl;
         RemoveNewlyDegreeZeroVertices(verticesToRemoveRef, row_offsets, column_indices, newRowOffsets);
         std::cout << "Done" << std::endl;
-
-        // We dont need the values array anymore
-        // Reset with a small vector of all 1's
-        // Maybe a temporary sol'n
-        values.clear();
-        values.resize(edgesLeftToCover, 1);
 }
 
 std::vector<int> & Graph::GetCondensedNewValRef(){

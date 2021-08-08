@@ -19,11 +19,15 @@ class Graph {
 Graph(CSR & csr);
 Graph(const Graph & other);
 //Graph(Graph & g_arg);
-void InitGPrime(Graph & g_parent, std::vector<int> & verticesToDelete);
-void InitGNPrime(Graph & g_parent, std::vector<int> & verticesToDelete);
+// Since for GPrime, the vertices to include in the cover, S,
+// come from the kernelization step
+void InitGPrime(Graph & g_parent, std::vector<int> & S);
+void InitGNPrime(Graph & g_parent);
 void SetMyOldsToParentsNews(Graph & g_parent);
 void PopulatePreallocatedMemoryGPrime(Graph & g_parent);
 void PopulatePreallocatedMemoryGNPrime(Graph & g_parent);
+std::vector<int> & GetVerticesThisGraphIncludedInTheCover();
+
 /* Constructor to make induced subgraph G'' for each branch */
      //   Graph(Graph * g_arg, std::vector<int> & verticesToDelete);
         std::vector<int> & GetRemainingVerticesRef();
@@ -44,15 +48,16 @@ void PopulatePreallocatedMemoryGNPrime(Graph & g_parent);
         int edgesLeftToCover;
         std::set<std::pair<int,int>> edgesCoveredByKernelization;
         void removeVertex(int vertexToRemove, std::vector<int> & verticesRemaining);
-        void PrepareGPrime(std::vector<int> & verticesToRemoveRef);
+        void InduceSubgraph(std::vector<int> & verticesToRemoveRef);
         int GetVertexCount();
         std::vector<int> & GetCondensedNewValRef();
         void PrintEdgesOfS();
         bool GPrimeEdgesGreaterKTimesKPrime(int k, int kPrime);
         int GetRandomVertex();
-
+        void SetVerticesToIncludeInCover(std::vector<int> & verticesRef);
 
     private:
+        std::vector<int> verticesToIncludeInCover;
         int vertexCount;
         CSR csr;
 
