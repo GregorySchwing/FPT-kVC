@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     for (auto & v : graphs){
         std::cout << v.GetCSR().new_row_offsets.capacity() << std::endl;
         std::cout << v.GetNewDegRef().capacity() << std::endl;
-        std::cout << v.GetOldDegRef().capacity() << std::endl;
+        std::cout << v.GetOldDegRef()->capacity() << std::endl;
     }
     //graphs.resize(5);
 

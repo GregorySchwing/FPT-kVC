@@ -49,7 +49,7 @@ old_degrees_ref(new_degrees)
 /* Create first Graph */
 Graph::Graph(CSR & csr):
     csr(csr),
-    old_degrees_ref(new_degrees),
+    old_degrees_ref(&new_degrees),
     vertexCount(csr.vertexCount)
 {
     std::cout << "First G" << std::endl;
@@ -68,10 +68,10 @@ Graph::Graph(Graph & g_arg):
 }
 */
 Graph::Graph(const Graph & other): csr(other.csr),
-    old_degrees_ref(new_degrees),
+    old_degrees_ref(&new_degrees),
     vertexCount(other.vertexCount){
     
-    new_degrees.reserve(other.GetNewDegRef().capacity());
+    new_degrees.reserve(other.vertexCount);
     std::cout << "Copied" << std::endl;
 }
 
@@ -158,11 +158,11 @@ int Graph::GetEdgesLeftToCover(){
 
 
 int Graph::GetDegree(int v){
-    return csr.old_row_offsets_ref[v+1] - csr.old_row_offsets_ref[v];
+    return (*(csr.old_row_offsets_ref))[v+1] - (*(csr.old_row_offsets_ref))[v];
 }
 
 int Graph::GetOutgoingEdge(int v, int outEdgeIndex){
-    return csr.old_column_indices_ref[csr.old_row_offsets_ref[v] + outEdgeIndex];
+    return (*csr.old_column_indices_ref)[(*(csr.old_row_offsets_ref))[v] + outEdgeIndex];
 }
 
 int Graph::GetVertexCount(){
@@ -230,8 +230,8 @@ void Graph::removeVertex(int vertexToRemove, std::vector<int> & verticesRemainin
 void Graph::SetEdgesOfSSymParallel(std::vector<int> & S){
     int v, intraRowOffset;
     std::vector<int>::iterator low;
-    std::vector<int> & row_offsets_ref = csr.GetOldRowOffRef();
-    std::vector<int> & column_indices_ref = csr.GetOldColRef();
+    std::vector<int> & row_offsets_ref = *(csr.GetOldRowOffRef());
+    std::vector<int> & column_indices_ref = *(csr.GetOldColRef());
     std::vector<int> & values = csr.GetNewValRef();
 
     // Set out-edges
@@ -269,7 +269,7 @@ void Graph::SetEdgesLeftToCoverParallel(){
     int count = 0, i = 0, j = 0;
     std::vector<int> & newDegs = new_degrees;
     std::vector<int> & values = csr.GetNewValRef();
-    std::vector<int> & row_offsets = csr.GetOldRowOffRef();
+    std::vector<int> & row_offsets = *(csr.GetOldRowOffRef());
     #pragma omp parallel for default(none) shared(row_offsets, values, newDegs, vertexCount) private (i, j) \
     reduction(+:count)
     for (i = 0; i < vertexCount; ++i)
@@ -353,8 +353,9 @@ void Graph::PrepareGPrime(std::vector<int> & verticesToRemoveRef){
         csr.GetNewColRef().resize(edgesLeftToCover);
         // Temporary, used for checking, will be replaced by vector of all 1's
 
-        std::vector<int> & row_offsets = csr.GetOldRowOffRef();
-        std::vector<int> & column_indices = csr.GetOldColRef();
+        // Here in cuda can be repaced by load to shared
+        std::vector<int> & row_offsets = *(csr.GetOldRowOffRef());
+        std::vector<int> & column_indices = *(csr.GetOldColRef());
         std::vector<int> & values = csr.GetNewValRef();
         
         std::vector<int> & newRowOffsets = csr.GetNewRowOffRef();
@@ -453,11 +454,11 @@ void Graph::BuildCOOFromFile(COO * coordinateFormat, std::string filename){
     coordinateFormat->sortMyself();
 }
 
-const std::vector<int> & Graph::GetNewDegRef() const{
+std::vector<int> & Graph::GetNewDegRef(){
     return new_degrees;
 }
 
-const std::vector<int> & Graph::GetOldDegRef(){
+std::vector<int> * Graph::GetOldDegRef(){
     return old_degrees_ref;
 }
 
@@ -466,8 +467,8 @@ void Graph::PrintEdgesOfS(){
     std::cout << "E(S) = {";
     int i, u, v;
     for (u = 0; u < vertexCount; ++u){
-        for (i = csr.old_row_offsets_ref[u]; i < csr.old_row_offsets_ref[u+1]; ++i){
-            v = csr.old_column_indices_ref[i];
+        for (i = (*(csr.old_row_offsets_ref))[u]; i < (*(csr.old_row_offsets_ref))[u+1]; ++i){
+            v = (*(csr.old_column_indices_ref))[i];
             if(!csr.new_values[i])
                 std::cout << "(" << u << ", " << v << "), ";
         }

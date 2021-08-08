@@ -16,11 +16,11 @@ class CSR : public SparseMatrix {
         CSR(const CSR & c);
 
 
-        std::vector<int> & GetOldRowOffRef();
+        std::vector<int> * GetOldRowOffRef();
         std::vector<int> & GetNewRowOffRef();
-        std::vector<int> & GetOldColRef();
+        std::vector<int> * GetOldColRef();
         std::vector<int> & GetNewColRef();
-        std::vector<int> & GetOldValRef();
+        std::vector<int> * GetOldValRef();
         std::vector<int> & GetNewValRef();
         
         void SetOldRowOffRef(std::vector<int> & old_arg);
@@ -31,7 +31,7 @@ class CSR : public SparseMatrix {
         // These are for the next CSR
         std::vector<int> new_column_indices, new_row_offsets;
         // These are the current CSR
-        std::vector<int> & old_column_indices_ref, & old_row_offsets_ref;
+        std::vector<int> * old_column_indices_ref, * old_row_offsets_ref;
         int vertexCount;
 
 };

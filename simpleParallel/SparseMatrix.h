@@ -30,7 +30,7 @@ class SparseMatrix {
         virtual std::string toString() = 0;
         int numberOfRows, numberOfColumns, size;
         // These are for the current matrix
-        std::vector<int> & old_values_ref;
+        std::vector<int> * old_values_ref;
         // These are for the next matrix
         std::vector<int> new_values;
 };
