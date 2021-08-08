@@ -42,6 +42,7 @@ set(sources_simple_parallel
     simpleParallel/Graph.cpp
     simpleParallel/SparseMatrix.cpp
     simpleParallel/ConnectednessTest.cpp
+    simpleParallel/ParallelB1.cpp
     simpleParallel/ParallelKernelization.cpp
     simpleParallel/LinearTimeDegreeSort.cpp
 
@@ -83,6 +84,7 @@ set(headers_simple_parallel
     simpleParallel/Graph.h
     simpleParallel/SparseMatrix.h
     simpleParallel/ConnectednessTest.h
+    simpleParallel/ParallelB1.h
     simpleParallel/ParallelKernelization.h
     simpleParallel/LinearTimeDegreeSort.cpp
 

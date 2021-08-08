@@ -73,15 +73,17 @@ Graph::Graph(const Graph & other): csr(other.csr),
 }
 
 
-/* Constructor to make induced subgraph G'' for each branch
-Graph::Graph(Graph * g_arg, std::vector<int> & verticesToDelete):
-    // Sets the old references of the new csr 
-    // to point to the new references of the argument
-    compressedSparseMatrix(new CSR(g_arg->GetCSR())),
-    old_degrees_ref(g_arg->new_degrees),
-    vertexCount(g_arg->vertexCount)
+/* Constructor to make induced subgraph G'' for each branch */
+void Graph::Init(Graph & g_parent, std::vector<int> & verticesToDelete)
 {        
     std::cout << "Entered constructor of G induced" << std::endl;
+    // Sets the old references of the new csr 
+    // to point to the new references of the argument
+    SetMyOldsToParentsNews(g_parent);
+    /*
+
+    vertexCount(g_arg->vertexCount);
+
     verticesRemaining = g_arg->verticesRemaining;
     new_degrees.resize(vertexCount);
     //std::cout << csr.toString();
@@ -98,8 +100,20 @@ Graph::Graph(Graph * g_arg, std::vector<int> & verticesToDelete):
     std::cout << std::endl;
 
     std::cout << edgesLeftToCover << " edges left in induced subgraph G'" << std::endl;
+    */
 }
-*/
+
+void Graph::SetMyOldsToParentsNews(Graph & g_parent){
+    this->SetOldDegRef(g_parent.GetNewDegRef());
+    this->GetCSR().SetOldRowOffRef(g_parent.GetCSR().GetNewRowOffRef());
+    this->GetCSR().SetOldColRef(g_parent.GetCSR().GetNewColRef());
+    this->GetCSR().SetOldValRef(g_parent.GetCSR().GetNewValRef());
+}
+
+void Graph::SetOldDegRef(std::vector<int> & parents_new_ref){
+    this->old_degrees_ref = parents_new_ref;
+}
+
 void Graph::ProcessGraph(int vertexCount){
     edgesLeftToCover = csr.new_column_indices.size()/2;
     verticesRemaining.resize(vertexCount);

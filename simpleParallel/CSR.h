@@ -20,6 +20,10 @@ class CSR : public SparseMatrix {
         std::vector<int> & GetNewColRef();
         std::vector<int> & GetOldValRef();
         std::vector<int> & GetNewValRef();
+        
+        void SetOldRowOffRef(std::vector<int> & old_arg);
+        void SetOldColRef(std::vector<int> & old_arg);
+        void SetOldValRef(std::vector<int> & old_arg);
 
         std::string toString();
         // These are for the next CSR

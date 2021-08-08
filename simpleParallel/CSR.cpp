@@ -69,6 +69,16 @@ old_column_indices_ref(new_column_indices)
     std::cout << "c.new_column_indices.size() " << c.new_column_indices.size()  << std::endl;
 }
 
+void CSR::SetOldRowOffRef(std::vector<int> & old_arg){
+    old_row_offsets_ref = old_arg;
+}
+void CSR::SetOldColRef(std::vector<int> & old_arg){
+    old_column_indices_ref = old_arg;
+}
+void CSR::SetOldValRef(std::vector<int> & old_arg){
+    old_values_ref = old_arg;
+}
+
 std::string CSR::toString(){
     std::stringstream ss;
     std::string myMatrix;

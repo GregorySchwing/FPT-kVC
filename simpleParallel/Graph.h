@@ -18,12 +18,15 @@ class Graph {
        // Graph(std::string filename, char sep = ',', int vertexCount = 0);
 Graph(CSR & csr);
 Graph(const Graph & other);
-
 Graph(Graph & g_arg);
+void Init(Graph & g_parent, std::vector<int> & verticesToDelete);
+void SetMyOldsToParentsNews(Graph & g_parent);
+
 /* Constructor to make induced subgraph G'' for each branch */
      //   Graph(Graph * g_arg, std::vector<int> & verticesToDelete);
         std::vector<int> & GetRemainingVerticesRef();
         std::vector<int> & GetNewDegRef();
+        void SetOldDegRef(std::vector<int> & parents_new_ref);
 
         int GetEdgesLeftToCover();
         int GetDegree(int v);
