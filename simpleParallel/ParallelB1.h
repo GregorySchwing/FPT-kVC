@@ -13,6 +13,7 @@ void static InduceSubgraph( Graph & child_g,
                             Graph & parent_g);
 
 private:
+    int static GetRandomOutgoingEdge(int v, std::vector<int> & path);
     int static classifyPath(std::vector<int> & path);
     void static createVertexSetsForEachChild(std::vector< std::vector<int> > & childrensVertices, 
                                                 int caseNumber, 
