@@ -68,7 +68,6 @@ Graph::Graph(Graph & g_arg):
 }
 */
 Graph::Graph(const Graph & other): csr(other.csr),
-    old_degrees_ref(&new_degrees),
     vertexCount(other.vertexCount){
     
     new_degrees.reserve(other.vertexCount);
@@ -105,10 +104,16 @@ void Graph::Init(Graph & g_parent, std::vector<int> & verticesToDelete)
 }
 
 void Graph::SetMyOldsToParentsNews(Graph & g_parent){
+    this->SetOldDegRef(g_parent.GetNewDegRef());
     this->GetCSR().SetOldRowOffRef(g_parent.GetCSR().GetNewRowOffRef());
     this->GetCSR().SetOldColRef(g_parent.GetCSR().GetNewColRef());
     this->GetCSR().SetOldValRef(g_parent.GetCSR().GetNewValRef());
 }
+
+void Graph::SetOldDegRef(std::vector<int> & old_deg_ref_arg){
+    old_degrees_ref = &old_deg_ref_arg;
+}
+
 
 void Graph::ProcessGraph(int vertexCount){
     edgesLeftToCover = csr.new_column_indices.size()/2;

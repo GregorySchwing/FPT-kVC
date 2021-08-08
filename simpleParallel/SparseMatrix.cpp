@@ -24,9 +24,7 @@ old_values_ref(&new_values)
 SparseMatrix::SparseMatrix(const SparseMatrix & s):
 size(s.size), 
 numberOfRows(s.numberOfRows), 
-numberOfColumns(s.numberOfColumns),
-// A Reference for read-only purposes
-old_values_ref(&new_values){
+numberOfColumns(s.numberOfColumns){
     std::cout << "Setting size, numRows, numCols - Reserving new_vals" << std::endl;
     // A copy for writing purposes
     new_values.reserve(s.size);

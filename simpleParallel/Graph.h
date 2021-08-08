@@ -74,6 +74,8 @@ void SetMyOldsToParentsNews(Graph & g_parent);
         void SetEdgesOfSSymParallel(std::vector<int> & S);
         void SetEdgesLeftToCoverParallel();
         void SetNewRowOffsets(std::vector<int> & newRowOffsetsRef);
+        void SetOldDegRef(std::vector<int> & old_deg_ref);
+
         void CountingSortParallelRowwiseValues(
                 int procID,
                 int beginIndex,
