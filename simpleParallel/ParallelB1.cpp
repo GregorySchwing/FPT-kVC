@@ -2,15 +2,61 @@
 
 void ParallelB1::InduceSubgraph( Graph & child_g,
                                 Graph & parent_g){
+
+    std::vector < std::vector<int> > childrensVertices;
+
+    std::vector<int> path;
+    std::cout << "Grabbing a randomVertex: " <<  std::endl;
+    int randomVertex = GetRandomVertex(child_g.GetRemainingVerticesRef());
+    std::cout << "randomVertex: " << randomVertex << std::endl;
+
+    path.push_back(randomVertex);
     
+    DFS(child_g.GetCSR().GetNewRowOffRef(), 
+        child_g.GetCSR().GetNewColRef(), 
+        path, 
+        randomVertex);
+
+    for (auto & v : path)
+        std::cout << v << " ";
+    std::cout << std::endl;
+    int caseNumber = classifyPath(path);
+    std::cout << "Case number: " << caseNumber << std::endl;
+    createVertexSetsForEachChild(childrensVertices, caseNumber, path);
+
+}
+
+int ParallelB1::GetRandomVertex(std::vector<int> & verticesRemaining){
+    std::cout << "verticesRemaining.size() " << verticesRemaining.size() << std::endl;
+    int index = rand() % verticesRemaining.size();
+    return verticesRemaining[index];
 }
 
 
+/* DFS of maximum length 3. No simple cycles u -> v -> u */
+void ParallelB1::DFS(std::vector<int> & new_row_off,
+                    std::vector<int> & new_col_ref, 
+                    std::vector<int> & path, 
+                    int rootVertex){
+    if (path.size() == 4)
+        return;
 
-int ParallelB1::GetRandomOutgoingEdge(int v, std::vector<int> & path){
+    int randomOutgoingEdge = GetRandomOutgoingEdge(new_row_off, new_col_ref, rootVertex, path);
+    if (randomOutgoingEdge < 0) {
+        return;
+    } else {
+        path.push_back(randomOutgoingEdge);
+        return DFS(new_row_off, new_col_ref, path, randomOutgoingEdge);
+    }
+}
 
-    std::vector<int> outgoingEdges(&csr.new_column_indices[csr.new_row_offsets[v]],
-                        &csr.new_column_indices[csr.new_row_offsets[v+1]]);
+int ParallelB1::GetRandomOutgoingEdge(  std::vector<int> & new_row_off,
+                                        std::vector<int> & new_col_ref,
+                                        int v, 
+                                        std::vector<int> & path){
+
+    std::vector<int> outgoingEdges(&new_col_ref[new_row_off[v]],
+                        &new_col_ref[new_row_off[v+1]]);
 
     std::random_device rd;
     std::mt19937 g(rd());

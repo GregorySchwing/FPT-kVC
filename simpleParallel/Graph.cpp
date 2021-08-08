@@ -433,20 +433,6 @@ std::vector<int> & Graph::GetCondensedNewValRef(){
     return newValues;
 }
 
-/* DFS of maximum length 3. No simple cycles u -> v -> u */
-void Graph::DFS(std::vector<int> & path, int rootVertex){
-    if (path.size() == 4)
-        return;
-
-    int randomOutgoingEdge = GetRandomOutgoingEdge(rootVertex, path);
-    if (randomOutgoingEdge < 0) {
-        return;
-    } else {
-        path.push_back(randomOutgoingEdge);
-        return DFS(path, randomOutgoingEdge);
-    }
-}
-
 void Graph::BuildTheExampleCOO(COO * coordinateFormat){
     coordinateFormat->addEdgeSymmetric(0,1,1);
     coordinateFormat->addEdgeSymmetric(0,4,1);
@@ -513,10 +499,4 @@ bool Graph::GPrimeEdgesGreaterKTimesKPrime(int k, int kPrime){
     if (edgesLeftToCover/2 > kTimesKPrime)
         return true;
     return false;
-}
-
-int Graph::GetRandomVertex(){
-    std::cout << "verticesRemaining.size() " << verticesRemaining.size() << std::endl;
-    int index = rand() % verticesRemaining.size();
-    return verticesRemaining[index];
 }
