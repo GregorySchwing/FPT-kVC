@@ -8,7 +8,7 @@
 
 class LinearTimeDegreeSort {
 public:
-    LinearTimeDegreeSort(int numberOfRows, std::vector<int> & old_degree_ref);
+    LinearTimeDegreeSort(int numberOfRows, const std::vector<int> & old_degree_ref);
     std::vector<int> & GetDegreeRef();
     std::vector<int> & GetVertexKeyRef();
 

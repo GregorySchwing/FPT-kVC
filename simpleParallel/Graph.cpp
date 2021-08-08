@@ -52,6 +52,7 @@ Graph::Graph(CSR & csr):
     old_degrees_ref(new_degrees),
     vertexCount(csr.vertexCount)
 {
+    std::cout << "First G" << std::endl;
     ProcessGraph(csr.numberOfRows);
 }
 
@@ -67,9 +68,10 @@ Graph::Graph(Graph & g_arg):
 }
 
 Graph::Graph(const Graph & other): csr(other.csr),
-    old_degrees_ref(new_degrees){
+    old_degrees_ref(other.GetNewDegRef()),
+    vertexCount(other.vertexCount){
+    new_degrees.reserve(old_degrees_ref.capacity());
     std::cout << "Copied" << std::endl;
-
 }
 
 
@@ -81,8 +83,6 @@ void Graph::Init(Graph & g_parent, std::vector<int> & verticesToDelete)
     // to point to the new references of the argument
     SetMyOldsToParentsNews(g_parent);
     /*
-
-    vertexCount(g_arg->vertexCount);
 
     verticesRemaining = g_arg->verticesRemaining;
     new_degrees.resize(vertexCount);
@@ -104,14 +104,9 @@ void Graph::Init(Graph & g_parent, std::vector<int> & verticesToDelete)
 }
 
 void Graph::SetMyOldsToParentsNews(Graph & g_parent){
-    this->SetOldDegRef(g_parent.GetNewDegRef());
     this->GetCSR().SetOldRowOffRef(g_parent.GetCSR().GetNewRowOffRef());
     this->GetCSR().SetOldColRef(g_parent.GetCSR().GetNewColRef());
     this->GetCSR().SetOldValRef(g_parent.GetCSR().GetNewValRef());
-}
-
-void Graph::SetOldDegRef(std::vector<int> & parents_new_ref){
-    this->old_degrees_ref = parents_new_ref;
 }
 
 void Graph::ProcessGraph(int vertexCount){
@@ -457,9 +452,14 @@ void Graph::BuildCOOFromFile(COO * coordinateFormat, std::string filename){
     coordinateFormat->sortMyself();
 }
 
-std::vector<int> & Graph::GetNewDegRef(){
+const std::vector<int> & Graph::GetNewDegRef() const{
     return new_degrees;
 }
+
+const std::vector<int> & Graph::GetOldDegRef(){
+    return old_degrees_ref;
+}
+
 
 void Graph::PrintEdgesOfS(){
     std::cout << "E(S) = {";

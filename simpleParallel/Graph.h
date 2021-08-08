@@ -25,8 +25,9 @@ void SetMyOldsToParentsNews(Graph & g_parent);
 /* Constructor to make induced subgraph G'' for each branch */
      //   Graph(Graph * g_arg, std::vector<int> & verticesToDelete);
         std::vector<int> & GetRemainingVerticesRef();
-        std::vector<int> & GetNewDegRef();
-        void SetOldDegRef(std::vector<int> & parents_new_ref);
+        const std::vector<int> & GetNewDegRef() const;
+        const std::vector<int> & GetOldDegRef();
+
 
         int GetEdgesLeftToCover();
         int GetDegree(int v);
@@ -60,7 +61,7 @@ void SetMyOldsToParentsNews(Graph & g_parent);
         std::vector<int> verticesRemaining, vertexTouchedByRemovedEdge;
         
         // Following the CSR design pattern, a reference to the old degrees
-        std::vector<int> & old_degrees_ref;
+        const std::vector<int> & old_degrees_ref;
         // Following the CSR design pattern, the new degrees
         std::vector<int> new_degrees;
 

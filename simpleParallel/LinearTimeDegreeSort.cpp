@@ -1,6 +1,6 @@
 #include "LinearTimeDegreeSort.h"
 
-LinearTimeDegreeSort::LinearTimeDegreeSort(int numberOfRows, std::vector<int> & old_degree_ref){
+LinearTimeDegreeSort::LinearTimeDegreeSort(int numberOfRows, const std::vector<int> & old_degree_ref){
     // Sorted as pairs (deg_0, v_0) , (deg_1, v_1) ...
     // Could use thrust
     std::vector<int> vertexKeys(numberOfRows);

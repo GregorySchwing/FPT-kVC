@@ -34,8 +34,11 @@ int main(int argc, char *argv[])
     ParallelKernelization sk(g, k);
     sk.TestAValueOfK(k);
     std::vector< Graph > graphs(5, Graph(g));
-    for (auto & v : graphs)
+    for (auto & v : graphs){
         std::cout << v.GetCSR().new_row_offsets.capacity() << std::endl;
+        std::cout << v.GetNewDegRef().capacity() << std::endl;
+        std::cout << v.GetOldDegRef().capacity() << std::endl;
+    }
     ParallelB1::EdgeCountKernel(g, k, sk.GetS(), graphs[0]);
     //graphs.resize(5);
 
