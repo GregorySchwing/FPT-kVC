@@ -89,10 +89,10 @@ void Graph::InitGPrime(Graph & g_parent,
     SetParent(g_parent);
     SetMyOldsToParentsNews(g_parent);
     PopulatePreallocatedMemory(g_parent);
+    InduceSubgraph(verticesToIncludeInCover);
     SetEdgesOfSSymParallel(S); 
     SetEdgesLeftToCoverParallel();
     SetVerticesToIncludeInCover(S);
-    InduceSubgraph(verticesToIncludeInCover);
     std::cout << edgesLeftToCover/2 << " edges left in induced subgraph G'" << std::endl;
 }
 
