@@ -22,20 +22,20 @@ Graph(const Graph & other);
 // Since for GPrime, the vertices to include in the cover, S,
 // come from the kernelization step
 void InitGPrime(Graph & g_parent, 
-                std::vector<int> & S,
-                std::vector<int> & old_degrees_from_kernel);
+                std::vector<int> & S);
 void InitGNPrime(Graph & g_parent, 
                 std::vector<int> & verticesToIncludeInCover);
 void SetMyOldsToParentsNews(Graph & g_parent);
 void ClearNewDegrees(Graph & g_parent);
-void PopulatePreallocatedMemoryGNPrime(Graph & g_parent);
+void PopulatePreallocatedMemory(Graph & g_parent);
 std::vector<int> & GetVerticesThisGraphIncludedInTheCover();
 
 /* Constructor to make induced subgraph G'' for each branch */
      //   Graph(Graph * g_arg, std::vector<int> & verticesToDelete);
         std::vector<int> & GetRemainingVerticesRef();
          std::vector<int> & GetNewDegRef();
-         std::vector<int> * GetOldDegRef();
+         std::vector<int> * GetOldDegPointer();
+         std::vector<int> & GetOldDegRef();
 
 
         int GetEdgesLeftToCover();

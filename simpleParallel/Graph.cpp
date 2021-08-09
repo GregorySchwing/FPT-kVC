@@ -75,21 +75,18 @@ void Graph::SetVerticesToIncludeInCover(std::vector<int> & verticesRef){
 
 /* Constructor to make induced subgraph G' for each branch */
 void Graph::InitGPrime(Graph & g_parent, 
-                        std::vector<int> & S,
-                        std::vector<int> & old_degrees_from_kernel)
+                        std::vector<int> & S)
 {        
     std::cout << "Entered constructor of G induced" << std::endl;
     // Sets the old references of the new csr 
     // to point to the new references of the argument
     SetParent(g_parent);
-    g_parent.SetEdgesOfSSymParallel(S); 
-    g_parent.SetOldDegRef(old_degrees_from_kernel);
-    ClearNewDegrees(g_parent);
-    g_parent.SetEdgesLeftToCoverParallel();
     SetMyOldsToParentsNews(g_parent);
-    PopulatePreallocatedMemoryGNPrime(g_parent);
+    PopulatePreallocatedMemory(g_parent);
+    SetEdgesOfSSymParallel(S); 
+    SetEdgesLeftToCoverParallel();
     SetVerticesToIncludeInCover(S);
-    edgesLeftToCover = g_parent.GetEdgesLeftToCover();
+    edgesLeftToCover = GetEdgesLeftToCover();
     InduceSubgraph(verticesToIncludeInCover);
     std::cout << edgesLeftToCover/2 << " edges left in induced subgraph G'" << std::endl;
 }
@@ -104,7 +101,7 @@ void Graph::InitGNPrime(Graph & g_parent,
     SetParent(g_parent);
     SetMyOldsToParentsNews(g_parent);
     std::cout << GetNewDegRef().capacity() << std::endl;
-    PopulatePreallocatedMemoryGNPrime(g_parent);
+    PopulatePreallocatedMemory(g_parent);
     SetEdgesOfSSymParallel(verticesToIncludeInCover); 
     SetEdgesLeftToCoverParallel();
     InduceSubgraph(verticesToIncludeInCover);
@@ -126,7 +123,7 @@ void Graph::ClearNewDegrees(Graph & g_parent){
         v = 0;
 }
 
-void Graph::PopulatePreallocatedMemoryGNPrime(Graph & g_parent){
+void Graph::PopulatePreallocatedMemory(Graph & g_parent){
     for (auto & v : g_parent.GetNewDegRef())
         new_degrees.push_back(0);
 
@@ -135,9 +132,7 @@ void Graph::PopulatePreallocatedMemoryGNPrime(Graph & g_parent){
     // In Gprime, old == new
     // Here the old degrees need be recalculated before inducing gNprime
     CalculateNewRowOffsets();
-
 }
-
 
 void Graph::SetOldDegRef(std::vector<int> & old_deg_ref_arg){
     old_degrees_ref = &old_deg_ref_arg;
@@ -145,13 +140,14 @@ void Graph::SetOldDegRef(std::vector<int> & old_deg_ref_arg){
 
 
 void Graph::ProcessGraph(int vertexCount){
-    edgesLeftToCover = csr.new_column_indices.size();
+    // Coming from the CSR we constructed in the process of building the graph
+    std::vector<int> & old_row_offsets = *(GetCSR().GetOldRowOffRef());
+    edgesLeftToCover = GetCSR().GetOldColRef()->size();
     verticesRemaining.resize(vertexCount);
     std::iota (std::begin(verticesRemaining), std::end(verticesRemaining), 0); // Fill with 0, 1, ..., 99.
-    std::vector<int> & new_row_offsets = csr.new_row_offsets;
-    new_degrees.resize(vertexCount);
+    old_degrees.resize(vertexCount);
     for (int i = 0; i < vertexCount; ++i){
-        new_degrees[i] = new_row_offsets[i+1] - new_row_offsets[i];
+        old_degrees[i] = old_row_offsets[i+1] - old_row_offsets[i];
     }
 }
  
@@ -243,9 +239,9 @@ void Graph::removeVertex(int vertexToRemove, std::vector<int> & verticesRemainin
 void Graph::SetEdgesOfSSymParallel(std::vector<int> & S){
     int v, intraRowOffset;
     std::vector<int>::iterator low;
-    std::vector<int> & row_offsets_ref = *(csr.GetOldRowOffRef());
-    std::vector<int> & column_indices_ref = *(csr.GetOldColRef());
-    std::vector<int> & values = csr.GetNewValRef();
+    std::vector<int> & row_offsets_ref = *(GetCSR().GetOldRowOffRef());
+    std::vector<int> & column_indices_ref = *(GetCSR().GetOldColRef());
+    std::vector<int> & values = GetCSR().GetNewValRef();
 
     // Set out-edges
     #pragma omp parallel for default(none) shared(row_offsets_ref, \
@@ -281,8 +277,8 @@ void Graph::SetEdgesOfSSymParallel(std::vector<int> & S){
 void Graph::SetEdgesLeftToCoverParallel(){
     int count = 0, i = 0, j = 0;
     std::vector<int> & newDegs = new_degrees;
-    std::vector<int> & values = csr.GetNewValRef();
-    std::vector<int> & row_offsets = *(csr.GetOldRowOffRef());
+    std::vector<int> & values = GetCSR().GetNewValRef();
+    std::vector<int> & row_offsets = *(GetCSR().GetOldRowOffRef());
     #pragma omp parallel for default(none) shared(row_offsets, values, newDegs, vertexCount) private (i, j) \
     reduction(+:count)
     for (i = 0; i < vertexCount; ++i)
@@ -372,19 +368,19 @@ void Graph::InduceSubgraph(std::vector<int> & verticesToRemoveRef){
         std::vector<int> & column_indices = *(csr.GetOldColRef());
         // Eventually this line can be commented out
         // and we no longer need to write in parallel in CSPRV
-        std::vector<int> & values = *(csr.GetOldValRef());
+        std::vector<int> & values = GetCSR().GetNewValRef();
         
         std::vector<int> & newRowOffsets = csr.GetNewRowOffRef();
         std::vector<int> & newColumnIndices = csr.GetNewColRef();
         // Eventually this line can be commented out
         // and we no longer need to write in parallel in CSPRV
-        std::vector<int> & newValuesRef = csr.GetNewValRef();
+        std::vector<int> newValues(GetEdgesLeftToCover(), 0);
 
         int row; 
         
         #pragma omp parallel for default(none) \
                             shared(row_offsets, column_indices, values, \
-                            new_degrees, newRowOffsets, newColumnIndices, newValuesRef) \
+                            new_degrees, newRowOffsets, newColumnIndices, newValues) \
                             private (row)
         for (row = 0; row < vertexCount; ++row)
         {
@@ -396,7 +392,7 @@ void Graph::InduceSubgraph(std::vector<int> & verticesToRemoveRef){
                                             values,
                                             newRowOffsets,
                                             newColumnIndices,
-                                            newValuesRef);
+                                            newValues);
         }
         std::cout << "removing the vertices in verticesToRemoveRef: " << std::endl;
         //for (auto & v : verticesToRemoveRef)
@@ -450,8 +446,12 @@ std::vector<int> & Graph::GetNewDegRef(){
     return new_degrees;
 }
 
-std::vector<int> * Graph::GetOldDegRef(){
+std::vector<int> * Graph::GetOldDegPointer(){
     return old_degrees_ref;
+}
+
+std::vector<int> & Graph::GetOldDegRef(){
+    return *old_degrees_ref;
 }
 
 

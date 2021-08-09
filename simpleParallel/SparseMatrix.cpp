@@ -35,11 +35,12 @@ SparseMatrix::SparseMatrix(SparseMatrix & s):
 size(s.size), 
 numberOfRows(s.numberOfRows), 
 numberOfColumns(s.numberOfColumns),
+// The new vals are reserved but not initiated
 old_values_ref(&s.new_values){
-    std::cout << "Setting size, numRows, numCols, old(RowOff/Col/Val)Refs; reserving space for new(RowOff/Col/Val)Refs" << std::endl;
-    std::cout << "reserving space for new(RowOff/Col/Val)Refs" << std::endl;
+    std::cout << "Setting size, numRows, numCols, old(RowOff/Col/Val)Refs;" << std::endl;
+    std::cout << "Setting newVals" << std::endl;
     // A copy for writing purposes
-    new_values.reserve(s.new_values.size());
+    new_values = s.new_values;
 }
 /* SPM by reference 
 SparseMatrix::SparseMatrix(int numberOfRows, std::vector<int> & values_ref_arg):

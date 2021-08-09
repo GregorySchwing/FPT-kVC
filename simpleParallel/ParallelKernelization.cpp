@@ -5,7 +5,7 @@ ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg),
 gPrime(g_arg)
 {
     std::cout << "Entered PK" << std::endl;
-    old_degrees = g_arg.GetNewDegRef();
+    old_degrees = g_arg.GetOldDegRef();
 
     numberOfRows = g.GetCSR().numberOfRows;
 
@@ -120,7 +120,7 @@ bool ParallelKernelization::TestAValueOfK(int k_arg){
 }
 
 bool ParallelKernelization::EdgeCountKernel(){
-    gPrime.InitGPrime(g, GetS(), old_degrees);
+    gPrime.InitGPrime(g, GetS());
     bool result = gPrime.GPrimeEdgesGreaterKTimesKPrime(k, k - GetS().size());
     return result;
 }
