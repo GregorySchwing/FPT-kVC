@@ -93,11 +93,15 @@ void Graph::InitGPrime(Graph & g_parent,
     SetEdgesOfSSymParallel(S); 
     SetEdgesLeftToCoverParallel();
     SetVerticesToIncludeInCover(S);
-    std::cout << edgesLeftToCover/2 << " edges left in induced subgraph G'" << std::endl;
+    // This line is throwing an error in valgrind
+    // Conditional jump or move depends on uninitialised value(s)
+    //std::cout << edgesLeftToCover/2 << " edges left in induced subgraph G'" << std::endl;
 }
 
 void Graph::SetMyOldsToParentsNews(Graph & g_parent){
+
     this->SetOldDegRef(g_parent.GetNewDegRef());
+    this->edgesLeftToCover = g_parent.GetEdgesLeftToCover();
     this->GetCSR().SetOldRowOffRef(g_parent.GetCSR().GetNewRowOffRef());
     this->GetCSR().SetOldColRef(g_parent.GetCSR().GetNewColRef());
     this->GetCSR().SetOldValRef(g_parent.GetCSR().GetNewValRef());
@@ -364,11 +368,11 @@ void Graph::InduceSubgraph(std::vector<int> & verticesToRemoveRef){
         std::vector<int> newValues(GetEdgesLeftToCover(), 0);
 
         int row; 
-        /*
+        
         #pragma omp parallel for default(none) \
                             shared(row_offsets, column_indices, values, \
                             new_degrees, newRowOffsets, newColumnIndices, newValues) \
-                            private (row)*/
+                            private (row)
         for (row = 0; row < vertexCount; ++row)
         {
             CountingSortParallelRowwiseValues(row,

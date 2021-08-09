@@ -18,8 +18,8 @@ int main(int argc, char *argv[])
     COO coordinateFormat;
     std::string filename = "small.csv";
     /* Eventually replace this with an initialization from file */
-    //coordinateFormat.BuildCOOFromFile(filename);
-    coordinateFormat.BuildTheExampleCOO();
+    coordinateFormat.BuildCOOFromFile(filename);
+    //coordinateFormat.BuildTheExampleCOO();
 
     coordinateFormat.SetVertexCountFromEdges();
     std::vector< std::vector<int> > vectorOfConnectedComponents;
@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
     CSR csr(coordinateFormat);
     Graph g(csr);
     std::cout << g.GetRemainingVerticesRef()[0] << std::endl;
-    int k = 20;
+    int k = 19;
     ParallelKernelization sk(g, k);
     sk.TestAValueOfK(k);
     bool noSolutionExists = sk.EdgeCountKernel();
