@@ -49,7 +49,7 @@ old_degrees_ref(new_degrees)
 /* Create first Graph */
 Graph::Graph(CSR & csr_arg):
     csr(csr_arg),
-    old_degrees_ref(&new_degrees),
+    old_degrees_ref(&old_degrees),
     vertexCount(csr_arg.vertexCount)
 {
     std::cout << "First G" << std::endl;
@@ -71,6 +71,12 @@ void Graph::SetVerticesToIncludeInCover(std::vector<int> & verticesRef){
     verticesToIncludeInCover = verticesRef;
 }
 
+void Graph::InitG(Graph & g_parent, std::vector<int> & S){
+    PopulatePreallocatedMemoryFirstGraph(g_parent);
+    SetEdgesOfSSymParallel(S); 
+    SetEdgesLeftToCoverParallel();
+    SetVerticesToIncludeInCover(S);
+}
 
 
 /* Constructor to make induced subgraph G' for each branch */
@@ -97,16 +103,8 @@ void Graph::SetMyOldsToParentsNews(Graph & g_parent){
     this->GetCSR().SetOldValRef(g_parent.GetCSR().GetNewValRef());
 }
 
-void Graph::ClearNewDegrees(Graph & g_parent){
-    // This is so we can follow the same pattern for all Graphs
-    // We want a graph with new values of all 1 at the end of
-    // A call to InitGPrime
-    for (auto & v : g_parent.GetNewDegRef())
-        v = 0;
-}
-
 void Graph::PopulatePreallocatedMemory(Graph & g_parent){
-    for (auto & v : g_parent.GetNewDegRef())
+    for (int i = 0; i < g_parent.GetVertexCount(); ++i)
         new_degrees.push_back(0);
 
     this->GetCSR().PopulateNewRefs(g_parent.GetEdgesLeftToCover());
@@ -114,6 +112,17 @@ void Graph::PopulatePreallocatedMemory(Graph & g_parent){
     // In Gprime, old == new
     // Here the old degrees need be recalculated before inducing gNprime
     CalculateNewRowOffsets();
+}
+
+void Graph::PopulatePreallocatedMemoryFirstGraph(Graph & g_parent){
+    for (int i = 0; i < g_parent.GetVertexCount(); ++i)
+        new_degrees.push_back(0);
+
+    this->GetCSR().PopulateNewVals(g_parent.GetEdgesLeftToCover());
+    // In this case, the new offsets needs to calculated
+    // In Gprime, old == new
+    // Here the old degrees need be recalculated before inducing gNprime
+    //CalculateNewRowOffsets();
 }
 
 void Graph::SetOldDegRef(std::vector<int> & old_deg_ref_arg){
@@ -127,9 +136,9 @@ void Graph::ProcessGraph(int vertexCount){
     edgesLeftToCover = GetCSR().GetOldColRef()->size();
     verticesRemaining.resize(vertexCount);
     std::iota (std::begin(verticesRemaining), std::end(verticesRemaining), 0); // Fill with 0, 1, ..., 99.
-    new_degrees.resize(vertexCount);
+    old_degrees.resize(vertexCount);
     for (int i = 0; i < vertexCount; ++i){
-        new_degrees[i] = old_row_offsets[i+1] - old_row_offsets[i];
+        old_degrees[i] = old_row_offsets[i+1] - old_row_offsets[i];
     }
 }
  
@@ -171,10 +180,6 @@ int Graph::GetEdgesLeftToCover(){
 
 int Graph::GetDegree(int v){
     return (*(csr.old_row_offsets_ref))[v+1] - (*(csr.old_row_offsets_ref))[v];
-}
-
-int Graph::GetOutgoingEdge(int v, int outEdgeIndex){
-    return (*csr.old_column_indices_ref)[(*(csr.old_row_offsets_ref))[v] + outEdgeIndex];
 }
 
 int Graph::GetVertexCount(){
@@ -308,7 +313,7 @@ void Graph::CountingSortParallelRowwiseValues(
         ++C_ref[A_values[i]];
     }
 
-    //std::cout << "C[i] now contains the number elements equal to i." << std::endl;
+    // This is  [old degree - new degree , new degree]
     for (int i = 1; i < max+1; ++i){
         C_ref[i] = C_ref[i] + C_ref[i-1];
     }
@@ -350,7 +355,7 @@ void Graph::InduceSubgraph(std::vector<int> & verticesToRemoveRef){
         std::vector<int> & column_indices = *(csr.GetOldColRef());
         // Eventually this line can be commented out
         // and we no longer need to write in parallel in CSPRV
-        std::vector<int> & values = GetCSR().GetNewValRef();
+        std::vector<int> & values = *(GetCSR().GetOldValRef());
         
         std::vector<int> & newRowOffsets = csr.GetNewRowOffRef();
         std::vector<int> & newColumnIndices = csr.GetNewColRef();

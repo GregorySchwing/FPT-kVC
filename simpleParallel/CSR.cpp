@@ -79,7 +79,7 @@ void CSR::SetOldValRef(std::vector<int> & old_arg){
 void CSR::PopulateNewVals(int edgesLeftToCover){
     int ONE = 1;
     std::vector<int> & new_vals = GetNewValRef();
-    for (int i = 0; i < edgesLeftToCover*2; ++i)
+    for (int i = 0; i < edgesLeftToCover; ++i)
         new_vals.push_back(ONE);
 }
 

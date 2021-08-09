@@ -120,8 +120,10 @@ bool ParallelKernelization::TestAValueOfK(int k_arg){
 }
 
 bool ParallelKernelization::EdgeCountKernel(){
-    gPrime.InitGPrime(g, GetS());
-    bool result = gPrime.GPrimeEdgesGreaterKTimesKPrime(k, k - GetS().size());
+    g.InitG(g, GetS());
+    std::vector<int> mpt;
+    gPrime.InitGPrime(g, mpt);
+    bool result = g.GPrimeEdgesGreaterKTimesKPrime(k, k - GetS().size());
     return result;
 }
 
