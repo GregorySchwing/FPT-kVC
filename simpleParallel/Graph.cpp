@@ -49,7 +49,7 @@ old_degrees_ref(new_degrees)
 /* Create first Graph */
 Graph::Graph(CSR & csr_arg):
     csr(csr_arg),
-    old_degrees_ref(&old_degrees),
+    old_degrees_ref(&new_degrees),
     vertexCount(csr_arg.vertexCount)
 {
     std::cout << "First G" << std::endl;
@@ -86,7 +86,6 @@ void Graph::InitGPrime(Graph & g_parent,
     SetEdgesOfSSymParallel(S); 
     SetEdgesLeftToCoverParallel();
     SetVerticesToIncludeInCover(S);
-    edgesLeftToCover = GetEdgesLeftToCover();
     InduceSubgraph(verticesToIncludeInCover);
     std::cout << edgesLeftToCover/2 << " edges left in induced subgraph G'" << std::endl;
 }
@@ -145,9 +144,9 @@ void Graph::ProcessGraph(int vertexCount){
     edgesLeftToCover = GetCSR().GetOldColRef()->size();
     verticesRemaining.resize(vertexCount);
     std::iota (std::begin(verticesRemaining), std::end(verticesRemaining), 0); // Fill with 0, 1, ..., 99.
-    old_degrees.resize(vertexCount);
+    new_degrees.resize(vertexCount);
     for (int i = 0; i < vertexCount; ++i){
-        old_degrees[i] = old_row_offsets[i+1] - old_row_offsets[i];
+        new_degrees[i] = old_row_offsets[i+1] - old_row_offsets[i];
     }
 }
  
@@ -294,7 +293,7 @@ void Graph::SetEdgesLeftToCoverParallel(){
 void Graph::CalculateNewRowOffsets(){    
     // Cuda load
     // Parent's new degree ref
-    std::vector<int> & old_degrees = *old_degrees_ref;
+    std::vector<int> & old_degrees = GetOldDegRef();
     std::vector<int> & new_row_offs = this->GetCSR().GetNewRowOffRef();
     int i = 0;
     new_row_offs.push_back(0);

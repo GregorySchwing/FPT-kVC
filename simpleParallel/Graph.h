@@ -73,8 +73,6 @@ std::vector<int> & GetVerticesThisGraphIncludedInTheCover();
         // Following the CSR design pattern, a reference to the old degrees
         // For Original G, this comes from the ParallelKernel class
         std::vector<int> * old_degrees_ref;
-        // Only used in first graph.
-        std::vector<int> old_degrees;
 
         // Following the CSR design pattern, the new degrees
         std::vector<int> new_degrees;

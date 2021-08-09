@@ -101,10 +101,7 @@ void CSR::PopulateNewRefs(int edgesLeftToCover){
         // we can add this line back
         //new_row_offs.push_back(ZERO);
         new_col_vals.push_back(ZERO);
-        //new_vals.push_back(ONE);
-        // Once we test the CSPRV just push back all ones
-        // and no longer write the actual val
-        new_vals.push_back(ZERO);
+        new_vals.push_back(ONE);
     }
 }
 
