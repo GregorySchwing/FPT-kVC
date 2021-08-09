@@ -90,23 +90,6 @@ void Graph::InitGPrime(Graph & g_parent,
     std::cout << edgesLeftToCover/2 << " edges left in induced subgraph G'" << std::endl;
 }
 
-/* Constructor to make induced subgraph G'' for each branch */
-void Graph::InitGNPrime(Graph & g_parent, 
-                        std::vector<int> & verticesToIncludeInCover)
-{        
-    std::cout << "Entered constructor of G induced" << std::endl;
-    // Sets the old references of the new csr 
-    // to point to the new references of the argument
-    SetParent(g_parent);
-    SetMyOldsToParentsNews(g_parent);
-    std::cout << GetNewDegRef().capacity() << std::endl;
-    PopulatePreallocatedMemory(g_parent);
-    SetEdgesOfSSymParallel(verticesToIncludeInCover); 
-    SetEdgesLeftToCoverParallel();
-    InduceSubgraph(verticesToIncludeInCover);
-    std::cout << edgesLeftToCover/2 << " edges left in induced subgraph G'" << std::endl;
-}
-
 void Graph::SetMyOldsToParentsNews(Graph & g_parent){
     this->SetOldDegRef(g_parent.GetNewDegRef());
     this->GetCSR().SetOldRowOffRef(g_parent.GetCSR().GetNewRowOffRef());

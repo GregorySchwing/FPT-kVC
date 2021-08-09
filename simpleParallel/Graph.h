@@ -19,15 +19,9 @@ class Graph {
 Graph(CSR & csr);
 Graph(const Graph & other);
 //Graph(Graph & g_arg);
-// Since for GPrime, the vertices to include in the cover, S,
-// come from the kernelization step
 void InitGPrime(Graph & g_parent, 
                 std::vector<int> & S);
-void InitGNPrime(Graph & g_parent, 
-                std::vector<int> & verticesToIncludeInCover);
-void SetMyOldsToParentsNews(Graph & g_parent);
-void ClearNewDegrees(Graph & g_parent);
-void PopulatePreallocatedMemory(Graph & g_parent);
+
 std::vector<int> & GetVerticesThisGraphIncludedInTheCover();
 
 /* Constructor to make induced subgraph G'' for each branch */
@@ -81,6 +75,10 @@ std::vector<int> & GetVerticesThisGraphIncludedInTheCover();
         void BuildTheExampleCOO(COO * coordinateFormat);
         void BuildCOOFromFile(COO * coordinateFormat, std::string filename);
         void ProcessGraph(int vertexCount);
+
+        void SetMyOldsToParentsNews(Graph & g_parent);
+        void PopulatePreallocatedMemory(Graph & g_parent);
+
         void SetVertexCountFromEdges(COO * coordinateFormat);
         void SetEdgesOfSSymParallel(std::vector<int> & S);
         void SetEdgesLeftToCoverParallel();
