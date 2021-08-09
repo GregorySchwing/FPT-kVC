@@ -101,7 +101,7 @@ class ParallelKernelization {
         int GetSetOfVerticesDegreeGreaterK(std::vector<int> & degrees,
                                             std::vector<int> & vertexKeys);
         LinearTimeDegreeSort * ltds;
-        std::vector<int> & old_degree_ref;
+        std::vector<int> old_degrees;
         Graph gPrime;
         /*
         void PrintEdgesOfS();

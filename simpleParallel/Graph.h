@@ -21,10 +21,13 @@ Graph(const Graph & other);
 //Graph(Graph & g_arg);
 // Since for GPrime, the vertices to include in the cover, S,
 // come from the kernelization step
-void InitGPrime(Graph & g_parent, std::vector<int> & S);
-void InitGNPrime(Graph & g_parent);
+void InitGPrime(Graph & g_parent, 
+                std::vector<int> & S,
+                std::vector<int> & old_degrees_from_kernel);
+void InitGNPrime(Graph & g_parent, 
+                std::vector<int> & verticesToIncludeInCover);
 void SetMyOldsToParentsNews(Graph & g_parent);
-void PopulatePreallocatedMemoryGPrime(Graph & g_parent);
+void ClearNewDegrees(Graph & g_parent);
 void PopulatePreallocatedMemoryGNPrime(Graph & g_parent);
 std::vector<int> & GetVerticesThisGraphIncludedInTheCover();
 
@@ -50,29 +53,29 @@ std::vector<int> & GetVerticesThisGraphIncludedInTheCover();
         void removeVertex(int vertexToRemove, std::vector<int> & verticesRemaining);
         void InduceSubgraph(std::vector<int> & verticesToRemoveRef);
         int GetVertexCount();
-        std::vector<int> & GetCondensedNewValRef();
         void PrintEdgesOfS();
         bool GPrimeEdgesGreaterKTimesKPrime(int k, int kPrime);
-        int GetRandomVertex();
+        std::vector< std::vector<int> > & GetChildrenVertices();
         void SetVerticesToIncludeInCover(std::vector<int> & verticesRef);
 
     private:
+        Graph * parent;
         std::vector<int> verticesToIncludeInCover;
         int vertexCount;
         CSR csr;
 
-        //CSR & csr_ref;
+        std::vector < std::vector<int> > childrenVertices;        
         // Every vertex touched by an edge removed should be checked after for being degree 0
         // and then removed if so, clearly the vertices chosen by the algorithm for removing
         // are also removed
         std::vector<int> verticesRemaining, vertexTouchedByRemovedEdge;
         
         // Following the CSR design pattern, a reference to the old degrees
+        // For Original G, this comes from the ParallelKernel class
         std::vector<int> * old_degrees_ref;
         // Following the CSR design pattern, the new degrees
         std::vector<int> new_degrees;
 
-        std::vector<int> newValues;
 
         void BuildTheExampleCOO(COO * coordinateFormat);
         void BuildCOOFromFile(COO * coordinateFormat, std::string filename);
@@ -82,6 +85,8 @@ std::vector<int> & GetVerticesThisGraphIncludedInTheCover();
         void SetEdgesLeftToCoverParallel();
         void SetNewRowOffsets(std::vector<int> & newRowOffsetsRef);
         void SetOldDegRef(std::vector<int> & old_deg_ref);
+        void SetParent(Graph & g_parent);
+
         void CalculateNewRowOffsets();
         void CountingSortParallelRowwiseValues(
                 int procID,

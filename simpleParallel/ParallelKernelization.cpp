@@ -2,15 +2,16 @@
 
 
 ParallelKernelization::ParallelKernelization(Graph & g_arg, int k_arg):g(g_arg), k(k_arg), 
-old_degree_ref(g_arg.GetNewDegRef()),
 gPrime(g_arg)
 {
     std::cout << "Entered PK" << std::endl;
+    old_degrees = g_arg.GetNewDegRef();
+
     numberOfRows = g.GetCSR().numberOfRows;
 
     //std::vector<int> & old_degree_ref = ;
 
-    ltds = new LinearTimeDegreeSort(numberOfRows, old_degree_ref);
+    ltds = new LinearTimeDegreeSort(numberOfRows, old_degrees);
 
          
    // std::cout << "Removing S from G" << std::endl;
@@ -119,11 +120,10 @@ bool ParallelKernelization::TestAValueOfK(int k_arg){
 }
 
 bool ParallelKernelization::EdgeCountKernel(){
-    gPrime.InitGPrime(g, GetS());
-    return gPrime.GPrimeEdgesGreaterKTimesKPrime(k, k - GetS().size());
+    gPrime.InitGPrime(g, GetS(), old_degrees);
+    bool result = gPrime.GPrimeEdgesGreaterKTimesKPrime(k, k - GetS().size());
+    return result;
 }
-
-
 
 void ParallelKernelization::CountingSortParallel(
                 int procID,

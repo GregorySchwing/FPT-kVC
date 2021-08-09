@@ -9,7 +9,7 @@
 
 class ParallelB1 {
 public:
-void static InduceSubgraph( Graph & child_g,
+void static GenerateChildren( Graph & child_g,
                             Graph & parent_g);
 
 private:

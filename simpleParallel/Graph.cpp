@@ -74,34 +74,40 @@ void Graph::SetVerticesToIncludeInCover(std::vector<int> & verticesRef){
 
 
 /* Constructor to make induced subgraph G' for each branch */
-void Graph::InitGPrime(Graph & g_parent, std::vector<int> & S)
+void Graph::InitGPrime(Graph & g_parent, 
+                        std::vector<int> & S,
+                        std::vector<int> & old_degrees_from_kernel)
 {        
     std::cout << "Entered constructor of G induced" << std::endl;
     // Sets the old references of the new csr 
     // to point to the new references of the argument
+    SetParent(g_parent);
+    g_parent.SetEdgesOfSSymParallel(S); 
+    g_parent.SetOldDegRef(old_degrees_from_kernel);
+    ClearNewDegrees(g_parent);
+    g_parent.SetEdgesLeftToCoverParallel();
     SetMyOldsToParentsNews(g_parent);
-    PopulatePreallocatedMemoryGPrime(g_parent);
+    PopulatePreallocatedMemoryGNPrime(g_parent);
     SetVerticesToIncludeInCover(S);
-    SetEdgesOfSSymParallel(S); 
-    SetEdgesLeftToCoverParallel();
+    edgesLeftToCover = g_parent.GetEdgesLeftToCover();
+    InduceSubgraph(verticesToIncludeInCover);
     std::cout << edgesLeftToCover/2 << " edges left in induced subgraph G'" << std::endl;
 }
 
 /* Constructor to make induced subgraph G'' for each branch */
-void Graph::InitGNPrime(Graph & g_parent)
+void Graph::InitGNPrime(Graph & g_parent, 
+                        std::vector<int> & verticesToIncludeInCover)
 {        
     std::cout << "Entered constructor of G induced" << std::endl;
     // Sets the old references of the new csr 
     // to point to the new references of the argument
+    SetParent(g_parent);
     SetMyOldsToParentsNews(g_parent);
+    std::cout << GetNewDegRef().capacity() << std::endl;
     PopulatePreallocatedMemoryGNPrime(g_parent);
-    InduceSubgraph(g_parent.GetVerticesThisGraphIncludedInTheCover());
-    // This line is where we can use different methods
-
-    //
-    std::vector<int> verticesToDelete;
-    SetEdgesOfSSymParallel(verticesToDelete); 
+    SetEdgesOfSSymParallel(verticesToIncludeInCover); 
     SetEdgesLeftToCoverParallel();
+    InduceSubgraph(verticesToIncludeInCover);
     std::cout << edgesLeftToCover/2 << " edges left in induced subgraph G'" << std::endl;
 }
 
@@ -112,25 +118,18 @@ void Graph::SetMyOldsToParentsNews(Graph & g_parent){
     this->GetCSR().SetOldValRef(g_parent.GetCSR().GetNewValRef());
 }
 
-void Graph::PopulatePreallocatedMemoryGPrime(Graph & g_parent){
+void Graph::ClearNewDegrees(Graph & g_parent){
+    // This is so we can follow the same pattern for all Graphs
+    // We want a graph with new values of all 1 at the end of
+    // A call to InitGPrime
     for (auto & v : g_parent.GetNewDegRef())
-        new_degrees.push_back(0);
-
-    std::vector<int> & new_row_offs = this->GetCSR().GetNewRowOffRef();
-    for (auto & v : g_parent.GetCSR().GetNewRowOffRef())
-        new_row_offs.push_back(v);
-
-    std::vector<int> & new_col_vals = this->GetCSR().GetNewColRef();
-    for (auto & v : g_parent.GetCSR().GetNewColRef())
-        new_col_vals.push_back(v);
-
-    this->GetCSR().PopulateNewVals(g_parent.GetEdgesLeftToCover());
-    //std::cout << this->GetCSR().GetNewValRef().size() << std::endl;
+        v = 0;
 }
 
 void Graph::PopulatePreallocatedMemoryGNPrime(Graph & g_parent){
     for (auto & v : g_parent.GetNewDegRef())
         new_degrees.push_back(0);
+
     this->GetCSR().PopulateNewRefs(g_parent.GetEdgesLeftToCover());
     // In this case, the new offsets needs to calculated
     // In Gprime, old == new
@@ -204,29 +203,8 @@ int Graph::GetVertexCount(){
     return vertexCount;
 }
 
-
-int Graph::GetRandomOutgoingEdge(int v, std::vector<int> & path){
-
-    std::vector<int> outgoingEdges(&csr.new_column_indices[csr.new_row_offsets[v]],
-                        &csr.new_column_indices[csr.new_row_offsets[v+1]]);
-
-    std::random_device rd;
-    std::mt19937 g(rd());
-    std::shuffle(outgoingEdges.begin(), outgoingEdges.end(), g);
-    std::vector<int>::iterator it = outgoingEdges.begin();
-
-    while (it != outgoingEdges.end()){
-        /* To prevent simple paths, must at least have 2 entries, 
-        assuming there are no self edges, since the first entry, v,
-        is randomly chosen and the second entry is a random out edge */
-        if (path.size() > 1 && *it == path.rbegin()[1]) {
-            //std::cout << "Wouldve been a simple path, skipping " << *it << std::endl;
-            ++it;
-        } else
-            return *it;
-    }
-
-    return -1;
+std::vector< std::vector<int> > & Graph::GetChildrenVertices(){
+    return childrenVertices;
 }
 
 
@@ -429,10 +407,6 @@ void Graph::InduceSubgraph(std::vector<int> & verticesToRemoveRef){
         std::cout << "Done" << std::endl;
 }
 
-std::vector<int> & Graph::GetCondensedNewValRef(){
-    return newValues;
-}
-
 void Graph::BuildTheExampleCOO(COO * coordinateFormat){
     coordinateFormat->addEdgeSymmetric(0,1,1);
     coordinateFormat->addEdgeSymmetric(0,4,1);
@@ -500,3 +474,8 @@ bool Graph::GPrimeEdgesGreaterKTimesKPrime(int k, int kPrime){
         return true;
     return false;
 }
+
+void Graph::SetParent(Graph & g_parent){
+    parent = &g_parent;
+}
+

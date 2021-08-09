@@ -1,9 +1,9 @@
 #include "ParallelB1.h"
 
-void ParallelB1::InduceSubgraph( Graph & child_g,
+void ParallelB1::GenerateChildren(Graph & child_g,
                                 Graph & parent_g){
 
-    std::vector < std::vector<int> > childrensVertices;
+    std::vector< std::vector<int> > childrensVertices_ref = child_g.GetChildrenVertices();
 
     std::vector<int> path;
     std::cout << "Grabbing a randomVertex: " <<  std::endl;
@@ -11,7 +11,7 @@ void ParallelB1::InduceSubgraph( Graph & child_g,
     std::cout << "randomVertex: " << randomVertex << std::endl;
 
     path.push_back(randomVertex);
-    
+
     DFS(child_g.GetCSR().GetNewRowOffRef(), 
         child_g.GetCSR().GetNewColRef(), 
         path, 
@@ -22,7 +22,7 @@ void ParallelB1::InduceSubgraph( Graph & child_g,
     std::cout << std::endl;
     int caseNumber = classifyPath(path);
     std::cout << "Case number: " << caseNumber << std::endl;
-    createVertexSetsForEachChild(childrensVertices, caseNumber, path);
+    createVertexSetsForEachChild(childrensVertices_ref, caseNumber, path);
 
 }
 
