@@ -68,9 +68,6 @@ private:
     // Following the CSR design pattern, the new degrees
     std::vector<int> new_degrees;
 
-
-    void BuildTheExampleCOO(COO * coordinateFormat);
-    void BuildCOOFromFile(COO * coordinateFormat, std::string filename);
     void ProcessGraph(int vertexCount);
 
     void SetMyOldsToParentsNews(Graph & g_parent);

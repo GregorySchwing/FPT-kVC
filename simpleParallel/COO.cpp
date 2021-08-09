@@ -60,6 +60,27 @@ void COO::BuildCOOFromFile(std::string filename){
     sortMyself();
 }
 
+void COO::BuildTheExampleCOO(){
+    addEdgeSymmetric(0,1,1);
+    addEdgeSymmetric(0,4,1);
+    addEdgeSymmetric(1,4,1);
+    addEdgeSymmetric(1,5,1);
+    addEdgeSymmetric(1,6,1);
+    addEdgeSymmetric(2,4,1);
+    addEdgeSymmetric(2,6,1);
+    addEdgeSymmetric(3,5,1);
+    addEdgeSymmetric(3,6,1);
+    addEdgeSymmetric(4,7,1);
+    addEdgeSymmetric(4,8,1);
+    addEdgeSymmetric(5,8,1);
+    addEdgeSymmetric(6,9,1);
+
+    size = new_values.size();
+    // vlog(e)
+    sortMyself();
+}
+
+
 void COO::SetVertexCountFromEdges(){
     int min;
     auto it = min_element(std::begin(new_row_indices), std::end(new_row_indices)); // C++11

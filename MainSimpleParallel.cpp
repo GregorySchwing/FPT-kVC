@@ -18,7 +18,9 @@ int main(int argc, char *argv[])
     COO coordinateFormat;
     std::string filename = "small.csv";
     /* Eventually replace this with an initialization from file */
-    coordinateFormat.BuildCOOFromFile(filename);
+    //coordinateFormat.BuildCOOFromFile(filename);
+    coordinateFormat.BuildTheExampleCOO();
+
     coordinateFormat.SetVertexCountFromEdges();
     std::vector< std::vector<int> > vectorOfConnectedComponents;
     ConnectednessTest ct(coordinateFormat, vectorOfConnectedComponents);
@@ -43,9 +45,10 @@ int main(int argc, char *argv[])
     std::vector< Graph > graphs(5, Graph(gPrime));
     std::vector<int> test;
     test.push_back(1);
+    graphs.clear();
     // ParallB1 Call to get gPrime's children
     // Store in test
-    graphs[0].InitGNPrime(gPrime, test);
+    //graphs[0].InitGNPrime(gPrime, test);
     /*ParallelB1::EdgeCountKernel(graphs[0], k, sk.GetS(), g);
     for (auto & v : graphs){
         std::cout << v.GetCSR().new_row_offsets.capacity() << std::endl;

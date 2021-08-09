@@ -364,11 +364,11 @@ void Graph::InduceSubgraph(std::vector<int> & verticesToRemoveRef){
         std::vector<int> newValues(GetEdgesLeftToCover(), 0);
 
         int row; 
-        
+        /*
         #pragma omp parallel for default(none) \
                             shared(row_offsets, column_indices, values, \
                             new_degrees, newRowOffsets, newColumnIndices, newValues) \
-                            private (row)
+                            private (row)*/
         for (row = 0; row < vertexCount; ++row)
         {
             CountingSortParallelRowwiseValues(row,
@@ -388,45 +388,6 @@ void Graph::InduceSubgraph(std::vector<int> & verticesToRemoveRef){
         std::cout << "Along with all their neighbors that are now deg 0 " << std::endl;
         RemoveNewlyDegreeZeroVertices(verticesToRemoveRef, row_offsets, column_indices, newRowOffsets);
         std::cout << "Done" << std::endl;
-}
-
-void Graph::BuildTheExampleCOO(COO * coordinateFormat){
-    coordinateFormat->addEdgeSymmetric(0,1,1);
-    coordinateFormat->addEdgeSymmetric(0,4,1);
-    coordinateFormat->addEdgeSymmetric(1,4,1);
-    coordinateFormat->addEdgeSymmetric(1,5,1);
-    coordinateFormat->addEdgeSymmetric(1,6,1);
-    coordinateFormat->addEdgeSymmetric(2,4,1);
-    coordinateFormat->addEdgeSymmetric(2,6,1);
-    coordinateFormat->addEdgeSymmetric(3,5,1);
-    coordinateFormat->addEdgeSymmetric(3,6,1);
-    coordinateFormat->addEdgeSymmetric(4,7,1);
-    coordinateFormat->addEdgeSymmetric(4,8,1);
-    coordinateFormat->addEdgeSymmetric(5,8,1);
-    coordinateFormat->addEdgeSymmetric(6,9,1);
-
-    coordinateFormat->size = coordinateFormat->new_values.size();
-    // vlog(e)
-    coordinateFormat->sortMyself();
-}
-
-void Graph::BuildCOOFromFile(COO * coordinateFormat, std::string filename){
-    char sep = ' ';
-    std::ifstream       file(filename);
-    std::string::size_type sz;   // alias of size_t
-    for(auto& row: CSVRange(file, sep))
-    {
-        //std::cout << "adding (" << std::stoi(row[0],&sz) 
-        //<< ", " << std::stoi(row[1],&sz) << ")" << std::endl; 
-        coordinateFormat->addEdgeSymmetric(std::stoi(row[0],&sz), 
-                                            std::stoi(row[1],&sz), 1);
-        //coordinateFormat->addEdgeSimple(std::stoi(row[0],&sz), 
-        //                                    std::stoi(row[1],&sz), 1);
-    }
-
-    coordinateFormat->size = coordinateFormat->new_values.size();
-    // vlog(e)
-    coordinateFormat->sortMyself();
 }
 
 std::vector<int> & Graph::GetNewDegRef(){
