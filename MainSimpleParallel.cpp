@@ -43,8 +43,8 @@ int main(int argc, char *argv[])
     }
     Graph & gPrime = sk.GetGPrime(); 
     std::vector< Graph > graphs(5, Graph(gPrime));
-    std::vector<int> test;
-    test.push_back(1);
+    ParallelB1::GenerateChildren(gPrime);
+    //test.push_back(1);
     graphs.clear();
     // ParallB1 Call to get gPrime's children
     // Store in test

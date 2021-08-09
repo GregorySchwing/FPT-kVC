@@ -99,7 +99,7 @@ void Graph::InitGPrime(Graph & g_parent,
 }
 
 void Graph::SetMyOldsToParentsNews(Graph & g_parent){
-
+    this->SetParent(g_parent);
     this->SetOldDegRef(g_parent.GetNewDegRef());
     this->edgesLeftToCover = g_parent.GetEdgesLeftToCover();
     this->GetCSR().SetOldRowOffRef(g_parent.GetCSR().GetNewRowOffRef());

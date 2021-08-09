@@ -1,7 +1,6 @@
 #include "ParallelB1.h"
 
-void ParallelB1::GenerateChildren(Graph & child_g,
-                                Graph & parent_g){
+void ParallelB1::GenerateChildren(Graph & child_g){
 
     std::vector< std::vector<int> > childrensVertices_ref = child_g.GetChildrenVertices();
 

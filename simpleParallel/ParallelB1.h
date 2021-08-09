@@ -9,8 +9,7 @@
 
 class ParallelB1 {
 public:
-void static GenerateChildren( Graph & child_g,
-                            Graph & parent_g);
+void static GenerateChildren( Graph & child_g);
 
 private:
     void static DFS(std::vector<int> & new_row_off,
