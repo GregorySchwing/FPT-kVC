@@ -47,10 +47,10 @@ old_degrees_ref(new_degrees)
 }
   */
 /* Create first Graph */
-Graph::Graph(CSR & csr):
-    csr(csr),
-    old_degrees_ref(&new_degrees),
-    vertexCount(csr.vertexCount)
+Graph::Graph(CSR & csr_arg):
+    csr(csr_arg),
+    old_degrees_ref(&old_degrees),
+    vertexCount(csr_arg.vertexCount)
 {
     std::cout << "First G" << std::endl;
     ProcessGraph(csr.numberOfRows);
