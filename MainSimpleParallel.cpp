@@ -51,29 +51,7 @@ int main(int argc, char *argv[])
     for (auto & v: answer)
         std::cout << v << " ";
     std::cout << std::endl;
-    // Logic of the tree
-    // Every level decreases the number of remaining vertices by at least 2
-    // more sophisticate analysis could be performed by analyzing the graph
-    // i.e. number of degree 1 vertices, (case 3) - a level decreases by > 2
-    // number of degree 2 vertices with a pendant edge (case 2) - a level decreases by > 2
-    // number of triangles in a graph (case 1)
-    // gPrime is at root of tree
-    // This is a 3-ary tree, m = 3
-    // if a node has an index i, its c-th child in range {1,…,m} 
-    // is found at index m ⋅ i + c, while its parent (if any) is 
-    // found at index floor((i-1)/m).
-
-// This method benefits from more compact storage and 
-// better locality of reference, particularly during a 
-// preorder traversal. The space complexity of this 
-// method is O(m^n).  Actually smaller - TODO
-// calculate by recursion tree
-
-    // We are setting parent pointers, in case we find space
-    // to be a constraint, we are halfway to dynamic trees,
-    // we just need to pop a free graph object off a queue 
-    // and induce.  
-    // We may have no use for iterating over a graph from the root.
+    
     
 /* 
 

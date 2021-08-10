@@ -10,6 +10,30 @@ int ParallelB1::CalculateWorstCaseSpaceComplexity(int vertexCount){
     return summand;
 }
 
+// Logic of the tree
+    // Every level decreases the number of remaining vertices by at least 2
+    // more sophisticate analysis could be performed by analyzing the graph
+    // i.e. number of degree 1 vertices, (case 3) - a level decreases by > 2
+    // number of degree 2 vertices with a pendant edge (case 2) - a level decreases by > 2
+    // number of triangles in a graph (case 1)
+    // gPrime is at root of tree
+    // This is a 3-ary tree, m = 3
+    // if a node has an index i, its c-th child in range {1,…,m} 
+    // is found at index m ⋅ i + c, while its parent (if any) is 
+    // found at index floor((i-1)/m).
+
+// This method benefits from more compact storage and 
+// better locality of reference, particularly during a 
+// preorder traversal. The space complexity of this 
+// method is O(m^n).  Actually smaller - TODO
+// calculate by recursion tree
+
+    // We are setting parent pointers, in case we find space
+    // to be a constraint, we are halfway to dynamic trees,
+    // we just need to pop a free graph object off a queue 
+    // and induce.  
+    // We may have no use for iterating over a graph from the root.
+
 void ParallelB1::PopulateTree(int treeSize, 
                                 std::vector<Graph> & graphs,
                                 std::vector<int> & answer){
@@ -18,10 +42,10 @@ void ParallelB1::PopulateTree(int treeSize,
     for (int i = 0; i < treeSize; ++i){
         result = GenerateChildren(graphs[i]);
         while (graphs[i].GetChildrenVertices().size() == 1){
-            graphs[i].InitGPrime(graphs[i], graphs[i].GetChildrenVertices().front());
+            graphs[i].ProcessImmediately(graphs[i].GetChildrenVertices().front());
             graphs[i].GetChildrenVertices().clear();
             result = GenerateChildren(graphs[i]);
-        }        
+        }       
         if (result == -1){
             TraverseUpTree(i, graphs, answer);
             return;
@@ -47,6 +71,7 @@ int ParallelB1::GenerateChildren(Graph & child_g){
 
     DFS(child_g.GetCSR().GetNewRowOffRef(), 
         child_g.GetCSR().GetNewColRef(), 
+        child_g.GetCSR().GetNewValRef(),
         path, 
         randomVertex);
 
@@ -71,42 +96,52 @@ int ParallelB1::GetRandomVertex(std::vector<int> & verticesRemaining){
 /* DFS of maximum length 3. No simple cycles u -> v -> u */
 void ParallelB1::DFS(std::vector<int> & new_row_off,
                     std::vector<int> & new_col_ref, 
+                    std::vector<int> & new_vals_ref,
                     std::vector<int> & path, 
                     int rootVertex){
     if (path.size() == 4)
         return;
 
-    int randomOutgoingEdge = GetRandomOutgoingEdge(new_row_off, new_col_ref, rootVertex, path);
+    int randomOutgoingEdge = GetRandomOutgoingEdge(new_row_off, new_col_ref, new_vals_ref, rootVertex, path);
     if (randomOutgoingEdge < 0) {
         return;
     } else {
         path.push_back(randomOutgoingEdge);
-        return DFS(new_row_off, new_col_ref, path, randomOutgoingEdge);
+        return DFS(new_row_off, new_col_ref, new_vals_ref, path, randomOutgoingEdge);
     }
 }
 
 int ParallelB1::GetRandomOutgoingEdge(  std::vector<int> & new_row_off,
                                         std::vector<int> & new_col_ref,
+                                        std::vector<int> & new_values_ref,
                                         int v, 
                                         std::vector<int> & path){
 
     std::vector<int> outgoingEdges(&new_col_ref[new_row_off[v]],
                         &new_col_ref[new_row_off[v+1]]);
 
+    std::vector<int> outgoingEdgeValues(&new_values_ref[new_row_off[v]],
+                    &new_values_ref[new_row_off[v+1]]);
+
+    std::vector<std::pair<int, int>> edgesAndValues;
+    edgesAndValues.reserve(outgoingEdges.size());
+    std::transform(outgoingEdges.begin(), outgoingEdges.end(), outgoingEdgeValues.begin(), std::back_inserter(edgesAndValues),
+               [](int a, int b) { return std::make_pair(a, b); });
+
     std::random_device rd;
     std::mt19937 g(rd());
-    std::shuffle(outgoingEdges.begin(), outgoingEdges.end(), g);
-    std::vector<int>::iterator it = outgoingEdges.begin();
+    std::shuffle(edgesAndValues.begin(), edgesAndValues.end(), g);
+    std::vector< std::pair<int,int> >::iterator it = edgesAndValues.begin();
 
-    while (it != outgoingEdges.end()){
+    while (it != edgesAndValues.end()){
         /* To prevent simple paths, must at least have 2 entries, 
         assuming there are no self edges, since the first entry, v,
         is randomly chosen and the second entry is a random out edge */
-        if (path.size() > 1 && *it == path.rbegin()[1]) {
+        if (path.size() > 1 && it->first == path.rbegin()[1]  || it->second == 0) {
             //std::cout << "Wouldve been a simple path, skipping " << *it << std::endl;
             ++it;
         } else
-            return *it;
+            return it->first;
     }
 
     return -1;

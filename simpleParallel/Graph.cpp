@@ -1,51 +1,5 @@
 #include "Graph.h"
 
-/*
-Graph::Graph(int vertexCount): 
-// Circular reference since there are no old degrees.
-old_degrees_ref(new_degrees),
-vertexCount(vertexCount)
-{
-    //coordinateFormat = new COO(vertexCount, vertexCount);
-
-    /* Eventually replace this with an initialization from file */
-    /*
-    BuildTheExampleCOO(coordinateFormat);
-    if(vertexCount == 0)
-        SetVertexCountFromEdges(coordinateFormat);
-    std::vector< std::vector<int> > vectorOfConnectedComponents;
-    ConnectednessTest ct(this, vectorOfConnectedComponents);
-    if (vectorOfConnectedComponents.size() > 1){
-        std::cout << "Graph isn't connected" << std::endl;
-    } else {
-        std::cout << "Graph is connected" << std::endl;
-    }
-    ProcessGraph(coordinateFormat->GetNumberOfRows());
-    */
-//}
- /*
-Graph::Graph(std::string filename, char sep, int vertexCount):
-// Circular reference since there are no old degrees.
-old_degrees_ref(new_degrees)
-{
-   
-    coordinateFormat = new COO();
-    /* Eventually replace this with an initialization from file */
-    /*
-    BuildCOOFromFile(coordinateFormat, filename);
-    if(vertexCount == 0)
-        SetVertexCountFromEdges(coordinateFormat);
-    std::vector< std::vector<int> > vectorOfConnectedComponents;
-    ConnectednessTest ct(this, vectorOfConnectedComponents);
-    if (vectorOfConnectedComponents.size() > 1){
-        std::cout << "Graph isn't connected" << std::endl;
-    } else {
-        std::cout << "Graph is connected" << std::endl;
-    }
-    ProcessGraph(coordinateFormat->GetNumberOfRows());
-  
-}
-  */
 /* Create first Graph */
 Graph::Graph(CSR & csr_arg):
     csr(csr_arg),
@@ -78,11 +32,10 @@ void Graph::SetVerticesToIncludeInCover(std::vector<int> & verticesRef){
 void Graph::InitG(Graph & g_parent, std::vector<int> & S){
     PopulatePreallocatedMemoryFirstGraph(g_parent);
     SetEdgesOfSSymParallel(S); 
-    SetEdgesLeftToCoverParallel();
+    SetEdgesLeftToCoverParallel(*(GetCSR().GetOldRowOffRef()));
     RemoveNewlyDegreeZeroVertices(S);
     SetVerticesToIncludeInCover(S);
 }
-
 
 /* Constructor to make induced subgraph G' for each branch */
 void Graph::InitGPrime(Graph & g_parent, 
@@ -94,23 +47,34 @@ void Graph::InitGPrime(Graph & g_parent,
     // Pendant edges are processed immediately without spawning children
     // Hence we want to skip tree building, allocation, and inducing 
     // And just remove more edges from the graph
-    if(GetRemainingVerticesRef().size() == 0){
-        SetParent(g_parent);
-        SetMyOldsToParentsNews(g_parent);
-        SetVerticesRemainingAndVerticesRemoved(g_parent);
-        PopulatePreallocatedMemory(g_parent);
-        InduceSubgraph();
+    SetMyOldsToParentsNews(g_parent);
+    SetVerticesRemainingAndVerticesRemoved(g_parent);
+    PopulatePreallocatedMemory(g_parent);
+    InduceSubgraph();
+    // Just copy old degrees to new degrees
+    if(S.size() != 0){
+        SetEdgesOfSSymParallel(S); 
+        SetEdgesLeftToCoverParallel(GetCSR().GetNewRowOffRef());
+        RemoveNewlyDegreeZeroVertices(S);
+        SetVerticesToIncludeInCover(S);
     } else {
-        for(auto & v : new_degrees)
-            v = 0;
+        new_degrees = GetOldDegRef();
     }
-    SetEdgesOfSSymParallel(S); 
-    SetEdgesLeftToCoverParallel();
-    RemoveNewlyDegreeZeroVertices(S);
-    SetVerticesToIncludeInCover(S);
     // This line is throwing an error in valgrind
     // Conditional jump or move depends on uninitialised value(s)
     //std::cout << edgesLeftToCover/2 << " edges left in induced subgraph G'" << std::endl;
+}
+
+void Graph::ProcessImmediately(std::vector<int> & S){
+    for(auto & v : new_degrees)
+        v = 0;
+    SetEdgesOfSSymParallel(S); 
+    SetEdgesLeftToCoverParallel(GetCSR().GetNewRowOffRef());
+    RemoveNewlyDegreeZeroVertices(S);
+    //for(auto & v : GetCSR().GetNewRowOffRef())
+    //    v = 0;
+    //CalculateNewRowOffsets(GetNewDegRef());
+    SetVerticesToIncludeInCover(S);
 }
 
 void Graph::SetMyOldsToParentsNews(Graph & g_parent){
@@ -135,7 +99,7 @@ void Graph::PopulatePreallocatedMemory(Graph & g_parent){
     // In this case, the new offsets needs to calculated
     // In Gprime, old == new
     // Here the old degrees need be recalculated before inducing gNprime
-    CalculateNewRowOffsets();
+    CalculateNewRowOffsets(GetOldDegRef());
 }
 
 void Graph::PopulatePreallocatedMemoryFirstGraph(Graph & g_parent){
@@ -302,11 +266,11 @@ void Graph::SetEdgesOfSSymParallel(std::vector<int> & S){
 }
 
 // Sets the new degrees without the edges and the edges left to cover
-void Graph::SetEdgesLeftToCoverParallel(){
+void Graph::SetEdgesLeftToCoverParallel(std::vector<int> & row_offsets){
     int count = 0, i = 0, j = 0;
     std::vector<int> & newDegs = new_degrees;
     std::vector<int> & values = GetCSR().GetNewValRef();
-    std::vector<int> & row_offsets = *(GetCSR().GetOldRowOffRef());
+    //std::vector<int> & row_offsets = 
     #pragma omp parallel for default(none) shared(row_offsets, values, newDegs, vertexCount) private (i, j) \
     reduction(+:count)
     for (i = 0; i < vertexCount; ++i)
@@ -319,10 +283,11 @@ void Graph::SetEdgesLeftToCoverParallel(){
 }
 
 /* Called if edgesLeftToCover > 0 */
-void Graph::CalculateNewRowOffsets(){    
+void Graph::CalculateNewRowOffsets(std::vector<int> & old_degrees){    
     // Cuda load
     // Parent's new degree ref
-    std::vector<int> & old_degrees = GetOldDegRef();
+    //std::vector<int> & old_degrees = GetOldDegRef();
+    // or recalculate degrees if we processed immediately
     std::vector<int> & new_row_offs = this->GetCSR().GetNewRowOffRef();
     int i = 0;
     new_row_offs.push_back(0);
@@ -341,8 +306,9 @@ void Graph::CountingSortParallelRowwiseValues(
                 std::vector<int> & A_column_indices,
                 std::vector<int> & A_values,
                 std::vector<int> & B_row_indices_ref,
-                std::vector<int> & B_column_indices_ref,
-                std::vector<int> & B_values_ref){
+                std::vector<int> & B_column_indices_ref){
+                //,
+                //std::vector<int> & B_values_ref){
 
     //std::cout << "procID : " << procID << " beginIndex " << beginIndex << " endIndex " << endIndex << std::endl;
 
@@ -362,7 +328,7 @@ void Graph::CountingSortParallelRowwiseValues(
     for (int i = endIndex-1; i >= beginIndex; --i){
         if (A_values[i]){
             B_column_indices_ref[B_row_indices_ref[rowID] - C_ref[0] + C_ref[1]-1] = A_column_indices[i];
-            B_values_ref[B_row_indices_ref[rowID] - C_ref[0] + C_ref[1]-1] = A_values[i];
+            //B_values_ref[B_row_indices_ref[rowID] - C_ref[0] + C_ref[1]-1] = A_values[i];
             --C_ref[A_values[i]];
         }
     }
@@ -404,7 +370,7 @@ void Graph::InduceSubgraph(){
         // Eventually this line can be commented out
         // and we no longer need to write in parallel in CSPRV
 
-        testVals.resize(GetEdgesLeftToCover(), 0);
+        //testVals.resize(GetEdgesLeftToCover(), 0);
 
         int row; 
         
@@ -421,8 +387,9 @@ void Graph::InduceSubgraph(){
                                             column_indices,
                                             values,
                                             newRowOffsets,
-                                            newColumnIndices,
-                                            testVals);
+                                            newColumnIndices);
+                                            //,
+                                            //testVals);
         }
 }
 

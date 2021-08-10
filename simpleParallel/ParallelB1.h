@@ -20,11 +20,13 @@ private:
                                 std::vector<int> & answer);
     void static DFS(std::vector<int> & new_row_off,
                     std::vector<int> & new_col_ref,
+                    std::vector<int> & new_vals_ref,
                     std::vector<int> & path, 
                     int rootVertex);
     int static GetRandomVertex(std::vector<int> & verticesRemaining);
     int static GetRandomOutgoingEdge(std::vector<int> & new_row_off,
                                     std::vector<int> & new_col_ref,
+                                    std::vector<int> & new_values_ref,
                                     int v, 
                                     std::vector<int> & path);
     int static classifyPath(std::vector<int> & path);

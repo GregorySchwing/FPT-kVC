@@ -21,6 +21,8 @@ public:
     void InitG(Graph & g_parent, std::vector<int> & S);
     void InitGPrime(Graph & g_parent, 
                     std::vector<int> & S);
+    void ProcessImmediately(std::vector<int> & S);
+
 
     std::vector<int> & GetVerticesThisGraphIncludedInTheCover();
 
@@ -87,12 +89,12 @@ private:
 
     void SetVertexCountFromEdges(COO * coordinateFormat);
     void SetEdgesOfSSymParallel(std::vector<int> & S);
-    void SetEdgesLeftToCoverParallel();
+    void SetEdgesLeftToCoverParallel(std::vector<int> & row_offsets);
     void SetNewRowOffsets(std::vector<int> & newRowOffsetsRef);
     void SetOldDegRef(std::vector<int> & old_deg_ref);
     void SetParent(Graph & g_parent);
 
-    void CalculateNewRowOffsets();
+    void CalculateNewRowOffsets(std::vector<int> & old_degrees);
     void CountingSortParallelRowwiseValues(
             int procID,
             int beginIndex,
@@ -101,8 +103,9 @@ private:
             std::vector<int> & A_column_indices,
             std::vector<int> & A_values,
             std::vector<int> & B_row_indices_ref,
-            std::vector<int> & B_column_indices_ref,
-            std::vector<int> & B_values_ref);
+            std::vector<int> & B_column_indices_ref);
+            //,
+            //std::vector<int> & B_values_ref);
 
     void RemoveNewlyDegreeZeroVertices(std::vector<int> & verticesToRemove);
 
