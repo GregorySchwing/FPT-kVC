@@ -246,15 +246,15 @@ void Graph::removeVertex(int vertexToRemove, std::vector<int> & verticesRemainin
             std::cout << "vertexToRemove " << vertexToRemove << std::endl;
 
             std::cout << "Before Erasing " << low - std::begin(verticesRemaining) << std::endl;
-            //for ( auto & v : verticesRemaining )
-            //    std::cout << v << " ";
+            for ( auto & v : verticesRemaining )
+                std::cout << v << " ";
             std::cout << std::endl;
 
             std::cout << "Erasing " << low - std::begin(verticesRemaining) << std::endl;
             verticesRemaining.erase(low);
             std::cout << "After Erasing " << low - std::begin(verticesRemaining) << std::endl;
-            //for ( auto & v : verticesRemaining )
-            //    std::cout << v << " ";
+            for ( auto & v : verticesRemaining )
+                std::cout << v << " ";
             std::cout << std::endl;
             std::cout << "End of a call" << std::endl;
         }
@@ -432,6 +432,10 @@ std::vector<int> * Graph::GetOldDegPointer(){
 
 std::vector<int> & Graph::GetOldDegRef(){
     return *old_degrees_ref;
+}
+
+Graph & Graph::GetParent(){
+    return *parent;
 }
 
 

@@ -49,6 +49,8 @@ public:
     bool GPrimeEdgesGreaterKTimesKPrime(int k, int kPrime);
     std::vector< std::vector<int> > & GetChildrenVertices();
     void SetVerticesToIncludeInCover(std::vector<int> & verticesRef);
+    Graph & GetParent();
+
 
 private:
     Graph * parent;

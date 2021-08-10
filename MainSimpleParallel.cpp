@@ -44,7 +44,8 @@ int main(int argc, char *argv[])
     int treeSize = ParallelB1::CalculateWorstCaseSpaceComplexity(gPrime.GetRemainingVerticesRef().size());
     std::vector< Graph > graphs(treeSize, Graph(gPrime));
     std::swap(graphs[0], gPrime);
-    ParallelB1::PopulateTree(treeSize, graphs);
+    std::vector<int> answer;
+    ParallelB1::PopulateTree(treeSize, graphs, answer);
     // Logic of the tree
     // Every level decreases the number of remaining vertices by at least 2
     // more sophisticate analysis could be performed by analyzing the graph

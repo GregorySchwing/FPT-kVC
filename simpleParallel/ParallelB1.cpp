@@ -10,23 +10,37 @@ int ParallelB1::CalculateWorstCaseSpaceComplexity(int vertexCount){
     return summand;
 }
 
-void ParallelB1::PopulateTree(int treeSize, std::vector<Graph> & graphs){
+void ParallelB1::PopulateTree(int treeSize, 
+                                std::vector<Graph> & graphs,
+                                std::vector<int> & answer){
     // ceiling(vertexCount/2) loops
+    int result;
     for (int i = 0; i < treeSize; ++i){
-        GenerateChildren(graphs[i]);
-        graphs[3*i + i%3].InitGPrime(graphs[i], graphs[i].GetChildrenVertices()[i%3]);
+        result = GenerateChildren(graphs[i]);
+        while (graphs[i].GetChildrenVertices().size() == 1){
+            graphs[i].InitGPrime(graphs[i], graphs[i].GetChildrenVertices().front());
+            graphs[i].GetChildrenVertices().clear();
+            result = GenerateChildren(graphs[i]);
+        }        
+        if (result == -1){
+            TraverseUpTree(i, graphs, answer);
+            return;
+        } else {
+            graphs[3*i + i%3].InitGPrime(graphs[i], graphs[i].GetChildrenVertices()[i%3]);
+        }
     }
 }
 
 
-void ParallelB1::GenerateChildren(Graph & child_g){
+int ParallelB1::GenerateChildren(Graph & child_g){
 
     std::vector< std::vector<int> > & childrensVertices_ref = child_g.GetChildrenVertices();
 
     std::vector<int> path;
-    std::cout << "Grabbing a randomVertex: " <<  std::endl;
     int randomVertex = GetRandomVertex(child_g.GetRemainingVerticesRef());
-    std::cout << "randomVertex: " << randomVertex << std::endl;
+    std::cout << "Grabbing a randomVertex: " <<  randomVertex<< std::endl;
+    if(randomVertex == -1)
+        return randomVertex;
 
     path.push_back(randomVertex);
 
@@ -42,10 +56,12 @@ void ParallelB1::GenerateChildren(Graph & child_g){
     std::cout << "Case number: " << caseNumber << std::endl;
     createVertexSetsForEachChild(childrensVertices_ref, caseNumber, path);
 
+    return 0;
 }
 
 int ParallelB1::GetRandomVertex(std::vector<int> & verticesRemaining){
-    std::cout << "verticesRemaining.size() " << verticesRemaining.size() << std::endl;
+    if(verticesRemaining.size() == 0)
+        return -1;
     int index = rand() % verticesRemaining.size();
     return verticesRemaining[index];
 }
@@ -154,5 +170,18 @@ void ParallelB1::createVertexSetsForEachChild(std::vector< std::vector<int> > & 
         childrensVertices[0].push_back(path[0]);
 
     }
+}
+
+void ParallelB1::TraverseUpTree(int index, 
+                                std::vector<Graph> & graphs,
+                                std::vector<int> & answer){
+    bool haventReachedRoot = true;
+    while(haventReachedRoot) {
+        if (index == 0)
+            haventReachedRoot = false;
+        for (auto & v : graphs[index].GetVerticesThisGraphIncludedInTheCover())
+            answer.push_back(v);
+        index = (index-1)/3;
+    } 
 }
 
