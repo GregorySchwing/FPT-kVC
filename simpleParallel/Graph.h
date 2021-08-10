@@ -107,7 +107,8 @@ private:
             //,
             //std::vector<int> & B_values_ref);
 
-    void RemoveNewlyDegreeZeroVertices(std::vector<int> & verticesToRemove);
+    void RemoveNewlyDegreeZeroVertices(std::vector<int> & verticesToRemove,
+                                        std::vector<int> & oldRowOffets);
 
 };
 #endif

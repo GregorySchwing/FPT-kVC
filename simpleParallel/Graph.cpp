@@ -33,7 +33,7 @@ void Graph::InitG(Graph & g_parent, std::vector<int> & S){
     PopulatePreallocatedMemoryFirstGraph(g_parent);
     SetEdgesOfSSymParallel(S); 
     SetEdgesLeftToCoverParallel(*(GetCSR().GetOldRowOffRef()));
-    RemoveNewlyDegreeZeroVertices(S);
+    RemoveNewlyDegreeZeroVertices(S, *(GetCSR().GetOldRowOffRef()));
     SetVerticesToIncludeInCover(S);
 }
 
@@ -42,6 +42,11 @@ void Graph::InitGPrime(Graph & g_parent,
                         std::vector<int> & S)
 {        
     std::cout << "Entered constructor of G induced" << std::endl;
+    std::cout << "S :" << std::endl;
+    for (auto & v : S)
+        std::cout << v << " ";
+    std::cout << std::endl;
+
     // Sets the old references of the new csr 
     // to point to the new references of the argument
     // Pendant edges are processed immediately without spawning children
@@ -55,7 +60,7 @@ void Graph::InitGPrime(Graph & g_parent,
     if(S.size() != 0){
         SetEdgesOfSSymParallel(S); 
         SetEdgesLeftToCoverParallel(GetCSR().GetNewRowOffRef());
-        RemoveNewlyDegreeZeroVertices(S);
+        RemoveNewlyDegreeZeroVertices(S, *(GetCSR().GetOldRowOffRef()));
         SetVerticesToIncludeInCover(S);
     } else {
         new_degrees = GetOldDegRef();
@@ -70,7 +75,7 @@ void Graph::ProcessImmediately(std::vector<int> & S){
         v = 0;
     SetEdgesOfSSymParallel(S); 
     SetEdgesLeftToCoverParallel(GetCSR().GetNewRowOffRef());
-    RemoveNewlyDegreeZeroVertices(S);
+    RemoveNewlyDegreeZeroVertices(S, GetCSR().GetNewRowOffRef());
     //for(auto & v : GetCSR().GetNewRowOffRef())
     //    v = 0;
     //CalculateNewRowOffsets(GetNewDegRef());
@@ -231,9 +236,17 @@ void Graph::removeVertex(int vertexToRemove, std::vector<int> & verticesRemainin
 void Graph::SetEdgesOfSSymParallel(std::vector<int> & S){
     int v, intraRowOffset;
     std::vector<int>::iterator low;
+    int test;
     std::vector<int> & row_offsets_ref = *(GetCSR().GetOldRowOffRef());
     std::vector<int> & column_indices_ref = *(GetCSR().GetOldColRef());
     std::vector<int> & values = GetCSR().GetNewValRef();
+    for (auto u : S)
+    {
+        if (u < 0 || u > vertexCount){
+            std::cout << "error" << std::endl;
+            test = -1;
+        }
+    }
 
     // Set out-edges
     #pragma omp parallel for default(none) shared(row_offsets_ref, \
@@ -335,11 +348,10 @@ void Graph::CountingSortParallelRowwiseValues(
 }
 
 // Highly unoptimized, but should work for now
-void Graph::RemoveNewlyDegreeZeroVertices(std::vector<int> & verticesToRemove){
+void Graph::RemoveNewlyDegreeZeroVertices(std::vector<int> & verticesToRemove,
+                                            std::vector<int> & oldRowOffsets){
  
-    std::vector<int> & oldRowOffsets = *(GetCSR().GetOldRowOffRef());
     std::vector<int> & oldColumnIndices = *(GetCSR().GetOldColRef());
-    std::vector<int> & newRowOffsets = GetCSR().GetNewRowOffRef();
 
     int i = 0, j;
     for (auto & v :verticesToRemove){

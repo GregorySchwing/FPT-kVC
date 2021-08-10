@@ -17,8 +17,8 @@ int main(int argc, char *argv[])
     //Graph g("small.csv");
     COO coordinateFormat;
     std::string filename = "small.csv";
-    //coordinateFormat.BuildCOOFromFile(filename);
-    coordinateFormat.BuildTheExampleCOO();
+    coordinateFormat.BuildCOOFromFile(filename);
+    //coordinateFormat.BuildTheExampleCOO();
 
     coordinateFormat.SetVertexCountFromEdges();
     std::vector< std::vector<int> > vectorOfConnectedComponents;
@@ -30,8 +30,8 @@ int main(int argc, char *argv[])
     }
     CSR csr(coordinateFormat);
     Graph g(csr);
-    //int k = 19;
-    int k = 4;
+    int k = 19;
+    //int k = 4;
     ParallelKernelization sk(g, k);
     sk.TestAValueOfK(k);
     bool noSolutionExists = sk.EdgeCountKernel();
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
     } else{
         std::cout << "|G'(E)| <= k*k', a solution may exist" << std::endl;
     }
-    int treeSize = ParallelB1::CalculateWorstCaseSpaceComplexity(g.GetRemainingVerticesRef().size());
+    int treeSize = 20000;
     std::vector< Graph > graphs(treeSize, Graph(g));
     std::vector<int> mpt;
     graphs[0].InitGPrime(g, mpt);

@@ -50,8 +50,10 @@ void ParallelB1::PopulateTree(int treeSize,
             TraverseUpTree(i, graphs, answer);
             return;
         } else {
-            for (int c = 1; c <= 3; ++c)
+            for (int c = 1; c <= 3; ++c){
+                std::cout << "i : " << i << ", c : " << c << std::endl;
                 graphs[3*i + c].InitGPrime(graphs[i], graphs[i].GetChildrenVertices()[c-1]);
+            }
         }
     }
 }
@@ -75,12 +77,19 @@ int ParallelB1::GenerateChildren(Graph & child_g){
         path, 
         randomVertex);
 
-    for (auto & v : path)
+    for (auto & v : path){
         std::cout << v << " ";
+        if (v < 0 || v > child_g.GetVertexCount())
+            std::cout << "error" << std::endl;
+    }
     std::cout << std::endl;
     int caseNumber = classifyPath(path);
     std::cout << "Case number: " << caseNumber << std::endl;
     createVertexSetsForEachChild(childrensVertices_ref, caseNumber, path);
+    for (auto & vv : childrensVertices_ref)
+        for (auto & v : vv)
+            if (v < 0 || v > child_g.GetVertexCount())
+                std::cout << "error" << std::endl;
 
     return 0;
 }
@@ -104,6 +113,7 @@ void ParallelB1::DFS(std::vector<int> & new_row_off,
 
     int randomOutgoingEdge = GetRandomOutgoingEdge(new_row_off, new_col_ref, new_vals_ref, rootVertex, path);
     if (randomOutgoingEdge < 0) {
+        std::cout << "terminate DFS" << std::endl;
         return;
     } else {
         path.push_back(randomOutgoingEdge);
