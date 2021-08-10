@@ -9,8 +9,9 @@
 
 class ParallelB1 {
 public:
+void static PopulateTree(int treeSize, std::vector<Graph> & graphs);
 void static GenerateChildren( Graph & child_g);
-
+int static CalculateWorstCaseSpaceComplexity(int vertexCount);
 private:
     void static DFS(std::vector<int> & new_row_off,
                     std::vector<int> & new_col_ref,

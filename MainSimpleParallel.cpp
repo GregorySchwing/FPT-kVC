@@ -17,9 +17,8 @@ int main(int argc, char *argv[])
     //Graph g("small.csv");
     COO coordinateFormat;
     std::string filename = "small.csv";
-    /* Eventually replace this with an initialization from file */
-    coordinateFormat.BuildCOOFromFile(filename);
-    //coordinateFormat.BuildTheExampleCOO();
+    //coordinateFormat.BuildCOOFromFile(filename);
+    coordinateFormat.BuildTheExampleCOO();
 
     coordinateFormat.SetVertexCountFromEdges();
     std::vector< std::vector<int> > vectorOfConnectedComponents;
@@ -31,8 +30,8 @@ int main(int argc, char *argv[])
     }
     CSR csr(coordinateFormat);
     Graph g(csr);
-    std::cout << g.GetRemainingVerticesRef()[0] << std::endl;
-    int k = 19;
+    //int k = 19;
+    int k = 4;
     ParallelKernelization sk(g, k);
     sk.TestAValueOfK(k);
     bool noSolutionExists = sk.EdgeCountKernel();
@@ -42,11 +41,34 @@ int main(int argc, char *argv[])
         std::cout << "|G'(E)| <= k*k', a solution may exist" << std::endl;
     }
     Graph & gPrime = sk.GetGPrime(); 
-    std::vector< Graph > graphs(5, Graph(gPrime));
-    ParallelB1::GenerateChildren(gPrime);
-    // ParallB1 Call to get gPrime's children
-    // Store in test
-    //graphs[0].InitGNPrime(gPrime, test);
+    int treeSize = ParallelB1::CalculateWorstCaseSpaceComplexity(gPrime.GetRemainingVerticesRef().size());
+    std::vector< Graph > graphs(treeSize, Graph(gPrime));
+    std::swap(graphs[0], gPrime);
+    ParallelB1::PopulateTree(treeSize, graphs);
+    // Logic of the tree
+    // Every level decreases the number of remaining vertices by at least 2
+    // more sophisticate analysis could be performed by analyzing the graph
+    // i.e. number of degree 1 vertices, (case 3) - a level decreases by > 2
+    // number of degree 2 vertices with a pendant edge (case 2) - a level decreases by > 2
+    // number of triangles in a graph (case 1)
+    // gPrime is at root of tree
+    // This is a 3-ary tree, m = 3
+    // if a node has an index i, its c-th child in range {1,…,m} 
+    // is found at index m ⋅ i + c, while its parent (if any) is 
+    // found at index floor((i-1)/m).
+
+// This method benefits from more compact storage and 
+// better locality of reference, particularly during a 
+// preorder traversal. The space complexity of this 
+// method is O(m^n).  Actually smaller - TODO
+// calculate by recursion tree
+
+    // We are setting parent pointers, in case we find space
+    // to be a constraint, we are halfway to dynamic trees,
+    // we just need to pop a free graph object off a queue 
+    // and induce.  
+    // We may have no use for iterating over a graph from the root.
+    
 /* 
 
     //Graph g(10);

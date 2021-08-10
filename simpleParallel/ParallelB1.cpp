@@ -1,4 +1,23 @@
 #include "ParallelB1.h"
+#include <math.h>       /* pow */
+// Sum of i = 0 to n/2
+// 3^i
+int ParallelB1::CalculateWorstCaseSpaceComplexity(int vertexCount){
+    int summand= 0;
+    // ceiling(vertexCount/2) loops
+    for (int i = 0; i < (vertexCount + 2 - 1)/2; ++i)
+        summand += pow (3.0, i);
+    return summand;
+}
+
+void ParallelB1::PopulateTree(int treeSize, std::vector<Graph> & graphs){
+    // ceiling(vertexCount/2) loops
+    for (int i = 0; i < treeSize; ++i){
+        GenerateChildren(graphs[i]);
+        graphs[3*i + i%3].InitGPrime(graphs[i], graphs[i].GetChildrenVertices()[i%3]);
+    }
+}
+
 
 void ParallelB1::GenerateChildren(Graph & child_g){
 
