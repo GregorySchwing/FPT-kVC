@@ -45,7 +45,8 @@ int main(int argc, char *argv[])
     std::vector<int> mpt;
     graphs[0].InitGPrime(g, mpt);
     graphs[0].SetVerticesToIncludeInCover(g.GetVerticesThisGraphIncludedInTheCover());
-
+    ParallelB1::GenerateChildren(graphs[0]);
+    graphs[0].InitGPrime(graphs[0], graphs[0].GetChildrenVertices()[0]);
     //std::swap(graphs[0], gPrime);
     std::vector<int> answer;
     ParallelB1::PopulateTree(treeSize, graphs, answer);

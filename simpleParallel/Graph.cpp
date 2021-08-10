@@ -400,13 +400,14 @@ void Graph::InduceSubgraph(std::vector<int> & verticesToRemoveRef){
         std::vector<int> & newColumnIndices = csr.GetNewColRef();
         // Eventually this line can be commented out
         // and we no longer need to write in parallel in CSPRV
-        std::vector<int> newValues(GetEdgesLeftToCover(), 0);
+
+        testVals.resize(GetEdgesLeftToCover(), 0);
 
         int row; 
         
         #pragma omp parallel for default(none) \
                             shared(row_offsets, column_indices, values, \
-                            new_degrees, newRowOffsets, newColumnIndices, newValues) \
+                            new_degrees, newRowOffsets, newColumnIndices, testVals) \
                             private (row)
         for (row = 0; row < vertexCount; ++row)
         {
@@ -418,7 +419,7 @@ void Graph::InduceSubgraph(std::vector<int> & verticesToRemoveRef){
                                             values,
                                             newRowOffsets,
                                             newColumnIndices,
-                                            newValues);
+                                            testVals);
         }
 }
 

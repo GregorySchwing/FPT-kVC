@@ -56,6 +56,7 @@ private:
     Graph * parent;
     int vertexCount;
     CSR csr;
+    std::vector<int> testVals;
     // vector of vectors of the children
     std::vector < std::vector<int> > childrenVertices;
     // The vertices passed as an argument to the InitGPrime method, used for creating an answer
