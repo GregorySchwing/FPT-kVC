@@ -378,7 +378,7 @@ void Graph::RemoveNewlyDegreeZeroVertices(std::vector<int> & verticesToRemove){
         hasntBeenRemoved[v] = 0;
         for (i = oldRowOffsets[v]; i < oldRowOffsets[v+1]; ++i){
             j = oldColumnIndices[i];
-            if(newRowOffsets[j+1] - newRowOffsets[j] == 0)
+            if(new_degrees[j] == 0)
                 if (hasntBeenRemoved[j]){
                     removeVertex(j, GetRemainingVerticesRef());
                     hasntBeenRemoved[j] = 0;
