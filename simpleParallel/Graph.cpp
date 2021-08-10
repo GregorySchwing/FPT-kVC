@@ -68,8 +68,11 @@ std::vector<int> & Graph::GetVerticesThisGraphIncludedInTheCover(){
     return verticesToIncludeInCover;
 }
 
+// This approach will continually append vertices if we keep processing
+// immediately in the case of pendant edges
 void Graph::SetVerticesToIncludeInCover(std::vector<int> & verticesRef){
-    verticesToIncludeInCover = verticesRef;
+    verticesToIncludeInCover.insert(std::end(verticesToIncludeInCover), 
+        std::begin(verticesRef), std::end(verticesRef));
 }
 
 void Graph::InitG(Graph & g_parent, std::vector<int> & S){
@@ -88,11 +91,16 @@ void Graph::InitGPrime(Graph & g_parent,
     std::cout << "Entered constructor of G induced" << std::endl;
     // Sets the old references of the new csr 
     // to point to the new references of the argument
-    SetParent(g_parent);
-    SetMyOldsToParentsNews(g_parent);
-    SetVerticesRemainingAndVerticesRemoved(g_parent);
-    PopulatePreallocatedMemory(g_parent);
-    InduceSubgraph(verticesToIncludeInCover);
+    // Pendant edges are processed immediately without spawning children
+    // Hence we want to skip tree building, allocation, and inducing 
+    // And just remove more edges from the graph
+    if(GetRemainingVerticesRef().size() == 0){
+        SetParent(g_parent);
+        SetMyOldsToParentsNews(g_parent);
+        SetVerticesRemainingAndVerticesRemoved(g_parent);
+        PopulatePreallocatedMemory(g_parent);
+        InduceSubgraph(verticesToIncludeInCover);
+    }
     SetEdgesOfSSymParallel(S); 
     SetEdgesLeftToCoverParallel();
     RemoveNewlyDegreeZeroVertices(S);
