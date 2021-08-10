@@ -14,7 +14,7 @@ void ParallelB1::PopulateTree(int treeSize,
                                 std::vector<Graph> & graphs,
                                 std::vector<int> & answer){
     // ceiling(vertexCount/2) loops
-    int result;
+    int result, childVertex;
     for (int i = 0; i < treeSize; ++i){
         result = GenerateChildren(graphs[i]);
         while (graphs[i].GetChildrenVertices().size() == 1){
@@ -26,7 +26,8 @@ void ParallelB1::PopulateTree(int treeSize,
             TraverseUpTree(i, graphs, answer);
             return;
         } else {
-            graphs[3*i + i%3].InitGPrime(graphs[i], graphs[i].GetChildrenVertices()[i%3]);
+            childVertex = int(pow(3.0, i));
+            graphs[childVertex + i].InitGPrime(graphs[i], graphs[i].GetChildrenVertices()[i%3]);
         }
     }
 }

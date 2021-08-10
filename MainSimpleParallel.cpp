@@ -40,12 +40,18 @@ int main(int argc, char *argv[])
     } else{
         std::cout << "|G'(E)| <= k*k', a solution may exist" << std::endl;
     }
-    Graph & gPrime = sk.GetGPrime(); 
-    int treeSize = ParallelB1::CalculateWorstCaseSpaceComplexity(gPrime.GetRemainingVerticesRef().size());
-    std::vector< Graph > graphs(treeSize, Graph(gPrime));
-    std::swap(graphs[0], gPrime);
+    int treeSize = ParallelB1::CalculateWorstCaseSpaceComplexity(g.GetRemainingVerticesRef().size());
+    std::vector< Graph > graphs(treeSize, Graph(g));
+    std::vector<int> mpt;
+    graphs[0].InitGPrime(g, mpt);
+    graphs[0].SetVerticesToIncludeInCover(g.GetVerticesThisGraphIncludedInTheCover());
+
+    //std::swap(graphs[0], gPrime);
     std::vector<int> answer;
     ParallelB1::PopulateTree(treeSize, graphs, answer);
+    for (auto & v: answer)
+        std::cout << v << " ";
+    std::cout << std::endl;
     // Logic of the tree
     // Every level decreases the number of remaining vertices by at least 2
     // more sophisticate analysis could be performed by analyzing the graph
