@@ -43,7 +43,7 @@ public:
     COO * GetCOO();
     std::set<std::pair<int,int>> edgesCoveredByKernelization;
     void removeVertex(int vertexToRemove, std::vector<int> & verticesRemaining);
-    void InduceSubgraph(std::vector<int> & verticesToRemoveRef);
+    void InduceSubgraph();
     int GetVertexCount();
     void PrintEdgesOfS();
     bool GPrimeEdgesGreaterKTimesKPrime(int k, int kPrime);

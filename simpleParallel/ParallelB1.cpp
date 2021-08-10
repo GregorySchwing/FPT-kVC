@@ -26,8 +26,8 @@ void ParallelB1::PopulateTree(int treeSize,
             TraverseUpTree(i, graphs, answer);
             return;
         } else {
-            childVertex = int(pow(3.0, i));
-            graphs[childVertex + i].InitGPrime(graphs[i], graphs[i].GetChildrenVertices()[i%3]);
+            for (int c = 1; c <= 3; ++c)
+                graphs[3*i + c].InitGPrime(graphs[i], graphs[i].GetChildrenVertices()[c-1]);
         }
     }
 }

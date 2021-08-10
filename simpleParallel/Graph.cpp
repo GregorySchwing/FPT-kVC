@@ -99,7 +99,10 @@ void Graph::InitGPrime(Graph & g_parent,
         SetMyOldsToParentsNews(g_parent);
         SetVerticesRemainingAndVerticesRemoved(g_parent);
         PopulatePreallocatedMemory(g_parent);
-        InduceSubgraph(verticesToIncludeInCover);
+        InduceSubgraph();
+    } else {
+        for(auto & v : new_degrees)
+            v = 0;
     }
     SetEdgesOfSSymParallel(S); 
     SetEdgesLeftToCoverParallel();
@@ -387,7 +390,7 @@ void Graph::RemoveNewlyDegreeZeroVertices(std::vector<int> & verticesToRemove){
     }
 }
 
-void Graph::InduceSubgraph(std::vector<int> & verticesToRemoveRef){
+void Graph::InduceSubgraph(){
        
         // Here in cuda can be repaced by load to shared
         std::vector<int> & row_offsets = *(csr.GetOldRowOffRef());
