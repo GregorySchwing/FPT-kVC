@@ -25,6 +25,11 @@ public:
     std::vector<int> & GetVerticesThisGraphIncludedInTheCover();
 
     std::vector<int> & GetRemainingVerticesRef();
+    std::vector<int> & GetHasntBeenRemoved();
+
+    void SetRemainingVerticesRef(std::vector<int> & verticesRemaining_arg);
+    void SetHasntBeenRemoved(std::vector<int> & hasntBeenRemoved_arg);
+
     std::vector<int> & GetNewDegRef();
     std::vector<int> * GetOldDegPointer();
     std::vector<int> & GetOldDegRef();
@@ -36,7 +41,6 @@ public:
 
     CSR & GetCSR();
     COO * GetCOO();
-    int edgesLeftToCover;
     std::set<std::pair<int,int>> edgesCoveredByKernelization;
     void removeVertex(int vertexToRemove, std::vector<int> & verticesRemaining);
     void InduceSubgraph(std::vector<int> & verticesToRemoveRef);
@@ -48,15 +52,18 @@ public:
 
 private:
     Graph * parent;
-    std::vector<int> verticesToIncludeInCover;
     int vertexCount;
     CSR csr;
-
-    std::vector < std::vector<int> > childrenVertices;        
-    // Every vertex touched by an edge removed should be checked after for being degree 0
-    // and then removed if so, clearly the vertices chosen by the algorithm for removing
-    // are also removed
-    std::vector<int> verticesRemaining, vertexTouchedByRemovedEdge;
+    // vector of vectors of the children
+    std::vector < std::vector<int> > childrenVertices;
+    // The vertices passed as an argument to the InitGPrime method, used for creating an answer
+    std::vector<int> verticesToIncludeInCover;
+    // set of vertices remaining, removed as vertices become degree 0
+    std::vector<int> verticesRemaining;
+    // array of length vertexCount of booleans
+    std::vector<int> hasntBeenRemoved;
+    // Set by SetEdgesLeftToCoverParallel method
+    int edgesLeftToCover;
     
     // Following the CSR design pattern, a reference to the old degrees
     // For Original G, this comes from the ParallelKernel class
@@ -71,6 +78,7 @@ private:
     void ProcessGraph(int vertexCount);
 
     void SetMyOldsToParentsNews(Graph & g_parent);
+    void SetVerticesRemainingAndVerticesRemoved(Graph & g_parent);
     void PopulatePreallocatedMemory(Graph & g_parent);
     void PopulatePreallocatedMemoryFirstGraph(Graph & g_parent);
 
@@ -92,10 +100,8 @@ private:
             std::vector<int> & B_row_indices_ref,
             std::vector<int> & B_column_indices_ref,
             std::vector<int> & B_values_ref);
-    void RemoveNewlyDegreeZeroVertices(     std::vector<int> & verticesToRemove,
-                                            std::vector<int> & oldRowOffsets, 
-                                            std::vector<int> & oldColumnIndices, 
-                                            std::vector<int> & newRowOffsets);
+
+    void RemoveNewlyDegreeZeroVertices(std::vector<int> & verticesToRemove);
 
 };
 #endif

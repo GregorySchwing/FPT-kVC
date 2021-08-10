@@ -58,7 +58,8 @@ Graph::Graph(CSR & csr_arg):
 
 Graph::Graph(const Graph & other): csr(other.csr),
     vertexCount(other.vertexCount){
-    
+    hasntBeenRemoved.reserve(other.vertexCount);
+    verticesRemaining.reserve(other.vertexCount);
     new_degrees.reserve(other.vertexCount);
     std::cout << "Copied" << std::endl;
 }
@@ -75,6 +76,7 @@ void Graph::InitG(Graph & g_parent, std::vector<int> & S){
     PopulatePreallocatedMemoryFirstGraph(g_parent);
     SetEdgesOfSSymParallel(S); 
     SetEdgesLeftToCoverParallel();
+    RemoveNewlyDegreeZeroVertices(S);
     SetVerticesToIncludeInCover(S);
 }
 
@@ -88,10 +90,12 @@ void Graph::InitGPrime(Graph & g_parent,
     // to point to the new references of the argument
     SetParent(g_parent);
     SetMyOldsToParentsNews(g_parent);
+    SetVerticesRemainingAndVerticesRemoved(g_parent);
     PopulatePreallocatedMemory(g_parent);
     InduceSubgraph(verticesToIncludeInCover);
     SetEdgesOfSSymParallel(S); 
     SetEdgesLeftToCoverParallel();
+    RemoveNewlyDegreeZeroVertices(S);
     SetVerticesToIncludeInCover(S);
     // This line is throwing an error in valgrind
     // Conditional jump or move depends on uninitialised value(s)
@@ -105,6 +109,11 @@ void Graph::SetMyOldsToParentsNews(Graph & g_parent){
     this->GetCSR().SetOldRowOffRef(g_parent.GetCSR().GetNewRowOffRef());
     this->GetCSR().SetOldColRef(g_parent.GetCSR().GetNewColRef());
     this->GetCSR().SetOldValRef(g_parent.GetCSR().GetNewValRef());
+}
+
+void Graph::SetVerticesRemainingAndVerticesRemoved(Graph & g_parent){
+    this->SetRemainingVerticesRef(g_parent.GetRemainingVerticesRef());
+    this->SetHasntBeenRemoved(g_parent.GetHasntBeenRemoved());
 }
 
 void Graph::PopulatePreallocatedMemory(Graph & g_parent){
@@ -138,8 +147,11 @@ void Graph::ProcessGraph(int vertexCount){
     // Coming from the CSR we constructed in the process of building the graph
     std::vector<int> & old_row_offsets = *(GetCSR().GetOldRowOffRef());
     edgesLeftToCover = GetCSR().GetOldColRef()->size();
+    // iterable set of vertices with non-zero degrees
     verticesRemaining.resize(vertexCount);
     std::iota (std::begin(verticesRemaining), std::end(verticesRemaining), 0); // Fill with 0, 1, ..., 99.
+    // USed as a constant time lookup for whether a vertex has been removed
+    hasntBeenRemoved.resize(vertexCount, 1);
     old_degrees.resize(vertexCount);
     for (int i = 0; i < vertexCount; ++i){
         old_degrees[i] = old_row_offsets[i+1] - old_row_offsets[i];
@@ -176,6 +188,20 @@ void Graph::SetVertexCountFromEdges(COO * coordinateFormat){
 std::vector<int> & Graph::GetRemainingVerticesRef(){
     return verticesRemaining;
 }
+
+std::vector<int> & Graph::GetHasntBeenRemoved(){
+    return hasntBeenRemoved;
+}
+
+void Graph::SetRemainingVerticesRef(std::vector<int> & verticesRemaining_arg){
+    verticesRemaining = verticesRemaining_arg;
+}
+
+void Graph::SetHasntBeenRemoved(std::vector<int> & hasntBeenRemoved_arg){
+    hasntBeenRemoved = hasntBeenRemoved_arg;
+}
+
+
 
 int Graph::GetEdgesLeftToCover(){
     return edgesLeftToCover;
@@ -332,20 +358,21 @@ void Graph::CountingSortParallelRowwiseValues(
 }
 
 // Highly unoptimized, but should work for now
-void Graph::RemoveNewlyDegreeZeroVertices(  std::vector<int> & verticesToRemove,
-                                            std::vector<int> & oldRowOffsets, 
-                                            std::vector<int> & oldColumnIndices, 
-                                            std::vector<int> & newRowOffsets){
+void Graph::RemoveNewlyDegreeZeroVertices(std::vector<int> & verticesToRemove){
+ 
+    std::vector<int> & oldRowOffsets = *(GetCSR().GetOldRowOffRef());
+    std::vector<int> & oldColumnIndices = *(GetCSR().GetOldColRef());
+    std::vector<int> & newRowOffsets = GetCSR().GetNewRowOffRef();
+
     int i = 0, j;
-    std::vector<int> hasntBeenRemoved(vertexCount, 1);
     for (auto & v :verticesToRemove){
-        removeVertex(v, verticesRemaining);
+        removeVertex(v, GetRemainingVerticesRef());
         hasntBeenRemoved[v] = 0;
         for (i = oldRowOffsets[v]; i < oldRowOffsets[v+1]; ++i){
             j = oldColumnIndices[i];
             if(newRowOffsets[j+1] - newRowOffsets[j] == 0)
                 if (hasntBeenRemoved[j]){
-                    removeVertex(j, verticesRemaining);
+                    removeVertex(j, GetRemainingVerticesRef());
                     hasntBeenRemoved[j] = 0;
                 }
         }
@@ -385,13 +412,6 @@ void Graph::InduceSubgraph(std::vector<int> & verticesToRemoveRef){
                                             newColumnIndices,
                                             newValues);
         }
-        std::cout << "removing the vertices in verticesToRemoveRef: " << std::endl;
-        //for (auto & v : verticesToRemoveRef)
-        //    std::cout << v << " ";
-        std::cout << std::endl;
-        std::cout << "Along with all their neighbors that are now deg 0 " << std::endl;
-        RemoveNewlyDegreeZeroVertices(verticesToRemoveRef, row_offsets, column_indices, newRowOffsets);
-        std::cout << "Done" << std::endl;
 }
 
 std::vector<int> & Graph::GetNewDegRef(){

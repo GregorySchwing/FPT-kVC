@@ -2,7 +2,7 @@
 
 void ParallelB1::GenerateChildren(Graph & child_g){
 
-    std::vector< std::vector<int> > childrensVertices_ref = child_g.GetChildrenVertices();
+    std::vector< std::vector<int> > & childrensVertices_ref = child_g.GetChildrenVertices();
 
     std::vector<int> path;
     std::cout << "Grabbing a randomVertex: " <<  std::endl;
