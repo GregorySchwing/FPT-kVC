@@ -68,38 +68,70 @@ void ParallelB1::PopulateTree(int treeSize,
 }
 
 // Fill a perfect 3-ary tree to a given depth
-void ParallelB1::PopulateTreeParallelLevelWise(int numberOfLevels, 
+int ParallelB1::PopulateTreeParallelLevelWise(int numberOfLevels, 
                                 std::vector<Graph> & graphs,
                                 std::vector<int> & answer){
     // ceiling(vertexCount/2) loops
+    volatile bool flag=false;
+    std::vector<int> resultsFlags;
+    resultsFlags.reserve(int(pow(3.0, numberOfLevels-1)));
     int leafIndex;
     int levelOffset = 0;
+    int upperBound = 0;
     for (int level = 0; level < numberOfLevels; ++level){
         // level 0 - [0,1); lvlOff = 0 + 0
         // level 1 - [1,4); lvlOff = 0 + 3^0 = 1
         // level 2 - [4,13);lvlOff = 1 + 3^1 = 4
         if (level != 0)
             levelOffset += int(pow(3.0, level-1));
+        upperBound = levelOffset + int(pow(3.0, level));
+        
+        resultsFlags.clear();
+        for (int count = levelOffset; count < upperBound; ++count)
+            resultsFlags.push_back(0);
+
         #pragma omp parallel for default(none) \
-            shared(graphs, levelOffset, level, numberOfLevels) \
+            shared(graphs, levelOffset, level, numberOfLevels, upperBound, flag, resultsFlags) \
             private (leafIndex)
-        for (leafIndex = levelOffset; leafIndex < levelOffset + int(pow(3.0, level)); ++leafIndex){
+        for (leafIndex = levelOffset; leafIndex < upperBound; ++leafIndex){
+            
+            // Allows for pseudo-early termination if an answer is found
+            // All iterations which havent begun will terminate quickly
+            if(flag) continue;
+
             int result;
             result = GenerateChildren(graphs[leafIndex]);
+            if (result == -1)
+            {
+                flag = true;
+                resultsFlags[leafIndex - levelOffset] = leafIndex;
+                continue;
+            }
             // This is a strict 3-ary tree
             while (graphs[leafIndex].GetChildrenVertices().size() == 1){
                 graphs[leafIndex].ProcessImmediately(graphs[leafIndex].GetChildrenVertices().front());
                 graphs[leafIndex].GetChildrenVertices().clear();
                 result = GenerateChildren(graphs[leafIndex]);
-            }  
+                if (result == -1)
+                {
+                    flag = true;
+                    resultsFlags[leafIndex - levelOffset] = leafIndex;
+                    continue;
+                }  
             // We dont initiate the last level     
             if (level + 1 != numberOfLevels)
                 for (int c = 1; c <= 3; ++c){
                     printf("level : %d, level offset : %d, leafIndex : %d, c : %d\n", level, levelOffset, leafIndex, c);
                     graphs[3*leafIndex + c].InitGPrime(graphs[leafIndex], graphs[leafIndex].GetChildrenVertices()[c-1]);
                 }
+            }
         }
+        if (flag)
+            for(auto & v : resultsFlags)
+                if (v != 0)
+                    return v;
     }
+    return -1;
 }
 // This method can be rewritten to use fill all Graphs allocated
 // Irrespective of whether the last level is full
