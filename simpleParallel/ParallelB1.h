@@ -15,6 +15,12 @@ void static PopulateTree(int treeSize,
 void static PopulateTreeParallel(int treeSize, 
                                 std::vector<Graph> & graphs,
                                 std::vector<int> & answer);
+void static PopulateTreeParallelLevelWise(int numberOfLevels, 
+                                std::vector<Graph> & graphs,
+                                std::vector<int> & answer);
+void static PopulateTreeParallelAsymmetric(int treeSize, 
+                                std::vector<Graph> & graphs,
+                                std::vector<int> & answer);
 int static GenerateChildren( Graph & child_g);
 int static CalculateWorstCaseSpaceComplexity(int vertexCount);
 int static CalculateSpaceForDesiredNumberOfLevels(int NumberOfLevels);

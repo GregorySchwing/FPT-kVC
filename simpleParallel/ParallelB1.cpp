@@ -67,7 +67,43 @@ void ParallelB1::PopulateTree(int treeSize,
     }
 }
 
-void ParallelB1::PopulateTreeParallel(int treeSize, 
+// Fill a perfect 3-ary tree to a given depth
+void ParallelB1::PopulateTreeParallelLevelWise(int numberOfLevels, 
+                                std::vector<Graph> & graphs,
+                                std::vector<int> & answer){
+    // ceiling(vertexCount/2) loops
+    int leafIndex;
+    int levelOffset = 0;
+    for (int level = 0; level < numberOfLevels; ++level){
+        // level 0 - [0,1); lvlOff = 0 + 0
+        // level 1 - [1,4); lvlOff = 0 + 3^0 = 1
+        // level 2 - [4,13);lvlOff = 1 + 3^1 = 4
+        if (level != 0)
+            levelOffset += int(pow(3.0, level-1));
+        #pragma omp parallel for default(none) \
+            shared(graphs, levelOffset, level, numberOfLevels) \
+            private (leafIndex)
+        for (leafIndex = levelOffset; leafIndex < levelOffset + int(pow(3.0, level)); ++leafIndex){
+            int result;
+            result = GenerateChildren(graphs[leafIndex]);
+            // This is a strict 3-ary tree
+            while (graphs[leafIndex].GetChildrenVertices().size() == 1){
+                graphs[leafIndex].ProcessImmediately(graphs[leafIndex].GetChildrenVertices().front());
+                graphs[leafIndex].GetChildrenVertices().clear();
+                result = GenerateChildren(graphs[leafIndex]);
+            }  
+            // We dont initiate the last level     
+            if (level + 1 != numberOfLevels)
+                for (int c = 1; c <= 3; ++c){
+                    printf("level : %d, level offset : %d, leafIndex : %d, c : %d\n", level, levelOffset, leafIndex, c);
+                    graphs[3*leafIndex + c].InitGPrime(graphs[leafIndex], graphs[leafIndex].GetChildrenVertices()[c-1]);
+                }
+        }
+    }
+}
+// This method can be rewritten to use fill all Graphs allocated
+// Irrespective of whether the last level is full
+void ParallelB1::PopulateTreeParallelAsymmetric(int treeSize, 
                                 std::vector<Graph> & graphs,
                                 std::vector<int> & answer){
     // ceiling(vertexCount/2) loops

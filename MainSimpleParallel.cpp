@@ -40,14 +40,17 @@ int main(int argc, char *argv[])
     } else{
         std::cout << "|G'(E)| <= k*k', a solution may exist" << std::endl;
     }
-    int treeSize = 200000;
+    //int treeSize = 200000;
+    int numberOfLevels = 5;
+    int treeSize = ParallelB1::CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
     std::vector< Graph > graphs(treeSize, Graph(g));
     std::vector<int> mpt;
     graphs[0].InitGPrime(g, mpt);
     graphs[0].SetVerticesToIncludeInCover(g.GetVerticesThisGraphIncludedInTheCover());
     //std::swap(graphs[0], gPrime);
     std::vector<int> answer;
-    ParallelB1::PopulateTree(treeSize, graphs, answer);
+    //ParallelB1::PopulateTree(treeSize, graphs, answer);
+    ParallelB1::PopulateTreeParallelLevelWise(numberOfLevels, graphs, answer);
     for (auto & v: answer)
         std::cout << v << " ";
     std::cout << std::endl;
