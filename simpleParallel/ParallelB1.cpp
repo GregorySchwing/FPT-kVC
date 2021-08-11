@@ -10,6 +10,15 @@ int ParallelB1::CalculateWorstCaseSpaceComplexity(int vertexCount){
     return summand;
 }
 
+int ParallelB1::CalculateSpaceForDesiredNumberOfLevels(int NumberOfLevels){
+    int summand= 0;
+    // ceiling(vertexCount/2) loops
+    for (int i = 0; i < NumberOfLevels; ++i)
+        summand += pow (3.0, i);
+    return summand;
+}
+
+
 // Logic of the tree
     // Every level decreases the number of remaining vertices by at least 2
     // more sophisticate analysis could be performed by analyzing the graph
@@ -66,29 +75,25 @@ void ParallelB1::PopulateTreeParallel(int treeSize,
     int leafIndex;
     int levelOffset = 0;
     for (int level = 0; level < numberOfLevels; ++level){
-        // level 0 - [0,1)
-        if (level == 0){
-            levelOffset = 0;
-        // level 1 - [1, 4)
-        } else if (level != 1){
-            levelOffset = int(pow(3.0, level-1));
-        // level 2 - [4, 13)
-        } else{
-            levelOffset = int(pow(3.0, level-1))+1;
-        }
+        // level 0 - [0,1); lvlOff = 0 + 0
+        // level 1 - [1,4); lvlOff = 0 + 3^0 = 1
+        // level 2 - [4,13);lvlOff = 1 + 3^1 = 4
+        if (level != 0)
+            levelOffset += int(pow(3.0, level-1));
         #pragma omp parallel for default(none) \
                             shared(graphs, levelOffset, level) \
                             private (leafIndex)
         for (leafIndex = levelOffset; leafIndex < levelOffset + int(pow(3.0, level)); ++leafIndex){
             int result;
             result = GenerateChildren(graphs[leafIndex]);
+            // This is a strict 3-ary tree
             while (graphs[leafIndex].GetChildrenVertices().size() == 1){
                 graphs[leafIndex].ProcessImmediately(graphs[leafIndex].GetChildrenVertices().front());
                 graphs[leafIndex].GetChildrenVertices().clear();
                 result = GenerateChildren(graphs[leafIndex]);
             }       
             for (int c = 1; c <= 3; ++c){
-                printf("leafIndex : %d, c : %d\n", leafIndex, c);
+                printf("level : %d, level offset : %d, leafIndex : %d, c : %d\n", level, levelOffset, leafIndex, c);
                 graphs[3*leafIndex + c].InitGPrime(graphs[leafIndex], graphs[leafIndex].GetChildrenVertices()[c-1]);
             }
         }

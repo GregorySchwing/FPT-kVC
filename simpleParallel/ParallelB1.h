@@ -17,6 +17,9 @@ void static PopulateTreeParallel(int treeSize,
                                 std::vector<int> & answer);
 int static GenerateChildren( Graph & child_g);
 int static CalculateWorstCaseSpaceComplexity(int vertexCount);
+int static CalculateSpaceForDesiredNumberOfLevels(int NumberOfLevels);
+
+
 private:
     void static TraverseUpTree(int index, 
                                 std::vector<Graph> & graphs,
