@@ -16,9 +16,10 @@ int main(int argc, char *argv[])
     std::cout << "Building G" << std::endl;
     //Graph g("small.csv");
     COO coordinateFormat;
-    std::string filename = "small.csv";
-//    coordinateFormat.BuildCOOFromFile(filename);
-    coordinateFormat.BuildTheExampleCOO();
+//    std::string filename = "small.csv";
+    std::string filename = "25.csv";
+    coordinateFormat.BuildCOOFromFile(filename);
+    //coordinateFormat.BuildTheExampleCOO();
 
     coordinateFormat.SetVertexCountFromEdges();
     std::vector< std::vector<int> > vectorOfConnectedComponents;
@@ -30,8 +31,8 @@ int main(int argc, char *argv[])
     }
     CSR csr(coordinateFormat);
     Graph g(csr);
-//    int k = 25;
-    int k = 4;
+    int k = 25;
+    //int k = 4;
     ParallelKernelization sk(g, k);
     sk.TestAValueOfK(k);
     bool noSolutionExists = sk.EdgeCountKernel();
@@ -41,8 +42,18 @@ int main(int argc, char *argv[])
         std::cout << "|G'(E)| <= k*k', a solution may exist" << std::endl;
     }
     //int treeSize = 200000;
-    int numberOfLevels = 5;
-    int treeSize = ParallelB1::CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
+    int numberOfLevels = 15;
+    long long treeSize = ParallelB1::CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
+    long long sizeOfSingleGraph = sizeof(g);
+    long long totalMem = sizeOfSingleGraph * treeSize;
+    std::cout << "You are about to allocate " << totalMem << " bytes (total)" << std::endl;
+    std::cout << "You are about to allocate " << double(totalMem)/1024 << " KB (total)" << std::endl;
+    std::cout << "You are about to allocate " << double(totalMem)/1024/1024 << " MB (total)" << std::endl;
+    std::cout << "You are about to allocate " << double(totalMem)/1024/1024/1024 << " GB (total)" << std::endl;
+    do 
+    {
+        std::cout << '\n' << "Press a key to continue...; ctrl-c to terminate";
+    } while (std::cin.get() != '\n');
     std::vector< Graph > graphs(treeSize, Graph(g));
     std::vector<int> mpt;
     graphs[0].InitGPrime(g, mpt);

@@ -10,8 +10,8 @@ int ParallelB1::CalculateWorstCaseSpaceComplexity(int vertexCount){
     return summand;
 }
 
-int ParallelB1::CalculateSpaceForDesiredNumberOfLevels(int NumberOfLevels){
-    int summand= 0;
+long long ParallelB1::CalculateSpaceForDesiredNumberOfLevels(int NumberOfLevels){
+    long long summand= 0;
     // ceiling(vertexCount/2) loops
     for (int i = 0; i < NumberOfLevels; ++i)
         summand += pow (3.0, i);
@@ -73,21 +73,28 @@ int ParallelB1::PopulateTreeParallelLevelWise(int numberOfLevels,
                                 std::vector<int> & answer){
     // ceiling(vertexCount/2) loops
     volatile bool flag=false;
-    std::vector<int> resultsFlags;
-    resultsFlags.reserve(int(pow(3.0, numberOfLevels-1)));
-    int leafIndex;
-    int levelOffset = 0;
-    int upperBound = 0;
+    std::vector<long long> resultsFlags;
+    long long maximumLevelSize = pow(3.0, numberOfLevels-1);
+    resultsFlags.reserve(maximumLevelSize);
+    long long leafIndex;
+    long long levelOffset = 0;
+    long long upperBound = 0;
+    long long previousLevelSize = 0;
+    long long thisLevelSize = 0;
+    long long count = 0;
     for (int level = 0; level < numberOfLevels; ++level){
         // level 0 - [0,1); lvlOff = 0 + 0
         // level 1 - [1,4); lvlOff = 0 + 3^0 = 1
         // level 2 - [4,13);lvlOff = 1 + 3^1 = 4
-        if (level != 0)
-            levelOffset += int(pow(3.0, level-1));
-        upperBound = levelOffset + int(pow(3.0, level));
+        if (level != 0){
+            previousLevelSize = thisLevelSize;
+            levelOffset += previousLevelSize;
+        }
+        thisLevelSize = pow(3.0, level);
+        upperBound = levelOffset + thisLevelSize;
         
         resultsFlags.clear();
-        for (int count = levelOffset; count < upperBound; ++count)
+        for (count = levelOffset; count < upperBound; ++count)
             resultsFlags.push_back(-1);
 
         #pragma omp parallel for default(none) \
@@ -121,7 +128,7 @@ int ParallelB1::PopulateTreeParallelLevelWise(int numberOfLevels,
             // We dont initiate the last level and we stop if we cant make more children 
             if (level + 1 != numberOfLevels && result != -1)
                 for (int c = 1; c <= 3; ++c){
-                    printf("level : %d, level offset : %d, leafIndex : %d, c : %d\n", level, levelOffset, leafIndex, c);
+                    printf("level : %d, level offset : %lld, leafIndex : %lld, c : %d\n", level, levelOffset, leafIndex, c);
                     graphs[3*leafIndex + c].InitGPrime(graphs[leafIndex], graphs[leafIndex].GetChildrenVertices()[c-1]);
                 }
         }
