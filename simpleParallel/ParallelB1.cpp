@@ -99,6 +99,7 @@ int ParallelB1::PopulateTreeParallelLevelWise(int numberOfLevels,
             // All iterations which havent begun will terminate quickly
     //        if(flag) continue;
 
+            if (flag) continue;
             int result;
             result = GenerateChildren(graphs[leafIndex]);
             if (result == -1)
