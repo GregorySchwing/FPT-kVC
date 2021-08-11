@@ -88,7 +88,7 @@ int ParallelB1::PopulateTreeParallelLevelWise(int numberOfLevels,
         
         resultsFlags.clear();
         for (int count = levelOffset; count < upperBound; ++count)
-            resultsFlags.push_back(0);
+            resultsFlags.push_back(-1);
 
         #pragma omp parallel for default(none) \
             shared(graphs, levelOffset, level, numberOfLevels, upperBound, flag, resultsFlags) \
@@ -122,13 +122,14 @@ int ParallelB1::PopulateTreeParallelLevelWise(int numberOfLevels,
             if (level + 1 != numberOfLevels)
                 for (int c = 1; c <= 3; ++c){
                     printf("level : %d, level offset : %d, leafIndex : %d, c : %d\n", level, levelOffset, leafIndex, c);
+                    if(flag) continue;
                     graphs[3*leafIndex + c].InitGPrime(graphs[leafIndex], graphs[leafIndex].GetChildrenVertices()[c-1]);
                 }
             }
         }
         if (flag)
             for(auto & v : resultsFlags)
-                if (v != 0)
+                if (v != -1)
                     return v;
     }
     return -1;

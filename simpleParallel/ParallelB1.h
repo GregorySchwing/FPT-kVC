@@ -24,12 +24,12 @@ void static PopulateTreeParallelAsymmetric(int treeSize,
 int static GenerateChildren( Graph & child_g);
 int static CalculateWorstCaseSpaceComplexity(int vertexCount);
 int static CalculateSpaceForDesiredNumberOfLevels(int NumberOfLevels);
+void static TraverseUpTree(int index, 
+                            std::vector<Graph> & graphs,
+                            std::vector<int> & answer);
 
 
 private:
-    void static TraverseUpTree(int index, 
-                                std::vector<Graph> & graphs,
-                                std::vector<int> & answer);
     void static DFS(std::vector<int> & new_row_off,
                     std::vector<int> & new_col_ref,
                     std::vector<int> & new_vals_ref,

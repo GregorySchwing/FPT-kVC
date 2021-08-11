@@ -17,8 +17,8 @@ int main(int argc, char *argv[])
     //Graph g("small.csv");
     COO coordinateFormat;
     std::string filename = "small.csv";
-    coordinateFormat.BuildCOOFromFile(filename);
-    //coordinateFormat.BuildTheExampleCOO();
+//    coordinateFormat.BuildCOOFromFile(filename);
+    coordinateFormat.BuildTheExampleCOO();
 
     coordinateFormat.SetVertexCountFromEdges();
     std::vector< std::vector<int> > vectorOfConnectedComponents;
@@ -30,8 +30,8 @@ int main(int argc, char *argv[])
     }
     CSR csr(coordinateFormat);
     Graph g(csr);
-    int k = 25;
-    //int k = 4;
+//    int k = 25;
+    int k = 4;
     ParallelKernelization sk(g, k);
     sk.TestAValueOfK(k);
     bool noSolutionExists = sk.EdgeCountKernel();
@@ -50,11 +50,16 @@ int main(int argc, char *argv[])
     //std::swap(graphs[0], gPrime);
     std::vector<int> answer;
     //ParallelB1::PopulateTree(treeSize, graphs, answer);
-    ParallelB1::PopulateTreeParallelLevelWise(numberOfLevels, graphs, answer);
-    for (auto & v: answer)
-        std::cout << v << " ";
+    int result = ParallelB1::PopulateTreeParallelLevelWise(numberOfLevels, graphs, answer);
     std::cout << std::endl;
-    
+    if (result != -1){
+        ParallelB1::TraverseUpTree(result, graphs, answer);    
+        std::cout << std::endl;
+        std::cout << "Found an answer" << std::endl;
+        for (auto & v: answer)
+            std::cout << v << " ";
+        std::cout << std::endl;
+    }
     
 /* 
 

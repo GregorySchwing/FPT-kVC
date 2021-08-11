@@ -15,7 +15,7 @@ Graph::Graph(const Graph & other): csr(other.csr),
     hasntBeenRemoved.reserve(other.vertexCount);
     verticesRemaining.reserve(other.vertexCount);
     new_degrees.reserve(other.vertexCount);
-    std::cout << "Copied" << std::endl;
+//    std::cout << "Copied" << std::endl;
 }
 
 std::vector<int> & Graph::GetVerticesThisGraphIncludedInTheCover(){
@@ -45,10 +45,11 @@ void Graph::InitGPrime(Graph & g_parent,
         std::cout << "error" << std::endl;
     std::cout << "Entered constructor of G induced" << std::endl;
     std::cout << "S :" << std::endl;
-    for (auto & v : S)
-        std::cout << v << " ";
-    std::cout << std::endl;
-
+    if (!S.empty())
+        for (auto v : S){
+            std::cout << v << " ";
+            std::cout << std::endl;
+        }
     // Sets the old references of the new csr 
     // to point to the new references of the argument
     // Pendant edges are processed immediately without spawning children

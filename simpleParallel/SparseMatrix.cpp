@@ -25,7 +25,7 @@ SparseMatrix::SparseMatrix(const SparseMatrix & s):
 size(s.size), 
 numberOfRows(s.numberOfRows), 
 numberOfColumns(s.numberOfColumns){
-    std::cout << "Setting size, numRows, numCols - Reserving new_vals" << std::endl;
+//    std::cout << "Setting size, numRows, numCols - Reserving new_vals" << std::endl;
     // A copy for writing purposes
     new_values.reserve(s.size);
 }
