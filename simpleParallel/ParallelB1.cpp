@@ -97,7 +97,7 @@ int ParallelB1::PopulateTreeParallelLevelWise(int numberOfLevels,
             
             // Allows for pseudo-early termination if an answer is found
             // All iterations which havent begun will terminate quickly
-            if(flag) continue;
+    //        if(flag) continue;
 
             int result;
             result = GenerateChildren(graphs[leafIndex]);
@@ -105,7 +105,6 @@ int ParallelB1::PopulateTreeParallelLevelWise(int numberOfLevels,
             {
                 flag = true;
                 resultsFlags[leafIndex - levelOffset] = leafIndex;
-                continue;
             }
             // This is a strict 3-ary tree
             while (graphs[leafIndex].GetChildrenVertices().size() == 1){
@@ -116,16 +115,14 @@ int ParallelB1::PopulateTreeParallelLevelWise(int numberOfLevels,
                 {
                     flag = true;
                     resultsFlags[leafIndex - levelOffset] = leafIndex;
-                    continue;
                 }  
-            // We dont initiate the last level     
-            if (level + 1 != numberOfLevels)
+            }
+            // We dont initiate the last level and we stop if we cant make more children 
+            if (level + 1 != numberOfLevels && result != -1)
                 for (int c = 1; c <= 3; ++c){
                     printf("level : %d, level offset : %d, leafIndex : %d, c : %d\n", level, levelOffset, leafIndex, c);
-                    if(flag) continue;
                     graphs[3*leafIndex + c].InitGPrime(graphs[leafIndex], graphs[leafIndex].GetChildrenVertices()[c-1]);
                 }
-            }
         }
         if (flag)
             for(auto & v : resultsFlags)
