@@ -48,6 +48,7 @@ public:
     void InduceSubgraph();
     int GetVertexCount();
     void PrintEdgesOfS();
+    void PrintEdgesRemaining();
     bool GPrimeEdgesGreaterKTimesKPrime(int k, int kPrime);
     std::vector< std::vector<int> > & GetChildrenVertices();
     void SetVerticesToIncludeInCover(std::vector<int> & verticesRef);

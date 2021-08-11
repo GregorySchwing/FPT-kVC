@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
     //Graph g("small.csv");
     COO coordinateFormat;
 //    std::string filename = "small.csv";
-    std::string filename = "25.csv";
+    std::string filename = "25_nodes.csv";
     coordinateFormat.BuildCOOFromFile(filename);
     //coordinateFormat.BuildTheExampleCOO();
 
@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
     }
     CSR csr(coordinateFormat);
     Graph g(csr);
-    int k = 25;
+    int k = 9;
     //int k = 4;
     ParallelKernelization sk(g, k);
     sk.TestAValueOfK(k);
@@ -78,6 +78,17 @@ int main(int argc, char *argv[])
             std::cout << v << " ";
         std::cout << std::endl;
     }
+
+    COO coordinateFormatTest;
+//    std::string filename = "small.csv";
+    //std::string filename = "25_nodes.csv";
+    coordinateFormatTest.BuildCOOFromFile(filename);
+    coordinateFormatTest.SetVertexCountFromEdges();
+    CSR csrTest(coordinateFormatTest);
+    Graph gTest(csrTest);
+    gTest.InitG(gTest, answer);
+    std::cout << "Edges remaining in original graph after removing answer : " << gTest.GetEdgesLeftToCover() << std::endl;
+    gTest.PrintEdgesRemaining();    
     
 /* 
 

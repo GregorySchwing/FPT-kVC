@@ -437,6 +437,19 @@ void Graph::PrintEdgesOfS(){
     std::cout << "}" << std::endl;
 }
 
+void Graph::PrintEdgesRemaining(){
+    std::cout << "E(G') = {";
+    int i, u, v;
+    for (u = 0; u < vertexCount; ++u){
+        for (i = (*(csr.old_row_offsets_ref))[u]; i < (*(csr.old_row_offsets_ref))[u+1]; ++i){
+            v = (*(csr.old_column_indices_ref))[i];
+            if(csr.new_values[i])
+                std::cout << "(" << u << ", " << v << "), ";
+        }
+    }
+    std::cout << "}" << std::endl;
+}
+
 bool Graph::GPrimeEdgesGreaterKTimesKPrime(int k, int kPrime){
     int kTimesKPrime = k * kPrime;
     if (edgesLeftToCover/2 > kTimesKPrime)
