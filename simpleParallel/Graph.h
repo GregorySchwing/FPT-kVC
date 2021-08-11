@@ -88,7 +88,9 @@ private:
     void PopulatePreallocatedMemoryFirstGraph(Graph & g_parent);
 
     void SetVertexCountFromEdges(COO * coordinateFormat);
-    void SetEdgesOfSSymParallel(std::vector<int> & S);
+    void SetEdgesOfSSymParallel(std::vector<int> & S,
+                                std::vector<int> & row_offsets_ref,
+                                std::vector<int> & column_indices_ref);
     void SetEdgesLeftToCoverParallel(std::vector<int> & row_offsets);
     void SetNewRowOffsets(std::vector<int> & newRowOffsetsRef);
     void SetOldDegRef(std::vector<int> & old_deg_ref);
@@ -108,7 +110,8 @@ private:
             //std::vector<int> & B_values_ref);
 
     void RemoveNewlyDegreeZeroVertices(std::vector<int> & verticesToRemove,
-                                        std::vector<int> & oldRowOffets);
+                                        std::vector<int> & oldRowOffets,
+                                        std::vector<int> & oldColumnIndices);
 
 };
 #endif

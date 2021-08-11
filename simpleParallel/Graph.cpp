@@ -31,9 +31,9 @@ void Graph::SetVerticesToIncludeInCover(std::vector<int> & verticesRef){
 
 void Graph::InitG(Graph & g_parent, std::vector<int> & S){
     PopulatePreallocatedMemoryFirstGraph(g_parent);
-    SetEdgesOfSSymParallel(S); 
+    SetEdgesOfSSymParallel(S, *(GetCSR().GetOldRowOffRef()), *(GetCSR().GetOldColRef())); 
     SetEdgesLeftToCoverParallel(*(GetCSR().GetOldRowOffRef()));
-    RemoveNewlyDegreeZeroVertices(S, *(GetCSR().GetOldRowOffRef()));
+    RemoveNewlyDegreeZeroVertices(S, *(GetCSR().GetOldRowOffRef()), *(GetCSR().GetOldColRef()));
     SetVerticesToIncludeInCover(S);
 }
 
@@ -41,6 +41,8 @@ void Graph::InitG(Graph & g_parent, std::vector<int> & S){
 void Graph::InitGPrime(Graph & g_parent, 
                         std::vector<int> & S)
 {        
+    if (verticesRemaining.size() != 0)
+        std::cout << "error" << std::endl;
     std::cout << "Entered constructor of G induced" << std::endl;
     std::cout << "S :" << std::endl;
     for (auto & v : S)
@@ -58,9 +60,9 @@ void Graph::InitGPrime(Graph & g_parent,
     InduceSubgraph();
     // Just copy old degrees to new degrees
     if(S.size() != 0){
-        SetEdgesOfSSymParallel(S); 
+        SetEdgesOfSSymParallel(S, GetCSR().GetNewRowOffRef(), GetCSR().GetNewColRef()); 
         SetEdgesLeftToCoverParallel(GetCSR().GetNewRowOffRef());
-        RemoveNewlyDegreeZeroVertices(S, *(GetCSR().GetOldRowOffRef()));
+        RemoveNewlyDegreeZeroVertices(S, GetCSR().GetNewRowOffRef(), GetCSR().GetNewColRef());
         SetVerticesToIncludeInCover(S);
     } else {
         new_degrees = GetOldDegRef();
@@ -73,9 +75,9 @@ void Graph::InitGPrime(Graph & g_parent,
 void Graph::ProcessImmediately(std::vector<int> & S){
     for(auto & v : new_degrees)
         v = 0;
-    SetEdgesOfSSymParallel(S); 
+    SetEdgesOfSSymParallel(S, GetCSR().GetNewRowOffRef(), GetCSR().GetNewColRef()); 
     SetEdgesLeftToCoverParallel(GetCSR().GetNewRowOffRef());
-    RemoveNewlyDegreeZeroVertices(S, GetCSR().GetNewRowOffRef());
+    RemoveNewlyDegreeZeroVertices(S, GetCSR().GetNewRowOffRef(), GetCSR().GetNewColRef());
     //for(auto & v : GetCSR().GetNewRowOffRef())
     //    v = 0;
     //CalculateNewRowOffsets(GetNewDegRef());
@@ -233,12 +235,12 @@ void Graph::removeVertex(int vertexToRemove, std::vector<int> & verticesRemainin
         
 }
 
-void Graph::SetEdgesOfSSymParallel(std::vector<int> & S){
+void Graph::SetEdgesOfSSymParallel(std::vector<int> & S,
+                                    std::vector<int> & row_offsets_ref,
+                                    std::vector<int> & column_indices_ref){
     int v, intraRowOffset;
     std::vector<int>::iterator low;
     int test;
-    std::vector<int> & row_offsets_ref = *(GetCSR().GetOldRowOffRef());
-    std::vector<int> & column_indices_ref = *(GetCSR().GetOldColRef());
     std::vector<int> & values = GetCSR().GetNewValRef();
     for (auto u : S)
     {
@@ -349,10 +351,9 @@ void Graph::CountingSortParallelRowwiseValues(
 
 // Highly unoptimized, but should work for now
 void Graph::RemoveNewlyDegreeZeroVertices(std::vector<int> & verticesToRemove,
-                                            std::vector<int> & oldRowOffsets){
+                                            std::vector<int> & oldRowOffsets,
+                                            std::vector<int> & oldColumnIndices){
  
-    std::vector<int> & oldColumnIndices = *(GetCSR().GetOldColRef());
-
     int i = 0, j;
     for (auto & v :verticesToRemove){
         removeVertex(v, GetRemainingVerticesRef());

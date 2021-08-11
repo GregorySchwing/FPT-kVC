@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     }
     CSR csr(coordinateFormat);
     Graph g(csr);
-    int k = 19;
+    int k = 25;
     //int k = 4;
     ParallelKernelization sk(g, k);
     sk.TestAValueOfK(k);
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
     } else{
         std::cout << "|G'(E)| <= k*k', a solution may exist" << std::endl;
     }
-    int treeSize = 20000;
+    int treeSize = 200000;
     std::vector< Graph > graphs(treeSize, Graph(g));
     std::vector<int> mpt;
     graphs[0].InitGPrime(g, mpt);
