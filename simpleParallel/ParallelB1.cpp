@@ -58,6 +58,42 @@ void ParallelB1::PopulateTree(int treeSize,
     }
 }
 
+void ParallelB1::PopulateTreeParallel(int treeSize, 
+                                std::vector<Graph> & graphs,
+                                std::vector<int> & answer){
+    // ceiling(vertexCount/2) loops
+    int numberOfLevels = int(log(treeSize) / log(3));
+    int leafIndex;
+    int levelOffset = 0;
+    for (int level = 0; level < numberOfLevels; ++level){
+        // level 0 - [0,1)
+        if (level == 0){
+            levelOffset = 0;
+        // level 1 - [1, 4)
+        } else if (level != 1){
+            levelOffset = int(pow(3.0, level-1));
+        // level 2 - [4, 13)
+        } else{
+            levelOffset = int(pow(3.0, level-1))+1;
+        }
+        #pragma omp parallel for default(none) \
+                            shared(graphs, levelOffset, level) \
+                            private (leafIndex)
+        for (leafIndex = levelOffset; leafIndex < levelOffset + int(pow(3.0, level)); ++leafIndex){
+            int result;
+            result = GenerateChildren(graphs[leafIndex]);
+            while (graphs[leafIndex].GetChildrenVertices().size() == 1){
+                graphs[leafIndex].ProcessImmediately(graphs[leafIndex].GetChildrenVertices().front());
+                graphs[leafIndex].GetChildrenVertices().clear();
+                result = GenerateChildren(graphs[leafIndex]);
+            }       
+            for (int c = 1; c <= 3; ++c){
+                printf("leafIndex : %d, c : %d\n", leafIndex, c);
+                graphs[3*leafIndex + c].InitGPrime(graphs[leafIndex], graphs[leafIndex].GetChildrenVertices()[c-1]);
+            }
+        }
+    }
+}
 
 int ParallelB1::GenerateChildren(Graph & child_g){
 

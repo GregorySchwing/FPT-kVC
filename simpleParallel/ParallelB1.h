@@ -12,6 +12,9 @@ public:
 void static PopulateTree(int treeSize, 
                                 std::vector<Graph> & graphs,
                                 std::vector<int> & answer);
+void static PopulateTreeParallel(int treeSize, 
+                                std::vector<Graph> & graphs,
+                                std::vector<int> & answer);
 int static GenerateChildren( Graph & child_g);
 int static CalculateWorstCaseSpaceComplexity(int vertexCount);
 private:
