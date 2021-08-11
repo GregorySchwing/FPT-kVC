@@ -4,11 +4,19 @@
 #include <memory>
 #include "simpleParallel/ConnectednessTest.h"
 #include "simpleParallel/ParallelB1.h"
+#include <unistd.h>
+
 
 //#include "simpleParallel/COO.h"
 //#include "simpleParallel/CSR.h"
 //#include "gpu/COO.cuh"
 
+unsigned long long getTotalSystemMemory()
+{
+    long pages = sysconf(_SC_PHYS_PAGES);
+    long page_size = sysconf(_SC_PAGE_SIZE);
+    return pages * page_size;
+}
 
 int main(int argc, char *argv[])
 {
@@ -46,10 +54,9 @@ int main(int argc, char *argv[])
     long long treeSize = ParallelB1::CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
     long long sizeOfSingleGraph = sizeof(g);
     long long totalMem = sizeOfSingleGraph * treeSize;
-    std::cout << "You are about to allocate " << totalMem << " bytes (total)" << std::endl;
-    std::cout << "You are about to allocate " << double(totalMem)/1024 << " KB (total)" << std::endl;
-    std::cout << "You are about to allocate " << double(totalMem)/1024/1024 << " MB (total)" << std::endl;
-    std::cout << "You are about to allocate " << double(totalMem)/1024/1024/1024 << " GB (total)" << std::endl;
+    long long memAvail = getTotalSystemMemory();
+    std::cout << "You are about to allocate " << double(totalMem)/1024/1024/1024 << " GB" << std::endl;
+    std::cout << "Your system has " << double(memAvail)/1024/1024/1024 << " GB available" << std::endl;
     do 
     {
         std::cout << '\n' << "Press a key to continue...; ctrl-c to terminate";
