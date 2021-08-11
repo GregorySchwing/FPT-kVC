@@ -107,19 +107,25 @@ void ParallelB1::PopulateTreeParallelAsymmetric(int treeSize,
                                 std::vector<Graph> & graphs,
                                 std::vector<int> & answer){
     // ceiling(vertexCount/2) loops
-    int numberOfLevels = int(log(treeSize) / log(3));
+    int numberOfLevels = int(ceil(log(treeSize) / log(3)));
     int leafIndex;
     int levelOffset = 0;
+    int upperBound = 0;
     for (int level = 0; level < numberOfLevels; ++level){
         // level 0 - [0,1); lvlOff = 0 + 0
         // level 1 - [1,4); lvlOff = 0 + 3^0 = 1
         // level 2 - [4,13);lvlOff = 1 + 3^1 = 4
         if (level != 0)
             levelOffset += int(pow(3.0, level-1));
+        if (level + 1 != numberOfLevels){
+            upperBound = levelOffset + int(pow(3.0, level));
+        } else {
+            upperBound = treeSize;
+        }
         #pragma omp parallel for default(none) \
-                            shared(graphs, levelOffset, level) \
+                            shared(treeSize, graphs, levelOffset, level, upperBound) \
                             private (leafIndex)
-        for (leafIndex = levelOffset; leafIndex < levelOffset + int(pow(3.0, level)); ++leafIndex){
+        for (leafIndex = levelOffset; leafIndex < upperBound; ++leafIndex){
             int result;
             result = GenerateChildren(graphs[leafIndex]);
             // This is a strict 3-ary tree
@@ -129,8 +135,10 @@ void ParallelB1::PopulateTreeParallelAsymmetric(int treeSize,
                 result = GenerateChildren(graphs[leafIndex]);
             }       
             for (int c = 1; c <= 3; ++c){
-                printf("level : %d, level offset : %d, leafIndex : %d, c : %d\n", level, levelOffset, leafIndex, c);
-                graphs[3*leafIndex + c].InitGPrime(graphs[leafIndex], graphs[leafIndex].GetChildrenVertices()[c-1]);
+                if (3*leafIndex + c < treeSize){
+                    printf("level : %d, level offset : %d, leafIndex : %d, c : %d\n", level, levelOffset, leafIndex, c);
+                    graphs[3*leafIndex + c].InitGPrime(graphs[leafIndex], graphs[leafIndex].GetChildrenVertices()[c-1]);
+                }
             }
         }
     }
