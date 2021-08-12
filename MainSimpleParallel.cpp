@@ -52,7 +52,9 @@ int main(int argc, char *argv[])
     //int treeSize = 200000;
     int numberOfLevels = 15;
     long long treeSize = ParallelB1::CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
-    long long sizeOfSingleGraph = sizeof(g);
+    long long expandedData = g.GetEdgesLeftToCover();
+    long long condensedData = g.GetVertexCount();
+    long long sizeOfSingleGraph = expandedData*2*sizeof(int) + 2*condensedData*sizeof(int);
     long long totalMem = sizeOfSingleGraph * treeSize;
     long long memAvail = getTotalSystemMemory();
     std::cout << "You are about to allocate " << double(totalMem)/1024/1024/1024 << " GB" << std::endl;
