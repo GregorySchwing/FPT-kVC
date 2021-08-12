@@ -95,8 +95,8 @@ void Graph::SetMyOldsToParentsNews(Graph & g_parent){
 }
 
 void Graph::SetVerticesRemainingAndVerticesRemoved(Graph & g_parent){
-    this->SetRemainingVertices(g_parent.GetRemainingVertices());
-    this->SetHasntBeenRemoved(g_parent.GetHasntBeenRemoved());
+    this->SetRemainingVertices(g_parent.GetRemainingVerticesRef());
+    this->SetHasntBeenRemoved(g_parent.GetHasntBeenRemovedRef());
 }
 
 void Graph::PopulatePreallocatedMemory(Graph & g_parent){
@@ -180,11 +180,15 @@ std::vector<int> Graph::GetHasntBeenRemoved(){
     return hasntBeenRemoved;
 }
 
-void Graph::SetRemainingVertices(std::vector<int> verticesRemaining_arg){
+std::vector<int> & Graph::GetHasntBeenRemovedRef(){
+    return hasntBeenRemoved;
+}
+
+void Graph::SetRemainingVertices(std::vector<int> & verticesRemaining_arg){
     verticesRemaining = verticesRemaining_arg;
 }
 
-void Graph::SetHasntBeenRemoved(std::vector<int> hasntBeenRemoved_arg){
+void Graph::SetHasntBeenRemoved(std::vector<int> &  hasntBeenRemoved_arg){
     hasntBeenRemoved = hasntBeenRemoved_arg;
 }
 
