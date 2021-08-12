@@ -78,6 +78,9 @@ void COO::BuildTheExampleCOO(){
     addEdgeToMap(5,8,1);
     addEdgeToMap(6,9,1);
 
+    for (auto & edge : orderedMap)
+        addEdge(edge.first.first, edge.first.second, edge.second);
+
     size = new_values.size();
     // vlog(e)
     //sortMyself();
