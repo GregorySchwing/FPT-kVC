@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include "../common/CSVRange.h"
+#include "../lib/CSVRange.h"
 #include  <iterator>
 #include <algorithm> /* rand */
 #include <map>

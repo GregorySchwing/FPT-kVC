@@ -1,14 +1,3 @@
-set(sources_common
-    common/CSVIterator.cpp
-    common/CSVRange.cpp
-    common/CSVRow.cpp
-)
-
-set(headers_common
-    common/CSVIterator.h
-    common/CSVRange.h
-    common/CSVRow.h
-)
 
 set(sources_cpu_serial 
     MainSerial.cpp
@@ -22,18 +11,6 @@ set(sources_cpu_serial
     serial/SequentialKernelization.cpp
     serial/SparseMatrix.cpp
    )
-
-set(sources_cpu_parallel 
-    MainOpenMP.cpp
-    openmp/COO.cpp
-    openmp/CSR.cpp
-    openmp/Graph.cpp
-    openmp/LinearTimeDegreeSort.cpp
-    openmp/ParallelB1.cpp   
-    openmp/ParallelKernelization.cpp
-    openmp/SparseMatrix.cpp
-   )
-
 
 set(sources_simple_parallel 
     MainSimpleParallel.cpp
@@ -68,16 +45,6 @@ set(headers_cpu_serial
     serial/SparseMatrix.h
    )
 
-set(headers_cpu_parallel 
-    openmp/COO.h
-    openmp/CSR.h
-    openmp/Graph.h
-    openmp/LinearTimeDegreeSort.h
-    openmp/ParallelB1.h
-    openmp/ParallelKernelization.h
-    openmp/SparseMatrix.h
-   )
-
 set(headers_simple_parallel 
     simpleParallel/COO.h
     simpleParallel/CSR.h
@@ -97,15 +64,24 @@ set(headers_gpu
     gpu/SparseMatrix.cuh
    )
 
-set(libHeaders
-    lib/boost/include/dynamic_bitset.hpp
-    lib/boost/include/dynamic_bitset_fwd.hpp
-    lib/boost/include/dynamic_bitset/dynamic_bitset.hpp
-    lib/boost/include/dynamic_bitset/config.hpp
-   )
+#set(libHeaders
+#    lib/boost/include/dynamic_bitset.hpp
+#    lib/boost/include/dynamic_bitset_fwd.hpp
+#    lib/boost/include/dynamic_bitset/dynamic_bitset.hpp
+#    lib/boost/include/dynamic_bitset/config.hpp
+#   )
 
-set(libSources
-    )
+set(sources_lib
+    lib/CSVIterator.cpp
+    lib/CSVRange.cpp
+    lib/CSVRow.cpp
+)
+
+set(headers_lib
+    lib/CSVIterator.h
+    lib/CSVRange.h
+    lib/CSVRow.h
+)
 
 set(cudaHeaders
     )

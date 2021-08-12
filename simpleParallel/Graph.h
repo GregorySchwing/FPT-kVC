@@ -10,7 +10,7 @@
 #include  <random>
 #include  <iterator>
 #include "ConnectednessTest.h"
-#include "../common/CSVRange.h"
+#include "../lib/CSVRange.h"
 
 class Graph {
 public:

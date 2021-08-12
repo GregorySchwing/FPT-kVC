@@ -12,8 +12,8 @@ project(FPT)
 #include_directories(serial)
 #include_directories(lib/boost/include)
 #include_directories(lib/boost)
-#include_directories(lib)
-
+include_directories(simpleParallel)
+include_directories(test/src)
 
 #Out-of-source build
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -67,8 +67,19 @@ if (CMAKE_CUDA_COMPILER)
 #    include(${PROJECT_SOURCE_DIR}/CMake/GPU.cmake)
 endif()
 
+
+#Optional CMake Argument
+option(GTEST    "Build unit tests " OFF)
+option(GTEST_MPI    "Build unit tests - MPI Enabled" OFF)
+
+# Enable google test, for now these vars of exclusive
+if(GTEST OR GTEST_MPI)
+  enable_testing()
+  include(${PROJECT_SOURCE_DIR}/test/GoogleTest.cmake)
+endif()
+
+
 # Setup Serial version
-#include(${PROJECT_SOURCE_DIR}/CMake/CPUSerial.cmake)
 include(${PROJECT_SOURCE_DIR}/CMake/CPUParallel.cmake)
 
 # find OpenMP and set it up
