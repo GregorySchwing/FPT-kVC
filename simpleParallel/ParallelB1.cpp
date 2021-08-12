@@ -96,10 +96,11 @@ int ParallelB1::PopulateTreeParallelLevelWise(int numberOfLevels,
         resultsFlags.clear();
         for (count = levelOffset; count < upperBound; ++count)
             resultsFlags.push_back(-1);
-
+/*
         #pragma omp parallel for default(none) \
             shared(graphs, levelOffset, level, numberOfLevels, upperBound, flag, resultsFlags) \
             private (leafIndex)
+*/
         for (leafIndex = levelOffset; leafIndex < upperBound; ++leafIndex){
             
             // Allows for pseudo-early termination if an answer is found

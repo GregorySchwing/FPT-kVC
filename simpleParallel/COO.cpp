@@ -55,12 +55,12 @@ void COO::BuildCOOFromFile(std::string filename){
         //                                    std::stoi(row[1],&sz), 1);
     }
 
-    for (auto & edge : um)
-        addEdge(edge.first.first, edge.first.second, 1);
+    for (auto & edge : orderedMap)
+        addEdge(edge.first.first, edge.first.second, edge.second);
 
     size = new_values.size();
     // vlog(e)
-    sortMyself();
+    //sortMyself();
 }
 
 void COO::BuildTheExampleCOO(){
@@ -80,7 +80,7 @@ void COO::BuildTheExampleCOO(){
 
     size = new_values.size();
     // vlog(e)
-    sortMyself();
+    //sortMyself();
 }
 
 
@@ -159,8 +159,8 @@ void COO::addEdgeToMap(int u, int v, int weight){
     std::pair<int, int> in(u, v);
     std::pair<int, int> out(v, u);
 
-    um[in] = true;
-    um[out] = true;
+    orderedMap[in] = weight;
+    orderedMap[out] = weight;
 }
 
 /* Works but the amount of data is 2x */

@@ -8,18 +8,8 @@
 #include "../common/CSVRange.h"
 #include  <iterator>
 #include <algorithm> /* rand */
-#include <unordered_map>
+#include <map>
 
-// A hash function used to hash a pair of any kind
-struct hash_pair {
-    template <class T1, class T2>
-    size_t operator()(const std::pair<T1, T2>& p) const
-    {
-        auto hash1 = std::hash<T1>{}(p.first);
-        auto hash2 = std::hash<T2>{}(p.second);
-        return hash1 ^ hash2;
-    }
-};
 
 class COO final : public SparseMatrix
 {
@@ -53,7 +43,7 @@ public:
     int vertexCount;
 
 private:
-std::unordered_map<std::pair<int, int>, bool, hash_pair> um;
+std::map< std::pair<int, int>, int > orderedMap;
 bool isSorted;
 };
 #endif
