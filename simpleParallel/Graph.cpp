@@ -232,6 +232,8 @@ void Graph::removeVertex(int vertexToRemove, std::vector<int> & verticesRemainin
                 std::cout << v << " ";
             std::cout << std::endl;
             std::cout << "End of a call" << std::endl;
+
+            hasntBeenRemoved[vertexToRemove] = 0;
         }
         
 }
