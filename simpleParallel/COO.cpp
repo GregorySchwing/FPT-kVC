@@ -48,12 +48,15 @@ void COO::BuildCOOFromFile(std::string filename){
     for(auto& row: CSVRange(file, sep))
     {
         //std::cout << "adding (" << std::stoi(row[0],&sz) 
-        //<< ", " << std::stoi(row[1],&sz) << ")" << std::endl; 
-        addEdgeSymmetric(std::stoi(row[0],&sz), 
+        //<< ", " << std::stoi(row[1],&sz) << ")" << std::endl;
+        addEdgeToMap(std::stoi(row[0],&sz), 
                         std::stoi(row[1],&sz), 1);
         //coordinateFormat->addEdgeSimple(std::stoi(row[0],&sz), 
         //                                    std::stoi(row[1],&sz), 1);
     }
+
+    for (auto & edge : um)
+        addEdgeSymmetric(edge.first.first, edge.first.second, 1);
 
     size = new_values.size();
     // vlog(e)
@@ -61,19 +64,19 @@ void COO::BuildCOOFromFile(std::string filename){
 }
 
 void COO::BuildTheExampleCOO(){
-    addEdgeSymmetric(0,1,1);
-    addEdgeSymmetric(0,4,1);
-    addEdgeSymmetric(1,4,1);
-    addEdgeSymmetric(1,5,1);
-    addEdgeSymmetric(1,6,1);
-    addEdgeSymmetric(2,4,1);
-    addEdgeSymmetric(2,6,1);
-    addEdgeSymmetric(3,5,1);
-    addEdgeSymmetric(3,6,1);
-    addEdgeSymmetric(4,7,1);
-    addEdgeSymmetric(4,8,1);
-    addEdgeSymmetric(5,8,1);
-    addEdgeSymmetric(6,9,1);
+    addEdgeToMap(0,1,1);
+    addEdgeToMap(0,4,1);
+    addEdgeToMap(1,4,1);
+    addEdgeToMap(1,5,1);
+    addEdgeToMap(1,6,1);
+    addEdgeToMap(2,4,1);
+    addEdgeToMap(2,6,1);
+    addEdgeToMap(3,5,1);
+    addEdgeToMap(3,6,1);
+    addEdgeToMap(4,7,1);
+    addEdgeToMap(4,8,1);
+    addEdgeToMap(5,8,1);
+    addEdgeToMap(6,9,1);
 
     size = new_values.size();
     // vlog(e)
@@ -150,6 +153,15 @@ void COO::addEdgeASymmetric(int u, int v, int weight){
     }
 }
 
+
+/* Works but the amount of data is 2x */
+void COO::addEdgeToMap(int u, int v, int weight){
+    std::pair<int, int> in(u, v);
+    std::pair<int, int> out(v, u);
+
+    um[in] = true;
+    um[out] = true;
+}
 
 /* Works but the amount of data is 2x */
 void COO::addEdgeSymmetric(int u, int v, int weight){
