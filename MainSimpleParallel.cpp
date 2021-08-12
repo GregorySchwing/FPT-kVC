@@ -24,10 +24,10 @@ int main(int argc, char *argv[])
     std::cout << "Building G" << std::endl;
     //Graph g("small.csv");
     COO coordinateFormat;
-    std::string filename = "small.csv";
+//    std::string filename = "small.csv";
 //    std::string filename = "25_nodes.csv";
-    coordinateFormat.BuildCOOFromFile(filename);
-    //coordinateFormat.BuildTheExampleCOO();
+//    coordinateFormat.BuildCOOFromFile(filename);
+    coordinateFormat.BuildTheExampleCOO();
 
     coordinateFormat.SetVertexCountFromEdges();
     std::vector< std::vector<int> > vectorOfConnectedComponents;
@@ -39,8 +39,8 @@ int main(int argc, char *argv[])
     }
     CSR csr(coordinateFormat);
     Graph g(csr);
-    int k = 15;
-    //int k = 4;
+    //int k = 15;
+    int k = 4;
     ParallelKernelization sk(g, k);
     sk.TestAValueOfK(k);
     bool noSolutionExists = sk.EdgeCountKernel();
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
         std::cout << "|G'(E)| <= k*k', a solution may exist" << std::endl;
     }
     //int treeSize = 200000;
-    int numberOfLevels = 15;
+    int numberOfLevels = 5;
     long long treeSize = ParallelB1::CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
     long long expandedData = g.GetEdgesLeftToCover();
     long long condensedData = g.GetVertexCount();
@@ -82,9 +82,8 @@ int main(int argc, char *argv[])
     }
 
     COO coordinateFormatTest;
-//    std::string filename = "small.csv";
-    //std::string filename = "25_nodes.csv";
-    coordinateFormatTest.BuildCOOFromFile(filename);
+    coordinateFormatTest.BuildTheExampleCOO();
+//    coordinateFormatTest.BuildCOOFromFile(filename);
     coordinateFormatTest.SetVertexCountFromEdges();
     CSR csrTest(coordinateFormatTest);
     Graph gTest(csrTest);
