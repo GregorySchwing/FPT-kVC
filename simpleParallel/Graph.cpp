@@ -221,7 +221,8 @@ void Graph::removeVertex(int vertexToRemove){
                             vertexToRemove);
 
     if(!hasntBeenRemoved[vertexToRemove]){
-        if (low == std::end(verticesRemaining))
+        if (verticesRemaining[low - std::begin(verticesRemaining)] != vertexToRemove || 
+            low == std::end(verticesRemaining))
             return;
         else
             std::cout << "Error! Disagreement between verticesRemaining and hasntBeenRemoved!"
