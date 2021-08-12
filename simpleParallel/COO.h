@@ -36,6 +36,7 @@ public:
     int GetNumberOfVertices();
     int GetNumberOfEdges();
     void BuildTheExampleCOO();
+    void BuildCycleCOO();
     void BuildCOOFromFile(std::string filename);
     void SetVertexCountFromEdges();
     //COO& SpMV(COO & c);

@@ -1,5 +1,6 @@
 set(TestSources
 	test/src/LinearTimeDegreeSortTest.cpp
+	test/src/GraphTest.cpp
 )
 
 set(TestHeaders

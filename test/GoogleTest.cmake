@@ -35,8 +35,8 @@ include(${PROJECT_SOURCE_DIR}/test/FileList.cmake)
 #include(${PROJECT_SOURCE_DIR}/CMake/FileList.cmake)
 
 # Now simply link against gtest or gtest_main as needed. Eg
-add_executable(FPT_Test ${headers_simple_parallel} ${headers_lib} ${sources_lib} ${TestHeaders} ${TestSources})
+add_executable(kVCTest ${headers_simple_parallel} ${sources_simple_parallel} ${headers_lib} ${sources_lib} ${TestHeaders} ${TestSources})
 #add_executable(FPT_Test ${sources_simple_parallel} ${headers_simple_parallel} ${headers_lib} ${sources_lib} ${TestHeaders} ${TestSources})
-target_link_libraries(FPT_Test gtest_main)
-add_test(NAME PKTest COMMAND PKTest)
+target_link_libraries(kVCTest gtest_main gtest)
+add_test(NAME kVCTest COMMAND kVCTest)
 #set(GOMC_GTEST 1)

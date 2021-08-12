@@ -86,6 +86,18 @@ void COO::BuildTheExampleCOO(){
     //sortMyself();
 }
 
+void COO::BuildCycleCOO(){
+    addEdgeToMap(0,1,1);
+    addEdgeToMap(1,2,1);
+    addEdgeToMap(2,3,1);
+    addEdgeToMap(3,4,1);
+    addEdgeToMap(4,0,1);
+    
+    for (auto & edge : orderedMap)
+        addEdge(edge.first.first, edge.first.second, edge.second);
+
+    size = new_values.size();
+}
 
 void COO::SetVertexCountFromEdges(){
     int min;

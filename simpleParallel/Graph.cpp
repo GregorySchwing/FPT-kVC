@@ -226,6 +226,7 @@ void Graph::removeVertex(int vertexToRemove){
 
     if(!hasntBeenRemoved[vertexToRemove]){
 #ifndef NDEBUG
+        // Can occur only if the second child became degree zero after removing the first 
         if (verticesRemaining[low - std::begin(verticesRemaining)] != vertexToRemove || 
             low == std::end(verticesRemaining))
             return;

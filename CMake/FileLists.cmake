@@ -12,8 +12,11 @@ set(sources_cpu_serial
     serial/SparseMatrix.cpp
    )
 
-set(sources_simple_parallel 
+set(main_simple_parallel
     MainSimpleParallel.cpp
+    )
+
+set(sources_simple_parallel 
     simpleParallel/COO.cpp
     simpleParallel/CSR.cpp
     simpleParallel/Graph.cpp
