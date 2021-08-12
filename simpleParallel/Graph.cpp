@@ -214,15 +214,22 @@ CSR & Graph::GetCSR(){
 }
 
 void Graph::removeVertex(int vertexToRemove){
-    if(!hasntBeenRemoved[vertexToRemove]){
-        return;
-    } else 
-        hasntBeenRemoved[vertexToRemove] = 0;
         
     std::vector<int>::iterator low;
     low = std::lower_bound( std::begin(verticesRemaining), 
                             std::end(verticesRemaining), 
                             vertexToRemove);
+
+    if(!hasntBeenRemoved[vertexToRemove]){
+        if (low == std::end(verticesRemaining))
+            return;
+        else
+            std::cout << "Error! Disagreement between verticesRemaining and hasntBeenRemoved!"
+                << std::endl;
+    } else 
+        hasntBeenRemoved[vertexToRemove] = 0;
+
+
     std::cout << "Begginning of a call" << std::endl;
     std::cout << "vertexToRemove " << vertexToRemove << std::endl;
 
