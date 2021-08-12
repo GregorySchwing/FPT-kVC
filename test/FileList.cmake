@@ -1,5 +1,5 @@
 set(TestSources
-	test/src/ParallelKernelizationTest.cpp
+	test/src/LinearTimeDegreeSortTest.cpp
 )
 
 set(TestHeaders
