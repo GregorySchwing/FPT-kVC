@@ -56,7 +56,7 @@ void COO::BuildCOOFromFile(std::string filename){
     }
 
     for (auto & edge : um)
-        addEdgeSymmetric(edge.first.first, edge.first.second, 1);
+        addEdge(edge.first.first, edge.first.second, 1);
 
     size = new_values.size();
     // vlog(e)
@@ -174,6 +174,12 @@ void COO::addEdgeSymmetric(int u, int v, int weight){
     new_values.push_back(weight);
 }
 
+/* Map contains both edges as separate keys */
+void COO::addEdge(int u, int v, int weight){
+    new_row_indices.push_back(u);
+    new_column_indices.push_back(v);
+    new_values.push_back(weight);
+}
 
 void COO::insertElements(const SparseMatrix & s){
     try {
