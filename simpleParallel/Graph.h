@@ -26,11 +26,12 @@ public:
 
     std::vector<int> & GetVerticesThisGraphIncludedInTheCover();
 
+    std::vector<int> GetRemainingVertices();
     std::vector<int> & GetRemainingVerticesRef();
-    std::vector<int> & GetHasntBeenRemoved();
+    std::vector<int> GetHasntBeenRemoved();
 
-    void SetRemainingVerticesRef(std::vector<int> & verticesRemaining_arg);
-    void SetHasntBeenRemoved(std::vector<int> & hasntBeenRemoved_arg);
+    void SetRemainingVertices(std::vector<int> verticesRemaining_arg);
+    void SetHasntBeenRemoved(std::vector<int> hasntBeenRemoved_arg);
 
     std::vector<int> & GetNewDegRef();
     std::vector<int> * GetOldDegPointer();
@@ -44,7 +45,7 @@ public:
     CSR & GetCSR();
     COO * GetCOO();
     std::set<std::pair<int,int>> edgesCoveredByKernelization;
-    void removeVertex(int vertexToRemove, std::vector<int> & verticesRemaining);
+    void removeVertex(int vertexToRemove);
     void InduceSubgraph();
     int GetVertexCount();
     void PrintEdgesOfS();

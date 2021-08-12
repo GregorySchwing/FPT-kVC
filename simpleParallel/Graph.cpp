@@ -95,7 +95,7 @@ void Graph::SetMyOldsToParentsNews(Graph & g_parent){
 }
 
 void Graph::SetVerticesRemainingAndVerticesRemoved(Graph & g_parent){
-    this->SetRemainingVerticesRef(g_parent.GetRemainingVerticesRef());
+    this->SetRemainingVertices(g_parent.GetRemainingVertices());
     this->SetHasntBeenRemoved(g_parent.GetHasntBeenRemoved());
 }
 
@@ -168,19 +168,23 @@ void Graph::SetVertexCountFromEdges(COO * coordinateFormat){
 
 }
 
+std::vector<int> Graph::GetRemainingVertices(){
+    return verticesRemaining;
+}
+
 std::vector<int> & Graph::GetRemainingVerticesRef(){
     return verticesRemaining;
 }
 
-std::vector<int> & Graph::GetHasntBeenRemoved(){
+std::vector<int> Graph::GetHasntBeenRemoved(){
     return hasntBeenRemoved;
 }
 
-void Graph::SetRemainingVerticesRef(std::vector<int> & verticesRemaining_arg){
+void Graph::SetRemainingVertices(std::vector<int> verticesRemaining_arg){
     verticesRemaining = verticesRemaining_arg;
 }
 
-void Graph::SetHasntBeenRemoved(std::vector<int> & hasntBeenRemoved_arg){
+void Graph::SetHasntBeenRemoved(std::vector<int> hasntBeenRemoved_arg){
     hasntBeenRemoved = hasntBeenRemoved_arg;
 }
 
@@ -209,33 +213,31 @@ CSR & Graph::GetCSR(){
     return csr;
 }
 
-void Graph::removeVertex(int vertexToRemove, std::vector<int> & verticesRemaining){
-        std::vector<int>::iterator low;
-        low = std::lower_bound( std::begin(verticesRemaining), 
-                                std::end(verticesRemaining), 
-                                vertexToRemove);
-        if (low == std::end(verticesRemaining))
-            return;
-        else{
-            std::cout << "Begginning of a call" << std::endl;
-            std::cout << "vertexToRemove " << vertexToRemove << std::endl;
-
-            std::cout << "Before Erasing " << low - std::begin(verticesRemaining) << std::endl;
-            for ( auto & v : verticesRemaining )
-                std::cout << v << " ";
-            std::cout << std::endl;
-
-            std::cout << "Erasing " << low - std::begin(verticesRemaining) << std::endl;
-            verticesRemaining.erase(low);
-            std::cout << "After Erasing " << low - std::begin(verticesRemaining) << std::endl;
-            for ( auto & v : verticesRemaining )
-                std::cout << v << " ";
-            std::cout << std::endl;
-            std::cout << "End of a call" << std::endl;
-
-            hasntBeenRemoved[vertexToRemove] = 0;
-        }
+void Graph::removeVertex(int vertexToRemove){
+    if(!hasntBeenRemoved[vertexToRemove]){
+        return;
+    } else 
+        hasntBeenRemoved[vertexToRemove] = 0;
         
+    std::vector<int>::iterator low;
+    low = std::lower_bound( std::begin(verticesRemaining), 
+                            std::end(verticesRemaining), 
+                            vertexToRemove);
+    std::cout << "Begginning of a call" << std::endl;
+    std::cout << "vertexToRemove " << vertexToRemove << std::endl;
+
+    std::cout << "Before Erasing " << low - std::begin(verticesRemaining) << std::endl;
+    for ( auto & v : verticesRemaining )
+        std::cout << v << " ";
+    std::cout << std::endl;
+
+    std::cout << "Erasing " << low - std::begin(verticesRemaining) << std::endl;
+    verticesRemaining.erase(low);
+    std::cout << "After Erasing " << low - std::begin(verticesRemaining) << std::endl;
+    for ( auto & v : verticesRemaining )
+        std::cout << v << " ";
+    std::cout << std::endl;
+    std::cout << "End of a call" << std::endl;
 }
 
 void Graph::SetEdgesOfSSymParallel(std::vector<int> & S,
@@ -359,14 +361,12 @@ void Graph::RemoveNewlyDegreeZeroVertices(std::vector<int> & verticesToRemove,
  
     int i = 0, j;
     for (auto & v :verticesToRemove){
-        removeVertex(v, GetRemainingVerticesRef());
-        hasntBeenRemoved[v] = 0;
+        removeVertex(v);
         for (i = oldRowOffsets[v]; i < oldRowOffsets[v+1]; ++i){
             j = oldColumnIndices[i];
             if(new_degrees[j] == 0)
                 if (hasntBeenRemoved[j]){
-                    removeVertex(j, GetRemainingVerticesRef());
-                    hasntBeenRemoved[j] = 0;
+                    removeVertex(j);
                 }
         }
     }
