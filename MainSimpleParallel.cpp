@@ -24,8 +24,8 @@ int main(int argc, char *argv[])
     std::cout << "Building G" << std::endl;
     //Graph g("small.csv");
     COO coordinateFormat;
-//    std::string filename = "small.csv";
-    std::string filename = "25_nodes.csv";
+    std::string filename = "small.csv";
+//    std::string filename = "25_nodes.csv";
     coordinateFormat.BuildCOOFromFile(filename);
     //coordinateFormat.BuildTheExampleCOO();
 
@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
     }
     CSR csr(coordinateFormat);
     Graph g(csr);
-    int k = 9;
+    int k = 15;
     //int k = 4;
     ParallelKernelization sk(g, k);
     sk.TestAValueOfK(k);
