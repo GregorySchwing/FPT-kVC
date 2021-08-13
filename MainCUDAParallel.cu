@@ -1,10 +1,10 @@
 #include <cuda.h>
-#include "cuda/Graph.cuh"
-#include "cuda/ParallelKernelization.cuh"
+#include "hybrid/Graph.h"
+#include "hybrid/ParallelKernelization.h"
 #include <vector>
 #include <memory>
-#include "cuda/ConnectednessTest.cuh"
-#include "cuda/ParallelB1.cuh"
+#include "hybrid/ConnectednessTest.h"
+#include "hybrid/ParallelB1.h"
 #include <unistd.h>
 
 unsigned long long getTotalSystemMemory()

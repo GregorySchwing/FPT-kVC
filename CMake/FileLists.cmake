@@ -32,16 +32,28 @@ set(sources_simple_parallel
 
    )
 
+#set(sources_gpu 
+#    cuda/COO.cu
+#    cuda/CSR.cu
+#    cuda/Graph.cu
+#    cuda/SparseMatrix.cu
+#    cuda/ConnectednessTest.cu
+#    cuda/ParallelB1.cu
+#    cuda/ParallelKernelization.cu
+#    cuda/LinearTimeDegreeSort.cu
+#   )
+
 set(sources_gpu 
-    cuda/COO.cu
-    cuda/CSR.cu
-    cuda/Graph.cu
-    cuda/SparseMatrix.cu
-    cuda/ConnectednessTest.cu
-    cuda/ParallelB1.cu
-    cuda/ParallelKernelization.cu
-    cuda/LinearTimeDegreeSort.cu
+    hybrid/COO.cpp
+    hybrid/CSR.cpp
+    hybrid/Graph.cpp
+    hybrid/SparseMatrix.cpp
+    hybrid/ConnectednessTest.cpp
+    hybrid/ParallelB1.cpp
+    hybrid/ParallelKernelization.cpp
+    hybrid/LinearTimeDegreeSort.cpp
    )
+
 
 set(headers_cpu_serial 
     serial/COO.h
@@ -67,16 +79,28 @@ set(headers_simple_parallel
 
    )
 
+#set(headers_gpu 
+#    cuda/COO.cuh
+#    cuda/CSR.cuh
+#    cuda/Graph.cuh
+#    cuda/SparseMatrix.cuh
+#    cuda/ConnectednessTest.cuh
+#    cuda/ParallelB1.cuh
+#    cuda/ParallelKernelization.cuh
+#    cuda/LinearTimeDegreeSort.cuh
+#   )
+
 set(headers_gpu 
-    cuda/COO.cuh
-    cuda/CSR.cuh
-    cuda/Graph.cuh
-    cuda/SparseMatrix.cuh
-    cuda/ConnectednessTest.cuh
-    cuda/ParallelB1.cuh
-    cuda/ParallelKernelization.cuh
-    cuda/LinearTimeDegreeSort.cuh
+    hybrid/COO.h
+    hybrid/CSR.h
+    hybrid/Graph.h
+    hybrid/SparseMatrix.h
+    hybrid/ConnectednessTest.h
+    hybrid/ParallelB1.h
+    hybrid/ParallelKernelization.h
+    hybrid/LinearTimeDegreeSort.h
    )
+
 
 #set(libHeaders
 #    lib/boost/include/dynamic_bitset.hpp
