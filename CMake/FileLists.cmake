@@ -16,6 +16,10 @@ set(main_simple_parallel
     MainSimpleParallel.cpp
     )
 
+set(main_cuda_parallel
+    MainCUDAParallel.cu
+    )
+
 set(sources_simple_parallel 
     simpleParallel/COO.cpp
     simpleParallel/CSR.cpp
@@ -29,11 +33,14 @@ set(sources_simple_parallel
    )
 
 set(sources_gpu 
-    Main.cu
-    gpu/COO.cu
-    gpu/CSR.cu
-    gpu/Graph.cu
-    gpu/SparseMatrix.cu
+    cuda/COO.cu
+    cuda/CSR.cu
+    cuda/Graph.cu
+    cuda/SparseMatrix.cu
+    cuda/ConnectednessTest.cu
+    cuda/ParallelB1.cu
+    cuda/ParallelKernelization.cu
+    cuda/LinearTimeDegreeSort.cu
    )
 
 set(headers_cpu_serial 
@@ -56,15 +63,19 @@ set(headers_simple_parallel
     simpleParallel/ConnectednessTest.h
     simpleParallel/ParallelB1.h
     simpleParallel/ParallelKernelization.h
-    simpleParallel/LinearTimeDegreeSort.cpp
+    simpleParallel/LinearTimeDegreeSort.h
 
    )
 
 set(headers_gpu 
-    gpu/COO.cuh
-    gpu/CSR.cuh
-    gpu/Graph.cuh
-    gpu/SparseMatrix.cuh
+    cuda/COO.cuh
+    cuda/CSR.cuh
+    cuda/Graph.cuh
+    cuda/SparseMatrix.cuh
+    cuda/ConnectednessTest.cuh
+    cuda/ParallelB1.cuh
+    cuda/ParallelKernelization.cuh
+    cuda/LinearTimeDegreeSort.cuh
    )
 
 #set(libHeaders

@@ -64,7 +64,7 @@ if (CMAKE_CUDA_COMPILER)
     enable_language(CUDA)
     MESSAGE(STATUS "Cuda version: ${CUDA_VERSION}")
     find_package(CUDAToolkit)       
-#    include(${PROJECT_SOURCE_DIR}/CMake/GPU.cmake)
+    include(${PROJECT_SOURCE_DIR}/CMake/GPU.cmake)
 endif()
 
 
