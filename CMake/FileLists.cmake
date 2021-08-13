@@ -32,18 +32,14 @@ set(sources_simple_parallel
 
    )
 
-#set(sources_gpu 
-#    cuda/COO.cu
-#    cuda/CSR.cu
-#    cuda/Graph.cu
-#    cuda/SparseMatrix.cu
-#    cuda/ConnectednessTest.cu
-#    cuda/ParallelB1.cu
-#    cuda/ParallelKernelization.cu
-#    cuda/LinearTimeDegreeSort.cu
-#   )
-
 set(sources_gpu 
+    cuda/COO.cu
+    cuda/CSR.cu
+    cuda/Graph.cu
+    cuda/SparseMatrix.cu
+   )
+
+set(sources_hybrid 
     hybrid/COO.cpp
     hybrid/CSR.cpp
     hybrid/Graph.cpp
@@ -79,18 +75,14 @@ set(headers_simple_parallel
 
    )
 
-#set(headers_gpu 
-#    cuda/COO.cuh
-#    cuda/CSR.cuh
-#    cuda/Graph.cuh
-#    cuda/SparseMatrix.cuh
-#    cuda/ConnectednessTest.cuh
-#    cuda/ParallelB1.cuh
-#    cuda/ParallelKernelization.cuh
-#    cuda/LinearTimeDegreeSort.cuh
-#   )
-
 set(headers_gpu 
+    cuda/COO.cuh
+    cuda/CSR.cuh
+    cuda/Graph.cuh
+    cuda/SparseMatrix.cuh
+   )
+
+set(headers_hybrid
     hybrid/COO.h
     hybrid/CSR.h
     hybrid/Graph.h

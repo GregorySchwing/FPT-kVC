@@ -7,7 +7,7 @@ message(STATUS "CUSPARSE HEADERS = ${CUDAToolkit_INCLUDE_DIRS}")
 message(STATUS "CUSPARSE LIB = ${CUDA_cusparse_LIBRARY}")
 
 #add_executable(GPU_bin ${sources_gpu} ${headers_gpu} ${CUDAToolkit_INCLUDE_DIRS} ${libHeaders} ${libSources} ${BOOST_INCLUDE_DIRS})
-add_executable(GPU_bin ${headers_lib} ${sources_lib} ${main_cuda_parallel} ${sources_gpu} ${headers_gpu} ${CUDAToolkit_INCLUDE_DIRS})
+add_executable(GPU_bin ${headers_lib} ${sources_lib} ${main_cuda_parallel} ${sources_hybrid} ${headers_hybrid} ${sources_gpu} ${headers_gpu} ${CUDAToolkit_INCLUDE_DIRS})
 set_target_properties(GPU_bin PROPERTIES OUTPUT_NAME ${GPU_name})
 target_link_libraries( GPU_bin ${CUDA_cusparse_LIBRARY} )
 if(WIN32)
