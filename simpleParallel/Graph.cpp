@@ -376,7 +376,6 @@ void Graph::CountingSortParallelRowwiseValues(
 void Graph::RemoveNewlyDegreeZeroVertices(std::vector<int> & verticesToRemove,
                                             std::vector<int> & oldRowOffsets,
                                             std::vector<int> & oldColumnIndices){
- 
     int i = 0, j;
     for (auto & v :verticesToRemove){
         removeVertex(v);
@@ -384,7 +383,8 @@ void Graph::RemoveNewlyDegreeZeroVertices(std::vector<int> & verticesToRemove,
             j = oldColumnIndices[i];
             if(new_degrees[j] == 0)
                 if (hasntBeenRemoved[j]){
-                    removeVertex(j);
+        		std::cout << "removing newly degree zero vertex" << j << std::endl;
+	    		removeVertex(j);
                 }
         }
     }

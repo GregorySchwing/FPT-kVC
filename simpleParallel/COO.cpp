@@ -96,6 +96,8 @@ void COO::BuildCycleCOO(){
     for (auto & edge : orderedMap)
         addEdge(edge.first.first, edge.first.second, edge.second);
 
+    for (auto & edge : orderedMap)
+        std::cout << "(" << edge.first.first << ", " << edge.first.second << ")" << std::endl;
     size = new_values.size();
 }
 
