@@ -1,2 +1,2 @@
-# Fixed Parameter Tractable kVC CUDA Implementation
+# Parallelized Fixed Parameter Tractable kVC Implementation
 OpenMP and CUDA implementations of FPT kVC
