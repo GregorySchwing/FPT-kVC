@@ -47,20 +47,15 @@ void COO::BuildCOOFromFile(std::string filename){
     std::string::size_type sz;   // alias of size_t
     for(auto& row: CSVRange(file, sep))
     {
-        //std::cout << "adding (" << std::stoi(row[0],&sz) 
-        //<< ", " << std::stoi(row[1],&sz) << ")" << std::endl;
         addEdgeToMap(std::stoi(row[0],&sz), 
                         std::stoi(row[1],&sz), 1);
-        //coordinateFormat->addEdgeSimple(std::stoi(row[0],&sz), 
-        //                                    std::stoi(row[1],&sz), 1);
     }
 
     for (auto & edge : orderedMap)
         addEdge(edge.first.first, edge.first.second, edge.second);
 
     size = new_values.size();
-    // vlog(e)
-    //sortMyself();
+    SetVertexCountFromEdges();
 }
 
 void COO::BuildTheExampleCOO(){
@@ -82,8 +77,7 @@ void COO::BuildTheExampleCOO(){
         addEdge(edge.first.first, edge.first.second, edge.second);
 
     size = new_values.size();
-    // vlog(e)
-    //sortMyself();
+    SetVertexCountFromEdges();
 }
 
 void COO::BuildCycleCOO(){
@@ -99,6 +93,7 @@ void COO::BuildCycleCOO(){
     for (auto & edge : orderedMap)
         std::cout << "(" << edge.first.first << ", " << edge.first.second << ")" << std::endl;
     size = new_values.size();
+    SetVertexCountFromEdges();
 }
 
 void COO::SetVertexCountFromEdges(){

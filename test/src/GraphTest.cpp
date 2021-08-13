@@ -3,7 +3,6 @@
 TEST(GraphTest, GraphTest) {
 	COO cycle;
 	cycle.BuildCycleCOO();
-	cycle.SetVertexCountFromEdges();
 	CSR csr(cycle);
 	Graph g(csr);
 	std::vector<int> evenVertices;

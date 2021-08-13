@@ -85,7 +85,6 @@ int main(int argc, char *argv[])
     COO coordinateFormatTest;
     coordinateFormatTest.BuildTheExampleCOO();
 //    coordinateFormatTest.BuildCOOFromFile(filename);
-    coordinateFormatTest.SetVertexCountFromEdges();
     CSR csrTest(coordinateFormatTest);
     Graph gTest(csrTest);
     gTest.InitG(gTest, answer);
