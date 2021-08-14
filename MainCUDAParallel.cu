@@ -76,9 +76,15 @@ int main(int argc, char *argv[])
         std::cout << '\n' << "Press a key to continue...; ctrl-c to terminate";
     } while (std::cin.get() != '\n');
 
-
-    //cudaMalloc()
     thrust::device_vector< Graph_GPU > graphs(treeSize, Graph_GPU(g));
+    thrust::device_vector< int > new_row_offsets_dev((g.GetVertexCount()+1)*treeSize);
+    thrust::device_vector< int > new_columns_dev(g.GetEdgesLeftToCover()*treeSize);
+    thrust::device_vector< int > values_dev(g.GetEdgesLeftToCover()*treeSize);
+    thrust::device_vector< int > new_degrees_dev(g.GetVertexCount()*treeSize);
+    //thrust::device_vector< int > verticesToIncludeInCover_dev(g.GetVertexCount()*treeSize);
+    //thrust::device_vector< int > verticesRemaining_dev(g.GetVertexCount()*treeSize);
+    //thrust::device_vector< int > hasntBeenRemoved_dev(g.GetVertexCount()*treeSize);
+
     /*
     std::vector< Graph > graphs(treeSize, Graph(g));
     std::vector<int> mpt;

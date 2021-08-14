@@ -15,8 +15,6 @@ class SparseMatrix_GPU {
         // These are for the current matrix
         int * old_values_ref;
         // These are for the next matrix
-        
-        int * new_values;
         int * new_values_dev;
 };
 
