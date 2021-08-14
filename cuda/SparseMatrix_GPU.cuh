@@ -1,8 +1,10 @@
 #ifndef SPARSEMATRIX_GPU_H
 #define SPARSEMATRIX_GPU_H
 
+#include <cuda.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
+#include "SparseMatrix.h"
 
 class SparseMatrix_GPU {
     public: 

@@ -11,6 +11,7 @@
 #include  <iterator>
 #include "ConnectednessTest.h"
 #include "../lib/CSVRange.h"
+#include "Graph_GPU.cuh"
 
 class Graph {
 public:
@@ -115,6 +116,8 @@ private:
     void RemoveNewlyDegreeZeroVertices(std::vector<int> & verticesToRemove,
                                         std::vector<int> & oldRowOffets,
                                         std::vector<int> & oldColumnIndices);
+
+    friend class Graph_GPU;
 
 };
 #endif

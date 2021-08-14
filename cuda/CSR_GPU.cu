@@ -1,7 +1,7 @@
 #include "CSR_GPU.cuh"
 
 /* Copy constructor */
-CSR_GPU::CSR_GPU(const CSR_GPU & c):
+CSR_GPU::CSR_GPU(const CSR & c):
 SparseMatrix_GPU(c)
 {
     new_row_offsets.reserve(c.new_row_offsets.capacity());
