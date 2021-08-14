@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
     } while (std::cin.get() != '\n');
 
 
-
+    //cudaMalloc()
     thrust::device_vector< Graph_GPU > graphs(treeSize, Graph_GPU(g));
     /*
     std::vector< Graph > graphs(treeSize, Graph(g));

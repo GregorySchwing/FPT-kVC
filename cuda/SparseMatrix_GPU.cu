@@ -8,9 +8,9 @@ numberOfRows(s.numberOfRows),
 numberOfColumns(s.numberOfColumns){
 //    std::cout << "Setting size, numRows, numCols - Reserving new_vals" << std::endl;
     // A copy for writing purposes
-    cudaMalloc(&new_values_dev, s.size*sizeof(int)); 
+    //cudaMalloc(&new_values_dev, s.size*sizeof(int)); 
 }
 
 __host__ __device__ SparseMatrix_GPU::~SparseMatrix_GPU(){
-    cudaFree(new_values_dev);
+    //cudaFree(new_values_dev);
 }
