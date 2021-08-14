@@ -33,7 +33,6 @@ set(sources_simple_parallel
    )
 
 set(sources_gpu 
-    cuda/COO.cu
     cuda/CSR.cu
     cuda/Graph.cu
     cuda/SparseMatrix.cu
@@ -76,7 +75,6 @@ set(headers_simple_parallel
    )
 
 set(headers_gpu 
-    cuda/COO.cuh
     cuda/CSR.cuh
     cuda/Graph.cuh
     cuda/SparseMatrix.cuh
