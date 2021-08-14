@@ -39,12 +39,29 @@ __host__ __device__ long long CalculateLevelOffset(int level){
 __device__ void AssignPointers(long long globalIndex,
                                 long long edgesPerNode,
                                 long long numberOfVertices,
-                                Graph ** graphs,
+                                Graph_GPU ** graphs,
                                 int ** new_row_offsets_dev,
                                 int ** new_columns_dev,
                                 int ** values_dev,
                                 int ** new_degrees_dev){
 
+    (*graphs)[globalIndex].old_degrees_ref = (*graphs)[(globalIndex-1)/3].new_degrees_dev;
+    (*graphs)[globalIndex].csr.old_column_indices_ref = (*graphs)[(globalIndex-1)/3].csr.new_column_indices_dev;
+    (*graphs)[globalIndex].csr.old_row_offsets_ref = (*graphs)[(globalIndex-1)/3].csr.new_row_offsets_dev;
+    (*graphs)[globalIndex].csr.old_values_ref = (*graphs)[(globalIndex-1)/3].csr.new_values_dev;
+
+    (*graphs)[globalIndex].new_degrees_dev = new array_container(new_degrees_dev,
+                                                          globalIndex,
+                                                          numberOfVertices);
+    (*graphs)[globalIndex].csr.new_row_offsets_dev = new array_container(new_row_offsets_dev,
+                                                        globalIndex,
+                                                        numberOfVertices+1);
+    (*graphs)[globalIndex].csr.new_column_indices_dev = new array_container(new_columns_dev,
+                                                    globalIndex,
+                                                    edgesPerNode);
+    (*graphs)[globalIndex].csr.new_values_dev = new array_container(values_dev,
+                                                    globalIndex,
+                                                    edgesPerNode);
 
 }
 
@@ -54,7 +71,7 @@ __global__ void PopulateTreeParallelLevelWise(int numberOfLevels,
                                                 long long treeSize,
                                                 long long edgesPerNode,
                                                 long long numberOfVertices,
-                                                Graph ** graphs,
+                                                Graph_GPU ** graphs,
                                                 int ** new_row_offsets_dev,
                                                 int ** new_columns_dev,
                                                 int ** values_dev,

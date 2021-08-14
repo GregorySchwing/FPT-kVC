@@ -5,6 +5,8 @@
 #include <cuda.h>
 #include "Graph_GPU.cuh"
 
+class Graph_GPU;
+
 __host__ __device__ int CalculateWorstCaseSpaceComplexity(int vertexCount);
 __host__ __device__ long long CalculateSpaceForDesiredNumberOfLevels(int NumberOfLevels);
 __host__ __device__ long long CalculateSizeRequirement(int startingLevel,
@@ -14,7 +16,7 @@ __host__ __device__ long long CalculateLevelOffset(int level);
 __device__ void AssignPointers(long long globalIndex,
                                 long long edgesPerNode,
                                 long long numberOfVertices,
-                                Graph ** graphs,
+                                Graph_GPU ** graphs,
                                 int ** new_row_offsets_dev,
                                 int ** new_columns_dev,
                                 int ** values_dev,
@@ -23,7 +25,7 @@ __device__ void AssignPointers(long long globalIndex,
 __global__ void PopulateTreeParallelLevelWise(int numberOfLevels, 
                                             long long edgesPerNode,
                                             long long numberOfVertices,
-                                            Graph ** graphs,
+                                            Graph_GPU ** graphs,
                                             int ** new_row_offsets_dev,
                                             int ** new_columns_dev,
                                             int ** values_dev,

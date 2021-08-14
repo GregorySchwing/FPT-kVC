@@ -4,6 +4,15 @@
 #include <cuda.h>
 #include "SparseMatrix.h"
 
+
+struct array_container {
+    __device__ array_container(int ** globalData, long long globalIndex, int count_arg) : count(count_arg){
+        data = globalData[globalIndex];
+    }
+    int * data;
+    int count;
+};
+
 class SparseMatrix_GPU {
     public: 
         /* Copy Constructor */
@@ -13,9 +22,9 @@ class SparseMatrix_GPU {
 
         int numberOfRows, numberOfColumns, size;
         // These are for the current matrix
-        int * old_values_ref;
+        array_container * old_values_ref;
         // These are for the next matrix
-        int * new_values_dev;
+        array_container * new_values_dev;
 };
 
 #endif

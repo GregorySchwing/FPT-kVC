@@ -7,6 +7,8 @@
 #include <cuda.h>
 #include "ParallelB1_GPU.cuh"
 
+
+
 class Graph;
 
 
@@ -45,10 +47,10 @@ public:
     
     // Following the CSR design pattern, a reference to the old degrees
     // For Original G, this comes from the ParallelKernel class
-    int * old_degrees_ref;
+    array_container * old_degrees_ref;
 
-    int * new_degrees;
-    int * new_degrees_dev;
+    //int * new_degrees;
+    array_container * new_degrees_dev;
     
     friend class Graph;
 

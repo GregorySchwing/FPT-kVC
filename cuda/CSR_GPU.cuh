@@ -16,12 +16,12 @@ class CSR_GPU : public SparseMatrix_GPU {
         
 
         // These are the current CSR
-        int * old_column_indices_ref, * old_row_offsets_ref;
+        array_container * old_column_indices_ref, * old_row_offsets_ref;
         int vertexCount;
 
         // These are for the next CSR
-        int * new_column_indices_dev;
-        int * new_row_offsets_dev;
+        array_container * new_column_indices_dev;
+        array_container * new_row_offsets_dev;
 
 };
 
