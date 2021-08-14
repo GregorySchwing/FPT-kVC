@@ -23,10 +23,10 @@ int main(int argc, char *argv[])
     //Graph g("small.csv");
     COO coordinateFormat;
 //    std::string filename = "small.csv";
-//    std::string filename = "25_nodes.csv";
-//    coordinateFormat.BuildCOOFromFile(filename);
+    std::string filename = "25_nodes.csv";
+    coordinateFormat.BuildCOOFromFile(filename);
 //    coordinateFormat.BuildTheExampleCOO();
-    coordinateFormat.BuildCycleCOO();
+    //coordinateFormat.BuildCycleCOO();
 
     coordinateFormat.SetVertexCountFromEdges();
     std::vector< std::vector<int> > vectorOfConnectedComponents;
