@@ -43,7 +43,7 @@ set_target_properties(GPU_bin PROPERTIES
     COMPILE_FLAGS "${GPU_bin_flags}")
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message("-- Debug build type detected, GPU_NVT setting CUDA_RESOLVE_DEVICE_SYMBOLS ON")
-    set_property(TARGET GPU_NVT PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+    set_property(TARGET GPU_bin PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 endif()
 target_link_libraries( GPU_bin ${CUDA_cusparse_LIBRARY} ${CUDA_LIBRARIES})
 if(WIN32)
