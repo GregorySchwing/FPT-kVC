@@ -6,6 +6,7 @@
 #include "hybrid/ConnectednessTest.h"
 #include "hybrid/ParallelB1.h"
 #include <unistd.h>
+#include "Graph_GPU.cuh"
 
 unsigned long long getTotalSystemMemory()
 {
@@ -60,6 +61,8 @@ int main(int argc, char *argv[])
     {
         std::cout << '\n' << "Press a key to continue...; ctrl-c to terminate";
     } while (std::cin.get() != '\n');
+    thrust::device_vector< Graph_GPU > graphs(treeSize, Graph_GPU(g));
+    /*
     std::vector< Graph > graphs(treeSize, Graph(g));
     std::vector<int> mpt;
     graphs[0].InitGPrime(g, mpt);
@@ -86,7 +89,7 @@ int main(int argc, char *argv[])
     gTest.InitG(gTest, answer);
     std::cout << "Edges remaining in original graph after removing answer : " << gTest.GetEdgesLeftToCover() << std::endl;
     gTest.PrintEdgesRemaining();    
-    
+    */
 /* 
 
     //Graph g(10);
