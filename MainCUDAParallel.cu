@@ -7,6 +7,7 @@
 #include "hybrid/ParallelB1.h"
 #include <unistd.h>
 #include "Graph_GPU.cuh"
+#include <thrust/device_vector.h>
 
 unsigned long long getTotalSystemMemory()
 {
@@ -61,6 +62,7 @@ int main(int argc, char *argv[])
     {
         std::cout << '\n' << "Press a key to continue...; ctrl-c to terminate";
     } while (std::cin.get() != '\n');
+
     thrust::device_vector< Graph_GPU > graphs(treeSize, Graph_GPU(g));
     /*
     std::vector< Graph > graphs(treeSize, Graph(g));

@@ -4,26 +4,24 @@
 #include "SparseMatrix_GPU.cuh"
 #include "SparseMatrix.h"
 #include "CSR.h"
-#include <thrust/host_vector.h>
-#include <thrust/device_vector.h>
+#include <cuda.h>
 
 
 class CSR_GPU : public SparseMatrix_GPU {
     public:
         // Copy constructor for allocating graph object
         __host__ CSR_GPU(const CSR & c);
+        __host__ __device__ ~CSR_GPU();
+
         
 
         // These are the current CSR
-        thrust::device_vector<int> * old_column_indices_ref, * old_row_offsets_ref;
+        int * old_column_indices_ref, * old_row_offsets_ref;
         int vertexCount;
 
         // These are for the next CSR
-        thrust::host_vector<int> * new_column_indices;
-        thrust::host_vector<int> * new_row_offsets;
-
-        thrust::device_vector<int> * new_column_indices_dev;
-        thrust::device_vector<int> * new_row_offsets_dev;
+        int * new_column_indices_dev;
+        int * new_row_offsets_dev;
 
 };
 

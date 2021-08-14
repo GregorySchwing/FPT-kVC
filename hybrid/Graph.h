@@ -11,7 +11,6 @@
 #include  <iterator>
 #include "ConnectednessTest.h"
 #include "../lib/CSVRange.h"
-#include "Graph_GPU.cuh"
 
 class Graph {
 public:
