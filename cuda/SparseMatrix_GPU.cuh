@@ -10,15 +10,14 @@ class SparseMatrix_GPU {
     public: 
         /* Copy Constructor */
         __host__ SparseMatrix_GPU(const SparseMatrix & s);
-        __host__ ~SparseMatrix_GPU();
 
         int numberOfRows, numberOfColumns, size;
         // These are for the current matrix
         thrust::device_vector<int> * old_values_ref;
         // These are for the next matrix
         
-        thrust::host_vector<int> new_values;
-        thrust::device_vector<int> new_values_dev;
+        thrust::host_vector<int> * new_values;
+        thrust::device_vector<int> * new_values_dev;
 };
 
 #endif
