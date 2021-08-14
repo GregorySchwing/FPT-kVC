@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
         std::cout << "|G'(E)| <= k*k', a solution may exist" << std::endl;
     }
     //int treeSize = 200000;
-    int numberOfLevels = 15;
+    int numberOfLevels = 10;
     long long treeSize = ParallelB1::CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
     long long expandedData = g.GetEdgesLeftToCover();
     long long condensedData = g.GetVertexCount();
