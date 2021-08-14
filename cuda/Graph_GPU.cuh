@@ -5,6 +5,7 @@
 #include "CSR.h"
 #include "Graph.h"
 #include <cuda.h>
+#include "ParallelB1_GPU.cuh"
 
 class Graph;
 
@@ -23,8 +24,6 @@ public:
                                         int startingLevel, 
                                         int endingLevel, 
                                         Graph ** tree);
-    __host__ __device__ long long CalculateSizeRequirement(int startingLevel,
-                                                    int endingLevel);
 
 
 private:

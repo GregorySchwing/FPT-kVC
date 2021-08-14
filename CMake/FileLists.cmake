@@ -36,7 +36,7 @@ set(sources_gpu
     cuda/CSR_GPU.cu
     cuda/Graph_GPU.cu
     cuda/SparseMatrix_GPU.cu
-    cuda/ParallelB1.cu
+    cuda/ParallelB1_GPU.cu
    )
 
 set(sources_hybrid 
@@ -79,7 +79,7 @@ set(headers_gpu
     cuda/CSR_GPU.cuh
     cuda/Graph_GPU.cuh
     cuda/SparseMatrix_GPU.cuh
-    cuda/ParallelB1.cuh
+    cuda/ParallelB1_GPU.cuh
    )
 
 set(headers_hybrid
