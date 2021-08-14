@@ -7,13 +7,10 @@ elseif (NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.1)
   set(CMAKE_CXX17_EXTENSION_COMPILE_OPTION "-std=gnu++1z")
 endif()
 
-project(FPT)
-
+project(FPT LANGUAGES CUDA CXX)
 #include_directories(serial)
 #include_directories(lib/boost/include)
 #include_directories(lib/boost)
-include_directories(simpleParallel)
-include_directories(test/src)
 
 #Out-of-source build
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -63,10 +60,13 @@ check_language(CUDA)
 if (CMAKE_CUDA_COMPILER)
     enable_language(CUDA)
     MESSAGE(STATUS "Cuda version: ${CUDA_VERSION}")
+    find_package(CUDA)       
     find_package(CUDAToolkit)       
     include(${PROJECT_SOURCE_DIR}/CMake/GPU.cmake)
 endif()
 
+include_directories(simpleParallel)
+include_directories(test/src)
 
 #Optional CMake Argument
 option(GTEST    "Build unit tests " OFF)
