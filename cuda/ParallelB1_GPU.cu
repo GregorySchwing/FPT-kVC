@@ -2,7 +2,7 @@
 #include <math.h>       /* pow */
 // Sum of i = 0 to n/2
 // 3^i
-__host__ __device__ int ParallelB1_GPU::CalculateWorstCaseSpaceComplexity(int vertexCount){
+__host__ __device__ int CalculateWorstCaseSpaceComplexity(int vertexCount){
     int summand= 0;
     // ceiling(vertexCount/2) loops
     for (int i = 0; i < (vertexCount + 2 - 1)/2; ++i)
@@ -10,7 +10,7 @@ __host__ __device__ int ParallelB1_GPU::CalculateWorstCaseSpaceComplexity(int ve
     return summand;
 }
 
-__host__ __device__ long long ParallelB1_GPU::CalculateSpaceForDesiredNumberOfLevels(int NumberOfLevels){
+__host__ __device__ long long CalculateSpaceForDesiredNumberOfLevels(int NumberOfLevels){
     long long summand= 0;
     // ceiling(vertexCount/2) loops
     for (int i = 0; i < NumberOfLevels; ++i)
@@ -19,8 +19,8 @@ __host__ __device__ long long ParallelB1_GPU::CalculateSpaceForDesiredNumberOfLe
 }
 
 
-__host__ __device__ long long ParallelB1_GPU::CalculateSizeRequirement(int startingLevel,
-                                                                        int endingLevel){
+__host__ __device__ long long CalculateSizeRequirement(int startingLevel,
+                                                        int endingLevel){
     long long summand= 0;
     // ceiling(vertexCount/2) loops
     for (int i = startingLevel; i < endingLevel; ++i)
@@ -28,6 +28,64 @@ __host__ __device__ long long ParallelB1_GPU::CalculateSizeRequirement(int start
     return summand;
 }
 
+__host__ __device__ long long CalculateLevelOffset(int level){
+
+    // Closed form solution of partial geometric series
+    // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
+    return (1.0 - pow(3.0, (level-1) + 1))/(1.0 - 3.0);
+
+}
+
+__device__ void AssignPointers(long long globalIndex,
+                                long long edgesPerNode,
+                                long long numberOfVertices,
+                                Graph ** graphs,
+                                int ** new_row_offsets_dev,
+                                int ** new_columns_dev,
+                                int ** values_dev,
+                                int ** new_degrees_dev){
+
+
+}
+
+
+// Fill a perfect 3-ary tree to a given depth
+__global__ void PopulateTreeParallelLevelWise(int numberOfLevels, 
+                                                long long treeSize,
+                                                long long edgesPerNode,
+                                                long long numberOfVertices,
+                                                Graph ** graphs,
+                                                int ** new_row_offsets_dev,
+                                                int ** new_columns_dev,
+                                                int ** values_dev,
+                                                int ** new_degrees_dev){
+
+    long long myLevel = blockIdx.x;
+    long long myLevelSize;
+    long long levelOffset;
+    if (myLevel != 0){
+        myLevelSize = pow(3.0, myLevel-1);
+        levelOffset = CalculateLevelOffset(myLevel);
+    } else {
+        myLevelSize = 1;
+        levelOffset = 0;
+    }
+
+    long long leafIndex = threadIdx.x;
+
+    for (int node = leafIndex; node < myLevelSize; node += blockDim.x){
+        AssignPointers(levelOffset + node,
+                        edgesPerNode,
+                        numberOfVertices,
+                        graphs,
+                        new_row_offsets_dev,
+                        new_columns_dev,
+                        values_dev,
+                        new_degrees_dev
+        );
+    }
+
+}
 
 // Logic of the tree
     // Every level decreases the number of remaining vertices by at least 2
@@ -53,7 +111,7 @@ __host__ __device__ long long ParallelB1_GPU::CalculateSizeRequirement(int start
     // and induce.  
     // We may have no use for iterating over a graph from the root.
 /*
-__host__ __device__ void ParallelB1::PopulateTree(int treeSize, 
+__host__ __device__ void PopulateTree(int treeSize, 
                                 std::vector<Graph> & graphs,
                                 std::vector<int> & answer){
     // ceiling(vertexCount/2) loops
@@ -78,7 +136,7 @@ __host__ __device__ void ParallelB1::PopulateTree(int treeSize,
 }
 
 // Fill a perfect 3-ary tree to a given depth
-__host__ __device__ int ParallelB1::PopulateTreeParallelLevelWise(int numberOfLevels, 
+__host__ __device__ int PopulateTreeParallelLevelWise(int numberOfLevels, 
                                 std::vector<Graph> & graphs,
                                 std::vector<int> & answer){
     // ceiling(vertexCount/2) loops
@@ -152,7 +210,7 @@ __host__ __device__ int ParallelB1::PopulateTreeParallelLevelWise(int numberOfLe
 }
 // This method can be rewritten to use fill all Graphs allocated
 // Irrespective of whether the last level is full
-__host__ __device__ void ParallelB1::PopulateTreeParallelAsymmetric(int treeSize, 
+__host__ __device__ void PopulateTreeParallelAsymmetric(int treeSize, 
                                 std::vector<Graph> & graphs,
                                 std::vector<int> & answer){
     // ceiling(vertexCount/2) loops
@@ -193,7 +251,7 @@ __host__ __device__ void ParallelB1::PopulateTreeParallelAsymmetric(int treeSize
     }
 }
 
-__host__ __device__ int ParallelB1::GenerateChildren(Graph & child_g){
+__host__ __device__ int GenerateChildren(Graph & child_g){
 
     std::vector< std::vector<int> > & childrensVertices_ref = child_g.GetChildrenVertices();
 
@@ -228,7 +286,7 @@ __host__ __device__ int ParallelB1::GenerateChildren(Graph & child_g){
     return 0;
 }
 
-__host__ __device__ int ParallelB1::GetRandomVertex(std::vector<int> & verticesRemaining){
+__host__ __device__ int GetRandomVertex(std::vector<int> & verticesRemaining){
     if(verticesRemaining.size() == 0)
         return -1;
     int index = rand() % verticesRemaining.size();
@@ -237,7 +295,7 @@ __host__ __device__ int ParallelB1::GetRandomVertex(std::vector<int> & verticesR
 
 
 // DFS of maximum length 3. No simple cycles u -> v -> u 
-__host__ __device__ void ParallelB1::DFS(std::vector<int> & new_row_off,
+__host__ __device__ void DFS(std::vector<int> & new_row_off,
                     std::vector<int> & new_col_ref, 
                     std::vector<int> & new_vals_ref,
                     std::vector<int> & path, 
@@ -255,7 +313,7 @@ __host__ __device__ void ParallelB1::DFS(std::vector<int> & new_row_off,
     }
 }
 
-__host__ __device__ int ParallelB1::GetRandomOutgoingEdge(  std::vector<int> & new_row_off,
+__host__ __device__ int GetRandomOutgoingEdge(  std::vector<int> & new_row_off,
                                         std::vector<int> & new_col_ref,
                                         std::vector<int> & new_values_ref,
                                         int v, 
@@ -292,7 +350,7 @@ __host__ __device__ int ParallelB1::GetRandomOutgoingEdge(  std::vector<int> & n
 }
 
 
-__host__ __device__ int ParallelB1::classifyPath(std::vector<int> & path){
+__host__ __device__ int classifyPath(std::vector<int> & path){
     if (path.size()==2)
         return 3;
     else if (path.size()==3)
@@ -303,7 +361,7 @@ __host__ __device__ int ParallelB1::classifyPath(std::vector<int> & path){
         return 0;
 }
 
-__host__ __device__ void ParallelB1::createVertexSetsForEachChild(std::vector< std::vector<int> > & childrensVertices,
+__host__ __device__ void createVertexSetsForEachChild(std::vector< std::vector<int> > & childrensVertices,
                                             int caseNumber, 
                                             std::vector<int> & path){
     if (caseNumber == 0) {
@@ -352,7 +410,7 @@ __host__ __device__ void ParallelB1::createVertexSetsForEachChild(std::vector< s
     }
 }
 
-__host__ __device__ void ParallelB1::TraverseUpTree(int index, 
+__host__ __device__ void TraverseUpTree(int index, 
                                 std::vector<Graph> & graphs,
                                 std::vector<int> & answer){
     bool haventReachedRoot = true;
