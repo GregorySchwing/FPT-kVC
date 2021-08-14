@@ -55,13 +55,28 @@ int main(int argc, char *argv[])
     long long condensedData = g.GetVertexCount();
     long long sizeOfSingleGraph = expandedData*2*sizeof(int) + 2*condensedData*sizeof(int);
     long long totalMem = sizeOfSingleGraph * treeSize;
+
+    int num_gpus;
+    size_t free, total;
+    cudaGetDeviceCount( &num_gpus );
+    for ( int gpu_id = 0; gpu_id < num_gpus; gpu_id++ ) {
+        cudaSetDevice( gpu_id );
+        int id;
+        cudaGetDevice( &id );
+        cudaMemGetInfo( &free, &total );
+        std::cout << "GPU " << id << " memory: free=" << free << ", total=" << total << std::endl;
+    }
+
     long long memAvail = getTotalSystemMemory();
     std::cout << "You are about to allocate " << double(totalMem)/1024/1024/1024 << " GB" << std::endl;
-    std::cout << "Your system has " << double(memAvail)/1024/1024/1024 << " GB available" << std::endl;
+    std::cout << "Your CPU RAM has " << double(memAvail)/1024/1024/1024 << " GB available" << std::endl;
+    std::cout << "Your GPU RAM has " << double(free)/1024/1024/1024 << " GB available" << std::endl;
     do 
     {
         std::cout << '\n' << "Press a key to continue...; ctrl-c to terminate";
     } while (std::cin.get() != '\n');
+
+
 
     thrust::device_vector< Graph_GPU > graphs(treeSize, Graph_GPU(g));
     /*
