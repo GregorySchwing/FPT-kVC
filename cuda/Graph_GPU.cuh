@@ -13,7 +13,7 @@ class Graph;
 class Graph_GPU {
 public:
     /* Constructor to allocate induced subGraph_GPU G'' for each branch */
-    __host__ __device__ Graph_GPU(const Graph & other);
+    __host__ Graph_GPU(const Graph & other);
 
 private:
     Graph_GPU * parent;

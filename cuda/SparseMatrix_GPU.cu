@@ -2,7 +2,7 @@
 #include <memory>
 
 /* Copy constr */
-__host__ __device__ SparseMatrix_GPU::SparseMatrix_GPU(const SparseMatrix & s):
+__host__ SparseMatrix_GPU::SparseMatrix_GPU(const SparseMatrix & s):
 size(s.size), 
 numberOfRows(s.numberOfRows), 
 numberOfColumns(s.numberOfColumns){

@@ -9,7 +9,7 @@
 class SparseMatrix_GPU {
     public: 
         /* Copy Constructor */
-        __host__ __device__ SparseMatrix_GPU(const SparseMatrix & s);
+        __host__ SparseMatrix_GPU(const SparseMatrix & s);
 
         int numberOfRows, numberOfColumns, size;
         // These are for the current matrix
