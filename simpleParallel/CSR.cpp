@@ -46,6 +46,7 @@ old_column_indices_ref(&c.new_column_indices)
 /* Building the first graph */
 CSR::CSR(CSR & c):
 SparseMatrix(c),
+vertexCount(c.vertexCount),
 old_row_offsets_ref(&c.new_row_offsets),
 old_column_indices_ref(&c.new_column_indices)
 {

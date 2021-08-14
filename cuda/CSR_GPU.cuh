@@ -10,7 +10,7 @@
 class CSR_GPU : public SparseMatrix_GPU {
     public:
         // Copy constructor for allocating graph object
-        __host__ CSR_GPU(const CSR & c);
+        __host__ __device__ CSR_GPU(const CSR & c);
         __host__ __device__ ~CSR_GPU();
 
         

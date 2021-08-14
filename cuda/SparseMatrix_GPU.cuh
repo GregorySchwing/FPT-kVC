@@ -7,7 +7,7 @@
 class SparseMatrix_GPU {
     public: 
         /* Copy Constructor */
-        __host__ SparseMatrix_GPU(const SparseMatrix & s);
+        __host__ __device__ SparseMatrix_GPU(const SparseMatrix & s);
         __host__ __device__ ~SparseMatrix_GPU();
 
 
