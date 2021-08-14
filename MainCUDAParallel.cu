@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
     CSR csr(coordinateFormat);
     Graph g(csr);
     //int k = 15;
-    int k = 4;
+    int k = 9;
     ParallelKernelization sk(g, k);
     sk.TestAValueOfK(k);
     bool noSolutionExists = sk.EdgeCountKernel();
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
         std::cout << "|G'(E)| <= k*k', a solution may exist" << std::endl;
     }
     //int treeSize = 200000;
-    int numberOfLevels = 10;
+    int numberOfLevels = 15;
     long long treeSize = ParallelB1::CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
     long long expandedData = g.GetEdgesLeftToCover();
     long long condensedData = g.GetVertexCount();
