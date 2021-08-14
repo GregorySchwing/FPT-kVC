@@ -33,9 +33,9 @@ set(sources_simple_parallel
    )
 
 set(sources_gpu 
-    cuda/CSR.cu
-    cuda/Graph.cu
-    cuda/SparseMatrix.cu
+    cuda/CSR_GPU.cu
+    cuda/Graph_GPU.cu
+    cuda/SparseMatrix_GPU.cu
    )
 
 set(sources_hybrid 
@@ -75,9 +75,9 @@ set(headers_simple_parallel
    )
 
 set(headers_gpu 
-    cuda/CSR.cuh
-    cuda/Graph.cuh
-    cuda/SparseMatrix.cuh
+    cuda/CSR_GPU.cuh
+    cuda/Graph_GPU.cuh
+    cuda/SparseMatrix_GPU.cuh
    )
 
 set(headers_hybrid
