@@ -8,11 +8,23 @@
 
 class Graph;
 
+template <typename T, size_t M, size_t N>
+T (&make_sub_array(T (&orig)[M], size_t o))[N]
+{
+    return (T (&)[N])(*(orig + o));
+}
+
 class Graph_GPU {
 public:
     /* Constructor to allocate induced subGraph_GPU G'' for each branch */
     __host__ __device__ Graph_GPU(const Graph & other);
     __host__ __device__ ~Graph_GPU();
+    __host__ __device__ void InitTree(int treeSize, 
+                                        int startingLevel, 
+                                        int endingLevel, 
+                                        Graph ** tree);
+    __host__ __device__ long long CalculateSizeRequirement(int startingLevel,
+                                                    int endingLevel);
 
 
 private:
