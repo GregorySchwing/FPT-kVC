@@ -12,6 +12,8 @@ class CSR_GPU : public SparseMatrix_GPU {
     public:
         // Copy constructor for allocating graph object
         __host__ CSR_GPU(const CSR & c);
+        
+        __host__ ~CSR_GPU();
 
         // These are the current CSR
         thrust::device_vector<int> * old_column_indices_ref, * old_row_offsets_ref;

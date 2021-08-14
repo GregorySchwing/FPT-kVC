@@ -10,6 +10,7 @@ class SparseMatrix_GPU {
     public: 
         /* Copy Constructor */
         __host__ SparseMatrix_GPU(const SparseMatrix & s);
+        __host__ ~SparseMatrix_GPU();
 
         int numberOfRows, numberOfColumns, size;
         // These are for the current matrix

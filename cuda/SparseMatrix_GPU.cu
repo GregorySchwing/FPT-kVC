@@ -11,3 +11,8 @@ numberOfColumns(s.numberOfColumns){
     new_values_dev.reserve(s.size);
 }
 
+__host__ SparseMatrix_GPU::~SparseMatrix_GPU(){
+    new_values_dev.clear();
+    new_values_dev.shrink_to_fit();
+}
+
