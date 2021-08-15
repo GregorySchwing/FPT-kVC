@@ -77,6 +77,7 @@ set(headers_simple_parallel
 
 set(headers_gpu 
     cuda/CSR_GPU.cuh
+    cuda/CUDAUtils.cuh
     cuda/Graph_GPU.cuh
     cuda/SparseMatrix_GPU.cuh
     cuda/ParallelB1_GPU.cuh

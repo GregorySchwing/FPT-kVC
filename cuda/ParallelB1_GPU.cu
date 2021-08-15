@@ -183,7 +183,7 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&values_dev_ptr, (g.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&new_degrees_dev_ptr, (g.GetVertexCount()*treeSize) * sizeof(int) );
 
-    PopulateTreeParallelLevelWise_GPU<<<1,1,1>>>(g,
+    PopulateTreeParallelLevelWise_GPU<<<1,1>>>(g,
                                         numberOfLevels, 
                                         g.GetEdgesLeftToCover(),
                                         g.GetVertexCount(),
@@ -193,7 +193,7 @@ void CallPopulateTree(int numberOfLevels,
                                         &values_dev_ptr,
                                         &new_degrees_dev_ptr);
     cudaDeviceSynchronize();
-    //checkLastErrorCUDA(__FILE__, __LINE__);
+    checkLastErrorCUDA(__FILE__, __LINE__);
 
     std::vector<int> mpt;
     InitGPrime_GPU<<<1,1,1>>>(g, 
@@ -201,9 +201,12 @@ void CallPopulateTree(int numberOfLevels,
                             g.GetVerticesThisGraphIncludedInTheCover(), 
                             &graphs_ptr[0]);
     cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+    
     TearDownTree_GPU<<<1,1,1>>>(numberOfLevels, &graphs_ptr);
     cudaDeviceSynchronize();
-
+    checkLastErrorCUDA(__FILE__, __LINE__);
+    
     cudaFree( graphs_ptr );
     cudaFree( new_row_offsets_dev_ptr );
     cudaFree( new_columns_dev_ptr );
