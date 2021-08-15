@@ -18,7 +18,7 @@
 class Graph_GPU;
 
 void CallPopulateTree(int numberOfLevels, 
-                    Graph & g);
+                    Graph & gPrime);
 
 CUDA_HOSTDEV int CalculateWorstCaseSpaceComplexity(int vertexCount);
 CUDA_HOSTDEV long long CalculateSpaceForDesiredNumberOfLevels(int NumberOfLevels);

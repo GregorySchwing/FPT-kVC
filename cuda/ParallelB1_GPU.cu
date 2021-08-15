@@ -141,13 +141,13 @@ __global__ void TearDownTree_GPU(int numberOfLevels,
 }
 
 void CallPopulateTree(int numberOfLevels, 
-                    Graph & g){
+                    Graph & gPrime){
 
 
     //int treeSize = 200000;
     long long treeSize = CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
-    long long expandedData = g.GetEdgesLeftToCover();
-    long long condensedData = g.GetVertexCount();
+    long long expandedData = gPrime.GetEdgesLeftToCover();
+    long long condensedData = gPrime.GetVertexCount();
     long long sizeOfSingleGraph = expandedData*2*sizeof(int) + 2*condensedData*sizeof(int);
     long long totalMem = sizeOfSingleGraph * treeSize;
 
@@ -176,15 +176,15 @@ void CallPopulateTree(int numberOfLevels,
     int * new_degrees_dev_ptr; 
     
     cudaMalloc( (void**)&graphs_ptr, treeSize * sizeof(Graph_GPU) );
-    cudaMalloc( (void**)&new_row_offsets_dev_ptr, ((g.GetVertexCount()+1)*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&new_columns_dev_ptr, (g.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&values_dev_ptr, (g.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&new_degrees_dev_ptr, (g.GetVertexCount()*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&new_row_offsets_dev_ptr, ((gPrime.GetVertexCount()+1)*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&new_columns_dev_ptr, (gPrime.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&values_dev_ptr, (gPrime.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&new_degrees_dev_ptr, (gPrime.GetVertexCount()*treeSize) * sizeof(int) );
 
-    PopulateTreeParallelLevelWise_GPU<<<1,1,1>>>(g,
+    PopulateTreeParallelLevelWise_GPU<<<1,1,1>>>(gPrime,
                                         numberOfLevels, 
-                                        g.GetEdgesLeftToCover(),
-                                        g.GetVertexCount(),
+                                        gPrime.GetEdgesLeftToCover(),
+                                        gPrime.GetVertexCount(),
                                         &graphs_ptr,
                                         &new_row_offsets_dev_ptr,
                                         &new_columns_dev_ptr,
