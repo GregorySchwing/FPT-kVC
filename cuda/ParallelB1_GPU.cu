@@ -137,19 +137,17 @@ void CallPopulateTree(int numberOfLevels,
     } while (std::cin.get() != '\n');
 
     Graph_GPU * graphs_ptr;
-
+    int * new_row_offsets_dev_ptr;
+    int * new_columns_dev_ptr;
+    int * values_dev_ptr;
+    int * new_degrees_dev_ptr; 
+    
     cudaMalloc( (void**)&graphs_ptr, treeSize * sizeof(Graph_GPU) );
+    cudaMalloc( (void**)&new_row_offsets_dev_ptr, ((g.GetVertexCount()+1)*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&new_columns_dev_ptr, (g.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&values_dev_ptr, (g.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&new_degrees_dev_ptr, (g.GetVertexCount()*treeSize) * sizeof(int) );
 
-    thrust::device_vector< int > new_row_offsets_dev((g.GetVertexCount()+1)*treeSize);
-    thrust::device_vector< int > new_columns_dev(g.GetEdgesLeftToCover()*treeSize);
-    thrust::device_vector< int > values_dev(g.GetEdgesLeftToCover()*treeSize);
-    thrust::device_vector< int > new_degrees_dev(g.GetVertexCount()*treeSize);
-
-    int * new_row_offsets_dev_ptr = thrust::raw_pointer_cast(&new_row_offsets_dev[0]);
-    int * new_columns_dev_ptr = thrust::raw_pointer_cast(&new_columns_dev[0]);
-    int * values_dev_ptr = thrust::raw_pointer_cast(&values_dev[0]);
-    int * new_degrees_dev_ptr = thrust::raw_pointer_cast(&new_degrees_dev[0]);                    
-                        
     PopulateTreeParallelLevelWise_GPU<<<1,1,1>>>(numberOfLevels, 
                                         g.GetEdgesLeftToCover(),
                                         g.GetVertexCount(),
