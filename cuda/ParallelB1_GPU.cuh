@@ -35,7 +35,8 @@ __device__ void AssignPointers(long long globalIndex,
                                 int ** values_dev,
                                 int ** new_degrees_dev);
 
-__global__ void PopulateTreeParallelLevelWise_GPU(int numberOfLevels, 
+__global__ void PopulateTreeParallelLevelWise_GPU(Graph & gPrime,
+                                            int numberOfLevels, 
                                             long long edgesPerNode,
                                             long long numberOfVertices,
                                             Graph_GPU ** graphs,

@@ -72,7 +72,8 @@ __device__ void AssignPointers(long long globalIndex,
 
 
 // Fill a perfect 3-ary tree to a given depth
-__global__ void PopulateTreeParallelLevelWise_GPU(int numberOfLevels, 
+__global__ void PopulateTreeParallelLevelWise_GPU(Graph & gPrime,
+                                                int numberOfLevels, 
                                                 long long edgesPerNode,
                                                 long long numberOfVertices,
                                                 Graph_GPU ** graphs,
@@ -95,6 +96,7 @@ __global__ void PopulateTreeParallelLevelWise_GPU(int numberOfLevels,
     long long leafIndex = threadIdx.x;
 
     for (int node = leafIndex; node < myLevelSize; node += blockDim.x){
+        graphs[levelOffset + node] = new Graph_GPU(gPrime);
         AssignPointers(levelOffset + node,
                         edgesPerNode,
                         numberOfVertices,
@@ -148,7 +150,8 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&values_dev_ptr, (g.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&new_degrees_dev_ptr, (g.GetVertexCount()*treeSize) * sizeof(int) );
 
-    PopulateTreeParallelLevelWise_GPU<<<1,1,1>>>(numberOfLevels, 
+    PopulateTreeParallelLevelWise_GPU<<<1,1,1>>>(g,
+                                        numberOfLevels, 
                                         g.GetEdgesLeftToCover(),
                                         g.GetVertexCount(),
                                         &graphs_ptr,
@@ -156,6 +159,12 @@ void CallPopulateTree(int numberOfLevels,
                                         &new_columns_dev_ptr,
                                         &values_dev_ptr,
                                         &new_degrees_dev_ptr);
+
+    cudaFree( graphs_ptr );
+    cudaFree( new_row_offsets_dev_ptr );
+    cudaFree( new_columns_dev_ptr );
+    cudaFree( values_dev_ptr );
+    cudaFree( new_degrees_dev_ptr );
 
 }
 
