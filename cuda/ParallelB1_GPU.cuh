@@ -12,6 +12,7 @@
 #ifdef FPT_CUDA
 
 #include <cuda.h>
+#include <cuda_runtime.h>
 #include "Graph_GPU.cuh"
 #include <thrust/device_vector.h>
 

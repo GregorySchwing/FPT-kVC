@@ -190,6 +190,8 @@ void CallPopulateTree(int numberOfLevels,
                                         &new_columns_dev_ptr,
                                         &values_dev_ptr,
                                         &new_degrees_dev_ptr);
+    cudaDeviceSynchronize();
+    //checkLastErrorCUDA(__FILE__, __LINE__);
 
     std::vector<int> mpt;
     InitGPrime_GPU<<<1,1,1>>>(g, 
