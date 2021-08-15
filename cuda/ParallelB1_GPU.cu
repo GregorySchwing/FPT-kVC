@@ -83,6 +83,10 @@ __global__ void PopulateTreeParallelLevelWise_GPU(Graph & gPrime,
                                                 int ** new_degrees_dev){
 
     long long myLevel = blockIdx.x;
+
+    if (myLevel >= numberOfLevels)
+        return;
+
     long long myLevelSize;
     long long levelOffset;
     if (myLevel != 0){
@@ -106,6 +110,33 @@ __global__ void PopulateTreeParallelLevelWise_GPU(Graph & gPrime,
                         values_dev,
                         new_degrees_dev
         );
+    }
+}
+
+
+// Fill a perfect 3-ary tree to a given depth
+__global__ void TearDownTree_GPU(int numberOfLevels, 
+                                Graph_GPU ** graphs){
+
+    long long myLevel = blockIdx.x;
+
+    if (myLevel >= numberOfLevels)
+        return;
+
+    long long myLevelSize;
+    long long levelOffset;
+    if (myLevel != 0){
+        myLevelSize = pow(3.0, myLevel-1);
+        levelOffset = CalculateLevelOffset(myLevel);
+    } else {
+        myLevelSize = 1;
+        levelOffset = 0;
+    }
+
+    long long leafIndex = threadIdx.x;
+
+    for (int node = leafIndex; node < myLevelSize; node += blockDim.x){
+        delete graphs[levelOffset + node];
     }
 }
 
@@ -159,6 +190,8 @@ void CallPopulateTree(int numberOfLevels,
                                         &new_columns_dev_ptr,
                                         &values_dev_ptr,
                                         &new_degrees_dev_ptr);
+
+    TearDownTree_GPU<<<1,1,1>>>(numberOfLevels, &graphs_ptr);
 
     cudaFree( graphs_ptr );
     cudaFree( new_row_offsets_dev_ptr );
