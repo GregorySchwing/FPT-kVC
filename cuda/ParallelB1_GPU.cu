@@ -198,8 +198,9 @@ void CallPopulateTree(int numberOfLevels,
                             mpt, 
                             g.GetVerticesThisGraphIncludedInTheCover(), 
                             &graphs_ptr[0]);
-
+    cudaDeviceSynchronize();
     TearDownTree_GPU<<<1,1,1>>>(numberOfLevels, &graphs_ptr);
+    cudaDeviceSynchronize();
 
     cudaFree( graphs_ptr );
     cudaFree( new_row_offsets_dev_ptr );
