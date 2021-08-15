@@ -136,13 +136,15 @@ void CallPopulateTree(int numberOfLevels,
         std::cout << '\n' << "Press a key to continue...; ctrl-c to terminate";
     } while (std::cin.get() != '\n');
 
-    thrust::device_vector< Graph_GPU > graphs(treeSize, Graph_GPU(g));
+    Graph_GPU * graphs_ptr;
+
+    cudaMalloc( (void**)&graphs_ptr, treeSize * sizeof(Graph_GPU) );
+
     thrust::device_vector< int > new_row_offsets_dev((g.GetVertexCount()+1)*treeSize);
     thrust::device_vector< int > new_columns_dev(g.GetEdgesLeftToCover()*treeSize);
     thrust::device_vector< int > values_dev(g.GetEdgesLeftToCover()*treeSize);
     thrust::device_vector< int > new_degrees_dev(g.GetVertexCount()*treeSize);
 
-    Graph_GPU * graphs_ptr = thrust::raw_pointer_cast(&graphs[0]);
     int * new_row_offsets_dev_ptr = thrust::raw_pointer_cast(&new_row_offsets_dev[0]);
     int * new_columns_dev_ptr = thrust::raw_pointer_cast(&new_columns_dev[0]);
     int * values_dev_ptr = thrust::raw_pointer_cast(&values_dev[0]);
