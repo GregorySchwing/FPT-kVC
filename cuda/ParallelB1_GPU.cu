@@ -205,6 +205,7 @@ void CallPopulateTree(int numberOfLevels,
     cudaFree( values_dev_ptr );
     cudaFree( new_degrees_dev_ptr );
 
+    cudaDeviceSynchronize();
 }
 
 __global__ void InitGPrime_GPU(Graph & g, std::vector<int> mpt, std::vector<int> S, Graph_GPU * root){
