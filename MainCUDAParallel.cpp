@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 
 
     CallPopulateTree(endingLevel - startingLevel, 
-                    sk.GetGPrime());
+                    g);
     //thrust::device_vector< int > verticesToIncludeInCover_dev(g.GetVertexCount()*treeSize);
     //thrust::device_vector< int > verticesRemaining_dev(g.GetVertexCount()*treeSize);
     //thrust::device_vector< int > hasntBeenRemoved_dev(g.GetVertexCount()*treeSize);
