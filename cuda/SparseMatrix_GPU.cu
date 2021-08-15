@@ -1,3 +1,5 @@
+#ifdef FPT_CUDA
+
 #include "SparseMatrix_GPU.cuh"
 #include <memory>
 
@@ -14,3 +16,5 @@ numberOfColumns(s.numberOfColumns){
 __host__ __device__ SparseMatrix_GPU::~SparseMatrix_GPU(){
     //cudaFree(new_values_dev);
 }
+
+#endif

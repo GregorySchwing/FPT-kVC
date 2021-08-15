@@ -1,7 +1,12 @@
+#ifdef FPT_CUDA
+
 #include "ParallelB1_GPU.cuh"
 #include <math.h>       /* pow */
 // Sum of i = 0 to n/2
 // 3^i
+
+
+
 __host__ __device__ int CalculateWorstCaseSpaceComplexity(int vertexCount){
     int summand= 0;
     // ceiling(vertexCount/2) loops
@@ -67,8 +72,7 @@ __device__ void AssignPointers(long long globalIndex,
 
 
 // Fill a perfect 3-ary tree to a given depth
-__global__ void PopulateTreeParallelLevelWise(int numberOfLevels, 
-                                                long long treeSize,
+__global__ void PopulateTreeParallelLevelWise_GPU(int numberOfLevels, 
                                                 long long edgesPerNode,
                                                 long long numberOfVertices,
                                                 Graph_GPU ** graphs,
@@ -101,6 +105,57 @@ __global__ void PopulateTreeParallelLevelWise(int numberOfLevels,
                         new_degrees_dev
         );
     }
+}
+
+void CallPopulateTree(int numberOfLevels, 
+                    Graph & g){
+
+
+    //int treeSize = 200000;
+    long long treeSize = CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
+    long long expandedData = g.GetEdgesLeftToCover();
+    long long condensedData = g.GetVertexCount();
+    long long sizeOfSingleGraph = expandedData*2*sizeof(int) + 2*condensedData*sizeof(int);
+    long long totalMem = sizeOfSingleGraph * treeSize;
+
+    int num_gpus;
+    size_t free, total;
+    cudaGetDeviceCount( &num_gpus );
+    for ( int gpu_id = 0; gpu_id < num_gpus; gpu_id++ ) {
+        cudaSetDevice( gpu_id );
+        int id;
+        cudaGetDevice( &id );
+        cudaMemGetInfo( &free, &total );
+        std::cout << "GPU " << id << " memory: free=" << free << ", total=" << total << std::endl;
+    }
+
+    std::cout << "You are about to allocate " << double(totalMem)/1024/1024/1024 << " GB" << std::endl;
+    std::cout << "Your GPU RAM has " << double(free)/1024/1024/1024 << " GB available" << std::endl;
+    do 
+    {
+        std::cout << '\n' << "Press a key to continue...; ctrl-c to terminate";
+    } while (std::cin.get() != '\n');
+
+    thrust::device_vector< Graph_GPU > graphs(treeSize, Graph_GPU(g));
+    thrust::device_vector< int > new_row_offsets_dev((g.GetVertexCount()+1)*treeSize);
+    thrust::device_vector< int > new_columns_dev(g.GetEdgesLeftToCover()*treeSize);
+    thrust::device_vector< int > values_dev(g.GetEdgesLeftToCover()*treeSize);
+    thrust::device_vector< int > new_degrees_dev(g.GetVertexCount()*treeSize);
+
+    Graph_GPU * graphs_ptr = thrust::raw_pointer_cast(&graphs[0]);
+    int * new_row_offsets_dev_ptr = thrust::raw_pointer_cast(&new_row_offsets_dev[0]);
+    int * new_columns_dev_ptr = thrust::raw_pointer_cast(&new_columns_dev[0]);
+    int * values_dev_ptr = thrust::raw_pointer_cast(&values_dev[0]);
+    int * new_degrees_dev_ptr = thrust::raw_pointer_cast(&new_degrees_dev[0]);                    
+                        
+    PopulateTreeParallelLevelWise_GPU<<<1,1,1>>>(numberOfLevels, 
+                                        g.GetEdgesLeftToCover(),
+                                        g.GetVertexCount(),
+                                        &graphs_ptr,
+                                        &new_row_offsets_dev_ptr,
+                                        &new_columns_dev_ptr,
+                                        &values_dev_ptr,
+                                        &new_degrees_dev_ptr);
 
 }
 
@@ -440,4 +495,6 @@ __host__ __device__ void TraverseUpTree(int index,
     } 
 }
 */
+
+#endif
 

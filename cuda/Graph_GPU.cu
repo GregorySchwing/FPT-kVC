@@ -1,3 +1,6 @@
+#ifdef FPT_CUDA
+
+
 #include "Graph_GPU.cuh"
 
 
@@ -10,7 +13,8 @@ __host__ __device__ Graph_GPU::Graph_GPU(const Graph & other): csr(other.csr),
 }
 
 
-__host__ __device__ void Graph_GPU::InitTree(long long treeSize, 
+__host__ __device__ void Graph_GPU::InitTree(Graph & root,
+                                            long long treeSize, 
                                             long long edgesPerNode,
                                             long long numberOfVertices,
                                             int startingLevel, 
@@ -24,25 +28,20 @@ __host__ __device__ void Graph_GPU::InitTree(long long treeSize,
     long long calculatedSizeReq = CalculateSizeRequirement(startingLevel, 
                                                             endingLevel);
 
+
     if (treeSize != calculatedSizeReq)
         printf("Asymmetric tree");
     else
         printf("Symmetric tree");
 
 
-
-    
-
-    
-    //cudaMalloc(&hasntBeenRemoved, other.vertexCount*sizeof(int)); 
-    //cudaMalloc(&verticesRemaining, other.vertexCount*sizeof(int)); 
-    //cudaMalloc(&new_degrees_dev, other.vertexCount*sizeof(int)); 
 }
 
 __host__ __device__ Graph_GPU::~Graph_GPU(){
-    //csr.~CSR_GPU();
-    //cudaFree(hasntBeenRemoved);
-    //cudaFree(verticesRemaining);
-    //cudaFree(new_degrees_dev);
+    delete new_degrees_dev;
+    delete csr.new_row_offsets_dev;
+    delete csr.new_column_indices_dev;
+    delete csr.new_values_dev;
 }
 
+#endif

@@ -2,16 +2,29 @@
 #ifndef Parallel_B1_GPU_H
 #define Parallel_B1_GPU_H
 
+#ifdef __CUDACC__
+#define CUDA_HOSTDEV __host__ __device__
+#else
+#define CUDA_HOSTDEV
+#endif
+
+#pragma once
+#ifdef FPT_CUDA
+
 #include <cuda.h>
 #include "Graph_GPU.cuh"
+#include <thrust/device_vector.h>
 
 class Graph_GPU;
 
-__host__ __device__ int CalculateWorstCaseSpaceComplexity(int vertexCount);
-__host__ __device__ long long CalculateSpaceForDesiredNumberOfLevels(int NumberOfLevels);
-__host__ __device__ long long CalculateSizeRequirement(int startingLevel,
+void CallPopulateTree(int numberOfLevels, 
+                    Graph & g);
+
+CUDA_HOSTDEV int CalculateWorstCaseSpaceComplexity(int vertexCount);
+CUDA_HOSTDEV long long CalculateSpaceForDesiredNumberOfLevels(int NumberOfLevels);
+CUDA_HOSTDEV long long CalculateSizeRequirement(int startingLevel,
                                                             int endingLevel);
-__host__ __device__ long long CalculateLevelOffset(int level);
+CUDA_HOSTDEV long long CalculateLevelOffset(int level);
 
 __device__ void AssignPointers(long long globalIndex,
                                 long long edgesPerNode,
@@ -22,7 +35,7 @@ __device__ void AssignPointers(long long globalIndex,
                                 int ** values_dev,
                                 int ** new_degrees_dev);
 
-__global__ void PopulateTreeParallelLevelWise(int numberOfLevels, 
+__global__ void PopulateTreeParallelLevelWise_GPU(int numberOfLevels, 
                                             long long edgesPerNode,
                                             long long numberOfVertices,
                                             Graph_GPU ** graphs,
@@ -70,4 +83,5 @@ __host__ __device__ void TraverseUpTree(int index,
 */
 
 
+#endif
 #endif

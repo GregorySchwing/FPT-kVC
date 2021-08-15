@@ -6,7 +6,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 
-set(GEN_COMP_flag "-DGOMC_CUDA -DTHRUST_IGNORE_DEPRECATED_CPP_DIALECT ")
+set(GEN_COMP_flag "-DFPT_CUDA -DTHRUST_IGNORE_DEPRECATED_CPP_DIALECT ")
 
 if (GOMC_NVTX_ENABLED)
 	message("-- Enabling profiling with NVTX for GPU")
@@ -36,7 +36,7 @@ include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 message(STATUS "CUSPARSE HEADERS = ${CUDAToolkit_INCLUDE_DIRS}")
 message(STATUS "CUSPARSE LIB = ${CUDA_cusparse_LIBRARY}")
 
-add_executable(GPU_bin ${headers_lib} ${sources_lib} ${main_cuda_parallel} ${sources_gpu} ${headers_gpu} ${sources_hybrid} ${headers_hybrid} ${CUDAToolkit_INCLUDE_DIRS})
+add_executable(GPU_bin ${main_cuda_parallel} ${headers_gpu} ${sources_gpu} ${headers_lib} ${sources_lib} ${sources_hybrid} ${headers_hybrid} ${CUDAToolkit_INCLUDE_DIRS})
 set_target_properties(GPU_bin PROPERTIES
     CUDA_SEPARABLE_COMPILATION ON
     OUTPUT_NAME ${GPU_name}

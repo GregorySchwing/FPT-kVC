@@ -1,3 +1,5 @@
+#ifdef FPT_CUDA
+
 #include "CSR_GPU.cuh"
 
 /* Copy constructor */
@@ -15,4 +17,5 @@ __host__ __device__ CSR_GPU::~CSR_GPU(){
     //cudaFree(new_column_indices_dev);
 }
 
+#endif
 

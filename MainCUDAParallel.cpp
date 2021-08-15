@@ -6,9 +6,9 @@
 #include "hybrid/ConnectednessTest.h"
 #include "hybrid/ParallelB1.h"
 #include <unistd.h>
-#include "Graph_GPU.cuh"
-#include <thrust/device_vector.h>
-
+#ifdef FPT_CUDA
+#include "ParallelB1_GPU.cuh"
+#endif
 unsigned long long getTotalSystemMemory()
 {
     long pages = sysconf(_SC_PHYS_PAGES);
@@ -48,39 +48,13 @@ int main(int argc, char *argv[])
     } else{
         std::cout << "|G'(E)| <= k*k', a solution may exist" << std::endl;
     }
-    //int treeSize = 200000;
-    int numberOfLevels = 12;
-    long long treeSize = ParallelB1::CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
-    long long expandedData = g.GetEdgesLeftToCover();
-    long long condensedData = g.GetVertexCount();
-    long long sizeOfSingleGraph = expandedData*2*sizeof(int) + 2*condensedData*sizeof(int);
-    long long totalMem = sizeOfSingleGraph * treeSize;
 
-    int num_gpus;
-    size_t free, total;
-    cudaGetDeviceCount( &num_gpus );
-    for ( int gpu_id = 0; gpu_id < num_gpus; gpu_id++ ) {
-        cudaSetDevice( gpu_id );
-        int id;
-        cudaGetDevice( &id );
-        cudaMemGetInfo( &free, &total );
-        std::cout << "GPU " << id << " memory: free=" << free << ", total=" << total << std::endl;
-    }
+    int startingLevel = 0;
+    int endingLevel = 5;
 
-    long long memAvail = getTotalSystemMemory();
-    std::cout << "You are about to allocate " << double(totalMem)/1024/1024/1024 << " GB" << std::endl;
-    std::cout << "Your CPU RAM has " << double(memAvail)/1024/1024/1024 << " GB available" << std::endl;
-    std::cout << "Your GPU RAM has " << double(free)/1024/1024/1024 << " GB available" << std::endl;
-    do 
-    {
-        std::cout << '\n' << "Press a key to continue...; ctrl-c to terminate";
-    } while (std::cin.get() != '\n');
 
-    thrust::device_vector< Graph_GPU > graphs(treeSize, Graph_GPU(g));
-    thrust::device_vector< int > new_row_offsets_dev((g.GetVertexCount()+1)*treeSize);
-    thrust::device_vector< int > new_columns_dev(g.GetEdgesLeftToCover()*treeSize);
-    thrust::device_vector< int > values_dev(g.GetEdgesLeftToCover()*treeSize);
-    thrust::device_vector< int > new_degrees_dev(g.GetVertexCount()*treeSize);
+    CallPopulateTree(endingLevel - startingLevel, 
+                    g);
     //thrust::device_vector< int > verticesToIncludeInCover_dev(g.GetVertexCount()*treeSize);
     //thrust::device_vector< int > verticesRemaining_dev(g.GetVertexCount()*treeSize);
     //thrust::device_vector< int > hasntBeenRemoved_dev(g.GetVertexCount()*treeSize);

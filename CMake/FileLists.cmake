@@ -17,7 +17,7 @@ set(main_simple_parallel
     )
 
 set(main_cuda_parallel
-    MainCUDAParallel.cu
+    MainCUDAParallel.cpp
     )
 
 set(sources_simple_parallel 

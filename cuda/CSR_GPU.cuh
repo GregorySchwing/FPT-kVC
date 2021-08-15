@@ -1,6 +1,14 @@
 #ifndef CSR_GPU_H
 #define CSR_GPU_H
 
+#ifdef __CUDACC__
+#define CUDA_HOSTDEV __host__ __device__
+#else
+#define CUDA_HOSTDEV
+#endif
+
+#ifdef FPT_CUDA
+
 #include "SparseMatrix_GPU.cuh"
 #include "SparseMatrix.h"
 #include "CSR.h"
@@ -10,8 +18,8 @@
 class CSR_GPU : public SparseMatrix_GPU {
     public:
         // Copy constructor for allocating graph object
-        __host__ __device__ CSR_GPU(const CSR & c);
-        __host__ __device__ ~CSR_GPU();
+        CUDA_HOSTDEV CSR_GPU(const CSR & c);
+        CUDA_HOSTDEV ~CSR_GPU();
 
         
 
@@ -25,4 +33,5 @@ class CSR_GPU : public SparseMatrix_GPU {
 
 };
 
+#endif
 #endif

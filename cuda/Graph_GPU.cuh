@@ -1,6 +1,14 @@
 #ifndef GRAPH_GPU_H
 #define GRAPH_GPU_H
 
+#ifdef __CUDACC__
+#define CUDA_HOSTDEV __host__ __device__
+#else
+#define CUDA_HOSTDEV
+#endif
+
+#ifdef FPT_CUDA
+
 #include "CSR_GPU.cuh"
 #include "CSR.h"
 #include "Graph.h"
@@ -15,9 +23,10 @@ class Graph;
 class Graph_GPU {
 public:
     /* Constructor to allocate induced subGraph_GPU G'' for each branch */
-    __host__ __device__ Graph_GPU(const Graph & other);
-    __host__ __device__ ~Graph_GPU();
-    __host__ __device__ void InitTree(long long treeSize, 
+    CUDA_HOSTDEV Graph_GPU(const Graph & other);
+    CUDA_HOSTDEV ~Graph_GPU();
+    CUDA_HOSTDEV void InitTree(  Graph & root,
+                                        long long treeSize, 
                                         long long edgesPerNode,
                                         long long numberOfVertices,
                                         int startingLevel, 
@@ -55,4 +64,6 @@ public:
     friend class Graph;
 
 };
+#endif
+
 #endif
