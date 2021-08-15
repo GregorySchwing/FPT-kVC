@@ -12,7 +12,6 @@ __host__ __device__ Graph_GPU::Graph_GPU(const Graph & other): csr(other.csr),
     //cudaMalloc(&new_degrees_dev, other.vertexCount*sizeof(int)); 
 }
 
-
 __host__ __device__ void Graph_GPU::InitTree(Graph & root,
                                             long long treeSize, 
                                             long long edgesPerNode,

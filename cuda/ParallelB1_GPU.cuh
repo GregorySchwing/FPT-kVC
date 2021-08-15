@@ -45,6 +45,8 @@ __global__ void PopulateTreeParallelLevelWise_GPU(Graph & gPrime,
                                             int ** values_dev,
                                             int ** new_degrees_dev);
 
+__global__ void InitGPrime_GPU(Graph & g, std::vector<int> mpt, std::vector<int> S, Graph_GPU * root);
+
 // Fill a perfect 3-ary tree to a given depth
 __global__ void TearDownTree_GPU(int numberOfLevels, 
                                 Graph_GPU ** graphs);

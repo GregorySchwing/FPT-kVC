@@ -70,9 +70,8 @@ __device__ void AssignPointers(long long globalIndex,
 
 }
 
-
 // Fill a perfect 3-ary tree to a given depth
-__global__ void PopulateTreeParallelLevelWise_GPU(Graph & gPrime,
+__global__ void PopulateTreeParallelLevelWise_GPU(Graph & g,
                                                 int numberOfLevels, 
                                                 long long edgesPerNode,
                                                 long long numberOfVertices,
@@ -100,7 +99,8 @@ __global__ void PopulateTreeParallelLevelWise_GPU(Graph & gPrime,
     long long leafIndex = threadIdx.x;
 
     for (int node = leafIndex; node < myLevelSize; node += blockDim.x){
-        graphs[levelOffset + node] = new Graph_GPU(gPrime);
+        graphs[levelOffset + node] = new Graph_GPU(g);
+        printf("Thread %lu, block %lu, vertexCount %d", leafIndex, myLevel, graphs[levelOffset + node]->vertexCount);
         AssignPointers(levelOffset + node,
                         edgesPerNode,
                         numberOfVertices,
@@ -141,13 +141,13 @@ __global__ void TearDownTree_GPU(int numberOfLevels,
 }
 
 void CallPopulateTree(int numberOfLevels, 
-                    Graph & gPrime){
+                    Graph & g){
 
 
     //int treeSize = 200000;
     long long treeSize = CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
-    long long expandedData = gPrime.GetEdgesLeftToCover();
-    long long condensedData = gPrime.GetVertexCount();
+    long long expandedData = g.GetEdgesLeftToCover();
+    long long condensedData = g.GetVertexCount();
     long long sizeOfSingleGraph = expandedData*2*sizeof(int) + 2*condensedData*sizeof(int);
     long long totalMem = sizeOfSingleGraph * treeSize;
 
@@ -176,20 +176,26 @@ void CallPopulateTree(int numberOfLevels,
     int * new_degrees_dev_ptr; 
     
     cudaMalloc( (void**)&graphs_ptr, treeSize * sizeof(Graph_GPU) );
-    cudaMalloc( (void**)&new_row_offsets_dev_ptr, ((gPrime.GetVertexCount()+1)*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&new_columns_dev_ptr, (gPrime.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&values_dev_ptr, (gPrime.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&new_degrees_dev_ptr, (gPrime.GetVertexCount()*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&new_row_offsets_dev_ptr, ((g.GetVertexCount()+1)*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&new_columns_dev_ptr, (g.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&values_dev_ptr, (g.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&new_degrees_dev_ptr, (g.GetVertexCount()*treeSize) * sizeof(int) );
 
-    PopulateTreeParallelLevelWise_GPU<<<1,1,1>>>(gPrime,
+    PopulateTreeParallelLevelWise_GPU<<<1,1,1>>>(g,
                                         numberOfLevels, 
-                                        gPrime.GetEdgesLeftToCover(),
-                                        gPrime.GetVertexCount(),
+                                        g.GetEdgesLeftToCover(),
+                                        g.GetVertexCount(),
                                         &graphs_ptr,
                                         &new_row_offsets_dev_ptr,
                                         &new_columns_dev_ptr,
                                         &values_dev_ptr,
                                         &new_degrees_dev_ptr);
+
+    std::vector<int> mpt;
+    InitGPrime_GPU<<<1,1,1>>>(g, 
+                            mpt, 
+                            g.GetVerticesThisGraphIncludedInTheCover(), 
+                            &graphs_ptr[0]);
 
     TearDownTree_GPU<<<1,1,1>>>(numberOfLevels, &graphs_ptr);
 
@@ -198,6 +204,10 @@ void CallPopulateTree(int numberOfLevels,
     cudaFree( new_columns_dev_ptr );
     cudaFree( values_dev_ptr );
     cudaFree( new_degrees_dev_ptr );
+
+}
+
+__global__ void InitGPrime_GPU(Graph & g, std::vector<int> mpt, std::vector<int> S, Graph_GPU * root){
 
 }
 
