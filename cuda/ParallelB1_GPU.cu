@@ -118,6 +118,8 @@ __global__ void PopulateTreeParallelLevelWise_GPU(Graph & g,
 __global__ void TearDownTree_GPU(int numberOfLevels, 
                                 Graph_GPU ** graphs){
 
+    printf("\nCalledTeardown");
+
     long long myLevel = blockIdx.x;
 
     if (myLevel >= numberOfLevels)
