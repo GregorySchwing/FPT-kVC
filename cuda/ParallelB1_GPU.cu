@@ -319,7 +319,7 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
-    Graph_GPU * g_dev2 = new Graph_GPU();
+    Graph_GPU * g_dev2 = new Graph_GPU(1);
 
     //cudaMalloc( (void**)&g_dev, 1 * sizeof(Graph_GPU) );
 
