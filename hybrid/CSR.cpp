@@ -67,19 +67,19 @@ SparseMatrix(c)
 
 }
 
-void CSR::SetOldRowOffRef(std::vector<int> & old_arg){
+void CSR::SetOldRowOffRef(thrust::host_vector<int> & old_arg){
     old_row_offsets_ref = &old_arg;
 }
-void CSR::SetOldColRef(std::vector<int> & old_arg){
+void CSR::SetOldColRef(thrust::host_vector<int> & old_arg){
     old_column_indices_ref = &old_arg;
 }
-void CSR::SetOldValRef(std::vector<int> & old_arg){
+void CSR::SetOldValRef(thrust::host_vector<int> & old_arg){
     old_values_ref = &old_arg;
 }
 
 void CSR::PopulateNewVals(int edgesLeftToCover){
     int ONE = 1;
-    std::vector<int> & new_vals = GetNewValRef();
+    thrust::host_vector<int> & new_vals = GetNewValRef();
     for (int i = 0; i < edgesLeftToCover; ++i)
         new_vals.push_back(ONE);
 }
@@ -88,9 +88,9 @@ void CSR::PopulateNewRefs(int edgesLeftToCover){
     int ZERO = 0;
     int ONE = 1;
     // See comment below
-    //std::vector<int> & new_row_offs = GetNewRowOffRef();
-    std::vector<int> & new_col_vals = GetNewColRef();
-    std::vector<int> & new_vals = GetNewValRef();
+    //thrust::host_vector<int> & new_row_offs = GetNewRowOffRef();
+    thrust::host_vector<int> & new_col_vals = GetNewColRef();
+    thrust::host_vector<int> & new_vals = GetNewValRef();
 
     for (int i = 0; i < edgesLeftToCover; ++i){
         //new_row_offs are calculated sequentially
@@ -132,26 +132,26 @@ std::string CSR::toString(){
     return myMatrix;
 }
 
-std::vector<int> * CSR::GetOldRowOffRef(){
+thrust::host_vector<int> * CSR::GetOldRowOffRef(){
     return old_row_offsets_ref;
 }
 
-std::vector<int> * CSR::GetOldColRef(){
+thrust::host_vector<int> * CSR::GetOldColRef(){
     return old_column_indices_ref;
 }
 
-std::vector<int> * CSR::GetOldValRef(){
+thrust::host_vector<int> * CSR::GetOldValRef(){
     return old_values_ref;
 }
 
-std::vector<int> & CSR::GetNewRowOffRef(){
+thrust::host_vector<int> & CSR::GetNewRowOffRef(){
     return new_row_offsets;
 }
 
-std::vector<int> & CSR::GetNewColRef(){
+thrust::host_vector<int> & CSR::GetNewColRef(){
     return new_column_indices;
 }
 
-std::vector<int> & CSR::GetNewValRef(){
+thrust::host_vector<int> & CSR::GetNewValRef(){
     return new_values;
 }

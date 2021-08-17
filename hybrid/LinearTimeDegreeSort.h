@@ -5,26 +5,27 @@
 #include <vector>
 #include <iostream>
 #include <numeric>
+#include <thrust/host_vector.h>
 
 class LinearTimeDegreeSort {
 public:
-    LinearTimeDegreeSort(int numberOfRows, std::vector<int> & old_degree_ref);
-    std::vector<int> & GetDegreeRef();
-    std::vector<int> & GetVertexKeyRef();
+    LinearTimeDegreeSort(int numberOfRows, thrust::host_vector<int> & old_degree_ref);
+    thrust::host_vector<int> & GetDegreeRef();
+    thrust::host_vector<int> & GetVertexKeyRef();
 
 private:
-    std::vector<int> B_row_indices;
-    std::vector<int> B_column_indices; 
-    std::vector<int> B_values; 
-    std::vector<int> C;
+    thrust::host_vector<int> B_row_indices;
+    thrust::host_vector<int> B_column_indices; 
+    thrust::host_vector<int> B_values; 
+    thrust::host_vector<int> C;
 
     void CountingSortSerial(int max,
-                    const std::vector<int> & A_row_indices,
-                    std::vector<int> & A_column_indices,
-                    std::vector<int> & A_values,
-                    std::vector<int> & B_row_indices_ref,
-                    std::vector<int> & B_column_indices_ref,
-                    std::vector<int> & B_values_ref,
-                    std::vector<int> & C_ref);
+                    const thrust::host_vector<int> & A_row_indices,
+                    thrust::host_vector<int> & A_column_indices,
+                    thrust::host_vector<int> & A_values,
+                    thrust::host_vector<int> & B_row_indices_ref,
+                    thrust::host_vector<int> & B_column_indices_ref,
+                    thrust::host_vector<int> & B_values_ref,
+                    thrust::host_vector<int> & C_ref);
 };
 #endif

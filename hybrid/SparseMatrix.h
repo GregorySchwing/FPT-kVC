@@ -3,6 +3,7 @@
 #include <vector>
 #include <sstream>      // std::stringstream
 #include <iostream>
+#include <thrust/host_vector.h>
 
 class SparseMatrix {
     public: 
@@ -21,7 +22,7 @@ class SparseMatrix {
 
 
         /* SPM by reference */
-        //SparseMatrix(int numberOfRows, std::vector<int> & values_ref_arg);
+        //SparseMatrix(int numberOfRows, thrust::host_vector<int> & values_ref_arg);
 
         int GetNumberOfRows();
         void SetNumberOfRows(int numberOfRows_arg);
@@ -30,9 +31,9 @@ class SparseMatrix {
         virtual std::string toString() = 0;
         int numberOfRows, numberOfColumns, size;
         // These are for the current matrix
-        std::vector<int> * old_values_ref;
+        thrust::host_vector<int> * old_values_ref;
         // These are for the next matrix
-        std::vector<int> new_values;
+        thrust::host_vector<int> new_values;
 };
 
 #endif

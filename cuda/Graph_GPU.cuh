@@ -22,6 +22,9 @@ class Graph;
 
 class Graph_GPU {
 public:
+    CUDA_HOSTDEV Graph_GPU(int vertexCount, 
+                            int size,
+                            int numberOfRows);
     /* Constructor to allocate induced subGraph_GPU G'' for each branch */
     CUDA_HOSTDEV Graph_GPU(const Graph & other);
     CUDA_HOSTDEV ~Graph_GPU();

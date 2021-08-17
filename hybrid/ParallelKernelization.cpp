@@ -9,7 +9,7 @@ gPrime(g_arg)
 
     numberOfRows = g.GetCSR().numberOfRows;
 
-    //std::vector<int> & old_degree_ref = ;
+    //thrust::host_vector<int> & old_degree_ref = ;
 
     ltds = new LinearTimeDegreeSort(numberOfRows, old_degrees);
 
@@ -129,12 +129,12 @@ void ParallelKernelization::CountingSortParallel(
                 int procID,
                 int beginIndex,
                 int endIndex,
-                std::vector<int> & A_row_indices,
-                std::vector<int> & A_column_indices,
-                std::vector<int> & A_values,
-                std::vector<int> & B_row_indices_ref,
-                std::vector<int> & B_column_indices_ref,
-                std::vector<int> & B_values_ref){
+                thrust::host_vector<int> & A_row_indices,
+                thrust::host_vector<int> & A_column_indices,
+                thrust::host_vector<int> & A_values,
+                thrust::host_vector<int> & B_row_indices_ref,
+                thrust::host_vector<int> & B_column_indices_ref,
+                thrust::host_vector<int> & B_values_ref){
 
     //std::cout << "procID : " << procID << " beginIndex " << beginIndex << " endIndex " << endIndex << std::endl;
 
@@ -146,7 +146,7 @@ void ParallelKernelization::CountingSortParallel(
 
 
 
-    std::vector<int> C_ref(max+1, 0);
+    thrust::host_vector<int> C_ref(max+1, 0);
 
     for (int i = beginIndex; i < endIndex; ++i){
         ++C_ref[A_row_indices[i]];
@@ -172,18 +172,18 @@ void ParallelKernelization::CountingSortParallelRowwiseValues(
                 int rowID,
                 int beginIndex,
                 int endIndex,
-                std::vector<int> & A_row_offsets,
-                std::vector<int> & A_column_indices,
-                std::vector<int> & A_values,
-                std::vector<int> & B_row_indices_ref,
-                std::vector<int> & B_column_indices_ref,
-                std::vector<int> & B_values_ref){
+                thrust::host_vector<int> & A_row_offsets,
+                thrust::host_vector<int> & A_column_indices,
+                thrust::host_vector<int> & A_values,
+                thrust::host_vector<int> & B_row_indices_ref,
+                thrust::host_vector<int> & B_column_indices_ref,
+                thrust::host_vector<int> & B_values_ref){
 
     //std::cout << "procID : " << procID << " beginIndex " << beginIndex << " endIndex " << endIndex << std::endl;
 
     int max = 1;
 
-    std::vector<int> C_ref(max+1, 0);
+    thrust::host_vector<int> C_ref(max+1, 0);
 
     for (int i = beginIndex; i < endIndex; ++i){
         ++C_ref[A_values[i]];
@@ -207,12 +207,12 @@ void ParallelKernelization::CountingSortParallelRowwiseValues(
 void ParallelKernelization::ParallelRadixSortWrapper(int procID,
                 int beginIndex,
                 int endIndex,
-                std::vector<int> & A_row_indices,
-                std::vector<int> & A_column_indices,
-                std::vector<int> & A_values,
-                std::vector<int> & B_row_indices_ref,
-                std::vector<int> & B_column_indices_ref,
-                std::vector<int> & B_values_ref){
+                thrust::host_vector<int> & A_row_indices,
+                thrust::host_vector<int> & A_column_indices,
+                thrust::host_vector<int> & A_values,
+                thrust::host_vector<int> & B_row_indices_ref,
+                thrust::host_vector<int> & B_column_indices_ref,
+                thrust::host_vector<int> & B_values_ref){
 
     /* Get longest integer length */
     int maxLength = 0, size = 0;
@@ -229,7 +229,7 @@ void ParallelKernelization::ParallelRadixSortWrapper(int procID,
 
     int base = 10;
     int digit;
-    std::vector<int> C_ref(base+1, 0);
+    thrust::host_vector<int> C_ref(base+1, 0);
 
     for (int digit = 0; digit < maxLength; ++digit){
         ParallelRadixSortWorker(procID,
@@ -252,13 +252,13 @@ void ParallelKernelization::ParallelRadixSortWorker(int procID,
                 int endIndex,
                 int digit,
                 int base,
-                std::vector<int> & A_row_indices,
-                std::vector<int> & A_column_indices,
-                std::vector<int> & A_values,
-                std::vector<int> & B_row_indices_ref,
-                std::vector<int> & B_column_indices_ref,
-                std::vector<int> & B_values_ref,
-                std::vector<int> & C_ref){
+                thrust::host_vector<int> & A_row_indices,
+                thrust::host_vector<int> & A_column_indices,
+                thrust::host_vector<int> & A_values,
+                thrust::host_vector<int> & B_row_indices_ref,
+                thrust::host_vector<int> & B_column_indices_ref,
+                thrust::host_vector<int> & B_values_ref,
+                thrust::host_vector<int> & C_ref){
 
     C_ref.clear();
     int entry;
@@ -293,8 +293,8 @@ void ParallelKernelization::ParallelRadixSortWorker(int procID,
 
 }
 
-bool ParallelKernelization::CardinalityOfSetDegreeGreaterK(std::vector<int> & degrees,
-                                                           std::vector<int> & vertexKeys){
+bool ParallelKernelization::CardinalityOfSetDegreeGreaterK(thrust::host_vector<int> & degrees,
+                                                           thrust::host_vector<int> & vertexKeys){
     b = GetSetOfVerticesDegreeGreaterK(degrees, vertexKeys);
     if (b > k)
         return true;
@@ -303,14 +303,14 @@ bool ParallelKernelization::CardinalityOfSetDegreeGreaterK(std::vector<int> & de
 }
 
 /* Use the Count function of dynamic bitset */
-int ParallelKernelization::GetSetOfVerticesDegreeGreaterK(std::vector<int> & degrees,
-                                                           std::vector<int> & vertexKeys){    
+int ParallelKernelization::GetSetOfVerticesDegreeGreaterK(thrust::host_vector<int> & degrees,
+                                                           thrust::host_vector<int> & vertexKeys){    
     S.clear();
-    std::vector<int>::iterator up;
+    thrust::host_vector<int>::iterator up;
     up=std::upper_bound (degrees.begin(), degrees.end(), k); // 
     int cardinalityOfS = degrees.end() - up;
     std::cout << "cardinality of B " << (degrees.end() - up) << '\n'; 
-    std::vector<int>::iterator upCopy(up);
+    thrust::host_vector<int>::iterator upCopy(up);
  
     while(upCopy != degrees.end()){
         S.push_back(vertexKeys[upCopy - degrees.begin()]);
@@ -319,7 +319,7 @@ int ParallelKernelization::GetSetOfVerticesDegreeGreaterK(std::vector<int> & deg
     return cardinalityOfS;
 }
 
-std::vector<int> & ParallelKernelization::GetS(){
+thrust::host_vector<int> & ParallelKernelization::GetS(){
     return S;
 }
 
@@ -357,7 +357,7 @@ int ParallelKernelization::GetRandomVertex(){
 
 void ParallelKernelization::SetEdgesOfSSym(){
     int v;
-    std::vector<int>::iterator low;
+    thrust::host_vector<int>::iterator low;
     
     for (auto u : S){
         for (int i = row_offsets[u]; i < row_offsets[u+1]; ++i){
@@ -374,7 +374,7 @@ void ParallelKernelization::SetEdgesOfSSym(){
 
 void ParallelKernelization::SetEdgesOfSSymParallel(){
     int v, intraRowOffset;
-    std::vector<int>::iterator low;
+    thrust::host_vector<int>::iterator low;
     // Set out-edges
     #pragma omp parallel for default(none) shared(row_offsets, \
     column_indices, values) private (v)
@@ -430,7 +430,7 @@ void ParallelKernelization::SetEdgesLeftToCover(){
 
 void ParallelKernelization::SetEdgesLeftToCoverParallel(){
     int count = 0, i = 0, j = 0;
-    std::vector<int> & newDegs = newDegrees;
+    thrust::host_vector<int> & newDegs = newDegrees;
     #pragma omp parallel for default(none) shared(row_offsets, values, newDegs) private (i, j) \
     reduction(+:count)
     for (i = 0; i < numberOfRows; ++i)
@@ -444,8 +444,8 @@ void ParallelKernelization::SetEdgesLeftToCoverParallel(){
 
 void ParallelKernelization::SetNewRowOffsets(){
     int i = 0;
-    std::vector<int> & newDegs = newDegrees;
-    std::vector<int> & newRowOffs = newRowOffsets;
+    thrust::host_vector<int> & newDegs = newDegrees;
+    thrust::host_vector<int> & newRowOffs = newRowOffsets;
     newRowOffs.resize(numberOfRows+1);
     for (i = 1; i <= numberOfRows; ++i)
     {
@@ -460,16 +460,16 @@ bool ParallelKernelization::GPrimeEdgesGreaterKTimesKPrime(){
     return false;
 }
 
-std::vector<int> & ParallelKernelization::GetRowOffRef(){
+thrust::host_vector<int> & ParallelKernelization::GetRowOffRef(){
     return row_offsets;
 }
-std::vector<int> & ParallelKernelization::GetColRef(){
+thrust::host_vector<int> & ParallelKernelization::GetColRef(){
     return column_indices;
 }
-std::vector<int> & ParallelKernelization::GetValRef(){
+thrust::host_vector<int> & ParallelKernelization::GetValRef(){
     return values;
 }
-std::vector<int> & ParallelKernelization::GetVerticesRemainingRef(){
+thrust::host_vector<int> & ParallelKernelization::GetVerticesRemainingRef(){
     return verticesRemaining;
 }
 */

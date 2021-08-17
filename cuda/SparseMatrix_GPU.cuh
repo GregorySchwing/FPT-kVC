@@ -24,12 +24,17 @@ struct array_container {
 
 class SparseMatrix_GPU {
     public: 
+        /* First Graph Constructor */
+        CUDA_HOSTDEV SparseMatrix_GPU(int vertexCount, 
+                                    int size,
+                                    int numberOfRows);
+
         /* Copy Constructor */
         CUDA_HOSTDEV SparseMatrix_GPU(const SparseMatrix & s);
         CUDA_HOSTDEV ~SparseMatrix_GPU();
 
 
-        int numberOfRows, numberOfColumns, size;
+        int numberOfRows, size;
         // These are for the current matrix
         array_container * old_values_ref;
         // These are for the next matrix

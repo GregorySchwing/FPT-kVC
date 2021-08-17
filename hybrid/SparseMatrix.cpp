@@ -43,7 +43,7 @@ old_values_ref(&s.new_values){
     //new_values = s.new_values;
 }
 /* SPM by reference 
-SparseMatrix::SparseMatrix(int numberOfRows, std::vector<int> & values_ref_arg):
+SparseMatrix::SparseMatrix(int numberOfRows, thrust::host_vector<int> & values_ref_arg):
 numberOfRows(s.numberOfRows), 
 numberOfColumns(s.numberOfColumns),
 old_values_ref(values_ref_arg){

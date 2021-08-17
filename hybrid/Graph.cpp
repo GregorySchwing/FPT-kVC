@@ -18,18 +18,18 @@ Graph::Graph(const Graph & other): csr(other.csr),
 //    std::cout << "Copied" << std::endl;
 }
 
-std::vector<int> & Graph::GetVerticesThisGraphIncludedInTheCover(){
+thrust::host_vector<int> & Graph::GetVerticesThisGraphIncludedInTheCover(){
     return verticesToIncludeInCover;
 }
 
 // This approach will continually append vertices if we keep processing
 // immediately in the case of pendant edges
-void Graph::SetVerticesToIncludeInCover(std::vector<int> & verticesRef){
+void Graph::SetVerticesToIncludeInCover(thrust::host_vector<int> & verticesRef){
     verticesToIncludeInCover.insert(std::end(verticesToIncludeInCover), 
         std::begin(verticesRef), std::end(verticesRef));
 }
 
-void Graph::InitG(Graph & g_parent, std::vector<int> & S){
+void Graph::InitG(Graph & g_parent, thrust::host_vector<int> & S){
     PopulatePreallocatedMemoryFirstGraph(g_parent);
     SetEdgesOfSSymParallel(S, *(GetCSR().GetOldRowOffRef()), *(GetCSR().GetOldColRef())); 
     SetEdgesLeftToCoverParallel(*(GetCSR().GetOldRowOffRef()));
@@ -39,7 +39,7 @@ void Graph::InitG(Graph & g_parent, std::vector<int> & S){
 
 /* Constructor to make induced subgraph G' for each branch */
 void Graph::InitGPrime(Graph & g_parent, 
-                        std::vector<int> & S)
+                        thrust::host_vector<int> & S)
 {        
     if (verticesRemaining.size() != 0)
         std::cout << "error" << std::endl;
@@ -73,7 +73,7 @@ void Graph::InitGPrime(Graph & g_parent,
     //std::cout << edgesLeftToCover/2 << " edges left in induced subgraph G'" << std::endl;
 }
 
-void Graph::ProcessImmediately(std::vector<int> & S){
+void Graph::ProcessImmediately(thrust::host_vector<int> & S){
     for(auto & v : new_degrees)
         v = 0;
     SetEdgesOfSSymParallel(S, GetCSR().GetNewRowOffRef(), GetCSR().GetNewColRef()); 
@@ -121,14 +121,14 @@ void Graph::PopulatePreallocatedMemoryFirstGraph(Graph & g_parent){
     //CalculateNewRowOffsets();
 }
 
-void Graph::SetOldDegRef(std::vector<int> & old_deg_ref_arg){
+void Graph::SetOldDegRef(thrust::host_vector<int> & old_deg_ref_arg){
     old_degrees_ref = &old_deg_ref_arg;
 }
 
 
 void Graph::ProcessGraph(int vertexCount){
     // Coming from the CSR we constructed in the process of building the graph
-    std::vector<int> & old_row_offsets = *(GetCSR().GetOldRowOffRef());
+    thrust::host_vector<int> & old_row_offsets = *(GetCSR().GetOldRowOffRef());
     edgesLeftToCover = GetCSR().GetOldColRef()->size();
     // iterable set of vertices with non-zero degrees
     verticesRemaining.resize(vertexCount);
@@ -168,27 +168,27 @@ void Graph::SetVertexCountFromEdges(COO * coordinateFormat){
 
 }
 
-std::vector<int> Graph::GetRemainingVertices(){
+thrust::host_vector<int> Graph::GetRemainingVertices(){
     return verticesRemaining;
 }
 
-std::vector<int> & Graph::GetRemainingVerticesRef(){
+thrust::host_vector<int> & Graph::GetRemainingVerticesRef(){
     return verticesRemaining;
 }
 
-std::vector<int> Graph::GetHasntBeenRemoved(){
+thrust::host_vector<int> Graph::GetHasntBeenRemoved(){
     return hasntBeenRemoved;
 }
 
-std::vector<int> & Graph::GetHasntBeenRemovedRef(){
+thrust::host_vector<int> & Graph::GetHasntBeenRemovedRef(){
     return hasntBeenRemoved;
 }
 
-void Graph::SetRemainingVertices(std::vector<int> & verticesRemaining_arg){
+void Graph::SetRemainingVertices(thrust::host_vector<int> & verticesRemaining_arg){
     verticesRemaining = verticesRemaining_arg;
 }
 
-void Graph::SetHasntBeenRemoved(std::vector<int> &  hasntBeenRemoved_arg){
+void Graph::SetHasntBeenRemoved(thrust::host_vector<int> &  hasntBeenRemoved_arg){
     hasntBeenRemoved = hasntBeenRemoved_arg;
 }
 
@@ -207,7 +207,7 @@ int Graph::GetVertexCount(){
     return vertexCount;
 }
 
-std::vector< std::vector<int> > & Graph::GetChildrenVertices(){
+std::vector< thrust::host_vector<int> > & Graph::GetChildrenVertices(){
     return childrenVertices;
 }
 
@@ -219,7 +219,7 @@ CSR & Graph::GetCSR(){
 
 void Graph::removeVertex(int vertexToRemove){
         
-    std::vector<int>::iterator low;
+    thrust::host_vector<int>::iterator low;
     low = std::lower_bound( std::begin(verticesRemaining), 
                             std::end(verticesRemaining), 
                             vertexToRemove);
@@ -258,13 +258,13 @@ void Graph::removeVertex(int vertexToRemove){
     std::cout << "End of a call" << std::endl;
 }
 
-void Graph::SetEdgesOfSSymParallel(std::vector<int> & S,
-                                    std::vector<int> & row_offsets_ref,
-                                    std::vector<int> & column_indices_ref){
+void Graph::SetEdgesOfSSymParallel(thrust::host_vector<int> & S,
+                                    thrust::host_vector<int> & row_offsets_ref,
+                                    thrust::host_vector<int> & column_indices_ref){
     int v, intraRowOffset;
-    std::vector<int>::iterator low;
+    thrust::host_vector<int>::iterator low;
     int test;
-    std::vector<int> & values = GetCSR().GetNewValRef();
+    thrust::host_vector<int> & values = GetCSR().GetNewValRef();
     for (auto u : S)
     {
         if (u < 0 || u > vertexCount){
@@ -304,11 +304,11 @@ void Graph::SetEdgesOfSSymParallel(std::vector<int> & S,
 }
 
 // Sets the new degrees without the edges and the edges left to cover
-void Graph::SetEdgesLeftToCoverParallel(std::vector<int> & row_offsets){
+void Graph::SetEdgesLeftToCoverParallel(thrust::host_vector<int> & row_offsets){
     int count = 0, i = 0, j = 0;
-    std::vector<int> & newDegs = new_degrees;
-    std::vector<int> & values = GetCSR().GetNewValRef();
-    //std::vector<int> & row_offsets = 
+    thrust::host_vector<int> & newDegs = new_degrees;
+    thrust::host_vector<int> & values = GetCSR().GetNewValRef();
+    //thrust::host_vector<int> & row_offsets = 
     #pragma omp parallel for default(none) shared(row_offsets, values, newDegs, vertexCount) private (i, j) \
     reduction(+:count)
     for (i = 0; i < vertexCount; ++i)
@@ -321,12 +321,12 @@ void Graph::SetEdgesLeftToCoverParallel(std::vector<int> & row_offsets){
 }
 
 /* Called if edgesLeftToCover > 0 */
-void Graph::CalculateNewRowOffsets(std::vector<int> & old_degrees){    
+void Graph::CalculateNewRowOffsets(thrust::host_vector<int> & old_degrees){    
     // Cuda load
     // Parent's new degree ref
-    //std::vector<int> & old_degrees = GetOldDegRef();
+    //thrust::host_vector<int> & old_degrees = GetOldDegRef();
     // or recalculate degrees if we processed immediately
-    std::vector<int> & new_row_offs = this->GetCSR().GetNewRowOffRef();
+    thrust::host_vector<int> & new_row_offs = this->GetCSR().GetNewRowOffRef();
     int i = 0;
     new_row_offs.push_back(0);
     for (i = 1; i <= vertexCount; ++i)
@@ -340,19 +340,19 @@ void Graph::CountingSortParallelRowwiseValues(
                 int rowID,
                 int beginIndex,
                 int endIndex,
-                std::vector<int> & A_row_offsets,
-                std::vector<int> & A_column_indices,
-                std::vector<int> & A_values,
-                std::vector<int> & B_row_indices_ref,
-                std::vector<int> & B_column_indices_ref){
+                thrust::host_vector<int> & A_row_offsets,
+                thrust::host_vector<int> & A_column_indices,
+                thrust::host_vector<int> & A_values,
+                thrust::host_vector<int> & B_row_indices_ref,
+                thrust::host_vector<int> & B_column_indices_ref){
                 //,
-                //std::vector<int> & B_values_ref){
+                //thrust::host_vector<int> & B_values_ref){
 
     //std::cout << "procID : " << procID << " beginIndex " << beginIndex << " endIndex " << endIndex << std::endl;
 
     int max = 1;
 
-    std::vector<int> C_ref(max+1, 0);
+    thrust::host_vector<int> C_ref(max+1, 0);
 
     for (int i = beginIndex; i < endIndex; ++i){
         ++C_ref[A_values[i]];
@@ -373,9 +373,9 @@ void Graph::CountingSortParallelRowwiseValues(
 }
 
 // Highly unoptimized, but should work for now
-void Graph::RemoveNewlyDegreeZeroVertices(std::vector<int> & verticesToRemove,
-                                            std::vector<int> & oldRowOffsets,
-                                            std::vector<int> & oldColumnIndices){
+void Graph::RemoveNewlyDegreeZeroVertices(thrust::host_vector<int> & verticesToRemove,
+                                            thrust::host_vector<int> & oldRowOffsets,
+                                            thrust::host_vector<int> & oldColumnIndices){
     int i = 0, j;
     for (auto & v :verticesToRemove){
         removeVertex(v);
@@ -393,14 +393,14 @@ void Graph::RemoveNewlyDegreeZeroVertices(std::vector<int> & verticesToRemove,
 void Graph::InduceSubgraph(){
        
         // Here in cuda can be repaced by load to shared
-        std::vector<int> & row_offsets = *(csr.GetOldRowOffRef());
-        std::vector<int> & column_indices = *(csr.GetOldColRef());
+        thrust::host_vector<int> & row_offsets = *(csr.GetOldRowOffRef());
+        thrust::host_vector<int> & column_indices = *(csr.GetOldColRef());
         // Eventually this line can be commented out
         // and we no longer need to write in parallel in CSPRV
-        std::vector<int> & values = *(GetCSR().GetOldValRef());
+        thrust::host_vector<int> & values = *(GetCSR().GetOldValRef());
         
-        std::vector<int> & newRowOffsets = csr.GetNewRowOffRef();
-        std::vector<int> & newColumnIndices = csr.GetNewColRef();
+        thrust::host_vector<int> & newRowOffsets = csr.GetNewRowOffRef();
+        thrust::host_vector<int> & newColumnIndices = csr.GetNewColRef();
         // Eventually this line can be commented out
         // and we no longer need to write in parallel in CSPRV
 
@@ -427,15 +427,15 @@ void Graph::InduceSubgraph(){
         }
 }
 
-std::vector<int> & Graph::GetNewDegRef(){
+thrust::host_vector<int> & Graph::GetNewDegRef(){
     return new_degrees;
 }
 
-std::vector<int> * Graph::GetOldDegPointer(){
+thrust::host_vector<int> * Graph::GetOldDegPointer(){
     return old_degrees_ref;
 }
 
-std::vector<int> & Graph::GetOldDegRef(){
+thrust::host_vector<int> & Graph::GetOldDegRef(){
     return *old_degrees_ref;
 }
 

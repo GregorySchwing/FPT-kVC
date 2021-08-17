@@ -45,7 +45,7 @@ long long ParallelB1::CalculateSpaceForDesiredNumberOfLevels(int NumberOfLevels)
 
 void ParallelB1::PopulateTree(int treeSize, 
                                 std::vector<Graph> & graphs,
-                                std::vector<int> & answer){
+                                thrust::host_vector<int> & answer){
     // ceiling(vertexCount/2) loops
     int result, childVertex;
     for (int i = 0; i < treeSize; ++i){
@@ -70,7 +70,7 @@ void ParallelB1::PopulateTree(int treeSize,
 // Fill a perfect 3-ary tree to a given depth
 int ParallelB1::PopulateTreeParallelLevelWise(int numberOfLevels, 
                                 std::vector<Graph> & graphs,
-                                std::vector<int> & answer){
+                                thrust::host_vector<int> & answer){
     // ceiling(vertexCount/2) loops
     volatile bool flag=false;
     std::vector<long long> resultsFlags;
@@ -144,7 +144,7 @@ int ParallelB1::PopulateTreeParallelLevelWise(int numberOfLevels,
 // Irrespective of whether the last level is full
 void ParallelB1::PopulateTreeParallelAsymmetric(int treeSize, 
                                 std::vector<Graph> & graphs,
-                                std::vector<int> & answer){
+                                thrust::host_vector<int> & answer){
     // ceiling(vertexCount/2) loops
     int numberOfLevels = int(ceil(log(treeSize) / log(3)));
     int leafIndex;
@@ -185,9 +185,9 @@ void ParallelB1::PopulateTreeParallelAsymmetric(int treeSize,
 
 int ParallelB1::GenerateChildren(Graph & child_g){
 
-    std::vector< std::vector<int> > & childrensVertices_ref = child_g.GetChildrenVertices();
+    std::vector< thrust::host_vector<int> > & childrensVertices_ref = child_g.GetChildrenVertices();
 
-    std::vector<int> path;
+    thrust::host_vector<int> path;
     int randomVertex = GetRandomVertex(child_g.GetRemainingVerticesRef());
     std::cout << "Grabbing a randomVertex: " <<  randomVertex<< std::endl;
     if(randomVertex == -1)
@@ -218,7 +218,7 @@ int ParallelB1::GenerateChildren(Graph & child_g){
     return 0;
 }
 
-int ParallelB1::GetRandomVertex(std::vector<int> & verticesRemaining){
+int ParallelB1::GetRandomVertex(thrust::host_vector<int> & verticesRemaining){
     if(verticesRemaining.size() == 0)
         return -1;
     int index = rand() % verticesRemaining.size();
@@ -227,10 +227,10 @@ int ParallelB1::GetRandomVertex(std::vector<int> & verticesRemaining){
 
 
 /* DFS of maximum length 3. No simple cycles u -> v -> u */
-void ParallelB1::DFS(std::vector<int> & new_row_off,
-                    std::vector<int> & new_col_ref, 
-                    std::vector<int> & new_vals_ref,
-                    std::vector<int> & path, 
+void ParallelB1::DFS(thrust::host_vector<int> & new_row_off,
+                    thrust::host_vector<int> & new_col_ref, 
+                    thrust::host_vector<int> & new_vals_ref,
+                    thrust::host_vector<int> & path, 
                     int rootVertex){
     if (path.size() == 4)
         return;
@@ -245,16 +245,16 @@ void ParallelB1::DFS(std::vector<int> & new_row_off,
     }
 }
 
-int ParallelB1::GetRandomOutgoingEdge(  std::vector<int> & new_row_off,
-                                        std::vector<int> & new_col_ref,
-                                        std::vector<int> & new_values_ref,
+int ParallelB1::GetRandomOutgoingEdge(  thrust::host_vector<int> & new_row_off,
+                                        thrust::host_vector<int> & new_col_ref,
+                                        thrust::host_vector<int> & new_values_ref,
                                         int v, 
-                                        std::vector<int> & path){
+                                        thrust::host_vector<int> & path){
 
-    std::vector<int> outgoingEdges(&new_col_ref[new_row_off[v]],
+    thrust::host_vector<int> outgoingEdges(&new_col_ref[new_row_off[v]],
                         &new_col_ref[new_row_off[v+1]]);
 
-    std::vector<int> outgoingEdgeValues(&new_values_ref[new_row_off[v]],
+    thrust::host_vector<int> outgoingEdgeValues(&new_values_ref[new_row_off[v]],
                     &new_values_ref[new_row_off[v+1]]);
 
     std::vector<std::pair<int, int>> edgesAndValues;
@@ -282,7 +282,7 @@ int ParallelB1::GetRandomOutgoingEdge(  std::vector<int> & new_row_off,
 }
 
 
-int ParallelB1::classifyPath(std::vector<int> & path){
+int ParallelB1::classifyPath(thrust::host_vector<int> & path){
     if (path.size()==2)
         return 3;
     else if (path.size()==3)
@@ -293,9 +293,9 @@ int ParallelB1::classifyPath(std::vector<int> & path){
         return 0;
 }
 
-void ParallelB1::createVertexSetsForEachChild(std::vector< std::vector<int> > & childrensVertices,
+void ParallelB1::createVertexSetsForEachChild(std::vector< thrust::host_vector<int> > & childrensVertices,
                                             int caseNumber, 
-                                            std::vector<int> & path){
+                                            thrust::host_vector<int> & path){
     if (caseNumber == 0) {
         /* 3 Children */
         childrensVertices.resize(3);
@@ -344,7 +344,7 @@ void ParallelB1::createVertexSetsForEachChild(std::vector< std::vector<int> > & 
 
 void ParallelB1::TraverseUpTree(int index, 
                                 std::vector<Graph> & graphs,
-                                std::vector<int> & answer){
+                                thrust::host_vector<int> & answer){
     bool haventReachedRoot = true;
     while(haventReachedRoot) {
         if (index == 0)

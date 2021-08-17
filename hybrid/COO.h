@@ -9,7 +9,9 @@
 #include  <iterator>
 #include <algorithm> /* rand */
 #include <map>
-
+#include <thrust/host_vector.h>
+#include <thrust/extrema.h>
+#include <thrust/pair.h>
 
 class COO final : public SparseMatrix
 {
@@ -40,7 +42,7 @@ public:
     void BuildCOOFromFile(std::string filename);
     void SetVertexCountFromEdges();
     //COO& SpMV(COO & c);
-    std::vector<int> new_column_indices, new_row_indices;
+    thrust::host_vector<int> new_column_indices, new_row_indices;
     int vertexCount;
 
 private:

@@ -4,6 +4,7 @@
 #include "SparseMatrix.h"
 #include "COO.h"
 #include "../VectorUtilities.h"
+#include <thrust/host_vector.h>
 
 
 class CSR : public SparseMatrix {
@@ -16,25 +17,25 @@ class CSR : public SparseMatrix {
         CSR(const CSR & c);
 
 
-        std::vector<int> * GetOldRowOffRef();
-        std::vector<int> & GetNewRowOffRef();
-        std::vector<int> * GetOldColRef();
-        std::vector<int> & GetNewColRef();
-        std::vector<int> * GetOldValRef();
-        std::vector<int> & GetNewValRef();
+        thrust::host_vector<int> * GetOldRowOffRef();
+        thrust::host_vector<int> & GetNewRowOffRef();
+        thrust::host_vector<int> * GetOldColRef();
+        thrust::host_vector<int> & GetNewColRef();
+        thrust::host_vector<int> * GetOldValRef();
+        thrust::host_vector<int> & GetNewValRef();
         
-        void SetOldRowOffRef(std::vector<int> & old_arg);
-        void SetOldColRef(std::vector<int> & old_arg);
-        void SetOldValRef(std::vector<int> & old_arg);
+        void SetOldRowOffRef(thrust::host_vector<int> & old_arg);
+        void SetOldColRef(thrust::host_vector<int> & old_arg);
+        void SetOldValRef(thrust::host_vector<int> & old_arg);
 
         void PopulateNewVals(int edgesLeftToCover);
         void PopulateNewRefs(int edgesLeftToCover);
 
         std::string toString();
         // These are for the next CSR
-        std::vector<int> new_column_indices, new_row_offsets;
+        thrust::host_vector<int> new_column_indices, new_row_offsets;
         // These are the current CSR
-        std::vector<int> * old_column_indices_ref, * old_row_offsets_ref;
+        thrust::host_vector<int> * old_column_indices_ref, * old_row_offsets_ref;
         int vertexCount;
 
 };

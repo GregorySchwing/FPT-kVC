@@ -71,7 +71,7 @@ __device__ void AssignPointers(long long globalIndex,
 }
 
 // Fill a perfect 3-ary tree to a given depth
-__global__ void PopulateTreeParallelLevelWise_GPU(Graph & g,
+__global__ void PopulateTreeParallelLevelWise_GPU(Graph_GPU * g,
                                                 int numberOfLevels, 
                                                 long long edgesPerNode,
                                                 long long numberOfVertices,
@@ -99,7 +99,7 @@ __global__ void PopulateTreeParallelLevelWise_GPU(Graph & g,
     long long leafIndex = threadIdx.x;
 
     for (int node = leafIndex; node < myLevelSize; node += blockDim.x){
-        graphs[levelOffset + node] = new Graph_GPU(g);
+        //graphs[levelOffset + node] = new Graph_GPU(g);
         printf("Thread %lu, block %lu, vertexCount %d", leafIndex, myLevel, graphs[levelOffset + node]->vertexCount);
         AssignPointers(levelOffset + node,
                         edgesPerNode,
@@ -171,6 +171,13 @@ void CallPopulateTree(int numberOfLevels,
         std::cout << '\n' << "Press a key to continue...; ctrl-c to terminate";
     } while (std::cin.get() != '\n');
 
+    Graph_GPU * g_dev;
+
+    cudaMalloc( (void**)&g_dev, 1 * sizeof(Graph_GPU) );
+
+    CopyGraphToDevice(g, g_dev);
+
+
     Graph_GPU * graphs_ptr;
     int * new_row_offsets_dev_ptr;
     int * new_columns_dev_ptr;
@@ -183,7 +190,7 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&values_dev_ptr, (g.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&new_degrees_dev_ptr, (g.GetVertexCount()*treeSize) * sizeof(int) );
 
-    PopulateTreeParallelLevelWise_GPU<<<1,1>>>(g,
+    PopulateTreeParallelLevelWise_GPU<<<1,1>>>(g_dev,
                                         numberOfLevels, 
                                         g.GetEdgesLeftToCover(),
                                         g.GetVertexCount(),
@@ -196,17 +203,19 @@ void CallPopulateTree(int numberOfLevels,
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     std::vector<int> mpt;
-    InitGPrime_GPU<<<1,1,1>>>(g, 
+    /*
+    InitGPrime_GPU<<<1,1,1>>>(g_dev, 
                             mpt, 
                             g.GetVerticesThisGraphIncludedInTheCover(), 
                             &graphs_ptr[0]);
+    */
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
     
     TearDownTree_GPU<<<1,1,1>>>(numberOfLevels, &graphs_ptr);
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
-    
+
     cudaFree( graphs_ptr );
     cudaFree( new_row_offsets_dev_ptr );
     cudaFree( new_columns_dev_ptr );
@@ -216,9 +225,40 @@ void CallPopulateTree(int numberOfLevels,
     cudaDeviceSynchronize();
 }
 
-__global__ void InitGPrime_GPU(Graph & g, std::vector<int> mpt, std::vector<int> S, Graph_GPU * root){
+__global__ void InitGPrime_GPU(Graph_GPU & g_dev, array_container * mpt, array_container * S, Graph_GPU * root){
 
 }
+
+void CopyGraphToDevice(Graph & gPrime, Graph_GPU * g_dev){
+
+    thrust::device_vector<int> new_values_dev = gPrime.GetCSR().GetNewValRef();
+    thrust::device_vector<int> old_values_dev = *(gPrime.GetCSR().GetOldValRef());
+    thrust::device_vector<int> old_column_indices_dev = *(gPrime.GetCSR().GetOldColRef());
+    thrust::device_vector<int> old_row_offsets_dev = *(gPrime.GetCSR().GetOldRowOffRef());
+
+    cudaMalloc( (void**)&g_dev, 1 * sizeof(int) );
+
+
+/*
+    int numberOfRows, 
+    int numberOfColumns, 
+    int size;
+
+    int * old_column_indices_ref, * old_row_offsets_ref;
+    int vertexCount;
+
+    // These are for the next CSR
+    int * new_column_indices_dev;
+    int * new_row_offsets_dev;
+
+
+
+
+    CubDebugExit(cudaMemcpy(&g_dev->csr., gpu_final_LJEn, sizeof(double),
+                          cudaMemcpyHostToDevice));
+*/
+}
+
 
 // Logic of the tree
     // Every level decreases the number of remaining vertices by at least 2

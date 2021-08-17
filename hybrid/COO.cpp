@@ -98,9 +98,9 @@ void COO::BuildCycleCOO(){
 
 void COO::SetVertexCountFromEdges(){
     int min;
-    auto it = min_element(std::begin(new_row_indices), std::end(new_row_indices)); // C++11
+    auto it = thrust::min_element(std::begin(new_row_indices), std::end(new_row_indices)); // C++11
     min = *it;
-    it = max_element(std::begin(new_column_indices), std::end(new_column_indices)); // C++11
+    it = thrust::max_element(std::begin(new_column_indices), std::end(new_column_indices)); // C++11
     if(min > *it)
         min = *it;
     if(min != 0){

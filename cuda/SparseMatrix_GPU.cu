@@ -4,10 +4,20 @@
 #include <memory>
 
 /* Copy constr */
+__host__ __device__ SparseMatrix_GPU::SparseMatrix_GPU(int vertexCount, 
+                                                        int size,
+                                                        int numberOfRows):
+size(size), 
+numberOfRows(numberOfRows){
+//    std::cout << "Setting size, numRows, numCols - Reserving new_vals" << std::endl;
+    // A copy for writing purposes
+    //cudaMalloc(&new_values_dev, s.size*sizeof(int)); 
+}
+
+/* Copy constr */
 __host__ __device__ SparseMatrix_GPU::SparseMatrix_GPU(const SparseMatrix & s):
 size(s.size), 
-numberOfRows(s.numberOfRows), 
-numberOfColumns(s.numberOfColumns){
+numberOfRows(s.numberOfRows){
 //    std::cout << "Setting size, numRows, numCols - Reserving new_vals" << std::endl;
     // A copy for writing purposes
     //cudaMalloc(&new_values_dev, s.size*sizeof(int)); 

@@ -34,8 +34,8 @@ ConnectednessTest::ConnectednessTest(COO & coo, std::vector< std::vector<int> > 
     int dummy;
     // Loads all the bonds into edges array
     
-    std::vector<int> & rows_ref = coo.new_row_indices;
-    std::vector<int> & cols_ref = coo.new_column_indices;
+    thrust::host_vector<int> & rows_ref = coo.new_row_indices;
+    thrust::host_vector<int> & cols_ref = coo.new_column_indices;
     
     // allocate new node
     head = new adjNode*[nNodes]();
@@ -68,7 +68,7 @@ ConnectednessTest::ConnectednessTest(COO & coo, std::vector< std::vector<int> > 
         
     
     /* Sort Atom Indices in N connected components, then sort N connected components by first atom index*/
-    /*for (std::vector< std::vector<int> >::iterator it = vectorOfConnectedComponents.begin();
+    /*for (std::vector< thrust::host_vector<int> >::iterator it = vectorOfConnectedComponents.begin();
         it != vectorOfConnectedComponents.end(); it++){
         std::sort(it->begin(), it->end());
     }
@@ -83,9 +83,9 @@ ConnectednessTest::ConnectednessTest(COO & coo, std::vector< std::vector<int> > 
         display_AdjList(head[i], i);
 
     std::cout << "Connected Components" << std::endl;
-    for (std::vector< std::vector<int> >::iterator it = vectorOfConnectedComponents.begin();
+    for (std::vector< thrust::host_vector<int> >::iterator it = vectorOfConnectedComponents.begin();
         it != vectorOfConnectedComponents.end(); it++){
-        for (std::vector<int>::iterator it2 = it->begin();
+        for (thrust::host_vector<int>::iterator it2 = it->begin();
             it2 != it->end(); it2++){
             std::cout << *it2 << ", ";
         }

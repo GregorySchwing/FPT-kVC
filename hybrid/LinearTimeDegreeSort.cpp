@@ -1,9 +1,9 @@
 #include "LinearTimeDegreeSort.h"
 
-LinearTimeDegreeSort::LinearTimeDegreeSort(int numberOfRows, std::vector<int> & old_degree_ref){
+LinearTimeDegreeSort::LinearTimeDegreeSort(int numberOfRows, thrust::host_vector<int> & old_degree_ref){
     // Sorted as pairs (deg_0, v_0) , (deg_1, v_1) ...
     // Could use thrust
-    std::vector<int> vertexKeys(numberOfRows);
+    thrust::host_vector<int> vertexKeys(numberOfRows);
     std::iota (std::begin(vertexKeys), std::end(vertexKeys), 0); // Fill with 0, 1, ..., 99.
 
     int max_degree = 0;
@@ -32,23 +32,23 @@ LinearTimeDegreeSort::LinearTimeDegreeSort(int numberOfRows, std::vector<int> & 
 
 }
 
-std::vector<int> & LinearTimeDegreeSort::GetDegreeRef(){
+thrust::host_vector<int> & LinearTimeDegreeSort::GetDegreeRef(){
     return B_row_indices;
 }
 
-std::vector<int> & LinearTimeDegreeSort::GetVertexKeyRef(){
+thrust::host_vector<int> & LinearTimeDegreeSort::GetVertexKeyRef(){
     return B_column_indices;
 }
 
 
 void LinearTimeDegreeSort::CountingSortSerial(int max,
-                        const std::vector<int> & A_row_indices,
-                        std::vector<int> & A_column_indices,
-                        std::vector<int> & A_values,
-                        std::vector<int> & B_row_indices_ref,
-                        std::vector<int> & B_column_indices_ref,
-                        std::vector<int> & B_values_ref,
-                        std::vector<int> & C_ref)
+                        const thrust::host_vector<int> & A_row_indices,
+                        thrust::host_vector<int> & A_column_indices,
+                        thrust::host_vector<int> & A_values,
+                        thrust::host_vector<int> & B_row_indices_ref,
+                        thrust::host_vector<int> & B_column_indices_ref,
+                        thrust::host_vector<int> & B_values_ref,
+                        thrust::host_vector<int> & C_ref)
 {
     for (int i = 0; i < A_row_indices.size(); ++i){
         ++C_ref[A_row_indices[i]];
