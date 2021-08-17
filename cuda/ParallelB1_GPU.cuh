@@ -15,6 +15,8 @@
 #include <cuda_runtime.h>
 #include "Graph_GPU.cuh"
 #include <thrust/device_vector.h>
+#include <thrust/copy.h>
+#include <thrust/execution_policy.h>
 #include "CUDAUtils.cuh"
 
 class Graph_GPU;
