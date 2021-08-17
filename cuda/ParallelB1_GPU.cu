@@ -273,13 +273,9 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
    // thrust::device_vector<int> new_degrees_dev(g.GetVertexCount());
    // thrust::copy(g.GetOldDegRef().begin(), g.GetOldDegRef().end(), old_degrees_dev.begin());
    // thrust::copy(g.GetNewDegRef().begin(), g.GetNewDegRef().end(), new_degrees_dev.begin());
-    thrust::device_vector<int> old_degrees_dev = g.GetOldDegRef();
     thrust::device_vector<int> new_degrees_dev = g.GetNewDegRef();
-    //thrust::copy(g.GetOldDegRef().begin(), g.GetOldDegRef().end(), old_degrees_dev.begin());
-    //thrust::copy(g.GetNewDegRef().begin(), g.GetNewDegRef().end(), new_degrees_dev.begin());
-    //thrust::device_vector<int> old_degrees_dev = g.GetOldDegRef();
 
-
+    thrust::device_vector<int> old_degrees_dev = g.GetOldDegRef();
 
     // CSR vectors
     thrust::device_vector<int> new_row_offsets_dev = g.GetCSR().GetNewRowOffRef();
