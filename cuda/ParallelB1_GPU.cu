@@ -249,14 +249,14 @@ void CallPopulateTree(int numberOfLevels,
                             mpt, 
                             g.GetVerticesThisGraphIncludedInTheCover(), 
                             &graphs_ptr[0]);
-    */
+    
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
     
     TearDownTree_GPU<<<1,1,1>>>(numberOfLevels, &graphs_ptr);
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
-
+*/
     cudaFree( graphs_ptr );
     cudaFree( new_row_offsets_dev_ptr );
     cudaFree( new_columns_dev_ptr );
@@ -316,7 +316,7 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
-    /*
+    
     int * sizedev2host;
     int * new_values_dev2host_ptr;
     int * size;
@@ -328,7 +328,7 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
     
     thrust::device_ptr<int> back2Host_ptr = thrust::device_pointer_cast(new_values_dev2host_ptr);
     thrust::device_vector<int> back2Host(back2Host_ptr, back2Host_ptr + (*size));
-    */
+    
     thrust::host_vector<int> hostFinal = new_degrees_dev;
     std::cout << "Priting data copied there and back" << std::endl;;
 
