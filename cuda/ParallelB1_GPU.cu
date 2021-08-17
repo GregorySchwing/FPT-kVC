@@ -269,11 +269,11 @@ __global__ void InitGPrime_GPU(Graph_GPU & g_dev, array_container * mpt, array_c
 void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
 
     // Graph vectors
-    thrust::device_vector<int> old_degrees_dev;
-    thrust::device_vector<int> new_degrees_dev;
+    thrust::device_vector<int> old_degrees_dev(g.GetVertexCount());
+    thrust::device_vector<int> new_degrees_dev(g.GetVertexCount());
     thrust::copy(g.GetOldDegRef().begin(), g.GetOldDegRef().end(), old_degrees_dev.begin());
     thrust::copy(g.GetNewDegRef().begin(), g.GetNewDegRef().end(), new_degrees_dev.begin());
-
+/*
     // CSR vectors
     thrust::device_vector<int> new_row_offsets_dev;
     thrust::device_vector<int> new_column_indices_dev;
@@ -319,6 +319,7 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
                             &new_values_dev_ptr,
                             &old_degrees_dev_ptr,
                             &new_degrees_dev_ptr);
+*/
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
     int * sizedev2host;
