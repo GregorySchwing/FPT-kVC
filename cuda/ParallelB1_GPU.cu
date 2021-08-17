@@ -289,6 +289,7 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
 
     thrust::copy(g.GetCSR().GetNewRowOffRef().begin(), g.GetCSR().GetNewRowOffRef().end(), new_row_offsets_dev.begin());
     thrust::copy(g.GetCSR().GetNewColRef().begin(), g.GetCSR().GetNewColRef().end(), new_column_indices_dev.begin());
+    /*  
     thrust::copy((g.GetCSR().GetOldRowOffRef())->begin(), (g.GetCSR().GetOldRowOffRef())->end(), old_row_offsets_dev.begin());
     thrust::copy((g.GetCSR().GetOldColRef())->begin(), (g.GetCSR().GetOldColRef())->end(), old_column_indices_dev.begin());
   
@@ -299,7 +300,7 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
     thrust::copy(g.GetCSR().GetNewValRef().begin(), g.GetCSR().GetNewValRef().end(), new_values_dev.begin());
     thrust::copy((g.GetCSR().GetOldValRef())->begin(), (g.GetCSR().GetOldValRef())->end(), old_values_dev.begin());
     
-/*  
+
     // Graph pointers
     int * old_degrees_dev_ptr = thrust::raw_pointer_cast(old_degrees_dev.data());
     int * new_degrees_dev_ptr = thrust::raw_pointer_cast(new_degrees_dev.data());
