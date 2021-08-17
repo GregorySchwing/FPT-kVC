@@ -212,7 +212,8 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&g_dev, 1 * sizeof(Graph_GPU) );
 
     CopyGraphToDevice(g, g_dev);
-
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
 
     Graph_GPU * graphs_ptr;
     int * new_row_offsets_dev_ptr;
