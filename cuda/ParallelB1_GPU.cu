@@ -282,8 +282,8 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
 
 
     // CSR vectors
-    //thrust::device_vector<int> new_row_offsets_dev;
-    //thrust::device_vector<int> new_column_indices_dev;
+    thrust::device_vector<int> new_row_offsets_dev = g.GetCSR().GetNewRowOffRef();
+    thrust::device_vector<int> new_column_indices_dev = g.GetCSR().GetNewColRef();
     thrust::device_vector<int> old_row_offsets_dev = *(g.GetCSR().GetOldRowOffRef());
     thrust::device_vector<int> old_column_indices_dev = *(g.GetCSR().GetOldColRef());
 
