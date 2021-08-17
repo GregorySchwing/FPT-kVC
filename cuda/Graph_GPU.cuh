@@ -33,6 +33,7 @@ public:
                             int ** new_values_dev,
                             int ** old_degrees_dev,
                             int ** new_degrees_dev);
+
     /* Constructor to allocate induced subGraph_GPU G'' for each branch */
     CUDA_HOSTDEV Graph_GPU(const Graph & other);
     CUDA_HOSTDEV ~Graph_GPU();

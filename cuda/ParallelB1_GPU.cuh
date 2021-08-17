@@ -30,6 +30,22 @@ CUDA_HOSTDEV long long CalculateSizeRequirement(int startingLevel,
                                                             int endingLevel);
 CUDA_HOSTDEV long long CalculateLevelOffset(int level);
 
+__global__ void First_Graph_GPU(Graph_GPU * g_dev,
+                                int vertexCount, 
+                                int size,
+                                int numberOfRows,
+                                int ** old_row_offsets_dev,
+                                int ** old_columns_dev,
+                                int ** old_values_dev,
+                                int ** new_row_offsets_dev,
+                                int ** new_columns_dev,
+                                int ** new_values_dev,
+                                int ** old_degrees_dev,
+                                int ** new_degrees_dev);
+
+__global__ void CopyBackGraph(Graph_GPU * g_dev, int * internal_dev_ptr, int * sizedev2host);
+
+
 __device__ void AssignPointers(long long globalIndex,
                                 long long edgesPerNode,
                                 long long numberOfVertices,

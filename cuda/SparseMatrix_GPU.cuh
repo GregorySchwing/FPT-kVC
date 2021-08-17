@@ -15,11 +15,12 @@
 
 
 struct array_container {
-    CUDA_HOSTDEV array_container(int ** globalData, long long globalIndex, int count_arg) : count(count_arg){
-        data = globalData[globalIndex];
-    }
-    int * data;
-    int count;
+    public :
+        CUDA_HOSTDEV array_container(int ** globalData, long long globalIndex, int count_arg) : count(count_arg){
+            data = globalData[globalIndex];
+        }
+        int * data;
+        int count;
 };
 
 class SparseMatrix_GPU {

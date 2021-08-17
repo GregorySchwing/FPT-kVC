@@ -70,6 +70,42 @@ __device__ void AssignPointers(long long globalIndex,
 
 }
 
+__global__ void First_Graph_GPU(Graph_GPU * g_dev,
+                                int vertexCount, 
+                                int size,
+                                int numberOfRows,
+                                int ** old_row_offsets_dev,
+                                int ** old_columns_dev,
+                                int ** old_values_dev,
+                                int ** new_row_offsets_dev,
+                                int ** new_columns_dev,
+                                int ** new_values_dev,
+                                int ** old_degrees_dev,
+                                int ** new_degrees_dev) {
+     // notice this is how you use __device__ compiled code
+     g_dev = new Graph_GPU(vertexCount, 
+                    size,
+                    numberOfRows,
+                    old_row_offsets_dev,
+                    old_columns_dev,
+                    old_values_dev,
+                    new_row_offsets_dev,
+                    new_columns_dev,
+                    new_values_dev,
+                    old_degrees_dev,
+                    new_degrees_dev);
+     // use the sphere here
+
+
+     return;
+}
+
+__global__ void CopyBackGraph(Graph_GPU * g_dev, int * internal_dev_ptr, int * sizedev2host){
+    internal_dev_ptr = g_dev->new_degrees_dev->data;
+    sizedev2host = &(g_dev->new_degrees_dev->count);
+}
+
+
 // Fill a perfect 3-ary tree to a given depth
 __global__ void PopulateTreeParallelLevelWise_GPU(Graph_GPU * g,
                                                 int numberOfLevels, 
@@ -259,38 +295,32 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
     int * new_values_dev_ptr = thrust::raw_pointer_cast(new_values_dev.data());
     int * old_values_dev_ptr = thrust::raw_pointer_cast(old_values_dev.data());
 
-    cudaMalloc( (void**)&g_dev, 1 * sizeof(Graph_GPU) );
-
-    g_dev = new Graph_GPU(g.GetVertexCount(),
-          g.GetSize(),
-          g.GetNumberOfRows(),
-          &old_row_offsets_dev_ptr,
-          &old_column_indices_dev_ptr,
-          &old_values_dev_ptr,
-          &new_row_offsets_dev_ptr,
-          &new_column_indices_dev_ptr,
-          &new_values_dev_ptr,
-          &old_degrees_dev_ptr,
-          &new_degrees_dev_ptr);
-
-/*
-    int numberOfRows, 
-    int numberOfColumns, 
-    int size;
-
-    int * old_column_indices_ref, * old_row_offsets_ref;
-    int vertexCount;
-
-    // These are for the next CSR
-    int * new_column_indices_dev;
-    int * new_row_offsets_dev;
-
-
-
-
-    CubDebugExit(cudaMemcpy(&g_dev->csr., gpu_final_LJEn, sizeof(double),
-                          cudaMemcpyHostToDevice));
-*/
+    First_Graph_GPU<<<1,1>>>(g_dev,
+                            g.GetVertexCount(),
+                            g.GetSize(),
+                            g.GetNumberOfRows(),
+                            &old_row_offsets_dev_ptr,
+                            &old_column_indices_dev_ptr,
+                            &old_values_dev_ptr,
+                            &new_row_offsets_dev_ptr,
+                            &new_column_indices_dev_ptr,
+                            &new_values_dev_ptr,
+                            &old_degrees_dev_ptr,
+                            &new_degrees_dev_ptr);
+    int * sizedev2host;
+    int * new_values_dev2host_ptr;
+    int * size;
+    CopyBackGraph<<<1,1>>>(g_dev, new_values_dev2host_ptr, sizedev2host);
+    CubDebugExit(cudaMemcpy(&size, sizedev2host, 1*sizeof(int),
+                          cudaMemcpyDeviceToHost));
+    thrust::device_ptr<int> back2Host_ptr = thrust::device_pointer_cast(new_values_dev2host_ptr);
+    thrust::device_vector<int> back2Host(back2Host_ptr, back2Host_ptr + (*size));
+    
+    thrust::host_vector<int> hostFinal = back2Host;
+    std::cout << "Size" << *size << std::endl;;
+    for (auto & v : hostFinal)
+        std::cout << v << " ";
+    std::cout << std::endl;
 }
 
 
