@@ -70,7 +70,7 @@ __device__ void AssignPointers(long long globalIndex,
 
 }
 
-__global__ void First_Graph_GPU(Graph_GPU ** g_dev,
+__global__ void First_Graph_GPU(Graph_GPU * g_dev,
                                 int vertexCount, 
                                 int size,
                                 int numberOfRows,
@@ -83,10 +83,10 @@ __global__ void First_Graph_GPU(Graph_GPU ** g_dev,
                                 int * old_degrees_dev,
                                 int * new_degrees_dev) {
      // notice this is how you use __device__ compiled code
-    //g_dev = new Graph_GPU(vertexCount);
+    g_dev = new Graph_GPU(vertexCount);
 
-     
-     *g_dev = new Graph_GPU(vertexCount, 
+     /*
+     g_dev = new Graph_GPU(vertexCount, 
                     size,
                     numberOfRows,
                     old_row_offsets_dev,
@@ -97,7 +97,7 @@ __global__ void First_Graph_GPU(Graph_GPU ** g_dev,
                     new_values_dev,
                     old_degrees_dev,
                     new_degrees_dev);
-                    
+          */          
      // use the sphere here
 
 
@@ -105,8 +105,10 @@ __global__ void First_Graph_GPU(Graph_GPU ** g_dev,
 }
 
 __global__ void CopyBackGraph(Graph_GPU * g_dev, int * internal_dev_ptr, int * sizedev2host){
-    internal_dev_ptr = g_dev->new_degrees_dev->data;
-    sizedev2host = &(g_dev->new_degrees_dev->count);
+    //internal_dev_ptr = g_dev->new_degrees_dev->data;
+    //sizedev2host = &(g_dev->new_degrees_dev->count);
+    sizedev2host = &(g_dev->vertexCount);
+
 }
 
 
@@ -301,11 +303,7 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
     int * new_values_dev_ptr = thrust::raw_pointer_cast(new_values_dev.data());
     int * old_values_dev_ptr = thrust::raw_pointer_cast(old_values_dev.data());
 
-    Graph_GPU ** g_dev2;
-    cudaMalloc( (void**)&g_dev2, 1 * sizeof(Graph_GPU*) );
-
-
-    First_Graph_GPU<<<1,1>>>(g_dev2,
+    First_Graph_GPU<<<1,1>>>(g_dev,
                             g.GetVertexCount(),
                             g.GetEdgesLeftToCover(),
                             g.GetNumberOfRows(),
@@ -324,7 +322,7 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
     int * sizedev2host;
     int * new_values_dev2host_ptr;
     int * size;
-    CopyBackGraph<<<1,1>>>(*g_dev2, new_values_dev2host_ptr, sizedev2host);
+    CopyBackGraph<<<1,1>>>(g_dev, new_values_dev2host_ptr, sizedev2host);
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
     cudaMemcpy(size, sizedev2host, 1*sizeof(int),
