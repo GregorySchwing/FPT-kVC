@@ -37,8 +37,8 @@ __host__ __device__ Graph_GPU::Graph_GPU(int vertexCount,
         new_columns_dev, new_values_dev),
     vertexCount(vertexCount){
 
-    this->old_degrees_ref = new array_container(old_values_dev, 0, size);
-    this->new_degrees_dev = new array_container(new_degrees_dev, 0, size);
+    this->old_degrees_ref = new array_container(old_values_dev, 0, vertexCount);
+    this->new_degrees_dev = new array_container(new_degrees_dev, 0, vertexCount);
 
 
     //cudaMalloc(&hasntBeenRemoved, other.vertexCount*sizeof(int)); 
