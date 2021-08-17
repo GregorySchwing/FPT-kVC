@@ -302,9 +302,9 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
     int * old_values_dev_ptr = thrust::raw_pointer_cast(old_values_dev.data());
 
     First_Graph_GPU<<<1,1>>>(g_dev,
-                            1,
-                            1,
-                            1,
+                            g.GetVertexCount(),
+                            g.GetEdgesLeftToCover(),
+                            g.GetNumberOfRows(),
                             old_row_offsets_dev_ptr,
                             old_column_indices_dev_ptr,
                             old_values_dev_ptr,
@@ -329,10 +329,10 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
     thrust::device_ptr<int> back2Host_ptr = thrust::device_pointer_cast(new_values_dev2host_ptr);
     thrust::device_vector<int> back2Host(back2Host_ptr, back2Host_ptr + (*size));
     
-    thrust::host_vector<int> hostFinal = new_degrees_dev;
+    thrust::host_vector<int> hostFinal = back2Host;
     std::cout << "Priting data copied there and back" << std::endl;;
 
-    //std::cout << "Size" << *size << std::endl;;
+    std::cout << "Size" << *size << std::endl;;
     for (auto & v : hostFinal)
         std::cout << v << " ";
     std::cout << std::endl;
