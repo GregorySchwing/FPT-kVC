@@ -322,10 +322,10 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
     int * sizedev2host;
     int * new_values_dev2host_ptr;
     int * size;
-    CopyBackGraph<<<1,1>>>(g_dev, new_values_dev2host_ptr, sizedev2host);
-    cudaDeviceSynchronize();
-    checkLastErrorCUDA(__FILE__, __LINE__);
-    cudaMemcpy(size, sizedev2host, 1*sizeof(int),
+    //CopyBackGraph<<<1,1>>>(g_dev, new_values_dev2host_ptr, sizedev2host);
+    //cudaDeviceSynchronize();
+    //checkLastErrorCUDA(__FILE__, __LINE__);
+    cudaMemcpy(size, &(g_dev->vertexCount), 1*sizeof(int),
                           cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
