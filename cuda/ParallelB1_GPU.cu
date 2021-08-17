@@ -74,15 +74,18 @@ __global__ void First_Graph_GPU(Graph_GPU * g_dev,
                                 int vertexCount, 
                                 int size,
                                 int numberOfRows,
-                                int ** old_row_offsets_dev,
-                                int ** old_columns_dev,
-                                int ** old_values_dev,
-                                int ** new_row_offsets_dev,
-                                int ** new_columns_dev,
-                                int ** new_values_dev,
-                                int ** old_degrees_dev,
-                                int ** new_degrees_dev) {
+                                int * old_row_offsets_dev,
+                                int * old_columns_dev,
+                                int * old_values_dev,
+                                int * new_row_offsets_dev,
+                                int * new_columns_dev,
+                                int * new_values_dev,
+                                int * old_degrees_dev,
+                                int * new_degrees_dev) {
      // notice this is how you use __device__ compiled code
+          g_dev = new Graph_GPU(vertexCount);
+
+     /*
      g_dev = new Graph_GPU(vertexCount, 
                     size,
                     numberOfRows,
@@ -94,6 +97,7 @@ __global__ void First_Graph_GPU(Graph_GPU * g_dev,
                     new_values_dev,
                     old_degrees_dev,
                     new_degrees_dev);
+                    */
      // use the sphere here
 
 
@@ -296,20 +300,20 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
     // SparseMatrix pointers
     int * new_values_dev_ptr = thrust::raw_pointer_cast(new_values_dev.data());
     int * old_values_dev_ptr = thrust::raw_pointer_cast(old_values_dev.data());
-/*
+
     First_Graph_GPU<<<1,1>>>(g_dev,
                             1,
                             1,
                             1,
-                            &old_row_offsets_dev_ptr,
-                            &old_column_indices_dev_ptr,
-                            &old_values_dev_ptr,
-                            &new_row_offsets_dev_ptr,
-                            &new_column_indices_dev_ptr,
-                            &new_values_dev_ptr,
-                            &old_degrees_dev_ptr,
-                            &new_degrees_dev_ptr);
-*/
+                            old_row_offsets_dev_ptr,
+                            old_column_indices_dev_ptr,
+                            old_values_dev_ptr,
+                            new_row_offsets_dev_ptr,
+                            new_column_indices_dev_ptr,
+                            new_values_dev_ptr,
+                            old_degrees_dev_ptr,
+                            new_degrees_dev_ptr);
+
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
     /*
