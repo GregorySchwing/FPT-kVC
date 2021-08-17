@@ -337,7 +337,7 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
     thrust::host_vector<int> hostFinal = back2Host;
     std::cout << "Priting data copied there and back" << std::endl;;
 */
-    std::cout << "Size" << g_dev2->GetVertexCount() << std::endl;;
+    std::cout << "Size" << g_dev2->vertexCount << std::endl;;
     //for (auto & v : hostFinal)
     //    std::cout << v << " ";
     //std::cout << std::endl;
