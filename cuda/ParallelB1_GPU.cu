@@ -83,9 +83,9 @@ __global__ void First_Graph_GPU(Graph_GPU * g_dev,
                                 int * old_degrees_dev,
                                 int * new_degrees_dev) {
      // notice this is how you use __device__ compiled code
-          g_dev = new Graph_GPU(vertexCount);
+    //g_dev = new Graph_GPU(vertexCount);
 
-     /*
+     
      g_dev = new Graph_GPU(vertexCount, 
                     size,
                     numberOfRows,
@@ -97,7 +97,7 @@ __global__ void First_Graph_GPU(Graph_GPU * g_dev,
                     new_values_dev,
                     old_degrees_dev,
                     new_degrees_dev);
-                    */
+                    
      // use the sphere here
 
 
