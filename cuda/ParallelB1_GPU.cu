@@ -282,13 +282,13 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
 
 
     // CSR vectors
-    thrust::device_vector<int> new_row_offsets_dev;
-    thrust::device_vector<int> new_column_indices_dev;
-    thrust::device_vector<int> old_row_offsets_dev;
-    thrust::device_vector<int> old_column_indices_dev;
+    //thrust::device_vector<int> new_row_offsets_dev;
+    //thrust::device_vector<int> new_column_indices_dev;
+    thrust::device_vector<int> old_row_offsets_dev = *(g.GetCSR().GetOldRowOffRef());
+    thrust::device_vector<int> old_column_indices_dev = *(g.GetCSR().GetOldColRef());
 
-    thrust::copy(g.GetCSR().GetNewRowOffRef().begin(), g.GetCSR().GetNewRowOffRef().end(), new_row_offsets_dev.begin());
-    thrust::copy(g.GetCSR().GetNewColRef().begin(), g.GetCSR().GetNewColRef().end(), new_column_indices_dev.begin());
+    //thrust::copy(g.GetCSR().GetNewRowOffRef().begin(), g.GetCSR().GetNewRowOffRef().end(), new_row_offsets_dev.begin());
+    //thrust::copy(g.GetCSR().GetNewColRef().begin(), g.GetCSR().GetNewColRef().end(), new_column_indices_dev.begin());
     /*  
     thrust::copy((g.GetCSR().GetOldRowOffRef())->begin(), (g.GetCSR().GetOldRowOffRef())->end(), old_row_offsets_dev.begin());
     thrust::copy((g.GetCSR().GetOldColRef())->begin(), (g.GetCSR().GetOldColRef())->end(), old_column_indices_dev.begin());
