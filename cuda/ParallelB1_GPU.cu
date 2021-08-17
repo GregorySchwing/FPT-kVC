@@ -322,6 +322,7 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
 */
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
+    /*
     int * sizedev2host;
     int * new_values_dev2host_ptr;
     int * size;
@@ -330,11 +331,14 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
     checkLastErrorCUDA(__FILE__, __LINE__);
     CubDebugExit(cudaMemcpy(&size, sizedev2host, 1*sizeof(int),
                           cudaMemcpyDeviceToHost));
+    
     thrust::device_ptr<int> back2Host_ptr = thrust::device_pointer_cast(new_values_dev2host_ptr);
     thrust::device_vector<int> back2Host(back2Host_ptr, back2Host_ptr + (*size));
-    
-    thrust::host_vector<int> hostFinal = back2Host;
-    std::cout << "Size" << *size << std::endl;;
+    */
+    thrust::host_vector<int> hostFinal = new_degrees_dev;
+    std::cout << "Priting data copied there and back" << std::endl;;
+
+    //std::cout << "Size" << *size << std::endl;;
     for (auto & v : hostFinal)
         std::cout << v << " ";
     std::cout << std::endl;
