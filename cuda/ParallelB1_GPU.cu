@@ -289,16 +289,16 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
 
     //thrust::copy(g.GetCSR().GetNewRowOffRef().begin(), g.GetCSR().GetNewRowOffRef().end(), new_row_offsets_dev.begin());
     //thrust::copy(g.GetCSR().GetNewColRef().begin(), g.GetCSR().GetNewColRef().end(), new_column_indices_dev.begin());
-    /*  
-    thrust::copy((g.GetCSR().GetOldRowOffRef())->begin(), (g.GetCSR().GetOldRowOffRef())->end(), old_row_offsets_dev.begin());
-    thrust::copy((g.GetCSR().GetOldColRef())->begin(), (g.GetCSR().GetOldColRef())->end(), old_column_indices_dev.begin());
+     
+    //thrust::copy((g.GetCSR().GetOldRowOffRef())->begin(), (g.GetCSR().GetOldRowOffRef())->end(), old_row_offsets_dev.begin());
+    //thrust::copy((g.GetCSR().GetOldColRef())->begin(), (g.GetCSR().GetOldColRef())->end(), old_column_indices_dev.begin());
   
     // SparseMatrix vectors
-    thrust::device_vector<int> new_values_dev;
-    thrust::device_vector<int> old_values_dev;
+    thrust::device_vector<int> new_values_dev = g.GetCSR().GetNewValRef();
+    thrust::device_vector<int> old_values_dev = *(g.GetCSR().GetOldValRef());
 
-    thrust::copy(g.GetCSR().GetNewValRef().begin(), g.GetCSR().GetNewValRef().end(), new_values_dev.begin());
-    thrust::copy((g.GetCSR().GetOldValRef())->begin(), (g.GetCSR().GetOldValRef())->end(), old_values_dev.begin());
+    //thrust::copy(g.GetCSR().GetNewValRef().begin(), g.GetCSR().GetNewValRef().end(), new_values_dev.begin());
+    //thrust::copy((g.GetCSR().GetOldValRef())->begin(), (g.GetCSR().GetOldValRef())->end(), old_values_dev.begin());
     
 
     // Graph pointers
