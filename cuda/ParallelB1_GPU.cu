@@ -300,7 +300,7 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
     //thrust::copy(g.GetCSR().GetNewValRef().begin(), g.GetCSR().GetNewValRef().end(), new_values_dev.begin());
     //thrust::copy((g.GetCSR().GetOldValRef())->begin(), (g.GetCSR().GetOldValRef())->end(), old_values_dev.begin());
     
-
+/*
     // Graph pointers
     int * old_degrees_dev_ptr = thrust::raw_pointer_cast(old_degrees_dev.data());
     int * new_degrees_dev_ptr = thrust::raw_pointer_cast(new_degrees_dev.data());
