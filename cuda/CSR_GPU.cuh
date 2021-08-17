@@ -20,7 +20,13 @@ class CSR_GPU : public SparseMatrix_GPU {
         // Default constructor for first graph object
         CUDA_HOSTDEV CSR_GPU(int vertexCount, 
                             int size,
-                            int numberOfRows);
+                            int numberOfRows,
+                            int ** old_row_offsets_dev,
+                            int ** old_columns_dev,
+                            int ** old_values_dev,
+                            int ** new_row_offsets_dev,
+                            int ** new_columns_dev,
+                            int ** new_values_dev);
         // Copy constructor for allocating graph object
         CUDA_HOSTDEV CSR_GPU(const CSR & c);
         CUDA_HOSTDEV ~CSR_GPU();

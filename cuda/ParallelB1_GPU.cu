@@ -231,10 +231,19 @@ __global__ void InitGPrime_GPU(Graph_GPU & g_dev, array_container * mpt, array_c
 
 void CopyGraphToDevice(Graph & gPrime, Graph_GPU * g_dev){
 
+    // Graph pointers
+    thrust::device_vector<int> old_degrees_dev = gPrime.GetCSR().GetOldDegRef();
+    thrust::device_vector<int> new_degrees_dev = gPrime.GetCSR().GetNewDegRef();
+
+    // CSR pointers
+    thrust::device_vector<int> new_row_offsets_dev = gPrime.GetCSR().GetNewRowOffRef();
+    thrust::device_vector<int> new_column_indices_dev = gPrime.GetCSR().GetNewColRef();
+    thrust::device_vector<int> old_row_offsets_dev = *(gPrime.GetCSR().GetOldRowOffRef());
+    thrust::device_vector<int> old_column_indices_dev = *(gPrime.GetCSR().GetOldColRef());
+    
+    // SparseMatrix Pointers
     thrust::device_vector<int> new_values_dev = gPrime.GetCSR().GetNewValRef();
     thrust::device_vector<int> old_values_dev = *(gPrime.GetCSR().GetOldValRef());
-    thrust::device_vector<int> old_column_indices_dev = *(gPrime.GetCSR().GetOldColRef());
-    thrust::device_vector<int> old_row_offsets_dev = *(gPrime.GetCSR().GetOldRowOffRef());
 
     cudaMalloc( (void**)&g_dev, 1 * sizeof(int) );
 

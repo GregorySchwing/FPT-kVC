@@ -61,11 +61,11 @@ int main(int argc, char *argv[])
 
     /*
     std::vector< Graph > graphs(treeSize, Graph(g));
-    std::vector<int> mpt;
+    thrust::host_vector<int> mpt;
     graphs[0].InitGPrime(g, mpt);
     graphs[0].SetVerticesToIncludeInCover(g.GetVerticesThisGraphIncludedInTheCover());
     //std::swap(graphs[0], gPrime);
-    std::vector<int> answer;
+    thrust::host_vector<int> answer;
     //ParallelB1::PopulateTree(treeSize, graphs, answer);
     int result = ParallelB1::PopulateTreeParallelLevelWise(numberOfLevels, graphs, answer);
     std::cout << std::endl;
@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
         }
     }
     std::cout << "Found min K : " << minK << std::endl;
-    std::vector<int> answer;
+    thrust::host_vector<int> answer;
     int kCovSize = binarySearch(answer,
                                 minK,
                                 maxK,

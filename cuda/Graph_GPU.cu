@@ -14,9 +14,23 @@ __host__ __device__ Graph_GPU::Graph_GPU(const Graph & other): csr(other.csr),
 
 __host__ __device__ Graph_GPU::Graph_GPU(int vertexCount, 
                                         int size,
-                                        int numberOfRows): 
-    csr(vertexCount, size, numberOfRows),
+                                        int numberOfRows,
+                                        int ** old_row_offsets_dev,
+                                        int ** old_columns_dev,
+                                        int ** old_values_dev,
+                                        int ** new_row_offsets_dev,
+                                        int ** new_columns_dev,
+                                        int ** new_values_dev,
+                                        int ** old_degrees_dev,
+                                        int ** new_degrees_dev): 
+    csr(vertexCount, size, numberOfRows, old_row_offsets_dev,
+        old_columns_dev, old_values_dev, new_row_offsets_dev,
+        new_columns_dev, new_values_dev),
     vertexCount(vertexCount){
+
+    this->old_degrees_ref = new array_container(old_values_dev, 0, size);
+    this->new_degrees_dev = new array_container(new_degrees_dev, 0, size);
+
 
     //cudaMalloc(&hasntBeenRemoved, other.vertexCount*sizeof(int)); 
     //cudaMalloc(&verticesRemaining, other.vertexCount*sizeof(int)); 
