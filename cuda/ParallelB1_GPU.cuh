@@ -36,14 +36,14 @@ __global__ void First_Graph_GPU(Graph_GPU * g_dev,
                                 int vertexCount, 
                                 int size,
                                 int numberOfRows,
-                                int ** old_row_offsets_dev,
-                                int ** old_columns_dev,
-                                int ** old_values_dev,
-                                int ** new_row_offsets_dev,
-                                int ** new_columns_dev,
-                                int ** new_values_dev,
-                                int ** old_degrees_dev,
-                                int ** new_degrees_dev);
+                                int * old_row_offsets_dev,
+                                int * old_columns_dev,
+                                int * old_values_dev,
+                                int * new_row_offsets_dev,
+                                int * new_columns_dev,
+                                int * new_values_dev,
+                                int * old_degrees_dev,
+                                int * new_degrees_dev);
 
 __global__ void CopyBackGraph(Graph_GPU * g_dev, int * internal_dev_ptr, int * sizedev2host);
 
