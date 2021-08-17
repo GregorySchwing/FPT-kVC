@@ -32,7 +32,7 @@ CUDA_HOSTDEV long long CalculateSizeRequirement(int startingLevel,
                                                             int endingLevel);
 CUDA_HOSTDEV long long CalculateLevelOffset(int level);
 
-__global__ void First_Graph_GPU(Graph_GPU * g_dev,
+__global__ void First_Graph_GPU(Graph_GPU ** g_dev,
                                 int vertexCount, 
                                 int size,
                                 int numberOfRows,
