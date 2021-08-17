@@ -318,28 +318,29 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
-    
-    int * sizedev2host;
-    int * new_values_dev2host_ptr;
-    int * size;
-    //CopyBackGraph<<<1,1>>>(g_dev, new_values_dev2host_ptr, sizedev2host);
-    //cudaDeviceSynchronize();
-    //checkLastErrorCUDA(__FILE__, __LINE__);
-    cudaMemcpy(size, &(g_dev->vertexCount), 1*sizeof(int),
+
+    Graph_GPU * g_dev2 = new Graph_GPU();
+
+    //cudaMalloc( (void**)&g_dev, 1 * sizeof(Graph_GPU) );
+
+
+
+    cudaMemcpy(g_dev2, g_dev, 1*sizeof(Graph_GPU),
                           cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
     
+    /*
     thrust::device_ptr<int> back2Host_ptr = thrust::device_pointer_cast(new_values_dev2host_ptr);
     thrust::device_vector<int> back2Host(back2Host_ptr, back2Host_ptr + (*size));
     
     thrust::host_vector<int> hostFinal = back2Host;
     std::cout << "Priting data copied there and back" << std::endl;;
-
-    std::cout << "Size" << *size << std::endl;;
-    for (auto & v : hostFinal)
-        std::cout << v << " ";
-    std::cout << std::endl;
+*/
+    std::cout << "Size" << g_dev2.GetVertexCount() << std::endl;;
+    //for (auto & v : hostFinal)
+    //    std::cout << v << " ";
+    //std::cout << std::endl;
 }
 
 
