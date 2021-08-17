@@ -16,8 +16,8 @@
 
 struct array_container {
     public :
-        CUDA_HOSTDEV array_container(int ** globalData, long long globalIndex, int count_arg) : count(count_arg){
-            data = globalData[globalIndex];
+        CUDA_HOSTDEV array_container(int * globalData, long long globalIndex, int count_arg) : count(count_arg){
+            data = &globalData[globalIndex];
         }
         int * data;
         int count;
@@ -30,8 +30,8 @@ class SparseMatrix_GPU {
         CUDA_HOSTDEV SparseMatrix_GPU(int vertexCount, 
                                     int size,
                                     int numberOfRows,
-                                    int ** old_values_dev,
-                                    int ** new_values_dev);
+                                    int * old_values_dev,
+                                    int * new_values_dev);
 
         /* Copy Constructor */
         CUDA_HOSTDEV SparseMatrix_GPU(const SparseMatrix & s);

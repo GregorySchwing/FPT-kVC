@@ -27,14 +27,14 @@ public:
     CUDA_HOSTDEV Graph_GPU(int vertexCount, 
                             int size,
                             int numberOfRows,
-                            int ** old_row_offsets_dev,
-                            int ** old_columns_dev,
-                            int ** old_values_dev,
-                            int ** new_row_offsets_dev,
-                            int ** new_columns_dev,
-                            int ** new_values_dev,
-                            int ** old_degrees_dev,
-                            int ** new_degrees_dev);
+                            int * old_row_offsets_dev,
+                            int * old_columns_dev,
+                            int * old_values_dev,
+                            int * new_row_offsets_dev,
+                            int * new_columns_dev,
+                            int * new_values_dev,
+                            int * old_degrees_dev,
+                            int * new_degrees_dev);
 
     /* Constructor to allocate induced subGraph_GPU G'' for each branch */
     CUDA_HOSTDEV Graph_GPU(const Graph & other);

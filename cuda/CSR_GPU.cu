@@ -11,12 +11,12 @@ SparseMatrix_GPU(vertexCount){
 __host__ __device__ CSR_GPU::CSR_GPU(int vertexCount, 
                                         int size,
                                         int numberOfRows,
-                                        int ** old_row_offsets_dev,
-                                        int ** old_columns_dev,
-                                        int ** old_values_dev,
-                                        int ** new_row_offsets_dev,
-                                        int ** new_columns_dev,
-                                        int ** new_values_dev):
+                                        int * old_row_offsets_dev,
+                                        int * old_columns_dev,
+                                        int * old_values_dev,
+                                        int * new_row_offsets_dev,
+                                        int * new_columns_dev,
+                                        int * new_values_dev):
 vertexCount(vertexCount),
 SparseMatrix_GPU(vertexCount, size, numberOfRows, old_values_dev, new_values_dev)
 {

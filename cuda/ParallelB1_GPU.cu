@@ -44,27 +44,27 @@ __host__ __device__ long long CalculateLevelOffset(int level){
 __device__ void AssignPointers(long long globalIndex,
                                 long long edgesPerNode,
                                 long long numberOfVertices,
-                                Graph_GPU ** graphs,
-                                int ** new_row_offsets_dev,
-                                int ** new_columns_dev,
-                                int ** values_dev,
-                                int ** new_degrees_dev){
+                                Graph_GPU * graphs,
+                                int * new_row_offsets_dev,
+                                int * new_columns_dev,
+                                int * values_dev,
+                                int * new_degrees_dev){
 
-    (*graphs)[globalIndex].old_degrees_ref = (*graphs)[(globalIndex-1)/3].new_degrees_dev;
-    (*graphs)[globalIndex].csr.old_column_indices_ref = (*graphs)[(globalIndex-1)/3].csr.new_column_indices_dev;
-    (*graphs)[globalIndex].csr.old_row_offsets_ref = (*graphs)[(globalIndex-1)/3].csr.new_row_offsets_dev;
-    (*graphs)[globalIndex].csr.old_values_ref = (*graphs)[(globalIndex-1)/3].csr.new_values_dev;
+    graphs[globalIndex].old_degrees_ref = graphs[(globalIndex-1)/3].new_degrees_dev;
+    graphs[globalIndex].csr.old_column_indices_ref = graphs[(globalIndex-1)/3].csr.new_column_indices_dev;
+    graphs[globalIndex].csr.old_row_offsets_ref = graphs[(globalIndex-1)/3].csr.new_row_offsets_dev;
+    graphs[globalIndex].csr.old_values_ref = graphs[(globalIndex-1)/3].csr.new_values_dev;
 
-    (*graphs)[globalIndex].new_degrees_dev = new array_container(new_degrees_dev,
+    graphs[globalIndex].new_degrees_dev = new array_container(new_degrees_dev,
                                                           globalIndex,
                                                           numberOfVertices);
-    (*graphs)[globalIndex].csr.new_row_offsets_dev = new array_container(new_row_offsets_dev,
+    graphs[globalIndex].csr.new_row_offsets_dev = new array_container(new_row_offsets_dev,
                                                         globalIndex,
                                                         numberOfVertices+1);
-    (*graphs)[globalIndex].csr.new_column_indices_dev = new array_container(new_columns_dev,
+    graphs[globalIndex].csr.new_column_indices_dev = new array_container(new_columns_dev,
                                                     globalIndex,
                                                     edgesPerNode);
-    (*graphs)[globalIndex].csr.new_values_dev = new array_container(values_dev,
+    graphs[globalIndex].csr.new_values_dev = new array_container(values_dev,
                                                     globalIndex,
                                                     edgesPerNode);
 
@@ -115,11 +115,11 @@ __global__ void PopulateTreeParallelLevelWise_GPU(Graph_GPU * g,
                                                 int numberOfLevels, 
                                                 long long edgesPerNode,
                                                 long long numberOfVertices,
-                                                Graph_GPU ** graphs,
-                                                int ** new_row_offsets_dev,
-                                                int ** new_columns_dev,
-                                                int ** values_dev,
-                                                int ** new_degrees_dev){
+                                                Graph_GPU * graphs,
+                                                int * new_row_offsets_dev,
+                                                int * new_columns_dev,
+                                                int * values_dev,
+                                                int * new_degrees_dev){
 
     long long myLevel = blockIdx.x;
 
@@ -140,7 +140,7 @@ __global__ void PopulateTreeParallelLevelWise_GPU(Graph_GPU * g,
 
     for (int node = leafIndex; node < myLevelSize; node += blockDim.x){
         //graphs[levelOffset + node] = new Graph_GPU(g);
-        printf("Thread %lu, block %lu, vertexCount %d", leafIndex, myLevel, graphs[levelOffset + node]->vertexCount);
+        printf("Thread %lu, block %lu, vertexCount %d", leafIndex, myLevel, graphs[levelOffset + node].vertexCount);
         AssignPointers(levelOffset + node,
                         edgesPerNode,
                         numberOfVertices,
@@ -235,11 +235,11 @@ void CallPopulateTree(int numberOfLevels,
                                         numberOfLevels, 
                                         g.GetEdgesLeftToCover(),
                                         g.GetVertexCount(),
-                                        &graphs_ptr,
-                                        &new_row_offsets_dev_ptr,
-                                        &new_columns_dev_ptr,
-                                        &values_dev_ptr,
-                                        &new_degrees_dev_ptr);
+                                        graphs_ptr,
+                                        new_row_offsets_dev_ptr,
+                                        new_columns_dev_ptr,
+                                        values_dev_ptr,
+                                        new_degrees_dev_ptr);
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 

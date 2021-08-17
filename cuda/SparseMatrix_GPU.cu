@@ -8,8 +8,8 @@ __host__ __device__ SparseMatrix_GPU::SparseMatrix_GPU(int vertexCount){}
 __host__ __device__ SparseMatrix_GPU::SparseMatrix_GPU(int vertexCount, 
                                                         int size,
                                                         int numberOfRows,
-                                                        int ** old_values_dev,
-                                                        int ** new_values_dev):
+                                                        int * old_values_dev,
+                                                        int * new_values_dev):
 size(size), 
 numberOfRows(numberOfRows){
     this->old_values_ref = new array_container(old_values_dev, 0, size);

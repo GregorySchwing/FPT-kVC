@@ -51,21 +51,21 @@ __global__ void CopyBackGraph(Graph_GPU * g_dev, int * internal_dev_ptr, int * s
 __device__ void AssignPointers(long long globalIndex,
                                 long long edgesPerNode,
                                 long long numberOfVertices,
-                                Graph_GPU ** graphs,
-                                int ** new_row_offsets_dev,
-                                int ** new_columns_dev,
-                                int ** values_dev,
-                                int ** new_degrees_dev);
+                                Graph_GPU * graphs,
+                                int * new_row_offsets_dev,
+                                int * new_columns_dev,
+                                int * values_dev,
+                                int * new_degrees_dev);
 
 __global__ void PopulateTreeParallelLevelWise_GPU(Graph_GPU * gPrime,
                                             int numberOfLevels, 
                                             long long edgesPerNode,
                                             long long numberOfVertices,
-                                            Graph_GPU ** graphs,
-                                            int ** new_row_offsets_dev,
-                                            int ** new_columns_dev,
-                                            int ** values_dev,
-                                            int ** new_degrees_dev);
+                                            Graph_GPU * graphs,
+                                            int * new_row_offsets_dev,
+                                            int * new_columns_dev,
+                                            int * values_dev,
+                                            int * new_degrees_dev);
 
 __global__ void InitGPrime_GPU(Graph_GPU * g_dev, 
 array_container * mpt, array_container * S, Graph_GPU * root);
