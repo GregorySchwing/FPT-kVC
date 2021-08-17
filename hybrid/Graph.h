@@ -38,6 +38,8 @@ public:
     thrust::host_vector<int> * GetOldDegPointer();
     thrust::host_vector<int> & GetOldDegRef();
 
+    int GetSize();
+    int GetNumberOfRows();
 
     int GetEdgesLeftToCover();
     int GetDegree(int v);

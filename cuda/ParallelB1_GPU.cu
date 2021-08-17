@@ -229,24 +229,49 @@ __global__ void InitGPrime_GPU(Graph_GPU & g_dev, array_container * mpt, array_c
 
 }
 
-void CopyGraphToDevice(Graph & gPrime, Graph_GPU * g_dev){
+void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
+
+    // Graph vectors
+    thrust::device_vector<int> old_degrees_dev = g.GetOldDegRef();
+    thrust::device_vector<int> new_degrees_dev = g.GetNewDegRef();
+
+    // CSR vectors
+    thrust::device_vector<int> new_row_offsets_dev = g.GetCSR().GetNewRowOffRef();
+    thrust::device_vector<int> new_column_indices_dev = g.GetCSR().GetNewColRef();
+    thrust::device_vector<int> old_row_offsets_dev = *(g.GetCSR().GetOldRowOffRef());
+    thrust::device_vector<int> old_column_indices_dev = *(g.GetCSR().GetOldColRef());
+    
+    // SparseMatrix vectors
+    thrust::device_vector<int> new_values_dev = g.GetCSR().GetNewValRef();
+    thrust::device_vector<int> old_values_dev = *(g.GetCSR().GetOldValRef());
 
     // Graph pointers
-    thrust::device_vector<int> old_degrees_dev = gPrime.GetCSR().GetOldDegRef();
-    thrust::device_vector<int> new_degrees_dev = gPrime.GetCSR().GetNewDegRef();
+    int * old_degrees_dev_ptr = thrust::raw_pointer_cast(old_degrees_dev.data());
+    int * new_degrees_dev_ptr = thrust::raw_pointer_cast(new_degrees_dev.data());
 
     // CSR pointers
-    thrust::device_vector<int> new_row_offsets_dev = gPrime.GetCSR().GetNewRowOffRef();
-    thrust::device_vector<int> new_column_indices_dev = gPrime.GetCSR().GetNewColRef();
-    thrust::device_vector<int> old_row_offsets_dev = *(gPrime.GetCSR().GetOldRowOffRef());
-    thrust::device_vector<int> old_column_indices_dev = *(gPrime.GetCSR().GetOldColRef());
+    int * new_row_offsets_dev_ptr = thrust::raw_pointer_cast(new_row_offsets_dev.data());
+    int * new_column_indices_dev_ptr = thrust::raw_pointer_cast(new_column_indices_dev.data());
+    int * old_row_offsets_dev_ptr = thrust::raw_pointer_cast(old_row_offsets_dev.data());
+    int * old_column_indices_dev_ptr = thrust::raw_pointer_cast(old_column_indices_dev.data());
     
-    // SparseMatrix Pointers
-    thrust::device_vector<int> new_values_dev = gPrime.GetCSR().GetNewValRef();
-    thrust::device_vector<int> old_values_dev = *(gPrime.GetCSR().GetOldValRef());
+    // SparseMatrix pointers
+    int * new_values_dev_ptr = thrust::raw_pointer_cast(new_values_dev.data());
+    int * old_values_dev_ptr = thrust::raw_pointer_cast(old_values_dev.data());
 
-    cudaMalloc( (void**)&g_dev, 1 * sizeof(int) );
+    cudaMalloc( (void**)&g_dev, 1 * sizeof(Graph_GPU) );
 
+    g_dev = new Graph_GPU(g.GetVertexCount(),
+          g.GetSize(),
+          g.GetNumberOfRows(),
+          &old_row_offsets_dev_ptr,
+          &old_column_indices_dev_ptr,
+          &old_values_dev_ptr,
+          &new_row_offsets_dev_ptr,
+          &new_column_indices_dev_ptr,
+          &new_values_dev_ptr,
+          &old_degrees_dev_ptr,
+          &new_degrees_dev_ptr);
 
 /*
     int numberOfRows, 

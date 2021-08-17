@@ -18,6 +18,15 @@ Graph::Graph(const Graph & other): csr(other.csr),
 //    std::cout << "Copied" << std::endl;
 }
 
+
+int Graph::GetSize(){
+    return GetCSR().GetSize();
+}
+
+int Graph::GetNumberOfRows(){
+    return GetCSR().GetNumberOfRows();
+}
+
 thrust::host_vector<int> & Graph::GetVerticesThisGraphIncludedInTheCover(){
     return verticesToIncludeInCover;
 }

@@ -25,6 +25,7 @@ class SparseMatrix {
         //SparseMatrix(int numberOfRows, thrust::host_vector<int> & values_ref_arg);
 
         int GetNumberOfRows();
+        int GetSize();
         void SetNumberOfRows(int numberOfRows_arg);
 
 

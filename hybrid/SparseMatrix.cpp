@@ -58,6 +58,10 @@ int SparseMatrix::GetNumberOfRows(){
     return numberOfRows;
 }
 
+int SparseMatrix::GetSize(){
+    return size;
+}
+
 void SparseMatrix::SetNumberOfRows(int numberOfRows_arg){
     numberOfRows = numberOfRows_arg;
 }
