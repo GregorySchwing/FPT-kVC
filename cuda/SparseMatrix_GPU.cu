@@ -3,6 +3,7 @@
 #include "SparseMatrix_GPU.cuh"
 #include <memory>
 
+__host__ __device__ SparseMatrix_GPU::SparseMatrix_GPU(int vertexCount){}
 /* Copy constr */
 __host__ __device__ SparseMatrix_GPU::SparseMatrix_GPU(int vertexCount, 
                                                         int size,

@@ -22,6 +22,8 @@ class Graph;
 
 class Graph_GPU {
 public:
+    CUDA_HOSTDEV Graph_GPU(int vertexCount);
+
     CUDA_HOSTDEV Graph_GPU(int vertexCount, 
                             int size,
                             int numberOfRows,

@@ -25,6 +25,7 @@ struct array_container {
 
 class SparseMatrix_GPU {
     public: 
+        CUDA_HOSTDEV SparseMatrix_GPU(int vertexCount);
         /* First Graph Constructor */
         CUDA_HOSTDEV SparseMatrix_GPU(int vertexCount, 
                                     int size,

@@ -2,6 +2,10 @@
 
 #include "CSR_GPU.cuh"
 
+__host__ __device__ CSR_GPU::CSR_GPU(int vertexCount):vertexCount(vertexCount),
+SparseMatrix_GPU(vertexCount){
+
+}
 
 /* First graph */
 __host__ __device__ CSR_GPU::CSR_GPU(int vertexCount, 

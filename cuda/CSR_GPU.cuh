@@ -17,6 +17,8 @@
 
 class CSR_GPU : public SparseMatrix_GPU {
     public:
+        CUDA_HOSTDEV CSR_GPU(int vertexCount);
+
         // Default constructor for first graph object
         CUDA_HOSTDEV CSR_GPU(int vertexCount, 
                             int size,
