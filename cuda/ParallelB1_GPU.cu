@@ -281,11 +281,17 @@ void CopyGraphToDevice( Graph & g,
     int * new_values_dev_ptr = thrust::raw_pointer_cast(new_values_dev.data());
     int * old_values_dev_ptr = thrust::raw_pointer_cast(old_values_dev.data());
 
+    // Currenly only sets the first graph in the cuda memory
+    CalculateNewRowOffsets<<<1,1>>>(g.GetNumberOfRows(),
+                                        new_degrees_dev_ptr,
+                                        global_row_offsets_dev_ptr);
+
+    // Currenly only sets the first graph in the cuda memory
     InduceSubgraph<<<1,32>>>(g.GetVertexCount(),           
                             old_row_offsets_dev_ptr,
                             old_column_indices_dev_ptr,
                             old_values_dev_ptr,
-                            new_row_offsets_dev_ptr,
+                            global_row_offsets_dev_ptr,
                             global_columns_dev_ptr);
 /*
     First_Graph_GPU<<<1,1>>>(g.GetVertexCount(),
