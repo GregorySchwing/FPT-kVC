@@ -58,7 +58,8 @@ __global__ void InduceSubgraph( int numberOfRows,
         printf("Thread %d, row %d", threadIdx.x, iter);
         C_ref[iter][0] = 0;
         C_ref[iter][1] = 0;
-        
+        printf("Thread %d, row %d, old_row_offsets_dev[iter] = %d", threadIdx.x, iter, old_row_offsets_dev[iter]);
+
         int beginIndex = old_row_offsets_dev[iter];
         int endIndex = old_row_offsets_dev[iter+1];
 
