@@ -75,6 +75,7 @@ __global__ void InduceSubgraph( int numberOfRows,
                 --C_ref[old_values_dev[i]];
             }
         }
+        printf("Thread %d, row %d, finished", threadIdx.x, iter);
     }
 }
 
@@ -259,7 +260,7 @@ void CopyGraphToDevice( Graph & g,
     int * new_values_dev_ptr = thrust::raw_pointer_cast(new_values_dev.data());
     int * old_values_dev_ptr = thrust::raw_pointer_cast(old_values_dev.data());
 
-    InduceSubgraph<<<1,1>>>(g.GetVertexCount(),           
+    InduceSubgraph<<<1,32>>>(g.GetVertexCount(),           
                             old_row_offsets_dev_ptr,
                             old_column_indices_dev_ptr,
                             old_values_dev_ptr,
