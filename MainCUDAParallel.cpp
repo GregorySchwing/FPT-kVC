@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     int startingLevel = 0;
     int endingLevel = 5;
     std::vector< Graph > graphs(1, Graph(g));
-    std::vector<int> mpt;
+    thrust::host_vector<int> mpt;
     graphs[0].InitGPrime(g, mpt);
     thrust::host_vector<int> & newCols = graphs[0].GetCSR().GetNewColRef();
     std::cout << "cpu newCols" << std::endl;
