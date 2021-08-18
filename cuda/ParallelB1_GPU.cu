@@ -286,6 +286,8 @@ void CopyGraphToDevice( Graph & g,
                                         new_degrees_dev_ptr,
                                         global_row_offsets_dev_ptr);
 
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
     // Currenly only sets the first graph in the cuda memory
     InduceSubgraph<<<1,32>>>(g.GetVertexCount(),           
                             old_row_offsets_dev_ptr,
