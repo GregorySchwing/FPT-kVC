@@ -41,43 +41,47 @@ __host__ __device__ long long CalculateLevelOffset(int level){
 
 }
 
+typedef int inner_array_t[2];
+
 __global__ void InduceSubgraph( int numberOfRows,
                                 int * old_row_offsets_dev,
                                 int * old_columns_dev,
                                 int * old_values_dev,
                                 int * new_row_offsets_dev,
                                 int * new_columns_dev){
-    int C_ref[2];
 
     int row = threadIdx.x + blockDim.x * blockIdx.x;
+    inner_array_t *C_ref = new inner_array_t[numberOfRows];
 
     for (int iter = row; iter < numberOfRows; iter += blockDim.x){
+
         printf("Thread %d, row %d", threadIdx.x, iter);
-        C_ref[0] = 0;
-        C_ref[1] = 0;
+        C_ref[iter][0] = 0;
+        C_ref[iter][1] = 0;
         
         int beginIndex = old_row_offsets_dev[iter];
         int endIndex = old_row_offsets_dev[iter+1];
 
         for (int i = beginIndex; i < endIndex; ++i){
-            ++C_ref[old_values_dev[i]];
+            ++C_ref[iter][old_values_dev[i]];
         }
 
         // This is  [old degree - new degree , new degree]
         for (int i = 1; i < 2; ++i){
-            C_ref[i] = C_ref[i] + C_ref[i-1];
+            C_ref[iter][i] = C_ref[iter][i] + C_ref[iter][i-1];
         }
         printf("Thread %d, row %d, almost done", threadIdx.x, iter);
 
         /* C_ref[A_row_indices[i]]]-1 , because the values of C_ref are from [1, n] -> [0,n) */
         for (int i = endIndex-1; i >= beginIndex; --i){
             if (old_values_dev[i]){
-                new_columns_dev[new_row_offsets_dev[iter] - C_ref[0] + C_ref[1]-1] = old_columns_dev[i];
-                --C_ref[old_values_dev[i]];
+                new_columns_dev[new_row_offsets_dev[iter] - C_ref[iter][0] + C_ref[iter][1]-1] = old_columns_dev[i];
+                --C_ref[iter][old_values_dev[i]];
             }
         }
         printf("Thread %d, row %d, finished", threadIdx.x, iter);
     }
+    delete[] C_ref;
 }
 
 __global__ void First_Graph_GPU(int vertexCount, 
