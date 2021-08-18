@@ -41,7 +41,7 @@ __host__ __device__ long long CalculateLevelOffset(int level){
 
 }
 
-__device__ void InduceSubgraph( int numberOfRows,
+__global__ void InduceSubgraph( int numberOfRows,
                                 int * old_row_offsets_dev,
                                 int * old_columns_dev,
                                 int * old_values_dev,
@@ -52,6 +52,7 @@ __device__ void InduceSubgraph( int numberOfRows,
     int row = threadIdx.x + blockDim.x * blockIdx.x;
 
     for (int iter = row; iter < numberOfRows; iter += blockDim.x){
+        printf("Thread %d, row %d", threadIdx.x, iter);
         C_ref[0] = 0;
         C_ref[1] = 0;
         
@@ -93,13 +94,14 @@ __global__ void First_Graph_GPU(int vertexCount,
                                 int * global_values_dev_ptr,
                                 int * global_degrees_dev_ptr
                                 ) {
+/*
         InduceSubgraph(
         numberOfRows,
         old_row_offsets_dev,
         old_columns_dev,
         old_values_dev,
         global_row_offsets_dev_ptr,
-        global_columns_dev_ptr);
+        global_columns_dev_ptr); */
 
      return;
 }
@@ -257,6 +259,13 @@ void CopyGraphToDevice( Graph & g,
     int * new_values_dev_ptr = thrust::raw_pointer_cast(new_values_dev.data());
     int * old_values_dev_ptr = thrust::raw_pointer_cast(old_values_dev.data());
 
+    InduceSubgraph<<<1,1>>>(g.GetVertexCount(),           
+                            old_row_offsets_dev_ptr,
+                            old_column_indices_dev_ptr,
+                            old_values_dev_ptr,
+                            global_row_offsets_dev_ptr,
+                            global_columns_dev_ptr);
+/*
     First_Graph_GPU<<<1,1>>>(g.GetVertexCount(),
                             g.GetEdgesLeftToCover(),
                             g.GetNumberOfRows(),
@@ -271,7 +280,7 @@ void CopyGraphToDevice( Graph & g,
                             global_row_offsets_dev_ptr,
                             global_columns_dev_ptr,
                             global_values_dev_ptr,
-                            global_degrees_dev_ptr);
+                            global_degrees_dev_ptr);*/
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);

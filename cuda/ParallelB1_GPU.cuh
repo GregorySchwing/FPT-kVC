@@ -70,7 +70,7 @@ __global__ void PopulateTreeParallelLevelWise_GPU(int numberOfLevels,
                                             int * values_dev,
                                             int * new_degrees_dev);
 
-__device__ void InduceSubgraph( int numberOfRows,
+__global__ void InduceSubgraph( int numberOfRows,
                                 int * old_row_offsets_dev,
                                 int * old_columns_dev,
                                 int * old_values_dev,
