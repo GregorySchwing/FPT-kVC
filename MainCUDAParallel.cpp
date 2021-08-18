@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
     std::vector< Graph > graphs(1, Graph(g));
     std::vector<int> mpt;
     graphs[0].InitGPrime(g, mpt);
-    thrust::host_vector<int> newCols = graphs[0].GetCSR().GetNewColRef();
+    thrust::host_vector<int> & newCols = graphs[0].GetCSR().GetNewColRef();
     std::cout << "cpu newCols" << std::endl;
     for (auto & v: newCols)
         std::cout << v << " ";
