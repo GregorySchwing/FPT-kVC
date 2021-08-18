@@ -272,7 +272,7 @@ void CopyGraphToDevice( Graph & g,
                             old_row_offsets_dev_ptr,
                             old_column_indices_dev_ptr,
                             new_values_dev_ptr,
-                            global_row_offsets_dev_ptr,
+                            new_row_offsets_dev_ptr,
                             global_columns_dev_ptr);
 /*
     First_Graph_GPU<<<1,1>>>(g.GetVertexCount(),
