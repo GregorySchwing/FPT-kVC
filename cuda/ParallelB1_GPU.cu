@@ -87,6 +87,19 @@ __global__ void InduceSubgraph( int numberOfRows,
     delete[] C_ref;
 }
 
+__global__ void CalculateNewRowOffsets( int numberOfRows,
+                                        int * old_degrees_dev,
+                                        int * new_row_offsets_dev){
+    int threadID = threadIdx.x + blockDim.x * blockIdx.x;
+    if (threadID > 0) return;
+    int i = 0;
+    new_row_offsets_dev[i] = i;
+    for (i = 1; i <= numberOfRows; ++i)
+    {
+        new_row_offsets_dev[i] = old_degrees_dev[i-1] + new_row_offsets_dev[i-1];
+    }
+}
+
 __global__ void First_Graph_GPU(int vertexCount, 
                                 int size,
                                 int numberOfRows,
@@ -271,7 +284,7 @@ void CopyGraphToDevice( Graph & g,
     InduceSubgraph<<<1,32>>>(g.GetVertexCount(),           
                             old_row_offsets_dev_ptr,
                             old_column_indices_dev_ptr,
-                            new_values_dev_ptr,
+                            old_values_dev_ptr,
                             new_row_offsets_dev_ptr,
                             global_columns_dev_ptr);
 /*
