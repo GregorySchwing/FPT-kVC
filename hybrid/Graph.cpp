@@ -481,6 +481,8 @@ void Graph::PrintEdgesRemaining(){
 
 bool Graph::GPrimeEdgesGreaterKTimesKPrime(int k, int kPrime){
     int kTimesKPrime = k * kPrime;
+    std::cout << "Directed edges remaining : " << edgesLeftToCover << std::endl;
+    std::cout << "Undirected edges remaining : " << edgesLeftToCover/2 << std::endl;
     if (edgesLeftToCover/2 > kTimesKPrime)
         return true;
     return false;
