@@ -93,10 +93,14 @@ __global__ void CalculateNewRowOffsets( int numberOfRows,
     int threadID = threadIdx.x + blockDim.x * blockIdx.x;
     if (threadID > 0) return;
     int i = 0;
+    printf("Thread %d, new_row_offsets_dev[%d] = %d", threadID, i, new_row_offsets_dev[i]);
+
     new_row_offsets_dev[i] = i;
     for (i = 1; i <= numberOfRows; ++i)
     {
         new_row_offsets_dev[i] = old_degrees_dev[i-1] + new_row_offsets_dev[i-1];
+        printf("Thread %d, new_row_offsets_dev[%d] = %d", threadID, i, new_row_offsets_dev[i]);
+
     }
 }
 
