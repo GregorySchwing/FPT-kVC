@@ -13,15 +13,20 @@
 
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include "Graph_GPU.cuh"
 #include <thrust/device_vector.h>
 #include <thrust/copy.h>
 #include <thrust/execution_policy.h>
 #include "CUDAUtils.cuh"
+#include "Graph.h"
 
-class Graph_GPU;
 
-void CopyGraphToDevice(Graph & gPrime, Graph_GPU * g_dev);
+class Graph;
+
+void CopyGraphToDevice( Graph & g,
+                        int * new_row_offsets_dev_ptr,
+                        int * new_columns_dev_ptr,
+                        int * values_dev_ptr,
+                        int * new_degrees_dev_ptr);
 
 void CallPopulateTree(int numberOfLevels, 
                     Graph & gPrime);
@@ -32,8 +37,7 @@ CUDA_HOSTDEV long long CalculateSizeRequirement(int startingLevel,
                                                             int endingLevel);
 CUDA_HOSTDEV long long CalculateLevelOffset(int level);
 
-__global__ void First_Graph_GPU(Graph_GPU ** g_dev,
-                                int vertexCount, 
+__global__ void First_Graph_GPU(int vertexCount, 
                                 int size,
                                 int numberOfRows,
                                 int * old_row_offsets_dev,
@@ -43,36 +47,35 @@ __global__ void First_Graph_GPU(Graph_GPU ** g_dev,
                                 int * new_columns_dev,
                                 int * new_values_dev,
                                 int * old_degrees_dev,
-                                int * new_degrees_dev);
-
-__global__ void CopyBackGraph(Graph_GPU * g_dev, int * internal_dev_ptr, int * sizedev2host);
-
+                                int * new_degrees_dev,
+                                int * global_row_offsets_dev_ptr,
+                                int * global_columns_dev_ptr,
+                                int * global_values_dev_ptr,
+                                int * global_degrees_dev_ptr
+                                );
 
 __device__ void AssignPointers(long long globalIndex,
                                 long long edgesPerNode,
                                 long long numberOfVertices,
-                                Graph_GPU * graphs,
                                 int * new_row_offsets_dev,
                                 int * new_columns_dev,
                                 int * values_dev,
                                 int * new_degrees_dev);
 
-__global__ void PopulateTreeParallelLevelWise_GPU(Graph_GPU * gPrime,
-                                            int numberOfLevels, 
+__global__ void PopulateTreeParallelLevelWise_GPU(int numberOfLevels, 
                                             long long edgesPerNode,
                                             long long numberOfVertices,
-                                            Graph_GPU * graphs,
                                             int * new_row_offsets_dev,
                                             int * new_columns_dev,
                                             int * values_dev,
                                             int * new_degrees_dev);
 
-__global__ void InitGPrime_GPU(Graph_GPU * g_dev, 
-array_container * mpt, array_container * S, Graph_GPU * root);
-
-// Fill a perfect 3-ary tree to a given depth
-__global__ void TearDownTree_GPU(int numberOfLevels, 
-                                Graph_GPU ** graphs);
+__device__ void InduceSubgraph( int numberOfRows,
+                                int * old_row_offsets_dev,
+                                int * old_columns_dev,
+                                int * old_values_dev,
+                                int * global_row_offsets_dev_ptr,
+                                int * global_columns_dev_ptr);
 /*
 __host__ __device__ void PopulateTree(int treeSize, 
                                 std::vector<Graph> & graphs,

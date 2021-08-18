@@ -41,37 +41,43 @@ __host__ __device__ long long CalculateLevelOffset(int level){
 
 }
 
-__device__ void AssignPointers(long long globalIndex,
-                                long long edgesPerNode,
-                                long long numberOfVertices,
-                                Graph_GPU * graphs,
+__device__ void InduceSubgraph( int numberOfRows,
+                                int * old_row_offsets_dev,
+                                int * old_columns_dev,
+                                int * old_values_dev,
                                 int * new_row_offsets_dev,
-                                int * new_columns_dev,
-                                int * values_dev,
-                                int * new_degrees_dev){
+                                int * new_columns_dev){
+    int C_ref[2];
 
-    graphs[globalIndex].old_degrees_ref = graphs[(globalIndex-1)/3].new_degrees_dev;
-    graphs[globalIndex].csr.old_column_indices_ref = graphs[(globalIndex-1)/3].csr.new_column_indices_dev;
-    graphs[globalIndex].csr.old_row_offsets_ref = graphs[(globalIndex-1)/3].csr.new_row_offsets_dev;
-    graphs[globalIndex].csr.old_values_ref = graphs[(globalIndex-1)/3].csr.new_values_dev;
+    int row = threadIdx.x + blockDim.x * blockIdx.x;
 
-    graphs[globalIndex].new_degrees_dev = new array_container(new_degrees_dev,
-                                                          globalIndex,
-                                                          numberOfVertices);
-    graphs[globalIndex].csr.new_row_offsets_dev = new array_container(new_row_offsets_dev,
-                                                        globalIndex,
-                                                        numberOfVertices+1);
-    graphs[globalIndex].csr.new_column_indices_dev = new array_container(new_columns_dev,
-                                                    globalIndex,
-                                                    edgesPerNode);
-    graphs[globalIndex].csr.new_values_dev = new array_container(values_dev,
-                                                    globalIndex,
-                                                    edgesPerNode);
+    for (int iter = row; iter < numberOfRows; iter += blockDim.x){
+        C_ref[0] = 0;
+        C_ref[1] = 0;
+        
+        int beginIndex = old_row_offsets_dev[iter];
+        int endIndex = old_row_offsets_dev[iter+1];
 
+        for (int i = beginIndex; i < endIndex; ++i){
+            ++C_ref[old_values_dev[i]];
+        }
+
+        // This is  [old degree - new degree , new degree]
+        for (int i = 1; i < 2; ++i){
+            C_ref[i] = C_ref[i] + C_ref[i-1];
+        }
+
+        /* C_ref[A_row_indices[i]]]-1 , because the values of C_ref are from [1, n] -> [0,n) */
+        for (int i = endIndex-1; i >= beginIndex; --i){
+            if (old_values_dev[i]){
+                new_columns_dev[new_row_offsets_dev[iter] - C_ref[0] + C_ref[1]-1] = old_columns_dev[i];
+                --C_ref[old_values_dev[i]];
+            }
+        }
+    }
 }
 
-__global__ void First_Graph_GPU(Graph_GPU * g_dev,
-                                int vertexCount, 
+__global__ void First_Graph_GPU(int vertexCount, 
                                 int size,
                                 int numberOfRows,
                                 int * old_row_offsets_dev,
@@ -81,43 +87,28 @@ __global__ void First_Graph_GPU(Graph_GPU * g_dev,
                                 int * new_columns_dev,
                                 int * new_values_dev,
                                 int * old_degrees_dev,
-                                int * new_degrees_dev) {
-     // notice this is how you use __device__ compiled code
-    g_dev = new Graph_GPU(vertexCount);
-
-     /*
-     g_dev = new Graph_GPU(vertexCount, 
-                    size,
-                    numberOfRows,
-                    old_row_offsets_dev,
-                    old_columns_dev,
-                    old_values_dev,
-                    new_row_offsets_dev,
-                    new_columns_dev,
-                    new_values_dev,
-                    old_degrees_dev,
-                    new_degrees_dev);
-          */          
-     // use the sphere here
-
+                                int * new_degrees_dev,
+                                int * global_row_offsets_dev_ptr,
+                                int * global_columns_dev_ptr,
+                                int * global_values_dev_ptr,
+                                int * global_degrees_dev_ptr
+                                ) {
+        InduceSubgraph(
+        numberOfRows,
+        old_row_offsets_dev,
+        old_columns_dev,
+        old_values_dev,
+        global_row_offsets_dev_ptr,
+        global_columns_dev_ptr);
 
      return;
 }
 
-__global__ void CopyBackGraph(Graph_GPU * g_dev, int * internal_dev_ptr, int * sizedev2host){
-    //internal_dev_ptr = g_dev->new_degrees_dev->data;
-    //sizedev2host = &(g_dev->new_degrees_dev->count);
-    sizedev2host = &(g_dev->vertexCount);
-
-}
-
 
 // Fill a perfect 3-ary tree to a given depth
-__global__ void PopulateTreeParallelLevelWise_GPU(Graph_GPU * g,
-                                                int numberOfLevels, 
+__global__ void PopulateTreeParallelLevelWise_GPU(int numberOfLevels, 
                                                 long long edgesPerNode,
                                                 long long numberOfVertices,
-                                                Graph_GPU * graphs,
                                                 int * new_row_offsets_dev,
                                                 int * new_columns_dev,
                                                 int * values_dev,
@@ -142,45 +133,8 @@ __global__ void PopulateTreeParallelLevelWise_GPU(Graph_GPU * g,
 
     for (int node = leafIndex; node < myLevelSize; node += blockDim.x){
         //graphs[levelOffset + node] = new Graph_GPU(g);
-        printf("Thread %lu, block %lu, vertexCount %d", leafIndex, myLevel, graphs[levelOffset + node].vertexCount);
-        AssignPointers(levelOffset + node,
-                        edgesPerNode,
-                        numberOfVertices,
-                        graphs,
-                        new_row_offsets_dev,
-                        new_columns_dev,
-                        values_dev,
-                        new_degrees_dev
-        );
-    }
-}
+        printf("Thread %lu, block %lu", leafIndex, myLevel);
 
-
-// Fill a perfect 3-ary tree to a given depth
-__global__ void TearDownTree_GPU(int numberOfLevels, 
-                                Graph_GPU ** graphs){
-
-    printf("\nCalledTeardown");
-
-    long long myLevel = blockIdx.x;
-
-    if (myLevel >= numberOfLevels)
-        return;
-
-    long long myLevelSize;
-    long long levelOffset;
-    if (myLevel != 0){
-        myLevelSize = pow(3.0, myLevel-1);
-        levelOffset = CalculateLevelOffset(myLevel);
-    } else {
-        myLevelSize = 1;
-        levelOffset = 0;
-    }
-
-    long long leafIndex = threadIdx.x;
-
-    for (int node = leafIndex; node < myLevelSize; node += blockDim.x){
-        delete graphs[levelOffset + node];
     }
 }
 
@@ -213,35 +167,36 @@ void CallPopulateTree(int numberOfLevels,
         std::cout << '\n' << "Press a key to continue...; ctrl-c to terminate";
     } while (std::cin.get() != '\n');
 
-    Graph_GPU * g_dev;
-
-    cudaMalloc( (void**)&g_dev, 1 * sizeof(Graph_GPU) );
-
-    CopyGraphToDevice(g, g_dev);
+    int * global_row_offsets_dev_ptr;
+    int * global_columns_dev_ptr;
+    int * global_values_dev_ptr;
+    int * global_degrees_dev_ptr; 
+    
+    cudaMalloc( (void**)&global_row_offsets_dev_ptr, ((g.GetVertexCount()+1)*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_columns_dev_ptr, (g.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_values_dev_ptr, (g.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_degrees_dev_ptr, (g.GetVertexCount()*treeSize) * sizeof(int) );
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
-    Graph_GPU * graphs_ptr;
-    int * new_row_offsets_dev_ptr;
-    int * new_columns_dev_ptr;
-    int * values_dev_ptr;
-    int * new_degrees_dev_ptr; 
-    
-    cudaMalloc( (void**)&graphs_ptr, treeSize * sizeof(Graph_GPU) );
-    cudaMalloc( (void**)&new_row_offsets_dev_ptr, ((g.GetVertexCount()+1)*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&new_columns_dev_ptr, (g.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&values_dev_ptr, (g.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&new_degrees_dev_ptr, (g.GetVertexCount()*treeSize) * sizeof(int) );
+    CopyGraphToDevice(g,
+                    global_row_offsets_dev_ptr,
+                    global_columns_dev_ptr,
+                    global_values_dev_ptr,
+                    global_degrees_dev_ptr);
 
-    PopulateTreeParallelLevelWise_GPU<<<1,1>>>(g_dev,
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+/*
+    PopulateTreeParallelLevelWise_GPU<<<1,1>>>(
                                         numberOfLevels, 
                                         g.GetEdgesLeftToCover(),
                                         g.GetVertexCount(),
-                                        graphs_ptr,
                                         new_row_offsets_dev_ptr,
                                         new_columns_dev_ptr,
                                         values_dev_ptr,
                                         new_degrees_dev_ptr);
+*/
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
@@ -259,20 +214,19 @@ void CallPopulateTree(int numberOfLevels,
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 */
-    cudaFree( graphs_ptr );
-    cudaFree( new_row_offsets_dev_ptr );
-    cudaFree( new_columns_dev_ptr );
-    cudaFree( values_dev_ptr );
-    cudaFree( new_degrees_dev_ptr );
+    cudaFree( global_row_offsets_dev_ptr );
+    cudaFree( global_columns_dev_ptr );
+    cudaFree( global_values_dev_ptr );
+    cudaFree( global_degrees_dev_ptr );
 
     cudaDeviceSynchronize();
 }
 
-__global__ void InitGPrime_GPU(Graph_GPU & g_dev, array_container * mpt, array_container * S, Graph_GPU * root){
-
-}
-
-void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
+void CopyGraphToDevice( Graph & g,
+                        int * global_row_offsets_dev_ptr,
+                        int * global_columns_dev_ptr,
+                        int * global_values_dev_ptr,
+                        int * global_degrees_dev_ptr){
 
     // Graph vectors
     thrust::device_vector<int> new_degrees_dev = g.GetNewDegRef();
@@ -303,8 +257,7 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
     int * new_values_dev_ptr = thrust::raw_pointer_cast(new_values_dev.data());
     int * old_values_dev_ptr = thrust::raw_pointer_cast(old_values_dev.data());
 
-    First_Graph_GPU<<<1,1>>>(g_dev,
-                            g.GetVertexCount(),
+    First_Graph_GPU<<<1,1>>>(g.GetVertexCount(),
                             g.GetEdgesLeftToCover(),
                             g.GetNumberOfRows(),
                             old_row_offsets_dev_ptr,
@@ -314,33 +267,24 @@ void CopyGraphToDevice(Graph & g, Graph_GPU * g_dev){
                             new_column_indices_dev_ptr,
                             new_values_dev_ptr,
                             old_degrees_dev_ptr,
-                            new_degrees_dev_ptr);
+                            new_degrees_dev_ptr,
+                            global_row_offsets_dev_ptr,
+                            global_columns_dev_ptr,
+                            global_values_dev_ptr,
+                            global_degrees_dev_ptr);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
-    Graph_GPU * g_dev2 = new Graph_GPU(1);
-
-    //cudaMalloc( (void**)&g_dev, 1 * sizeof(Graph_GPU) );
-
-
-
-    cudaMemcpy(g_dev2, g_dev, 1*sizeof(Graph_GPU),
-                          cudaMemcpyDeviceToHost);
-    cudaDeviceSynchronize();
-    checkLastErrorCUDA(__FILE__, __LINE__);
-    
-    /*
-    thrust::device_ptr<int> back2Host_ptr = thrust::device_pointer_cast(new_values_dev2host_ptr);
-    thrust::device_vector<int> back2Host(back2Host_ptr, back2Host_ptr + (*size));
+    thrust::device_ptr<int> back2Host_ptr = thrust::device_pointer_cast(global_columns_dev_ptr);
+    thrust::device_vector<int> back2Host(back2Host_ptr, back2Host_ptr + g.GetEdgesLeftToCover());
     
     thrust::host_vector<int> hostFinal = back2Host;
     std::cout << "Priting data copied there and back" << std::endl;;
-*/
-    std::cout << "Size" << g_dev2->vertexCount << std::endl;;
-    //for (auto & v : hostFinal)
-    //    std::cout << v << " ";
-    //std::cout << std::endl;
+    std::cout << "Size" << g.GetEdgesLeftToCover() << std::endl;;
+    for (auto & v : hostFinal)
+        std::cout << v << " ";
+    std::cout << std::endl;
 }
 
 
