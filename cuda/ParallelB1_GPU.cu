@@ -256,49 +256,42 @@ void CopyGraphToDevice( Graph & g,
                         int * global_values_dev_ptr,
                         int * global_degrees_dev_ptr){
 
+    int * new_degrees_ptr = thrust::raw_pointer_cast(g.GetNewDegRef().data());
     // Graph vectors
-    thrust::device_vector<int> new_degrees_dev = g.GetNewDegRef();
-    thrust::device_vector<int> old_degrees_dev = g.GetOldDegRef();
-
+    cudaMemcpy(global_degrees_dev_ptr, new_degrees_ptr, g.GetNumberOfRows() * sizeof(int),
+                cudaMemcpyHostToDevice);
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
     // CSR vectors
-    thrust::device_vector<int> new_row_offsets_dev = g.GetCSR().GetNewRowOffRef();
-    thrust::device_vector<int> new_column_indices_dev = g.GetCSR().GetNewColRef();
     thrust::device_vector<int> old_row_offsets_dev = *(g.GetCSR().GetOldRowOffRef());
     thrust::device_vector<int> old_column_indices_dev = *(g.GetCSR().GetOldColRef());
 
     // SparseMatrix vectors
     thrust::device_vector<int> new_values_dev = g.GetCSR().GetNewValRef();
-    thrust::device_vector<int> old_values_dev = *(g.GetCSR().GetOldValRef());
-
-
-    // Graph pointers
-    int * old_degrees_dev_ptr = thrust::raw_pointer_cast(old_degrees_dev.data());
-    int * new_degrees_dev_ptr = thrust::raw_pointer_cast(new_degrees_dev.data());
 
     // CSR pointers
-    int * new_row_offsets_dev_ptr = thrust::raw_pointer_cast(new_row_offsets_dev.data());
-    int * new_column_indices_dev_ptr = thrust::raw_pointer_cast(new_column_indices_dev.data());
     int * old_row_offsets_dev_ptr = thrust::raw_pointer_cast(old_row_offsets_dev.data());
     int * old_column_indices_dev_ptr = thrust::raw_pointer_cast(old_column_indices_dev.data());
     
     // SparseMatrix pointers
     int * new_values_dev_ptr = thrust::raw_pointer_cast(new_values_dev.data());
-    int * old_values_dev_ptr = thrust::raw_pointer_cast(old_values_dev.data());
 
     // Currenly only sets the first graph in the cuda memory
     CalculateNewRowOffsets<<<1,1>>>(g.GetNumberOfRows(),
-                                        new_degrees_dev_ptr,
+                                        global_degrees_dev_ptr,
                                         global_row_offsets_dev_ptr);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
     // Currenly only sets the first graph in the cuda memory
-    InduceSubgraph<<<1,32>>>(g.GetVertexCount(),           
+    InduceSubgraph<<<1,32>>>(g.GetNumberOfRows(),           
                             old_row_offsets_dev_ptr,
                             old_column_indices_dev_ptr,
                             new_values_dev_ptr,
                             global_row_offsets_dev_ptr,
                             global_columns_dev_ptr);
+
+    
 /*
     First_Graph_GPU<<<1,1>>>(g.GetVertexCount(),
                             g.GetEdgesLeftToCover(),
