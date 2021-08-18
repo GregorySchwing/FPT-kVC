@@ -57,6 +57,7 @@ public:
     std::vector< thrust::host_vector<int> > & GetChildrenVertices();
     void SetVerticesToIncludeInCover(thrust::host_vector<int> & verticesRef);
     Graph & GetParent();
+    int GetLargestDegree();
 
 
 private:
@@ -100,7 +101,6 @@ private:
     void SetNewRowOffsets(thrust::host_vector<int> & newRowOffsetsRef);
     void SetOldDegRef(thrust::host_vector<int> & old_deg_ref);
     void SetParent(Graph & g_parent);
-
     void CalculateNewRowOffsets(thrust::host_vector<int> & old_degrees);
     void CountingSortParallelRowwiseValues(
             int procID,

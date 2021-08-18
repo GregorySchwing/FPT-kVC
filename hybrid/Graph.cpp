@@ -207,6 +207,11 @@ int Graph::GetEdgesLeftToCover(){
     return edgesLeftToCover;
 }
 
+int Graph::GetLargestDegree(){
+    auto it = max_element(std::begin(new_degrees), std::end(new_degrees)); // C++11
+    return *it;
+}
+
 
 int Graph::GetDegree(int v){
     return (*(csr.old_row_offsets_ref))[v+1] - (*(csr.old_row_offsets_ref))[v];

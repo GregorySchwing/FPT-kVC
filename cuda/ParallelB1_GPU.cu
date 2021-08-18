@@ -132,6 +132,44 @@ __global__ void First_Graph_GPU(int vertexCount,
      return;
 }
 
+// Single threaded version
+// DFS is implicitly single threaded
+__global__ void GenerateChildren(int leafIndex,
+                                int numberOfRows,
+                                int * global_row_offsets_dev_ptr,
+                                int * global_columns_dev_ptr,
+                                int * global_values_dev_ptr,
+                                int * global_degrees_dev_ptr,
+                                int * global_vertices_remaining,
+                                int * global_paths_ptr,
+                                int * global_vertices_remaining_count){
+
+    int pathsOffset = leafIndex * 4;
+    int degreesOffset = leafIndex * numberOfRows;
+
+    for (int i = 0; i < numberOfRows; ++i)
+        if (global_degrees_dev_ptr[degreesOffset+i] == 0)
+            continue;
+        else {
+            global_vertices_remaining[degreesOffset+i] = i;
+            ++global_vertices_remaining_count[leafIndex];
+        }
+
+    int randomVertex = 1;
+    //thrust::host_vector<int> path;
+    //int randomVertex = GetRandomVertex(child_g.GetRemainingVerticesRef());
+    //std::cout << "Grabbing a randomVertex: " <<  randomVertex<< std::endl;
+    //if(randomVertex == -1)
+    //    return randomVertex;
+
+    //path.push_back(randomVertex);
+    for (int i = 0; i < 4; ++i){
+        global_paths_ptr[pathsOffset + i] = randomVertex;
+        if (randomVertex == -1)
+            break;
+        randomVertex = 1;
+    }
+}
 
 // Fill a perfect 3-ary tree to a given depth
 __global__ void PopulateTreeParallelLevelWise_GPU(int numberOfLevels, 
@@ -166,16 +204,22 @@ __global__ void PopulateTreeParallelLevelWise_GPU(int numberOfLevels,
     }
 }
 
+
+
 void CallPopulateTree(int numberOfLevels, 
                     Graph & g){
 
 
+    int largestDegree = g.GetLargestDegree();
+
     //int treeSize = 200000;
+    int counters = 2;
     long long treeSize = CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
-    long long expandedData = g.GetEdgesLeftToCover();
-    long long condensedData = g.GetVertexCount();
-    long long sizeOfSingleGraph = expandedData*2*sizeof(int) + 2*condensedData*sizeof(int);
-    long long totalMem = sizeOfSingleGraph * treeSize;
+    int expandedData = g.GetEdgesLeftToCover();
+    int condensedData = g.GetVertexCount();
+    int condensedData_plus1 = condensedData + 1;
+    long long sizeOfSingleGraph = expandedData*2 + 2*condensedData + condensedData_plus1 + largestDegree + counters;
+    long long totalMem = sizeOfSingleGraph * treeSize * sizeof(int);
 
     int num_gpus;
     size_t free, total;
@@ -199,11 +243,23 @@ void CallPopulateTree(int numberOfLevels,
     int * global_columns_dev_ptr;
     int * global_values_dev_ptr;
     int * global_degrees_dev_ptr; 
-    
-    cudaMalloc( (void**)&global_row_offsets_dev_ptr, ((g.GetVertexCount()+1)*treeSize) * sizeof(int) );
+    int * global_paths_ptr; 
+    int * global_vertices_remaining;
+    int * global_vertices_remaining_count;
+    int * global_outgoing_edge_vertices;
+
+    int max_dfs_depth = 4;
+
+
+    cudaMalloc( (void**)&global_row_offsets_dev_ptr, ((g.GetNumberOfRows()+1)*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_columns_dev_ptr, (g.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_values_dev_ptr, (g.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&global_degrees_dev_ptr, (g.GetVertexCount()*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_degrees_dev_ptr, (g.GetNumberOfRows()*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_paths_ptr, (max_dfs_depth*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_vertices_remaining, (g.GetNumberOfRows()*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_vertices_remaining_count, treeSize * sizeof(int) );
+    cudaMalloc( (void**)&global_outgoing_edge_vertices, treeSize * largestDegree * sizeof(int) );
+
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
@@ -216,6 +272,13 @@ void CallPopulateTree(int numberOfLevels,
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 /*
+    (global_row_offsets_dev_ptr,
+    global_columns_dev_ptr,
+    global_values_dev_ptr,
+    global_paths_ptr,
+    global_vertices_remaining_count)
+
+
     PopulateTreeParallelLevelWise_GPU<<<1,1>>>(
                                         numberOfLevels, 
                                         g.GetEdgesLeftToCover(),
