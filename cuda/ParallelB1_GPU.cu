@@ -67,6 +67,7 @@ __global__ void InduceSubgraph( int numberOfRows,
         for (int i = 1; i < 2; ++i){
             C_ref[i] = C_ref[i] + C_ref[i-1];
         }
+        printf("Thread %d, row %d, almost done", threadIdx.x, iter);
 
         /* C_ref[A_row_indices[i]]]-1 , because the values of C_ref are from [1, n] -> [0,n) */
         for (int i = endIndex-1; i >= beginIndex; --i){
