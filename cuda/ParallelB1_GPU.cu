@@ -157,6 +157,9 @@ __global__ void GenerateChildren(int leafIndex,
                                 int * global_vertices_remaining_count,
                                 int * global_outgoing_edge_vertices,
                                 int * global_outgoing_edge_vertices_count){
+    int threadID = threadIdx.x + blockDim.x * blockIdx.x;
+    printf("Thread %d starting", threadID);
+
 
     int pathsOffset = leafIndex * 4;
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
@@ -164,20 +167,30 @@ __global__ void GenerateChildren(int leafIndex,
     int degreesOffset = leafIndex * numberOfRows;
     int outgoingEdgeOffset = leafIndex * maxDegree;
 
+        printf("Thread %d, pathsOffset : ", pathsOffset);
+        printf("Thread %d, rowOffsOffset : ", rowOffsOffset);
+        printf("Thread %d, valsAndColsOffset : ", valsAndColsOffset);
+        printf("Thread %d, degreesOffset : ", degreesOffset);
+
+
+
     global_vertices_remaining_count[leafIndex] = 0;
 
-    for (int i = 0; i < numberOfRows; ++i)
+    for (int i = 0; i < numberOfRows; ++i){
         if (global_degrees_dev_ptr[degreesOffset+i] == 0)
             continue;
         else {
             global_vertices_remaining[degreesOffset+i] = i;
             ++global_vertices_remaining_count[leafIndex];
         }
+        printf("Thread %d, global_degrees_dev_ptr[degreesOffset+%d] : ", threadID, global_vertices_remaining_count[leafIndex], global_degrees_dev_ptr[degreesOffset+i]);
+    }
     int counter = 0;
     int seed = 0;
     int randomVertex = global_vertices_remaining[degreesOffset+
                         (randomGPU(counter, leafIndex, seed) % 
                             global_vertices_remaining_count[leafIndex])];
+    printf("Thread %d, randomVertex : %d", threadID, randomVertex);
 
     for (int i = 0; i < 4; ++i){
         global_paths_ptr[pathsOffset + i] = randomVertex;
