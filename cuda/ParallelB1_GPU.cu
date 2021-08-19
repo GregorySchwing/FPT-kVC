@@ -157,9 +157,10 @@ __global__ void GenerateChildren(int leafIndex,
                                 int * global_vertices_remaining_count,
                                 int * global_outgoing_edge_vertices,
                                 int * global_outgoing_edge_vertices_count){
+                             
     int threadID = threadIdx.x + blockDim.x * blockIdx.x;
+    if(threadID > 0) return;
     printf("Thread %d starting", threadID);
-
 
     int pathsOffset = leafIndex * 4;
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
@@ -167,23 +168,22 @@ __global__ void GenerateChildren(int leafIndex,
     int degreesOffset = leafIndex * numberOfRows;
     int outgoingEdgeOffset = leafIndex * maxDegree;
 
-        printf("Thread %d, pathsOffset : ", pathsOffset);
-        printf("Thread %d, rowOffsOffset : ", rowOffsOffset);
-        printf("Thread %d, valsAndColsOffset : ", valsAndColsOffset);
-        printf("Thread %d, degreesOffset : ", degreesOffset);
-
-
+    printf("Thread %d, pathsOffset : %d", pathsOffset);
+    printf("Thread %d, rowOffsOffset : %d", rowOffsOffset);
+    printf("Thread %d, valsAndColsOffset %d: ", valsAndColsOffset);
+    printf("Thread %d, degreesOffset : %d", degreesOffset);
 
     global_vertices_remaining_count[leafIndex] = 0;
 
     for (int i = 0; i < numberOfRows; ++i){
-        if (global_degrees_dev_ptr[degreesOffset+i] == 0)
+        printf("Thread %d, global_degrees_dev_ptr[degreesOffset+%d] : %d\n", threadID, i, global_degrees_dev_ptr[degreesOffset+i]);
+        if (global_degrees_dev_ptr[degreesOffset+i] == 0){
             continue;
-        else {
-            global_vertices_remaining[degreesOffset+i] = i;
+        } else {
+            global_vertices_remaining[degreesOffset+global_vertices_remaining_count[leafIndex]] = i;
+            printf("Thread %d, global_vertices_remaining[degreesOffset+%d] : %d\n", threadID, global_vertices_remaining_count[leafIndex], global_vertices_remaining[degreesOffset+global_vertices_remaining_count[leafIndex]]);
             ++global_vertices_remaining_count[leafIndex];
         }
-        printf("Thread %d, global_vertices_remaining[degreesOffset+%d] : %d\n", threadID, global_vertices_remaining_count[leafIndex], global_vertices_remaining[degreesOffset+global_vertices_remaining_count[leafIndex]]);
     }
     int counter = 0;
     int seed = 0;

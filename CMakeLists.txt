@@ -11,6 +11,8 @@ project(FPT LANGUAGES CUDA CXX)
 #include_directories(serial)
 #include_directories(lib/boost/include)
 #include_directories(lib/boost)
+include_directories(lib)
+
 
 #Out-of-source build
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -52,7 +54,6 @@ message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 #    message(STATUS "Boost_INCLUDE_DIRS: ${BOOST_INCLUDE_DIRS}")
 #endif()
 #include_directories(${BOOST_INCLUDE_DIRS})
-
 
 # Find if CUDA exists and what is the version number
 include(CheckLanguage)
