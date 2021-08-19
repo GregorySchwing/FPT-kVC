@@ -194,30 +194,34 @@ __global__ void GenerateChildren(int leafIndex,
 
     for (int i = 0; i < 4; ++i){
         global_paths_ptr[pathsOffset + i] = randomVertex;
+        printf("Thread %d, global_paths_ptr[pathsOffset + %d] : %d", threadID, i, global_paths_ptr[pathsOffset + i]);
+
         if (randomVertex == -1)
             break;
         global_outgoing_edge_vertices_count[leafIndex] = 0;
         for (int j = global_row_offsets_dev_ptr[rowOffsOffset + randomVertex]; 
                 j < global_row_offsets_dev_ptr[rowOffsOffset + randomVertex + 1]; ++j){
+            printf("Thread %d, global_values_dev_ptr[valsAndColsOffset + %d] : %d\n", threadID, j, global_values_dev_ptr[valsAndColsOffset + j]);
             if (global_values_dev_ptr[valsAndColsOffset + j] == 0)
                 continue;
             else {
                 global_outgoing_edge_vertices[outgoingEdgeOffset+global_outgoing_edge_vertices_count[leafIndex]] = j;
+                printf("Thread %d, global_outgoing_edge_vertices[outgoingEdgeOffset+%d] : %d\n", threadID, global_outgoing_edge_vertices_count[leafIndex], global_outgoing_edge_vertices[outgoingEdgeOffset+global_outgoing_edge_vertices_count[leafIndex]]);
                 ++global_outgoing_edge_vertices_count[leafIndex];
             }
         }
-
-        randomVertex = global_outgoing_edge_vertices[outgoingEdgeOffset+
-                    (randomGPU(counter, leafIndex, seed) % 
-                        global_outgoing_edge_vertices_count[leafIndex])];
+        ++counter;
+        randomNumber = randomGPU(counter, leafIndex, seed);
+        randomIndex = randomNumber % global_outgoing_edge_vertices_count[leafIndex]);
+        randomVertex = global_outgoing_edge_vertices[outgoingEdgeOffset+randomIndex];
         
         if (i > 0 && randomVertex == global_paths_ptr[pathsOffset + i - 1]){
             if (global_degrees_dev_ptr[degreesOffset+randomVertex] > 1){
                 while(randomVertex == global_paths_ptr[pathsOffset + i - 1]){
                     ++counter;
-                    randomVertex = global_outgoing_edge_vertices[outgoingEdgeOffset+
-                    (randomGPU(counter, leafIndex, seed) % 
-                        global_outgoing_edge_vertices_count[leafIndex])];
+                    randomNumber = randomGPU(counter, leafIndex, seed);
+                    randomIndex = randomNumber % global_outgoing_edge_vertices_count[leafIndex]);
+                    randomVertex = global_outgoing_edge_vertices[outgoingEdgeOffset+randomIndex];
                 }
             } else {
                 randomVertex = -1;
