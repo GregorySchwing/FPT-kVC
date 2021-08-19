@@ -168,10 +168,10 @@ __global__ void GenerateChildren(int leafIndex,
     int degreesOffset = leafIndex * numberOfRows;
     int outgoingEdgeOffset = leafIndex * maxDegree;
 
-    printf("Thread %d, pathsOffset : %d", pathsOffset);
-    printf("Thread %d, rowOffsOffset : %d", rowOffsOffset);
-    printf("Thread %d, valsAndColsOffset %d: ", valsAndColsOffset);
-    printf("Thread %d, degreesOffset : %d", degreesOffset);
+    printf("Thread %d, pathsOffset : %d", threadID, pathsOffset);
+    printf("Thread %d, rowOffsOffset : %d", threadID, rowOffsOffset);
+    printf("Thread %d, valsAndColsOffset %d: ", threadID, valsAndColsOffset);
+    printf("Thread %d, degreesOffset : %d", threadID, degreesOffset);
 
     global_vertices_remaining_count[leafIndex] = 0;
 
