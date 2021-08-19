@@ -183,7 +183,7 @@ __global__ void GenerateChildren(int leafIndex,
             global_vertices_remaining[degreesOffset+i] = i;
             ++global_vertices_remaining_count[leafIndex];
         }
-        printf("Thread %d, global_vertices_remaining[degreesOffset+%d] : %d", threadID, i, global_vertices_remaining[degreesOffset+i]);
+        printf("Thread %d, global_vertices_remaining[degreesOffset+%d] : %d\n", threadID, global_vertices_remaining_count[leafIndex], global_vertices_remaining[degreesOffset+global_vertices_remaining_count[leafIndex]]);
     }
     int counter = 0;
     int seed = 0;
