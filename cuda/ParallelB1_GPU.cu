@@ -13,7 +13,7 @@ __device__ int randomGPU(unsigned int counter, ulong step, ulong seed)
   uk[1] = seed;
   RNG::key_type k = uk;
   c[0] = counter;
-  RNG::ctr_type r = philox4x64(c, k);
+  RNG::ctr_type r = philox4x32(c, k);
   return r[0];
 }
 
@@ -185,11 +185,11 @@ __global__ void GenerateChildren(int leafIndex,
             ++global_vertices_remaining_count[leafIndex];
         }
     }
-    int counter = 0;
-    int seed = 0;
-    int randomVertex = global_vertices_remaining[degreesOffset+
-                        (randomGPU(counter, leafIndex, seed) % 
-                            global_vertices_remaining_count[leafIndex])];
+    unsigned int counter = 0;
+    ulong seed = 0;
+    int randomNumber = randomGPU(counter, leafIndex, seed);
+    int randomIndex = randomNumber % global_vertices_remaining_count[leafIndex];
+    int randomVertex = global_vertices_remaining[degreesOffset+randomIndex];
     printf("Thread %d, randomVertex : %d", threadID, randomVertex);
 
     for (int i = 0; i < 4; ++i){
