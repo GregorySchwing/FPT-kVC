@@ -108,8 +108,9 @@ set(headers_lib
     lib/CSVRow.h
 )
 
-set(cudaHeaders
-    )
+set(headers_lib_gpu
+    lib/Random123/philox.h
+)
 
 set(cudaSources
     )

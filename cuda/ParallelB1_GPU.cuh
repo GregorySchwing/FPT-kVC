@@ -18,9 +18,11 @@
 #include <thrust/execution_policy.h>
 #include "CUDAUtils.cuh"
 #include "Graph.h"
-//#include "Random123/philox.h"
-//typedef r123::Philox4x64 RNG;
+#include "Random123/philox.h"
+typedef r123::Philox4x64 RNG;
 //static const double RAND_INTERVAL_GPU = 1.0/static_cast<double>(ULONG_MAX);
+
+__device__ int randomGPU(unsigned int counter, ulong step, ulong seed);
 
 class Graph;
 
@@ -85,13 +87,16 @@ __global__ void CalculateNewRowOffsets( int numberOfRows,
 
 __global__ void GenerateChildren(int leafIndex,
                                 int numberOfRows,
+                                int maxDegree,
+                                int numberOfEdgesPerGraph,
                                 int * global_row_offsets_dev_ptr,
                                 int * global_columns_dev_ptr,
                                 int * global_values_dev_ptr,
                                 int * global_degrees_dev_ptr,
                                 int * global_vertices_remaining,
                                 int * global_paths_ptr,
-                                int * global_vertices_remaining_count);
+                                int * global_vertices_remaining_count,
+                                int * global_outgoing_edge_vertices);
 /*
 __host__ __device__ void PopulateTree(int treeSize, 
                                 std::vector<Graph> & graphs,

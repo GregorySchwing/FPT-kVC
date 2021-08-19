@@ -5,7 +5,17 @@
 // Sum of i = 0 to n/2
 // 3^i
 
-
+__device__ int randomGPU(unsigned int counter, ulong step, ulong seed)
+{
+  RNG::ctr_type c = {{}};
+  RNG::ukey_type uk = {{}};
+  uk[0] = step;
+  uk[1] = seed;
+  RNG::key_type k = uk;
+  c[0] = counter;
+  RNG::ctr_type r = philox4x64(c, k);
+  return r[0];
+}
 
 __host__ __device__ int CalculateWorstCaseSpaceComplexity(int vertexCount){
     int summand= 0;
@@ -136,16 +146,25 @@ __global__ void First_Graph_GPU(int vertexCount,
 // DFS is implicitly single threaded
 __global__ void GenerateChildren(int leafIndex,
                                 int numberOfRows,
+                                int maxDegree,
+                                int numberOfEdgesPerGraph,
                                 int * global_row_offsets_dev_ptr,
                                 int * global_columns_dev_ptr,
                                 int * global_values_dev_ptr,
                                 int * global_degrees_dev_ptr,
                                 int * global_vertices_remaining,
                                 int * global_paths_ptr,
-                                int * global_vertices_remaining_count){
+                                int * global_vertices_remaining_count,
+                                int * global_outgoing_edge_vertices,
+                                int * global_outgoing_edge_vertices_count){
 
     int pathsOffset = leafIndex * 4;
+    int rowOffsOffset = leafIndex * (numberOfRows + 1);
+    int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
     int degreesOffset = leafIndex * numberOfRows;
+    int outgoingEdgeOffset = leafIndex * maxDegree;
+
+    global_vertices_remaining_count[leafIndex] = 0;
 
     for (int i = 0; i < numberOfRows; ++i)
         if (global_degrees_dev_ptr[degreesOffset+i] == 0)
@@ -154,20 +173,43 @@ __global__ void GenerateChildren(int leafIndex,
             global_vertices_remaining[degreesOffset+i] = i;
             ++global_vertices_remaining_count[leafIndex];
         }
+    int counter = 0;
+    int seed = 0;
+    int randomVertex = global_vertices_remaining[degreesOffset+
+                        (randomGPU(counter, leafIndex, seed) % 
+                            global_vertices_remaining_count[leafIndex])];
 
-    int randomVertex = 1;
-    //thrust::host_vector<int> path;
-    //int randomVertex = GetRandomVertex(child_g.GetRemainingVerticesRef());
-    //std::cout << "Grabbing a randomVertex: " <<  randomVertex<< std::endl;
-    //if(randomVertex == -1)
-    //    return randomVertex;
-
-    //path.push_back(randomVertex);
     for (int i = 0; i < 4; ++i){
         global_paths_ptr[pathsOffset + i] = randomVertex;
         if (randomVertex == -1)
             break;
-        randomVertex = 1;
+        global_outgoing_edge_vertices_count[leafIndex] = 0;
+        for (int j = global_row_offsets_dev_ptr[rowOffsOffset + randomVertex]; 
+                j < global_row_offsets_dev_ptr[rowOffsOffset + randomVertex + 1]; ++j){
+            if (global_values_dev_ptr[valsAndColsOffset + j] == 0)
+                continue;
+            else {
+                global_outgoing_edge_vertices[outgoingEdgeOffset+global_outgoing_edge_vertices_count[leafIndex]] = j;
+                ++global_outgoing_edge_vertices_count[leafIndex];
+            }
+        }
+
+        randomVertex = global_outgoing_edge_vertices[outgoingEdgeOffset+
+                    (randomGPU(counter, leafIndex, seed) % 
+                        global_outgoing_edge_vertices_count[leafIndex])];
+        
+        if (i > 0 && randomVertex == global_paths_ptr[pathsOffset + i - 1]){
+            if (global_degrees_dev_ptr[degreesOffset+randomVertex] > 1){
+                while(randomVertex == global_paths_ptr[pathsOffset + i - 1]){
+                    ++counter;
+                    randomVertex = global_outgoing_edge_vertices[outgoingEdgeOffset+
+                    (randomGPU(counter, leafIndex, seed) % 
+                        global_outgoing_edge_vertices_count[leafIndex])];
+                }
+            } else {
+                randomVertex = -1;
+            }
+        }
     }
 }
 
@@ -247,6 +289,7 @@ void CallPopulateTree(int numberOfLevels,
     int * global_vertices_remaining;
     int * global_vertices_remaining_count;
     int * global_outgoing_edge_vertices;
+    int * global_outgoing_edge_vertices_count;
 
     int max_dfs_depth = 4;
 
@@ -259,6 +302,8 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_vertices_remaining, (g.GetNumberOfRows()*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_vertices_remaining_count, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_outgoing_edge_vertices, treeSize * largestDegree * sizeof(int) );
+    cudaMalloc( (void**)&global_outgoing_edge_vertices_count, treeSize * sizeof(int) );
+
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -268,6 +313,24 @@ void CallPopulateTree(int numberOfLevels,
                     global_columns_dev_ptr,
                     global_values_dev_ptr,
                     global_degrees_dev_ptr);
+
+    int leafIndex = 0;
+
+    GenerateChildren<<<1,1>>>(
+                            leafIndex,
+                            g.GetNumberOfRows(),
+                            largestDegree,
+                            g.GetEdgesLeftToCover(),
+                            global_row_offsets_dev_ptr,
+                            global_columns_dev_ptr,
+                            global_values_dev_ptr,
+                            global_degrees_dev_ptr,
+                            global_vertices_remaining,
+                            global_paths_ptr,
+                            global_vertices_remaining_count,
+                            global_outgoing_edge_vertices,
+                            global_outgoing_edge_vertices_count
+    );
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -379,8 +442,8 @@ void CopyGraphToDevice( Graph & g,
     thrust::device_vector<int> back2Host(back2Host_ptr, back2Host_ptr + g.GetEdgesLeftToCover());
     
     thrust::host_vector<int> hostFinal = back2Host;
-    std::cout << "Priting data copied there and back" << std::endl;;
-    std::cout << "Size" << g.GetEdgesLeftToCover() << std::endl;;
+    std::cout << "Priting data copied there and back" << std::endl;
+    std::cout << "Size" << g.GetEdgesLeftToCover() << std::endl;
     for (auto & v : hostFinal)
         std::cout << v << " ";
     std::cout << std::endl;
