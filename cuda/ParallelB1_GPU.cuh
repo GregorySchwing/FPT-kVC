@@ -94,6 +94,33 @@ __global__ void CreateSubsetOfRemainingVerticesLevelWise(int levelOffset,
                                                 int * global_vertices_remaining,
                                                 int * global_vertices_remaining_count);
 
+__global__ void DFSLevelWise(int levelOffset,
+                            int levelUpperBound,
+                            int numberOfRows,
+                            int maxDegree,
+                            int numberOfEdgesPerGraph,
+                            int * global_degrees_dev_ptr,
+                            int * global_row_offsets_dev_ptr,
+                            int * global_columns_dev_ptr,
+                            int * global_values_dev_ptr,
+                            int * global_vertices_remaining,
+                            int * global_vertices_remaining_count,
+                            int * global_paths_ptr,
+                            int * global_paths_length,
+                            int * global_outgoing_edge_vertices,
+                            int * global_outgoing_edge_vertices_count);
+
+__global__ void DFSLevelWiseSamplesWithoutReplacement(int levelOffset,
+                            int levelUpperBound,
+                            int numberOfRows,
+                            int numberOfEdgesPerGraph,
+                            int * global_degrees_dev_ptr,
+                            int * global_row_offsets_dev_ptr,
+                            int * global_columns_dev_ptr,
+                            int * global_values_dev_ptr,
+                            int * global_paths_ptr,
+                            int * global_paths_length);
+
 __global__ void GenerateChildren(int leafIndex,
                                 int numberOfRows,
                                 int maxDegree,
