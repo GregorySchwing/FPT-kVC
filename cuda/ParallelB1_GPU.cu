@@ -44,11 +44,14 @@ __host__ __device__ long long CalculateSizeRequirement(int startingLevel,
 }
 
 __host__ __device__ long long CalculateLevelOffset(int level){
+    if(level == 0)
+        return 0;
+    else
+        return pow(3.0, (level-1)) + 1;
+}
 
-    // Closed form solution of partial geometric series
-    // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
-    return (1.0 - pow(3.0, (level-1) + 1))/(1.0 - 3.0);
-
+__host__ __device__ long long CalculateLevelUpperBound(int level){
+    return pow(3.0, level);
 }
 
 typedef int inner_array_t[2];
@@ -142,6 +145,106 @@ __global__ void First_Graph_GPU(int vertexCount,
      return;
 }
 
+// Single thread per leaf
+__global__ void CreateSubsetOfRemainingVerticesLevelWise(int levelOffset,
+                                                int levelUpperBound,
+                                                int numberOfRows,
+                                                int * global_degrees_dev_ptr,
+                                                int * global_vertices_remaining,
+                                                int * global_vertices_remaining_count){
+    int threadID = threadIdx.x + blockDim.x * blockIdx.x;
+    int leafIndex = levelOffset + threadID;
+    if (leafIndex > levelUpperBound) return;
+    int degreesOffset = leafIndex * numberOfRows;
+
+    global_vertices_remaining_count[leafIndex] = 0;
+
+    for (int i = 0; i < numberOfRows; ++i){
+        printf("Thread %d, global_degrees_dev_ptr[degreesOffset+%d] : %d\n", threadID, i, global_degrees_dev_ptr[degreesOffset+i]);
+        if (global_degrees_dev_ptr[degreesOffset+i] == 0){
+            continue;
+        } else {
+            global_vertices_remaining[degreesOffset+global_vertices_remaining_count[leafIndex]] = i;
+            printf("Thread %d, global_vertices_remaining[degreesOffset+%d] : %d\n", threadID, global_vertices_remaining_count[leafIndex], global_vertices_remaining[degreesOffset+global_vertices_remaining_count[leafIndex]]);
+            ++global_vertices_remaining_count[leafIndex];
+        }
+    }
+}
+
+// Single thread per leaf
+__global__ void DFSLevelWise(int levelOffset,
+                            int levelUpperBound,
+                            int numberOfRows,
+                            int maxDegree,
+                            int numberOfEdgesPerGraph,
+                            int * global_degrees_dev_ptr,
+                            int * global_row_offsets_dev_ptr,
+                            int * global_columns_dev_ptr,
+                            int * global_values_dev_ptr,
+                            int * global_vertices_remaining,
+                            int * global_vertices_remaining_count,
+                            int * global_paths_ptr,
+                            int * global_outgoing_edge_vertices,
+                            int * global_outgoing_edge_vertices_count){
+    int threadID = threadIdx.x + blockDim.x * blockIdx.x;
+    int leafIndex = levelOffset + threadID;
+    if (leafIndex > levelUpperBound) return;
+    int degreesOffset = leafIndex * numberOfRows;
+    int pathsOffset = leafIndex * 4;
+    int rowOffsOffset = leafIndex * (numberOfRows + 1);
+    int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
+    int outgoingEdgeOffset = leafIndex * maxDegree;
+
+    unsigned int counter = 0;
+    ulong seed = 0;
+    int randomNumber = randomGPU(counter, leafIndex, seed);
+    int randomIndex = randomNumber % global_vertices_remaining_count[leafIndex];
+    int randomVertex = global_vertices_remaining[degreesOffset+randomIndex];
+    printf("Thread %d, randomVertex : %d", threadID, randomVertex);
+// dfs 
+    for (int i = 0; i < 4; ++i){
+        global_paths_ptr[pathsOffset + i] = randomVertex;
+        printf("Thread %d, global_paths_ptr[pathsOffset + %d] : %d", threadID, i, global_paths_ptr[pathsOffset + i]);
+
+        if (randomVertex == -1)
+            break;
+        global_outgoing_edge_vertices_count[leafIndex] = 0;
+        for (int j = global_row_offsets_dev_ptr[rowOffsOffset + randomVertex]; 
+                j < global_row_offsets_dev_ptr[rowOffsOffset + randomVertex + 1]; ++j){
+            printf("Thread %d, global_values_dev_ptr[valsAndColsOffset + %d] : %d\n", threadID, j, global_values_dev_ptr[valsAndColsOffset + j]);
+            if (global_values_dev_ptr[valsAndColsOffset + j] == 0)
+                continue;
+            else {
+                global_outgoing_edge_vertices[outgoingEdgeOffset+global_outgoing_edge_vertices_count[leafIndex]] = j;
+                printf("Thread %d, global_outgoing_edge_vertices[outgoingEdgeOffset+%d] : %d\n", threadID, global_outgoing_edge_vertices_count[leafIndex], global_outgoing_edge_vertices[outgoingEdgeOffset+global_outgoing_edge_vertices_count[leafIndex]]);
+                ++global_outgoing_edge_vertices_count[leafIndex];
+            }
+        }
+        ++counter;
+        randomNumber = randomGPU(counter, leafIndex, seed);
+        randomIndex = randomNumber % global_outgoing_edge_vertices_count[leafIndex];
+        randomVertex = global_outgoing_edge_vertices[outgoingEdgeOffset+randomIndex];
+        
+        if (i > 0 && randomVertex == global_paths_ptr[pathsOffset + i - 1]){
+            // if degree is greater than 1 there exists an alternative path 
+            // which doesnt form a simple cycle
+            if (global_degrees_dev_ptr[degreesOffset+randomVertex] > 1){
+                // Non-deterministic time until suitable edge which 
+                // doesn't form a simple cycle is found.
+                while(randomVertex == global_paths_ptr[pathsOffset + i - 1]){
+                    ++counter;
+                    randomNumber = randomGPU(counter, leafIndex, seed);
+                    randomIndex = randomNumber % global_outgoing_edge_vertices_count[leafIndex];
+                    randomVertex = global_outgoing_edge_vertices[outgoingEdgeOffset+randomIndex];
+                }
+            } else {
+                randomVertex = -1;
+            }
+        }
+    }
+}
+
+
 // Single threaded version
 // DFS is implicitly single threaded
 __global__ void GenerateChildren(int leafIndex,
@@ -173,25 +276,15 @@ __global__ void GenerateChildren(int leafIndex,
     printf("Thread %d, valsAndColsOffset %d: ", threadID, valsAndColsOffset);
     printf("Thread %d, degreesOffset : %d", threadID, degreesOffset);
 
-    global_vertices_remaining_count[leafIndex] = 0;
+// Get random vertex
 
-    for (int i = 0; i < numberOfRows; ++i){
-        printf("Thread %d, global_degrees_dev_ptr[degreesOffset+%d] : %d\n", threadID, i, global_degrees_dev_ptr[degreesOffset+i]);
-        if (global_degrees_dev_ptr[degreesOffset+i] == 0){
-            continue;
-        } else {
-            global_vertices_remaining[degreesOffset+global_vertices_remaining_count[leafIndex]] = i;
-            printf("Thread %d, global_vertices_remaining[degreesOffset+%d] : %d\n", threadID, global_vertices_remaining_count[leafIndex], global_vertices_remaining[degreesOffset+global_vertices_remaining_count[leafIndex]]);
-            ++global_vertices_remaining_count[leafIndex];
-        }
-    }
     unsigned int counter = 0;
     ulong seed = 0;
     int randomNumber = randomGPU(counter, leafIndex, seed);
     int randomIndex = randomNumber % global_vertices_remaining_count[leafIndex];
     int randomVertex = global_vertices_remaining[degreesOffset+randomIndex];
     printf("Thread %d, randomVertex : %d", threadID, randomVertex);
-
+// dfs 
     for (int i = 0; i < 4; ++i){
         global_paths_ptr[pathsOffset + i] = randomVertex;
         printf("Thread %d, global_paths_ptr[pathsOffset + %d] : %d", threadID, i, global_paths_ptr[pathsOffset + i]);
@@ -212,7 +305,7 @@ __global__ void GenerateChildren(int leafIndex,
         }
         ++counter;
         randomNumber = randomGPU(counter, leafIndex, seed);
-        randomIndex = randomNumber % global_outgoing_edge_vertices_count[leafIndex]);
+        randomIndex = randomNumber % global_outgoing_edge_vertices_count[leafIndex];
         randomVertex = global_outgoing_edge_vertices[outgoingEdgeOffset+randomIndex];
         
         if (i > 0 && randomVertex == global_paths_ptr[pathsOffset + i - 1]){
@@ -220,7 +313,7 @@ __global__ void GenerateChildren(int leafIndex,
                 while(randomVertex == global_paths_ptr[pathsOffset + i - 1]){
                     ++counter;
                     randomNumber = randomGPU(counter, leafIndex, seed);
-                    randomIndex = randomNumber % global_outgoing_edge_vertices_count[leafIndex]);
+                    randomIndex = randomNumber % global_outgoing_edge_vertices_count[leafIndex];
                     randomVertex = global_outgoing_edge_vertices[outgoingEdgeOffset+randomIndex];
                 }
             } else {
@@ -269,7 +362,7 @@ void CallPopulateTree(int numberOfLevels,
                     Graph & g){
 
 
-    int largestDegree = g.GetLargestDegree();
+    int maxDegree = g.GetLargestDegree();
 
     //int treeSize = 200000;
     int counters = 2;
@@ -277,7 +370,7 @@ void CallPopulateTree(int numberOfLevels,
     int expandedData = g.GetEdgesLeftToCover();
     int condensedData = g.GetVertexCount();
     int condensedData_plus1 = condensedData + 1;
-    long long sizeOfSingleGraph = expandedData*2 + 2*condensedData + condensedData_plus1 + largestDegree + counters;
+    long long sizeOfSingleGraph = expandedData*2 + 2*condensedData + condensedData_plus1 + maxDegree + counters;
     long long totalMem = sizeOfSingleGraph * treeSize * sizeof(int);
 
     int num_gpus;
@@ -309,16 +402,17 @@ void CallPopulateTree(int numberOfLevels,
     int * global_outgoing_edge_vertices_count;
 
     int max_dfs_depth = 4;
+    int numberOfRows = g.GetNumberOfRows();
+    int numberOfEdgesPerGraph = g.GetEdgesLeftToCover(); 
 
-
-    cudaMalloc( (void**)&global_row_offsets_dev_ptr, ((g.GetNumberOfRows()+1)*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&global_columns_dev_ptr, (g.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&global_values_dev_ptr, (g.GetEdgesLeftToCover()*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&global_degrees_dev_ptr, (g.GetNumberOfRows()*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_row_offsets_dev_ptr, ((numberOfRows+1)*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_columns_dev_ptr, (numberOfEdgesPerGraph*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_values_dev_ptr, (numberOfEdgesPerGraph*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_paths_ptr, (max_dfs_depth*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&global_vertices_remaining, (g.GetNumberOfRows()*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_vertices_remaining, (numberOfRows*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_vertices_remaining_count, treeSize * sizeof(int) );
-    cudaMalloc( (void**)&global_outgoing_edge_vertices, treeSize * largestDegree * sizeof(int) );
+    cudaMalloc( (void**)&global_outgoing_edge_vertices, treeSize * maxDegree * sizeof(int) );
     cudaMalloc( (void**)&global_outgoing_edge_vertices_count, treeSize * sizeof(int) );
 
 
@@ -331,8 +425,40 @@ void CallPopulateTree(int numberOfLevels,
                     global_values_dev_ptr,
                     global_degrees_dev_ptr);
 
-    int leafIndex = 0;
+    long long leafIndex;
+    long long levelOffset = 0;
+    long long levelUpperBound;
+    int numberOfBlocks;
+    for (int level = 0; level < numberOfLevels; ++level){
+        levelUpperBound = CalculateLevelUpperBound(level);
+        // ceil(numberOfLeaves/32)
+        numberOfBlocks = ((levelUpperBound - levelOffset) + 32 - 1) / 32;
+        CreateSubsetOfRemainingVerticesLevelWise<<<32,numberOfBlocks>>>(levelOffset,
+                                                levelUpperBound,
+                                                numberOfRows,
+                                                global_degrees_dev_ptr,
+                                                global_vertices_remaining,
+                                                global_vertices_remaining_count);
+        DFSLevelWise<<<32,numberOfBlocks>>>(levelOffset,
+                        levelUpperBound,
+                        numberOfRows,
+                        maxDegree,
+                        numberOfEdgesPerGraph,
+                        global_degrees_dev_ptr,
+                        global_row_offsets_dev_ptr,
+                        global_columns_dev_ptr,
+                        global_values_dev_ptr,
+                        global_vertices_remaining,
+                        global_vertices_remaining_count,
+                        global_paths_ptr,
+                        global_outgoing_edge_vertices,
+                        global_outgoing_edge_vertices_count);
+            
+        levelOffset = levelUpperBound + 1;
+    } 
 
+   // int leafIndex = 0;
+/*
     GenerateChildren<<<1,1>>>(
                             leafIndex,
                             g.GetNumberOfRows(),
@@ -348,7 +474,7 @@ void CallPopulateTree(int numberOfLevels,
                             global_outgoing_edge_vertices,
                             global_outgoing_edge_vertices_count
     );
-
+*/
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 /*

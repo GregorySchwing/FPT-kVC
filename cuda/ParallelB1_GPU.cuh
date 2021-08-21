@@ -40,6 +40,7 @@ CUDA_HOSTDEV long long CalculateSpaceForDesiredNumberOfLevels(int NumberOfLevels
 CUDA_HOSTDEV long long CalculateSizeRequirement(int startingLevel,
                                                             int endingLevel);
 CUDA_HOSTDEV long long CalculateLevelOffset(int level);
+CUDA_HOSTDEV long long CalculateLevelUpperBound(int level);
 
 __global__ void First_Graph_GPU(int vertexCount, 
                                 int size,
@@ -84,6 +85,13 @@ __global__ void InduceSubgraph( int numberOfRows,
 __global__ void CalculateNewRowOffsets( int numberOfRows,
                                         int * old_degrees_dev,
                                         int * new_row_offsets_dev);
+
+__global__ void CreateSubsetOfRemainingVerticesLevelWise(int levelOffset,
+                                                int levelUpperBound,
+                                                int numberOfRows,
+                                                int * global_degrees_dev_ptr,
+                                                int * global_vertices_remaining,
+                                                int * global_vertices_remaining_count);
 
 __global__ void GenerateChildren(int leafIndex,
                                 int numberOfRows,
