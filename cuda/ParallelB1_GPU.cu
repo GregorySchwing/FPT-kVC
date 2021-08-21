@@ -156,7 +156,6 @@ __global__ void CreateSubsetOfRemainingVerticesLevelWise(int levelOffset,
                                                 int * global_vertices_remaining,
                                                 int * global_vertices_remaining_count){
     int threadID = threadIdx.x + blockDim.x * blockIdx.x;
-    if (threadID) > levelUpperBound,
     int leafIndex = levelOffset + threadID;
     if (leafIndex > levelUpperBound) return;
     int degreesOffset = leafIndex * numberOfRows;
