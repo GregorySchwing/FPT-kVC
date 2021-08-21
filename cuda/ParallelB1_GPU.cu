@@ -64,7 +64,8 @@ __global__ void InduceSubgraph( int numberOfRows,
                                 int * old_columns_dev,
                                 int * old_values_dev,
                                 int * new_row_offsets_dev,
-                                int * new_columns_dev){
+                                int * new_columns_dev,
+                                int * new_values_dev){
 
     int row = threadIdx.x + blockDim.x * blockIdx.x;
     inner_array_t *C_ref = new inner_array_t[numberOfRows];
@@ -95,6 +96,7 @@ __global__ void InduceSubgraph( int numberOfRows,
         for (int i = endIndex-1; i >= beginIndex; --i){
             if (old_values_dev[i]){
                 new_columns_dev[new_row_offsets_dev[iter] - C_ref[iter][0] + C_ref[iter][1]-1] = old_columns_dev[i];
+                new_values_dev[new_row_offsets_dev[iter] - C_ref[iter][0] + C_ref[iter][1]-1] = old_values_dev[i];
                 --C_ref[iter][old_values_dev[i]];
             }
         }
@@ -561,7 +563,8 @@ void CopyGraphToDevice( Graph & g,
                             old_column_indices_dev_ptr,
                             new_values_dev_ptr,
                             global_row_offsets_dev_ptr,
-                            global_columns_dev_ptr);
+                            global_columns_dev_ptr,
+                            global_values_dev_ptr);
 
     
 /*

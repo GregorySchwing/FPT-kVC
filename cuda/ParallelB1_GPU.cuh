@@ -80,7 +80,8 @@ __global__ void InduceSubgraph( int numberOfRows,
                                 int * old_columns_dev,
                                 int * old_values_dev,
                                 int * global_row_offsets_dev_ptr,
-                                int * global_columns_dev_ptr);
+                                int * global_columns_dev_ptr,
+                                int * new_values_dev);
 
 __global__ void CalculateNewRowOffsets( int numberOfRows,
                                         int * old_degrees_dev,
