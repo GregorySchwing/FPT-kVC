@@ -205,14 +205,11 @@ __global__ void DFSLevelWise(int levelOffset,
     int randomNumber = randomGPU(counter, leafIndex, seed);
     int randomIndex = randomNumber % global_vertices_remaining_count[leafIndex];
     int randomVertex = global_vertices_remaining[degreesOffset+randomIndex];
+    global_paths_ptr[pathsOffset + 0] = randomVertex;
 // dfs 
-    for (int i = 0; i < 4; ++i){
+    for (int i = 1; i < 4; ++i){
         printf("Thread %d, randomVertex : %d, path position : %d\n\n", threadID, randomVertex, i);
-        global_paths_ptr[pathsOffset + i] = randomVertex;
         printf("Thread %d, global_paths_ptr[pathsOffset + %d] : %d", threadID, i, global_paths_ptr[pathsOffset + i]);
-
-        if (randomVertex == -1)
-            break;
         global_outgoing_edge_vertices_count[leafIndex] = 0;
         for (int j = global_row_offsets_dev_ptr[rowOffsOffset + randomVertex]; 
                 j < global_row_offsets_dev_ptr[rowOffsOffset + randomVertex + 1]; ++j){
@@ -230,7 +227,7 @@ __global__ void DFSLevelWise(int levelOffset,
         randomIndex = randomNumber % global_outgoing_edge_vertices_count[leafIndex];
         randomVertex = global_columns_dev_ptr[global_outgoing_edge_vertices[outgoingEdgeOffset+randomIndex]];
         
-        if (i > 0 && randomVertex == global_paths_ptr[pathsOffset + i - 1]){
+        if (randomVertex == global_paths_ptr[pathsOffset + i - 1]){
             // if degree is greater than 1 there exists an alternative path 
             // which doesnt form a simple cycle
             if (global_degrees_dev_ptr[degreesOffset+randomVertex] > 1){
@@ -246,6 +243,9 @@ __global__ void DFSLevelWise(int levelOffset,
                 randomVertex = -1;
             }
         }
+        global_paths_ptr[pathsOffset + i] = randomVertex;
+        if (randomVertex == -1)
+            break;
     }
 }
 
