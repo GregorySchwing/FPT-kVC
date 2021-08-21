@@ -51,7 +51,10 @@ __host__ __device__ long long CalculateLevelOffset(int level){
 }
 
 __host__ __device__ long long CalculateLevelUpperBound(int level){
-    return pow(3.0, level);
+    if(level == 0)
+        return 1;
+    else
+        return pow(3.0, (level)) + 1;
 }
 
 typedef int inner_array_t[2];
@@ -153,6 +156,7 @@ __global__ void CreateSubsetOfRemainingVerticesLevelWise(int levelOffset,
                                                 int * global_vertices_remaining,
                                                 int * global_vertices_remaining_count){
     int threadID = threadIdx.x + blockDim.x * blockIdx.x;
+    if (threadID) > levelUpperBound,
     int leafIndex = levelOffset + threadID;
     if (leafIndex > levelUpperBound) return;
     int degreesOffset = leafIndex * numberOfRows;
