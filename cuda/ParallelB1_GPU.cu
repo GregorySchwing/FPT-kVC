@@ -209,7 +209,6 @@ __global__ void DFSLevelWise(int levelOffset,
     printf("Thread %d, randomVertex : %d, path position : %d\n\n", threadID, randomVertex, 0);
 // dfs 
     for (int i = 1; i < 4; ++i){
-        printf("Thread %d, randomVertex : %d, path position : %d\n\n", threadID, randomVertex, i);
         global_outgoing_edge_vertices_count[leafIndex] = 0;
         for (int j = global_row_offsets_dev_ptr[rowOffsOffset + randomVertex]; 
                 j < global_row_offsets_dev_ptr[rowOffsOffset + randomVertex + 1]; ++j){
@@ -244,6 +243,7 @@ __global__ void DFSLevelWise(int levelOffset,
             }
         }
         global_paths_ptr[pathsOffset + i] = randomVertex;
+        printf("Thread %d, randomVertex : %d, path position : %d\n\n", threadID, randomVertex, i);
         printf("Thread %d, global_paths_ptr[pathsOffset + %d] : %d", threadID, i, global_paths_ptr[pathsOffset + i]);
         if (randomVertex == -1)
             break;
