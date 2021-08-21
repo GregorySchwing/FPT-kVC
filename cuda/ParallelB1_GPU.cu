@@ -458,7 +458,7 @@ void CallPopulateTree(int numberOfLevels,
                         global_outgoing_edge_vertices,
                         global_outgoing_edge_vertices_count);
             
-        levelOffset = levelUpperBound + 1;
+        levelOffset = levelUpperBound;
     } 
 
    // int leafIndex = 0;
