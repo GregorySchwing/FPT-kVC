@@ -157,7 +157,7 @@ __global__ void CreateSubsetOfRemainingVerticesLevelWise(int levelOffset,
                                                 int * global_vertices_remaining_count){
     int threadID = threadIdx.x + blockDim.x * blockIdx.x;
     int leafIndex = levelOffset + threadID;
-    if (leafIndex > levelUpperBound) return;
+    if (leafIndex >= levelUpperBound) return;
     int degreesOffset = leafIndex * numberOfRows;
 
     global_vertices_remaining_count[leafIndex] = 0;
@@ -191,7 +191,7 @@ __global__ void DFSLevelWise(int levelOffset,
                             int * global_outgoing_edge_vertices_count){
     int threadID = threadIdx.x + blockDim.x * blockIdx.x;
     int leafIndex = levelOffset + threadID;
-    if (leafIndex > levelUpperBound) return;
+    if (leafIndex >= levelUpperBound) return;
     int degreesOffset = leafIndex * numberOfRows;
     int pathsOffset = leafIndex * 4;
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
