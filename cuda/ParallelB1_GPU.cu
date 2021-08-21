@@ -434,6 +434,7 @@ void CallPopulateTree(int numberOfLevels,
     long long levelOffset = 0;
     long long levelUpperBound;
     int numberOfBlocks;
+    numberOfLevels = 1;
     for (int level = 0; level < numberOfLevels; ++level){
         levelUpperBound = CalculateLevelUpperBound(level);
         // ceil(numberOfLeaves/32)
