@@ -110,7 +110,7 @@ __global__ void DFSLevelWise(int levelOffset,
                             int * global_outgoing_edge_vertices,
                             int * global_outgoing_edge_vertices_count);
 
-__global__ void DFSLevelWiseSamplesWithoutReplacement(int levelOffset,
+__global__ void DFSLevelWiseSamplesWithReplacement(int levelOffset,
                             int levelUpperBound,
                             int numberOfRows,
                             int numberOfEdgesPerGraph,
@@ -120,6 +120,24 @@ __global__ void DFSLevelWiseSamplesWithoutReplacement(int levelOffset,
                             int * global_values_dev_ptr,
                             int * global_paths_ptr,
                             int * global_paths_length);
+
+__device__ void SetOutgoingEdges(int rowOffsOffset,
+                                int valsAndColsOffset,
+                                int degreesOffset,
+                                int u,
+                                int * global_row_offsets_dev_ptr,
+                                int * global_columns_dev_ptr,
+                                int * global_values_dev_ptr,
+                                int * global_degrees_dev_ptr);
+
+__device__ void SetIncomingEdges(int rowOffsOffset,
+                                int valsAndColsOffset,
+                                int degreesOffset,
+                                int u,
+                                int * global_row_offsets_dev_ptr,
+                                int * global_columns_dev_ptr,
+                                int * global_values_dev_ptr,
+                                int * global_degrees_dev_ptr);
 
 __global__ void GenerateChildren(int leafIndex,
                                 int numberOfRows,

@@ -264,7 +264,9 @@ __global__ void DFSLevelWise(int levelOffset,
 }
 
 // Single thread per leaf
-__global__ void DFSLevelWiseSamplesWithoutReplacement(int levelOffset,
+// When this method returns, an entire level has found a path which identifies 3 new children per leaf
+// Pendant edges were processed immediately.
+__global__ void DFSLevelWiseSamplesWithReplacement(int levelOffset,
                             int levelUpperBound,
                             int numberOfRows,
                             int numberOfEdgesPerGraph,
@@ -279,18 +281,55 @@ __global__ void DFSLevelWiseSamplesWithoutReplacement(int levelOffset,
     int leafIndex = levelOffset + threadID;
     if (leafIndex >= levelUpperBound) return;
 
+    int degreesOffset = leafIndex * numberOfRows;
+    int pathsOffset = leafIndex * 4;
+    int rowOffsOffset = leafIndex * (numberOfRows + 1);
+    int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
+    RNG::ctr_type r;
+    int randomVertex;
+
+    unsigned int counter = 0;
+    ulong seed = 0;
+    int randIt = 0;
+    int u;
+    bool firstIter = true;
+
     do {
+        // Path must be either length 2 or 3
+        if(!firstIter){
+            // If length is 3, u is 1
+            // IF length is 2, u is 0
+            // This corresponds to the desired behavior of Case 1 and 2 from B1 Algo
+            u = global_paths_length[leafIndex] % 2;
+            // Set u's edges to 0 and sets u's degree to 0
+            SetOutgoingEdges(rowOffsOffset,
+                            valsAndColsOffset,
+                            degreesOffset,
+                            u,
+                            global_row_offsets_dev_ptr,
+                            global_columns_dev_ptr,
+                            global_values_dev_ptr,
+                            global_degrees_dev_ptr);
+            // Sets the incoming edges to 0 decrements the degrees of the source vertices by 1
+            SetIncomingEdges(rowOffsOffset,
+                            valsAndColsOffset,
+                            degreesOffset,
+                            u,
+                            global_row_offsets_dev_ptr,
+                            global_columns_dev_ptr,
+                            global_values_dev_ptr,
+                            global_degrees_dev_ptr);
+            if (randIt == 4){
+                ++counter;
+                r = randomGPU_four(counter, leafIndex, seed);
+                randIt = 0;
+            }
+        } else {
+            r = randomGPU_four(counter, leafIndex, seed);
+        }
+        randomVertex = r[randIt] % numberOfRows;
+        ++randIt;
 
-        int degreesOffset = leafIndex * numberOfRows;
-        int pathsOffset = leafIndex * 4;
-        int rowOffsOffset = leafIndex * (numberOfRows + 1);
-        int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
-
-        unsigned int counter = 0;
-        ulong seed = 0;
-        int randIt = 0;
-        RNG::ctr_type r = randomGPU_four(counter, leafIndex, seed);
-        int randomVertex = r[randIt] % numberOfRows;
         while(global_degrees_dev_ptr[degreesOffset + randomVertex] == 0){
             if (randIt == 4){
                 ++counter;
@@ -327,6 +366,8 @@ __global__ void DFSLevelWiseSamplesWithoutReplacement(int levelOffset,
             } while (i > 1 && global_degrees_dev_ptr[degreesOffset + randomVertex]>1 &&
                     randomOutgoingVertex == global_paths_ptr[pathsOffset + (i-2)]);
         
+            // We exited the previous while loop so if we enter this if condition
+            // The degree of the current vertex is 1, and we are a pendant edge
             if (i > 1 && randomOutgoingVertex == global_paths_ptr[pathsOffset + (i-2)])
                 // pendant edge resulting in unavoidable simple cycle
                 break;
@@ -336,11 +377,57 @@ __global__ void DFSLevelWiseSamplesWithoutReplacement(int levelOffset,
             }
             printf("Thread %d, randomVertex : %d, path position : %d\n\n", threadID, randomVertex, i);
         }
-
+        firstIter = false;
     } while (global_paths_length[leafIndex] == 2 || global_paths_length[leafIndex] == 3);
 }
 
 
+__device__ void SetOutgoingEdges(int rowOffsOffset,
+                                int valsAndColsOffset,
+                                int degreesOffset,
+                                int u,
+                                int * global_row_offsets_dev_ptr,
+                                int * global_columns_dev_ptr,
+                                int * global_values_dev_ptr,
+                                int * global_degrees_dev_ptr){
+    //int rowOffsOffset = leafIndex * (numberOfRows + 1);
+    //int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
+    int uLB = global_row_offsets_dev_ptr[rowOffsOffset + u];
+    int uUB = global_row_offsets_dev_ptr[rowOffsOffset + u + 1];    // Set out-edges
+    for (int i = uLB; i < uUB; ++i){
+        global_values_dev_ptr[valsAndColsOffset + i] = 0;
+    }
+    global_degrees_dev_ptr[degreesOffset + u] = 0;
+}
+
+
+__device__ void SetIncomingEdges(int rowOffsOffset,
+                                int valsAndColsOffset,
+                                int degreesOffset,
+                                int u,
+                                int * global_row_offsets_dev_ptr,
+                                int * global_columns_dev_ptr,
+                                int * global_values_dev_ptr,
+                                int * global_degrees_dev_ptr){
+    int v;
+    int uLB = global_row_offsets_dev_ptr[rowOffsOffset + u];
+    int uUB = global_row_offsets_dev_ptr[rowOffsOffset + u + 1];
+    int vLB;
+    int vUB;
+        // Set out-edges
+    for (int i = uLB; i < uUB; ++i){
+        v = global_columns_dev_ptr[valsAndColsOffset + i];
+        vLB = global_row_offsets_dev_ptr[rowOffsOffset + v];
+        vUB = global_row_offsets_dev_ptr[rowOffsOffset + v + 1];
+        for (int j = vLB; i < vUB; ++j){
+            if(u == global_columns_dev_ptr[valsAndColsOffset + j]){
+                global_values_dev_ptr[valsAndColsOffset + j] = 0;
+                --global_degrees_dev_ptr[degreesOffset + v];
+                break;
+            }
+        }
+    }
+}
 
 // Single threaded version
 // DFS is implicitly single threaded
@@ -555,7 +642,7 @@ void CallPopulateTree(int numberOfLevels,
                         global_outgoing_edge_vertices,
                         global_outgoing_edge_vertices_count);
         */
-       
+
         levelOffset = levelUpperBound;
     } 
 
