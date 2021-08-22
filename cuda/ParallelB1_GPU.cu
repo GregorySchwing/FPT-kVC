@@ -383,6 +383,7 @@ __global__ void DFSLevelWiseSamplesWithReplacement(int levelOffset,
                 // pendant edge resulting in unavoidable simple cycle
                 break;
             else{
+                randomVertex = randomOutgoingVertex;
                 global_paths_ptr[pathsOffset + i] = randomVertex;
                 ++global_paths_length[leafIndex];
             }
@@ -637,6 +638,7 @@ void CallPopulateTree(int numberOfLevels,
         levelUpperBound = CalculateLevelUpperBound(level);
         // ceil(numberOfLeaves/32)
         numberOfBlocks = ((levelUpperBound - levelOffset) + 32 - 1) / 32;
+        // Without replacement
         /*
         CreateSubsetOfRemainingVerticesLevelWise<<<32,numberOfBlocks>>>(levelOffset,
                                                 levelUpperBound,
