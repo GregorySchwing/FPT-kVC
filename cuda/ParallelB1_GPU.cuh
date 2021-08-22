@@ -119,7 +119,10 @@ __global__ void DFSLevelWiseSamplesWithReplacement(int levelOffset,
                             int * global_columns_dev_ptr,
                             int * global_values_dev_ptr,
                             int * global_paths_ptr,
-                            int * global_paths_length);
+                            int * global_paths_length,
+                            int numberOfVerticesAllocatedForPendantEdges,
+                            int * global_pendant_vertices_added_to_cover,
+                            int * global_papendant_vertices_length);
 
 __device__ void SetOutgoingEdges(int rowOffsOffset,
                                 int valsAndColsOffset,

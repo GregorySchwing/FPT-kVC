@@ -275,7 +275,10 @@ __global__ void DFSLevelWiseSamplesWithReplacement(int levelOffset,
                             int * global_columns_dev_ptr,
                             int * global_values_dev_ptr,
                             int * global_paths_ptr,
-                            int * global_paths_length){
+                            int * global_paths_length,
+                            int numberOfVerticesAllocatedForPendantEdges,
+                            int * global_pendant_vertices_added_to_cover,
+                            int * global_papendant_vertices_length){
 
     int threadID = threadIdx.x + blockDim.x * blockIdx.x;
     int leafIndex = levelOffset + threadID;
@@ -285,6 +288,7 @@ __global__ void DFSLevelWiseSamplesWithReplacement(int levelOffset,
     int pathsOffset = leafIndex * 4;
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
     int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
+    int pendantEdgeOffset = numberOfVerticesAllocatedForPendantEdges * leafIndex;
     RNG::ctr_type r;
     int randomVertex;
 
@@ -293,7 +297,6 @@ __global__ void DFSLevelWiseSamplesWithReplacement(int levelOffset,
     int randIt = 0;
     int u;
     bool firstIter = true;
-
     do {
         // Path must be either length 2 or 3
         if(!firstIter){
@@ -301,6 +304,14 @@ __global__ void DFSLevelWiseSamplesWithReplacement(int levelOffset,
             // IF length is 2, u is 0
             // This corresponds to the desired behavior of Case 1 and 2 from B1 Algo
             u = global_paths_length[leafIndex] % 2;
+            if(global_papendant_vertices_length[leafIndex]>3){
+                // We have run out space for pendant edges, we will check the path lengths of all the leaves
+                // if the path length of a leaf is 2 or 3, we know we returned here.
+                return;
+            }
+            global_pendant_vertices_added_to_cover[pendantEdgeOffset + 
+                global_papendant_vertices_length[leafIndex]] = u;
+            ++global_papendant_vertices_length[leafIndex];
             // Set u's edges to 0 and sets u's degree to 0
             SetOutgoingEdges(rowOffsOffset,
                             valsAndColsOffset,
@@ -580,11 +591,15 @@ void CallPopulateTree(int numberOfLevels,
     int * global_values_dev_ptr;
     int * global_degrees_dev_ptr; 
     int * global_paths_ptr; 
-    int * global_vertices_remaining;
-    int * global_vertices_remaining_count;
-    int * global_outgoing_edge_vertices;
-    int * global_outgoing_edge_vertices_count;
+    //int * global_vertices_remaining;
+    //int * global_vertices_remaining_count;
+    //int * global_outgoing_edge_vertices;
+    //int * global_outgoing_edge_vertices_count;
     int * global_paths_length;
+    int numberOfVerticesAllocatedForPendantEdges = 4;
+    int * global_pendant_vertices_added_to_cover;
+    int * global_pendant_vertices_length;
+
 
     int max_dfs_depth = 4;
     int numberOfRows = g.GetNumberOfRows();
@@ -595,11 +610,14 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_values_dev_ptr, (numberOfEdgesPerGraph*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_paths_ptr, (max_dfs_depth*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&global_vertices_remaining, (numberOfRows*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&global_vertices_remaining_count, treeSize * sizeof(int) );
-    cudaMalloc( (void**)&global_outgoing_edge_vertices, treeSize * maxDegree * sizeof(int) );
-    cudaMalloc( (void**)&global_outgoing_edge_vertices_count, treeSize * sizeof(int) );
+    //cudaMalloc( (void**)&global_vertices_remaining, (numberOfRows*treeSize) * sizeof(int) );
+    //cudaMalloc( (void**)&global_vertices_remaining_count, treeSize * sizeof(int) );
+    //cudaMalloc( (void**)&global_outgoing_edge_vertices, treeSize * maxDegree * sizeof(int) );
+    //cudaMalloc( (void**)&global_outgoing_edge_vertices_count, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_paths_length, treeSize * sizeof(int) );
+    cudaMalloc( (void**)&global_pendant_vertices_added_to_cover, treeSize * numberOfVerticesAllocatedForPendantEdges * sizeof(int) );
+    cudaMalloc( (void**)&global_pendant_vertices_length, treeSize * sizeof(int) );
+
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -642,6 +660,19 @@ void CallPopulateTree(int numberOfLevels,
                         global_outgoing_edge_vertices,
                         global_outgoing_edge_vertices_count);
         */
+        DFSLevelWiseSamplesWithReplacement<<<32,numberOfBlocks>>>(levelOffset,
+                                                                levelUpperBound,
+                                                                numberOfRows,
+                                                                numberOfEdgesPerGraph,
+                                                                global_degrees_dev_ptr,
+                                                                global_row_offsets_dev_ptr,
+                                                                global_columns_dev_ptr,
+                                                                global_values_dev_ptr,
+                                                                global_paths_ptr,
+                                                                global_paths_length,
+                                                                numberOfVerticesAllocatedForPendantEdges,
+                                                                global_pendant_vertices_added_to_cover,
+                                                                global_pendant_vertices_length);
 
         levelOffset = levelUpperBound;
     } 
@@ -653,16 +684,14 @@ void CallPopulateTree(int numberOfLevels,
     cudaFree( global_columns_dev_ptr );
     cudaFree( global_values_dev_ptr );
     cudaFree( global_degrees_dev_ptr );
-    cudaFree( global_row_offsets_dev_ptr );
-    cudaFree( global_columns_dev_ptr );
-    cudaFree( global_values_dev_ptr );
-    cudaFree( global_degrees_dev_ptr );
     cudaFree( global_paths_ptr );
-    cudaFree( global_vertices_remaining );
-    cudaFree( global_vertices_remaining_count );
-    cudaFree( global_outgoing_edge_vertices );
-    cudaFree( global_outgoing_edge_vertices_count );
+    //cudaFree( global_vertices_remaining );
+    //cudaFree( global_vertices_remaining_count );
+    //cudaFree( global_outgoing_edge_vertices );
+    //cudaFree( global_outgoing_edge_vertices_count );
     cudaFree( global_paths_length );
+    cudaFree( global_pendant_vertices_added_to_cover );
+    cudaFree( global_pendant_vertices_length );
     cudaDeviceSynchronize();
 }
 
