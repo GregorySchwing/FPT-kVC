@@ -280,12 +280,12 @@ __global__ void InduceRowOfSubgraphs( int numberOfRows,
         int * new_values_dev = &(global_values_dev_ptr[3*leafIndex + child]);
         for (int iter = row; iter < numberOfRows; iter += blockDim.x){
 
-            printf("Thread %d, row %d", threadIdx.x, iter);
+            //printf("Thread %d, row %d", threadIdx.x, iter);
             C_ref[iter][0] = 0;
             C_ref[iter][1] = 0;
             //printf("Thread %d, row %d, old_row_offsets_dev[iter] = %d", threadIdx.x, iter, old_row_offsets_dev[iter]);
             //printf("Thread %d, row %d, old_row_offsets_dev[iter+1] = %d", threadIdx.x, iter, old_row_offsets_dev[iter+1]);
-            printf("Thread %d, row %d, old_values_dev[endOffset] = %d", threadIdx.x, iter, old_values_dev[old_row_offsets_dev[iter+1]]);
+            //printf("Thread %d, row %d, old_values_dev[endOffset] = %d", threadIdx.x, iter, old_values_dev[old_row_offsets_dev[iter+1]]);
 
             int beginIndex = old_row_offsets_dev[iter];
             int endIndex = old_row_offsets_dev[iter+1];
@@ -298,7 +298,7 @@ __global__ void InduceRowOfSubgraphs( int numberOfRows,
             for (int i = 1; i < 2; ++i){
                 C_ref[iter][i] = C_ref[iter][i] + C_ref[iter][i-1];
             }
-            printf("Thread %d, row %d, almost done", threadIdx.x, iter);
+           // printf("Thread %d, row %d, almost done", threadIdx.x, iter);
 
             /* C_ref[A_row_indices[i]]]-1 , because the values of C_ref are from [1, n] -> [0,n) */
             for (int i = endIndex-1; i >= beginIndex; --i){
@@ -308,8 +308,9 @@ __global__ void InduceRowOfSubgraphs( int numberOfRows,
                     --C_ref[iter][old_values_dev[i]];
                 }
             }
-            printf("Thread %d, row %d, finished", threadIdx.x, iter);
+            //printf("Thread %d, row %d, finished", threadIdx.x, iter);
         }
+        printf("Block %d, induced child %d", blockIdx.x, 3*leafIndex + child);
     }
     delete[] C_ref;
 }
@@ -328,8 +329,6 @@ __global__ void CalculateNewRowOffsets( int numberOfRows,
     int i = 0;
     printf("Thread %d, degreesOffset = %d", threadID, degreesOffset);
     printf("Thread %d, rowOffsOffset = %d", threadID, rowOffsOffset);
-
-
     printf("Thread %d, new_row_offsets_dev[%d] = %d", threadID, i, global_row_offsets_dev_ptr[rowOffsOffset]);
 
     global_row_offsets_dev_ptr[rowOffsOffset] = i;
@@ -880,6 +879,7 @@ void CallPopulateTree(int numberOfLevels,
         // This allows for continuing runs on subtrees easily
         if (level != 0){
             // 1 block per leaf
+            std::cout << "Setting edges - level " << level << std::endl;
             SetEdges<<<levelUpperBound-levelOffset,threadsPerBlock>>>(numberOfRows,
                                                         numberOfEdgesPerGraph,
                                                         levelOffset,
@@ -889,6 +889,7 @@ void CallPopulateTree(int numberOfLevels,
                                                         global_values_dev_ptr,
                                                         global_paths_ptr,
                                                         global_paths_length);
+            std::cout << "Setting degrees - level " << level << std::endl;
             // 1 block per leaf
             SetDegreesAndCountEdgesLeftToCover<<<levelUpperBound-levelOffset,threadsPerBlock,sizeof(int)*numberOfRows>>>
                                     (numberOfRows,
@@ -900,6 +901,7 @@ void CallPopulateTree(int numberOfLevels,
                                     global_degrees_dev_ptr,
                                     global_edges_left_to_cover_count);
             // 1 thread per leaf
+            std::cout << "Calling new rowoffs - level " << level << std::endl;
             CalculateNewRowOffsets<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock>>>
                                     (numberOfRows,
                                     levelOffset,
@@ -908,6 +910,7 @@ void CallPopulateTree(int numberOfLevels,
                                     global_degrees_dev_ptr);
          }
         // 1 thread per leaf
+        std::cout << "Calling DFS - level " << level << std::endl;
         DFSLevelWiseSamplesWithReplacement<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock>>>
                                     (levelOffset,
                                     levelUpperBound,
@@ -929,6 +932,7 @@ void CallPopulateTree(int numberOfLevels,
         // assuming there were no pendant edges...
         if (level + 1 != numberOfLevels){
             // 1 block per leaf
+            std::cout << "Inducing children - level " << level << std::endl;
             InduceRowOfSubgraphs<<<levelUpperBound-levelOffset,threadsPerBlock>>>
                                     (numberOfRows,
                                     levelOffset,
