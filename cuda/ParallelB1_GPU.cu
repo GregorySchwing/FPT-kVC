@@ -239,9 +239,9 @@ __global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
             if (iter < halvedArray){
                 degrees[iter] += degrees[iter + halvedArray];
             }
-            __syncthreads();
-            halvedArray /= 2;
         }
+        __syncthreads();
+        halvedArray /= 2;
     }
     if (row == 0)
         global_edges_left_to_cover_count[leafIndex] = degrees[0];
