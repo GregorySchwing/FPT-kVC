@@ -117,6 +117,73 @@ __global__ void InduceSubgraph( int numberOfRows,
     delete[] C_ref;
 }
 
+__global__ void InduceRowOfSubgraphs( int numberOfRows,
+                                      int levelOffset,
+                                      int levelUpperBound,
+                                      int * global_row_offsets_dev_ptr,
+                                      int * global_columns_dev_ptr,
+                                      int * global_values_dev_ptr
+                                    ){
+
+    int x = blockIdx.x;
+    int y = blockIdx.y;
+    int blockIndex = x + y * gridDim.x;
+    int leafIndex = levelOffset + blockIndex;
+    if (leafIndex >= levelUpperBound) return;
+
+    int thread_x = threadIdx.x;
+    int thread_y = threadIdx.y;
+    int threadIndex = thread_x + thread_y * blockDim.x;
+    int row = threadIndex;
+
+// Since three children share a parent, it is sensible for the old pointers to be shared memory
+// and for each block to induce three children
+// For now it still global..
+    int * old_row_offsets_dev = &(global_row_offsets_dev_ptr[leafIndex]);
+    int * old_columns_dev = &(global_columns_dev_ptr[leafIndex]);
+    int * old_values_dev = &(global_values_dev_ptr[leafIndex]);
+
+    inner_array_t *C_ref = new inner_array_t[numberOfRows];
+    for (int child = 1; child <= 3; ++child){
+        int * new_row_offsets_dev = &(global_row_offsets_dev_ptr[3*leafIndex + child]);
+        int * new_columns_dev =  &(global_columns_dev_ptr[3*leafIndex + child]);
+        int * new_values_dev = &(global_values_dev_ptr[3*leafIndex + child]);
+        for (int iter = row; iter < numberOfRows; iter += blockDim.x){
+
+            printf("Thread %d, row %d", threadIdx.x, iter);
+            C_ref[iter][0] = 0;
+            C_ref[iter][1] = 0;
+            //printf("Thread %d, row %d, old_row_offsets_dev[iter] = %d", threadIdx.x, iter, old_row_offsets_dev[iter]);
+            //printf("Thread %d, row %d, old_row_offsets_dev[iter+1] = %d", threadIdx.x, iter, old_row_offsets_dev[iter+1]);
+            printf("Thread %d, row %d, old_values_dev[endOffset] = %d", threadIdx.x, iter, old_values_dev[old_row_offsets_dev[iter+1]]);
+
+            int beginIndex = old_row_offsets_dev[iter];
+            int endIndex = old_row_offsets_dev[iter+1];
+
+            for (int i = beginIndex; i < endIndex; ++i){
+                ++C_ref[iter][old_values_dev[i]];
+            }
+
+            // This is  [old degree - new degree , new degree]
+            for (int i = 1; i < 2; ++i){
+                C_ref[iter][i] = C_ref[iter][i] + C_ref[iter][i-1];
+            }
+            printf("Thread %d, row %d, almost done", threadIdx.x, iter);
+
+            /* C_ref[A_row_indices[i]]]-1 , because the values of C_ref are from [1, n] -> [0,n) */
+            for (int i = endIndex-1; i >= beginIndex; --i){
+                if (old_values_dev[i]){
+                    new_columns_dev[new_row_offsets_dev[iter] - C_ref[iter][0] + C_ref[iter][1]-1] = old_columns_dev[i];
+                    new_values_dev[new_row_offsets_dev[iter] - C_ref[iter][0] + C_ref[iter][1]-1] = old_values_dev[i];
+                    --C_ref[iter][old_values_dev[i]];
+                }
+            }
+            printf("Thread %d, row %d, finished", threadIdx.x, iter);
+        }
+    }
+    delete[] C_ref;
+}
+
 __global__ void CalculateNewRowOffsets( int numberOfRows,
                                         int * old_degrees_dev,
                                         int * new_row_offsets_dev){
@@ -675,6 +742,11 @@ void CallPopulateTree(int numberOfLevels,
                                                                 numberOfVerticesAllocatedForPendantEdges,
                                                                 global_pendant_vertices_added_to_cover,
                                                                 global_pendant_vertices_length);
+
+        // Check if any pathlengths are != 4, since we are allocating only 4 spaces for pendant edges
+        // It might be better to only process each vertex once in the kernel
+        // and handle pendant edges in a separate kernel
+        // assuming there were no pendant edges...
 
         levelOffset = levelUpperBound;
     } 
