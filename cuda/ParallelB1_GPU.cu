@@ -705,7 +705,12 @@ void CallPopulateTree(int numberOfLevels,
         levelUpperBound = CalculateLevelUpperBound(level);
         // ceil(numberOfLeaves/32)
         numberOfBlocks = ((levelUpperBound - levelOffset) + 32 - 1) / 32;
-        // Without replacement
+        // Without replacement, problematic handling of pendant edges..if we convert to a modifiable
+        // data structure we'd be able to use a deterministic approach
+        // however with the current csr, which is nontrivial to modify,
+        // the sampling of vertices and edges is easier with replacement,
+        // this will be a problem on large graphs though as fewer vertices 
+        // remain.
         /*
         CreateSubsetOfRemainingVerticesLevelWise<<<32,numberOfBlocks>>>(levelOffset,
                                                 levelUpperBound,
@@ -747,6 +752,13 @@ void CallPopulateTree(int numberOfLevels,
         // It might be better to only process each vertex once in the kernel
         // and handle pendant edges in a separate kernel
         // assuming there were no pendant edges...
+        InduceRowOfSubgraphs<<<32,numberOfBlocks>>>(numberOfRows,
+                                                    levelOffset,
+                                                    levelUpperBound,
+                                                    global_row_offsets_dev_ptr,
+                                                    global_columns_dev_ptr,
+                                                    global_values_dev_ptr
+                                                    );
 
         levelOffset = levelUpperBound;
     } 
