@@ -138,7 +138,8 @@ __global__ void SetEdges(int numberOfRows,
                         int * global_columns_dev_ptr,
                         int * global_values_dev_ptr,
                         int * global_paths_ptr,
-                        int * global_paths_length){
+                        int * global_paths_length,
+                        int * global_edges_left_to_cover_count){
 
     int leafIndex = levelOffset + blockIdx.x;
     if (leafIndex >= levelUpperBound) return;
@@ -187,7 +188,7 @@ Can't figure out a way to avoid these if conditionals without a kernel call to c
     }
     __syncthreads();
     if (threadIndex == 0){
-        printf("Block %d, levelOffset %d, leafIndex %d, children removed %d\n", blockIdx.x, levelOffset, leafIndex, children[0], children[1]);
+        printf("Block %d, levelOffset %d, leafIndex %d, children removed %d %d\n", blockIdx.x, levelOffset, leafIndex, children[0], children[1]);
         for (int i = 0; i < global_edges_left_to_cover_count[leafIndex]; ++i){
             printf("%d ",global_columns_dev_ptr[valsAndColsOffset + i]);
         }
@@ -223,7 +224,7 @@ Can't figure out a way to avoid these if conditionals without a kernel call to c
     }
     __syncthreads();
     if (threadIndex == 0){
-        printf("Block %d, levelOffset %d, leafIndex %d, children removed %d\n", blockIdx.x, levelOffset, leafIndex, children[0], children[1]);
+        printf("Block %d, levelOffset %d, leafIndex %d, children removed %d %d\n", blockIdx.x, levelOffset, leafIndex, children[0], children[1]);
         for (int i = 0; i < global_edges_left_to_cover_count[leafIndex]; ++i){
             printf("%d ",global_columns_dev_ptr[valsAndColsOffset + i]);
         }
@@ -949,7 +950,8 @@ void CallPopulateTree(int numberOfLevels,
                                                         global_columns_dev_ptr,
                                                         global_values_dev_ptr,
                                                         global_paths_ptr,
-                                                        global_paths_length);
+                                                        global_paths_length,
+                                                        global_edges_left_to_cover_count);
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
             std::cout << "Setting degrees - level " << level << std::endl;
