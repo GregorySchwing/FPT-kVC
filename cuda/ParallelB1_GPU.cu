@@ -116,7 +116,7 @@ __global__ void InduceSubgraph( int numberOfRows,
             }
         }
         if (row == 0){
-            printf("Block %d induced root of graph", blockIdx.x, leafI);
+            printf("Block %d induced root of graph", blockIdx.x);
             for (int i = 0; i < edgesLeftToCover; ++i){
                 printf("%d ",new_columns_dev[i]);
             }
@@ -1026,7 +1026,8 @@ void CopyGraphToDevice( Graph & g,
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
     // Currenly only sets the first graph in the cuda memory
-    InduceSubgraph<<<1,threadsPerBlock>>>(g.GetNumberOfRows(),           
+    InduceSubgraph<<<1,threadsPerBlock>>>(g.GetNumberOfRows(), 
+                            g.GetEdgesLeftToCover(),          
                             old_row_offsets_dev_ptr,
                             old_column_indices_dev_ptr,
                             new_values_dev_ptr,
