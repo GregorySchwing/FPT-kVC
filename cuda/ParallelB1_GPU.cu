@@ -255,16 +255,16 @@ __global__ void InduceRowOfSubgraphs( int numberOfRows,
                                       int * global_values_dev_ptr
                                     ){
 
-    int x = blockIdx.x;
-    int y = blockIdx.y;
-    int blockIndex = x + y * gridDim.x;
-    int leafIndex = levelOffset + blockIndex;
+    //int x = blockIdx.x;
+    //int y = blockIdx.y;
+    //int blockIndex = x + y * gridDim.x;
+    int leafIndex = levelOffset + blockIdx.x;
     if (leafIndex >= levelUpperBound) return;
 
-    int thread_x = threadIdx.x;
-    int thread_y = threadIdx.y;
-    int threadIndex = thread_x + thread_y * blockDim.x;
-    int row = threadIndex;
+    //int thread_x = threadIdx.x;
+    //int thread_y = threadIdx.y;
+    //int threadIndex = thread_x + thread_y * blockDim.x;
+    int row = threadIdx.x;
 
 // Since three children share a parent, it is sensible for the old pointers to be shared memory
 // and for each block to induce three children
@@ -829,7 +829,7 @@ void CallPopulateTree(int numberOfLevels,
     long long levelOffset = 0;
     long long levelUpperBound;
     int numberOfBlocks;
-    numberOfLevels = 1;
+    //numberOfLevels = 1;
     for (int level = 0; level < numberOfLevels; ++level){
         levelUpperBound = CalculateLevelUpperBound(level);
         // ceil(numberOfLeaves/32)
@@ -862,7 +862,29 @@ void CallPopulateTree(int numberOfLevels,
                         global_paths_length,
                         global_outgoing_edge_vertices,
                         global_outgoing_edge_vertices_count);
-        */
+            */
+        // First graph is assumed to already been processed
+        // This allows for continuing runs on subtrees easily
+        if (level != 0){
+            SetEdges<<<numberOfBlocks,threadsPerBlock>>>(numberOfRows,
+                                                        numberOfEdgesPerGraph,
+                                                        levelOffset,
+                                                        levelUpperBound,
+                                                        global_row_offsets_dev_ptr,
+                                                        global_columns_dev_ptr,
+                                                        global_values_dev_ptr,
+                                                        global_paths_ptr,
+                                                        global_paths_length);
+
+            SetDegreesAndCountEdgesLeftToCover<<<numberOfBlocks,threadsPerBlock>>>(numberOfRows,
+                                                            numberOfEdgesPerGraph,
+                                                            levelOffset,
+                                                            levelUpperBound,
+                                                            global_row_offsets_dev_ptr,
+                                                            global_values_dev_ptr,
+                                                            global_degrees_dev_ptr,
+                                                            global_edges_left_to_cover_count);
+        }
         DFSLevelWiseSamplesWithReplacement<<<numberOfBlocks,threadsPerBlock>>>(levelOffset,
                                                                 levelUpperBound,
                                                                 numberOfRows,
@@ -881,32 +903,14 @@ void CallPopulateTree(int numberOfLevels,
         // It might be better to only process each vertex once in the kernel
         // and handle pendant edges in a separate kernel
         // assuming there were no pendant edges...
-        InduceRowOfSubgraphs<<<numberOfBlocks,threadsPerBlock>>>(numberOfRows,
-                                                    levelOffset,
-                                                    levelUpperBound,
-                                                    global_row_offsets_dev_ptr,
-                                                    global_columns_dev_ptr,
-                                                    global_values_dev_ptr
-                                                    );
-
-        SetEdges<<<numberOfBlocks,threadsPerBlock>>>(numberOfRows,
-                                                    numberOfEdgesPerGraph,
-                                                    levelOffset,
-                                                    levelUpperBound,
-                                                    global_row_offsets_dev_ptr,
-                                                    global_columns_dev_ptr,
-                                                    global_values_dev_ptr,
-                                                    global_paths_ptr,
-                                                    global_paths_length);
-
-        SetDegreesAndCountEdgesLeftToCover<<<numberOfBlocks,threadsPerBlock>>>(numberOfRows,
-                                                        numberOfEdgesPerGraph,
+        if (level + 1 != numberOfLevels)
+            InduceRowOfSubgraphs<<<numberOfBlocks,threadsPerBlock>>>(numberOfRows,
                                                         levelOffset,
                                                         levelUpperBound,
                                                         global_row_offsets_dev_ptr,
-                                                        global_values_dev_ptr,
-                                                        global_degrees_dev_ptr,
-                                                        global_edges_left_to_cover_count);
+                                                        global_columns_dev_ptr,
+                                                        global_values_dev_ptr
+                                                        );
 
         levelOffset = levelUpperBound;
     } 
