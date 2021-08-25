@@ -122,7 +122,7 @@ __global__ void InduceSubgraph( int numberOfRows,
             }
             printf("\n");
             for (int i = 0; i < edgesLeftToCover; ++i){
-                printf("%d ",new_columns_dev[i]);
+                printf("%d ",new_values_dev[i]);
             }
             printf("\n");
         }
@@ -342,18 +342,17 @@ __global__ void CalculateNewRowOffsets( int numberOfRows,
     int degreesOffset = leafIndex * numberOfRows;
 
     int i = 0;
-    printf("Thread %d, degreesOffset = %d", threadID, degreesOffset);
-    printf("Thread %d, rowOffsOffset = %d", threadID, rowOffsOffset);
-    printf("Thread %d, new_row_offsets_dev[%d] = %d", threadID, i, global_row_offsets_dev_ptr[rowOffsOffset]);
+    printf("leafIndex %d, degreesOffset = %d\n", leafIndex, degreesOffset);
+    printf("leafIndex %d, rowOffsOffset = %d\n", leafIndex, rowOffsOffset);
+    printf("leafIndex %d, new_row_offsets_dev[%d] = %d\n", leafIndex, i, global_row_offsets_dev_ptr[rowOffsOffset]);
 
     global_row_offsets_dev_ptr[rowOffsOffset] = i;
     for (i = 1; i <= numberOfRows; ++i)
     {
         global_row_offsets_dev_ptr[rowOffsOffset + i] = global_degrees_dev_ptr[degreesOffset + i - 1] + global_row_offsets_dev_ptr[rowOffsOffset + i - 1];
-        printf("Thread %d, new_row_offsets_dev[%d] = %d\n", threadID, i, global_row_offsets_dev_ptr[rowOffsOffset + i]);
-        printf("Thread %d, global_row_offsets_dev_ptr[rowOffsOffset + %d - 1] = %d\n", threadID, i, global_row_offsets_dev_ptr[rowOffsOffset + i - 1]);
-        printf("Thread %d, global_degrees_dev_ptr[degreesOffset + %d - 1] = %d\n", threadID, i, global_degrees_dev_ptr[degreesOffset + i - 1]);
-
+        printf("leafIndex %d, new_row_offsets_dev[%d] = %d\n", leafIndex, i, global_row_offsets_dev_ptr[rowOffsOffset + i]);
+        printf("leafIndex %d, global_row_offsets_dev_ptr[rowOffsOffset + %d - 1] = %d\n", leafIndex, i, global_row_offsets_dev_ptr[rowOffsOffset + i - 1]);
+        printf("leafIndex %d, global_degrees_dev_ptr[degreesOffset + %d - 1] = %d\n", leafIndex, i, global_degrees_dev_ptr[degreesOffset + i - 1]);
     }
 }
 
