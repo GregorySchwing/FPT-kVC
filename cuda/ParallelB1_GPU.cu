@@ -797,7 +797,7 @@ void CallPopulateTree(int numberOfLevels,
     int numberOfVerticesAllocatedForPendantEdges = 4;
     int * global_pendant_vertices_added_to_cover;
     int * global_pendant_vertices_length;
-
+    int * global_edges_left_to_cover_count;
 
     int max_dfs_depth = 4;
     int numberOfRows = g.GetNumberOfRows();
