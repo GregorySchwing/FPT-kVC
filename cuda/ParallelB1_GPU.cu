@@ -72,6 +72,7 @@ __host__ __device__ long long CalculateLevelUpperBound(int level){
 typedef int inner_array_t[2];
 
 __global__ void InduceSubgraph( int numberOfRows,
+                                int edgesLeftToCover,
                                 int * old_row_offsets_dev,
                                 int * old_columns_dev,
                                 int * old_values_dev,
@@ -79,17 +80,19 @@ __global__ void InduceSubgraph( int numberOfRows,
                                 int * new_columns_dev,
                                 int * new_values_dev){
 
-    int row = threadIdx.x + blockDim.x * blockIdx.x;
+    //int row = threadIdx.x + blockDim.x * blockIdx.x;
+    int row = threadIdx.x;
+
     inner_array_t *C_ref = new inner_array_t[numberOfRows];
 
     for (int iter = row; iter < numberOfRows; iter += blockDim.x){
 
-        printf("Thread %d, row %d", threadIdx.x, iter);
+        //printf("Thread %d, row %d", threadIdx.x, iter);
         C_ref[iter][0] = 0;
         C_ref[iter][1] = 0;
         //printf("Thread %d, row %d, old_row_offsets_dev[iter] = %d", threadIdx.x, iter, old_row_offsets_dev[iter]);
         //printf("Thread %d, row %d, old_row_offsets_dev[iter+1] = %d", threadIdx.x, iter, old_row_offsets_dev[iter+1]);
-        printf("Thread %d, row %d, old_values_dev[endOffset] = %d", threadIdx.x, iter, old_values_dev[old_row_offsets_dev[iter+1]]);
+        //printf("Thread %d, row %d, old_values_dev[endOffset] = %d", threadIdx.x, iter, old_values_dev[old_row_offsets_dev[iter+1]]);
 
         int beginIndex = old_row_offsets_dev[iter];
         int endIndex = old_row_offsets_dev[iter+1];
@@ -102,7 +105,7 @@ __global__ void InduceSubgraph( int numberOfRows,
         for (int i = 1; i < 2; ++i){
             C_ref[iter][i] = C_ref[iter][i] + C_ref[iter][i-1];
         }
-        printf("Thread %d, row %d, almost done", threadIdx.x, iter);
+        //printf("Thread %d, row %d, almost done", threadIdx.x, iter);
 
         /* C_ref[A_row_indices[i]]]-1 , because the values of C_ref are from [1, n] -> [0,n) */
         for (int i = endIndex-1; i >= beginIndex; --i){
@@ -112,7 +115,17 @@ __global__ void InduceSubgraph( int numberOfRows,
                 --C_ref[iter][old_values_dev[i]];
             }
         }
-        printf("Thread %d, row %d, finished", threadIdx.x, iter);
+        if (row == 0){
+            printf("Block %d induced root of graph", blockIdx.x, leafI);
+            for (int i = 0; i < edgesLeftToCover; ++i){
+                printf("%d ",new_columns_dev[i]);
+            }
+            printf("\n");
+            for (int i = 0; i < edgesLeftToCover; ++i){
+                printf("%d ",new_columns_dev[i]);
+            }
+            printf("\n");
+        }
     }
     delete[] C_ref;
 }

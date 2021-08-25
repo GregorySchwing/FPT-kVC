@@ -96,6 +96,7 @@ __global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
                                             int * global_edges_left_to_cover_count);
 
 __global__ void InduceSubgraph( int numberOfRows,
+                                int edgesLeftToCover,
                                 int * old_row_offsets_dev,
                                 int * old_columns_dev,
                                 int * old_values_dev,
