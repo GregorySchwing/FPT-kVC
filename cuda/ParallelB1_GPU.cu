@@ -327,11 +327,11 @@ __global__ void InduceRowOfSubgraphs( int numberOfRows,
         __syncthreads();
         if (threadIdx.x == 0){
             printf("Block %d, levelOffset %d, leafIndex %d, induced child %d\n", blockIdx.x, levelOffset, leafIndex, 3*leafIndex + child);
-            for (int i = 0; i < global_edges_left_to_cover_count[3*leafIndex + child]; ++i){
+            for (int i = 0; i < global_edges_left_to_cover_count[leafIndex]; ++i){
                 printf("%d ",new_columns_dev[i]);
             }
             printf("\n");
-            for (int i = 0; i < global_edges_left_to_cover_count[3*leafIndex + child]; ++i){
+            for (int i = 0; i < global_edges_left_to_cover_count[leafIndex]; ++i){
                 printf("%d ",new_values_dev[i]);
             }
             printf("\n");
