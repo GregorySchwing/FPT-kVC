@@ -310,7 +310,8 @@ __global__ void InduceRowOfSubgraphs( int numberOfRows,
             }
             //printf("Thread %d, row %d, finished", threadIdx.x, iter);
         }
-        printf("Block %d, induced child %d", blockIdx.x, 3*leafIndex + child);
+        __sync_threads();
+        printf("Block %d, levelOffset %d, leafIndex %d, induced child %d\n", blockIdx.x, levelOffset, leafIndex, 3*leafIndex + child);
     }
     delete[] C_ref;
 }
