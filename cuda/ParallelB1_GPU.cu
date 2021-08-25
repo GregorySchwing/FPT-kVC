@@ -134,7 +134,7 @@ __global__ void SetEdges( int numberOfRows,
 
     int rowOffsOffset = (numberOfRows + 1) * leafIndex;
     int valsAndColsOffset = numberOfEdgesPerGraph * leafIndex;
-    int children[2], LB, UB, incomingEdgeSource, incomingEdgeSourceLB, incomingEdgeSourceUB;
+    int children[2], LB, UB, v, vLB, vUB;
     // Parent's DFS path
     int pathsOffset = ((leafIndex-1)/3) * 4;
 /*
@@ -173,20 +173,26 @@ Can't figure out a way to avoid these if conditionals without a kernel call to c
         }
     }
     __syncthreads();
+    // (u,v) is the form of edge pairs.  We are traversing over v's outgoing edges, 
+    // looking for u as the destination and turning off that edge.
+    // this may be more elegantly handled by 
+    // (1) an associative data structure
+    // (2) an undirected graph 
+    // Parallel implementations of both of these need to be investigated.
     for (int i = 0; i < 2; ++i){
         LB = global_row_offsets_dev_ptr[rowOffsOffset + children[i]];
         UB = global_row_offsets_dev_ptr[rowOffsOffset + children[i] + 1];    // Set out-edges
         for (int edge = LB + threadIndex; edge < UB; edge += blockDim.x){
-            incomingEdgeSource = global_columns_dev_ptr[valsAndColsOffset + edge];
+            v = global_columns_dev_ptr[valsAndColsOffset + edge];
             // guarunteed to only have one incoming and one outgoing edge connecting (x,y)
-            incomingEdgeSourceLB = global_row_offsets_dev_ptr[rowOffsOffset + incomingEdgeSource];
-            incomingEdgeSourceUB = global_row_offsets_dev_ptr[rowOffsOffset + incomingEdgeSource + 1];
-            for (int outgoingEdgeOfSource = incomingEdgeSourceLB + threadIndex; 
-                    outgoingEdgeOfSource < incomingEdgeSourceUB; 
-                        outgoingEdgeOfSource += blockDim.x){
-                if (children[i] == global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfSource]){
+            vLB = global_row_offsets_dev_ptr[rowOffsOffset + v];
+            vUB = global_row_offsets_dev_ptr[rowOffsOffset + v + 1];
+            for (int outgoingEdgeOfV = vLB + threadIndex; 
+                    outgoingEdgeOfV < vUB; 
+                        outgoingEdgeOfV += blockDim.x){
+                if (children[i] == global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfV]){
                     // Set in-edge
-                    global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfSource] = 0;
+                    global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV] = 0;
                 }
             }
         }
