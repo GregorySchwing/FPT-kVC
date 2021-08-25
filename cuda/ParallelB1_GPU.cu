@@ -270,6 +270,7 @@ __global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
 __global__ void InduceRowOfSubgraphs( int numberOfRows,
                                       int levelOffset,
                                       int levelUpperBound,
+                                      int * global_edges_left_to_cover_count,
                                       int * global_row_offsets_dev_ptr,
                                       int * global_columns_dev_ptr,
                                       int * global_values_dev_ptr
@@ -324,8 +325,17 @@ __global__ void InduceRowOfSubgraphs( int numberOfRows,
             //printf("Thread %d, row %d, finished", threadIdx.x, iter);
         }
         __syncthreads();
-        if (threadIdx.x == 0)
+        if (threadIdx.x == 0){
             printf("Block %d, levelOffset %d, leafIndex %d, induced child %d\n", blockIdx.x, levelOffset, leafIndex, 3*leafIndex + child);
+            for (int i = 0; i < global_edges_left_to_cover_count[3*leafIndex + child]; ++i){
+                printf("%d ",new_columns_dev[i]);
+            }
+            printf("\n");
+            for (int i = 0; i < global_edges_left_to_cover_count[3*leafIndex + child]; ++i){
+                printf("%d ",new_values_dev[i]);
+            }
+            printf("\n");
+        }
     }
     delete[] C_ref;
 }
@@ -928,7 +938,7 @@ void CallPopulateTree(int numberOfLevels,
                                     global_degrees_dev_ptr);
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
-         }
+        }
         // 1 thread per leaf
         std::cout << "Calling DFS - level " << level << std::endl;
         DFSLevelWiseSamplesWithReplacement<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock>>>
@@ -959,6 +969,7 @@ void CallPopulateTree(int numberOfLevels,
                                     (numberOfRows,
                                     levelOffset,
                                     levelUpperBound,
+                                    global_edges_left_to_cover_count,
                                     global_row_offsets_dev_ptr,
                                     global_columns_dev_ptr,
                                     global_values_dev_ptr
