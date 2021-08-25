@@ -264,7 +264,6 @@ __global__ void InduceRowOfSubgraphs( int numberOfRows,
     //int thread_x = threadIdx.x;
     //int thread_y = threadIdx.y;
     //int threadIndex = thread_x + thread_y * blockDim.x;
-    int row = threadIdx.x;
 
 // Since three children share a parent, it is sensible for the old pointers to be shared memory
 // and for each block to induce three children
@@ -275,6 +274,7 @@ __global__ void InduceRowOfSubgraphs( int numberOfRows,
 
     inner_array_t *C_ref = new inner_array_t[numberOfRows];
     for (int child = 1; child <= 3; ++child){
+        int row = threadIdx.x;
         int * new_row_offsets_dev = &(global_row_offsets_dev_ptr[3*leafIndex + child]);
         int * new_columns_dev =  &(global_columns_dev_ptr[3*leafIndex + child]);
         int * new_values_dev = &(global_values_dev_ptr[3*leafIndex + child]);
