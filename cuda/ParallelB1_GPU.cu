@@ -922,7 +922,7 @@ void CallPopulateTree(int numberOfLevels,
         // assuming there were no pendant edges...
         if (level + 1 != numberOfLevels){
             // 1 block per leaf
-            InduceRowOfSubgraphs<<<numberOfBlocks,threadsPerBlock>>>
+            InduceRowOfSubgraphs<<<levelUpperBound-levelOffset,threadsPerBlock>>>
                                     (numberOfRows,
                                     levelOffset,
                                     levelUpperBound,
