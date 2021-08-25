@@ -22,6 +22,8 @@
 typedef r123::Philox4x32 RNG;
 //static const double RAND_INTERVAL_GPU = 1.0/static_cast<double>(ULONG_MAX);
 
+const int threadsPerBlock = 32;
+
 __device__ int randomGPU(unsigned int counter, ulong step, ulong seed);
 
 class Graph;
@@ -74,6 +76,15 @@ __global__ void PopulateTreeParallelLevelWise_GPU(int numberOfLevels,
                                             int * new_columns_dev,
                                             int * values_dev,
                                             int * new_degrees_dev);
+
+__global__ void SetEdges( int numberOfRows,
+                        int levelOffset,
+                        int levelUpperBound,
+                        int rowOffsOffset,
+                        int valsAndColsOffset,
+                        int * global_row_offsets_dev_ptr,
+                        int * global_columns_dev_ptr,
+                        int * new_values_dev);
 
 __global__ void InduceSubgraph( int numberOfRows,
                                 int * old_row_offsets_dev,

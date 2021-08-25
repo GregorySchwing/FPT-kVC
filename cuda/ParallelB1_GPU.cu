@@ -117,6 +117,82 @@ __global__ void InduceSubgraph( int numberOfRows,
     delete[] C_ref;
 }
 
+__global__ void SetEdges( int numberOfRows,
+                          int numberOfEdgesPerGraph,
+                        int levelOffset,
+                        int levelUpperBound,
+                        int * global_row_offsets_dev_ptr,
+                        int * global_columns_dev_ptr,
+                        int * global_values_dev_ptr,
+                        int * global_paths_ptr,
+                        int * global_paths_length){
+
+    int leafIndex = levelOffset + blockIdx.x;
+    if (leafIndex >= levelUpperBound) return;
+
+    int threadIndex = threadIdx.x;
+
+    int rowOffsOffset = (numberOfRows + 1) * leafIndex;
+    int valsAndColsOffset = numberOfEdgesPerGraph * leafIndex;
+    int children[2], LB, UB, v, vLB, vUB;
+    // Parent's DFS path
+    int pathsOffset = ((leafIndex-1)/3) * 4;
+/*
+child x (path[0]) (path[2]);
+
+        (path[1]) (path[3]);     
+
+child y         or
+
+        (path[1]) (path[0]);    
+
+child z (path[2]) (path[1]);
+
+Can't figure out a way to avoid these if conditionals without a kernel call to classify before this kernel is called.
+*/
+    int pathType = leafIndex % 3;
+    if (pathType == 0){
+        children[0] = global_paths_ptr[pathsOffset];
+        children[1] = global_paths_ptr[pathsOffset + 2];
+    } else if (pathType == 1) { 
+        children[0] = global_paths_ptr[pathsOffset + 1];
+        children[1] = global_paths_ptr[pathsOffset + 2];
+    } else {
+        children[0] = global_paths_ptr[pathsOffset + 1];
+        if (global_paths_ptr[pathsOffset] == global_paths_ptr[pathsOffset + 3])
+            children[1] = global_paths_ptr[pathsOffset];
+        else
+            children[1] = global_paths_ptr[pathsOffset + 3];
+    }
+
+    for (int i = 0; i < 2; ++i){
+        LB = global_row_offsets_dev_ptr[rowOffsOffset + children[i]];
+        UB = global_row_offsets_dev_ptr[rowOffsOffset + children[i] + 1];    // Set out-edges
+        for (int edge = LB + threadIndex; edge < UB; edge += blockDim.x){
+            global_values_dev_ptr[valsAndColsOffset + edge] = 0;
+        }
+    }
+    __syncthreads();
+    for (int i = 0; i < 2; ++i){
+        LB = global_row_offsets_dev_ptr[rowOffsOffset + children[i]];
+        UB = global_row_offsets_dev_ptr[rowOffsOffset + children[i] + 1];    // Set out-edges
+        for (int edge = LB + threadIndex; edge < UB; edge += blockDim.x){
+            v = global_columns_dev_ptr[valsAndColsOffset + edge];
+            // guarunteed to only have one incoming and one outgoing edge connecting (x,y)
+            vLB = global_row_offsets_dev_ptr[rowOffsOffset + v];
+            vUB = global_row_offsets_dev_ptr[rowOffsOffset + v + 1];
+            for (int inEdge = vLB + threadIndex; inEdge < vUB; inEdge += blockDim.x){
+                if (children[i] == global_columns_dev_ptr[valsAndColsOffset + inEdge]){
+                    // Set in-edge
+                    global_values_dev_ptr[valsAndColsOffset + inEdge] = 0;
+                }
+            }
+        }
+    }
+    //global_degrees_dev_ptr[degreesOffset + u] = 0;
+
+}
+
 __global__ void InduceRowOfSubgraphs( int numberOfRows,
                                       int levelOffset,
                                       int levelUpperBound,
@@ -696,7 +772,6 @@ void CallPopulateTree(int numberOfLevels,
                     global_values_dev_ptr,
                     global_degrees_dev_ptr);
 
-    long long leafIndex;
     long long levelOffset = 0;
     long long levelUpperBound;
     int numberOfBlocks;
