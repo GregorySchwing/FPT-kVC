@@ -904,9 +904,9 @@ void CallPopulateTree(int numberOfLevels,
                                     (numberOfRows,
                                     levelOffset,
                                     levelUpperBound,
-                                    global_degrees_dev_ptr,
-                                    global_row_offsets_dev_ptr);
-        }
+                                    global_row_offsets_dev_ptr,
+                                    global_degrees_dev_ptr);
+         }
         // 1 thread per leaf
         DFSLevelWiseSamplesWithReplacement<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock>>>
                                     (levelOffset,
@@ -991,8 +991,8 @@ void CopyGraphToDevice( Graph & g,
     CalculateNewRowOffsets<<<1,1>>>(g.GetNumberOfRows(),
                                         0,
                                         1,
-                                        global_degrees_dev_ptr,
-                                        global_row_offsets_dev_ptr); 
+                                        global_row_offsets_dev_ptr,
+                                        global_degrees_dev_ptr); 
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
