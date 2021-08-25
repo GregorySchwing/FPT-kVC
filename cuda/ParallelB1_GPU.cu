@@ -146,7 +146,7 @@ __global__ void SetEdges(int numberOfRows,
 
     int threadIndex = threadIdx.x;
 
-    int rowOffsOffset = (numberOfRows + 1) * leafIndex;
+    int rowOffsOffset = (numberOfRows + 1) * (leafIndex-1)/3;
     int valsAndColsOffset = numberOfEdgesPerGraph * leafIndex;
     int children[2], LB, UB, v, vLB, vUB;
     // Parent's DFS path
