@@ -232,6 +232,7 @@ __global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
         global_degrees_dev_ptr[degreesOffset + iter] = degrees[iter];
     }
     __syncthreads();
+    printf("leafIndex %d, blockID %d set degrees\n", threadIdx.x, blockIdx.x);
     int halvedArray = numberOfRows/2;
     while (halvedArray != 0) {
         // Neccessary since numberOfRows is likely greater than blockSize
@@ -255,19 +256,12 @@ __global__ void InduceRowOfSubgraphs( int numberOfRows,
                                       int * global_values_dev_ptr
                                     ){
 
-    //int x = blockIdx.x;
-    //int y = blockIdx.y;
-    //int blockIndex = x + y * gridDim.x;
     int leafIndex = levelOffset + blockIdx.x;
     if (leafIndex >= levelUpperBound) return;
 
-    //int thread_x = threadIdx.x;
-    //int thread_y = threadIdx.y;
-    //int threadIndex = thread_x + thread_y * blockDim.x;
-
-// Since three children share a parent, it is sensible for the old pointers to be shared memory
-// and for each block to induce three children
-// For now it still global..
+    // Since three children share a parent, it is sensible for the old pointers to be shared memory
+    // and for each block to induce three children
+    // For now it still global..
     int * old_row_offsets_dev = &(global_row_offsets_dev_ptr[leafIndex]);
     int * old_columns_dev = &(global_columns_dev_ptr[leafIndex]);
     int * old_values_dev = &(global_values_dev_ptr[leafIndex]);
@@ -311,7 +305,8 @@ __global__ void InduceRowOfSubgraphs( int numberOfRows,
             //printf("Thread %d, row %d, finished", threadIdx.x, iter);
         }
         __syncthreads();
-        printf("Block %d, levelOffset %d, leafIndex %d, induced child %d\n", blockIdx.x, levelOffset, leafIndex, 3*leafIndex + child);
+        if (threadIdx.x == 0)
+            printf("Block %d, levelOffset %d, leafIndex %d, induced child %d\n", blockIdx.x, levelOffset, leafIndex, 3*leafIndex + child);
     }
     delete[] C_ref;
 }
