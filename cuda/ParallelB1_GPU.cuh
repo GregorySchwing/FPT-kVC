@@ -109,8 +109,8 @@ __global__ void InduceSubgraph( int numberOfRows,
 __global__ void InduceRowOfSubgraphs( int numberOfRows,
                                       int levelOffset,
                                       int levelUpperBound,
-                                      int edgesLeftToCover,
-                                      int * global_row_offsets_dev_ptr,
+                                      int numberOfEdgesPerGraph,
+                                      int * global_edges_left_to_cover_count,                                      int * global_row_offsets_dev_ptr,
                                       int * global_columns_dev_ptr,
                                       int * global_values_dev_ptr
                                     );
