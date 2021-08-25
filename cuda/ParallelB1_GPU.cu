@@ -179,9 +179,11 @@ Can't figure out a way to avoid these if conditionals without a kernel call to c
         for (int edge = LB + threadIndex; edge < UB; edge += blockDim.x){
             incomingEdgeSource = global_columns_dev_ptr[valsAndColsOffset + edge];
             // guarunteed to only have one incoming and one outgoing edge connecting (x,y)
-            vLB = global_row_offsets_dev_ptr[rowOffsOffset + incomingEdgeSource];
-            vUB = global_row_offsets_dev_ptr[rowOffsOffset + incomingEdgeSource + 1];
-            for (int outgoingEdgeOfSource = incomingEdgeSourceLB + threadIndex; inEdge < incomingEdgeSourceUB; inEdge += blockDim.x){
+            incomingEdgeSourceLB = global_row_offsets_dev_ptr[rowOffsOffset + incomingEdgeSource];
+            incomingEdgeSourceUB = global_row_offsets_dev_ptr[rowOffsOffset + incomingEdgeSource + 1];
+            for (int outgoingEdgeOfSource = incomingEdgeSourceLB + threadIndex; 
+                    outgoingEdgeOfSource < incomingEdgeSourceUB; 
+                        outgoingEdgeOfSource += blockDim.x){
                 if (children[i] == global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfSource]){
                     // Set in-edge
                     global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfSource] = 0;
@@ -809,7 +811,7 @@ void CallPopulateTree(int numberOfLevels,
                         global_outgoing_edge_vertices,
                         global_outgoing_edge_vertices_count);
         */
-        DFSLevelWiseSamplesWithReplacement<<<32,numberOfBlocks>>>(levelOffset,
+        DFSLevelWiseSamplesWithReplacement<<<numberOfBlocks,threadsPerBlock>>>(levelOffset,
                                                                 levelUpperBound,
                                                                 numberOfRows,
                                                                 numberOfEdgesPerGraph,
@@ -827,13 +829,23 @@ void CallPopulateTree(int numberOfLevels,
         // It might be better to only process each vertex once in the kernel
         // and handle pendant edges in a separate kernel
         // assuming there were no pendant edges...
-        InduceRowOfSubgraphs<<<32,numberOfBlocks>>>(numberOfRows,
+        InduceRowOfSubgraphs<<<numberOfBlocks,threadsPerBlock>>>(numberOfRows,
                                                     levelOffset,
                                                     levelUpperBound,
                                                     global_row_offsets_dev_ptr,
                                                     global_columns_dev_ptr,
                                                     global_values_dev_ptr
                                                     );
+
+        SetEdges<<<numberOfBlocks,threadsPerBlock>>>(numberOfRows,
+                                                    numberOfEdgesPerGraph,
+                                                    levelOffset,
+                                                    levelUpperBound,
+                                                    global_row_offsets_dev_ptr,
+                                                    global_columns_dev_ptr,
+                                                    global_values_dev_ptr,
+                                                    global_paths_ptr,
+                                                    global_paths_length);
 
         levelOffset = levelUpperBound;
     } 
@@ -883,6 +895,7 @@ void CopyGraphToDevice( Graph & g,
     int * new_values_dev_ptr = thrust::raw_pointer_cast(new_values_dev.data());
 
     // Currenly only sets the first graph in the cuda memory
+    // Might as well be host code
     CalculateNewRowOffsets<<<1,1>>>(g.GetNumberOfRows(),
                                         global_degrees_dev_ptr,
                                         global_row_offsets_dev_ptr);
@@ -890,7 +903,7 @@ void CopyGraphToDevice( Graph & g,
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
     // Currenly only sets the first graph in the cuda memory
-    InduceSubgraph<<<1,32>>>(g.GetNumberOfRows(),           
+    InduceSubgraph<<<1,threadsPerBlock>>>(g.GetNumberOfRows(),           
                             old_row_offsets_dev_ptr,
                             old_column_indices_dev_ptr,
                             new_values_dev_ptr,
