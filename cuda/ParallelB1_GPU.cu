@@ -804,6 +804,7 @@ void CallPopulateTree(int numberOfLevels,
 
     //int treeSize = 200000;
     int counters = 2;
+    numberOfLevels = 2;
     long long treeSize = CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
     int expandedData = g.GetEdgesLeftToCover();
     int condensedData = g.GetVertexCount();
