@@ -86,6 +86,15 @@ __global__ void SetEdges( int numberOfRows,
                         int * global_columns_dev_ptr,
                         int * new_values_dev);
 
+__global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
+                                            int numberOfEdgesPerGraph,
+                                            int levelOffset,
+                                            int levelUpperBound,
+                                            int * global_row_offsets_dev_ptr,
+                                            int * global_values_dev_ptr,
+                                            int * global_degrees_dev_ptr,
+                                            int * global_edges_left_to_cover_count);
+
 __global__ void InduceSubgraph( int numberOfRows,
                                 int * old_row_offsets_dev,
                                 int * old_columns_dev,

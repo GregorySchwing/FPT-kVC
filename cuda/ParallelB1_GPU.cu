@@ -117,8 +117,8 @@ __global__ void InduceSubgraph( int numberOfRows,
     delete[] C_ref;
 }
 
-__global__ void SetEdges( int numberOfRows,
-                          int numberOfEdgesPerGraph,
+__global__ void SetEdges(int numberOfRows,
+                        int numberOfEdgesPerGraph,
                         int levelOffset,
                         int levelUpperBound,
                         int * global_row_offsets_dev_ptr,
@@ -197,8 +197,54 @@ Can't figure out a way to avoid these if conditionals without a kernel call to c
             }
         }
     }
-    //global_degrees_dev_ptr[degreesOffset + u] = 0;
+}
 
+// Sets the new degrees without the edges and the edges left to cover
+__global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
+                            int numberOfEdgesPerGraph,
+                            int levelOffset,
+                            int levelUpperBound,
+                            int * global_row_offsets_dev_ptr,
+                            int * global_values_dev_ptr,
+                            int * global_degrees_dev_ptr,
+                            int * global_edges_left_to_cover_count){
+
+    int leafIndex = levelOffset + blockIdx.x;
+    if (leafIndex >= levelUpperBound) return;
+
+    extern __shared__ int degrees[];
+
+    int rowOffsOffset = (numberOfRows + 1) * leafIndex;
+    int valsAndColsOffset = numberOfEdgesPerGraph * leafIndex;
+    int degreesOffset = leafIndex * numberOfRows;
+    int LB, UB, iter, row, edge;
+
+    row = threadIdx.x;
+    for (iter = row; iter < numberOfRows; iter += blockDim.x){
+        LB = global_row_offsets_dev_ptr[rowOffsOffset + iter];
+        UB = global_row_offsets_dev_ptr[rowOffsOffset + iter + 1];   
+        for (edge = LB; edge < UB; ++edge)
+            degrees[iter] += global_values_dev_ptr[valsAndColsOffset + edge];
+        // Maybe this can be done asyncronously or after the whole array has been filled
+        // I definitely need the sync threads since I modify the shared memory for memcpy
+        // alternatively I could create two shared mem arrays, one for async write to global
+        // and 1 for reduction
+        global_degrees_dev_ptr[degreesOffset + iter] = degrees[iter];
+    }
+    __syncthreads();
+    int halvedArray = numberOfRows/2;
+    while (halvedArray != 0) {
+        // Neccessary since numberOfRows is likely greater than blockSize
+        for (iter = row; iter < halvedArray; iter += blockDim.x){
+            if (iter < halvedArray){
+                degrees[iter] += degrees[iter + halvedArray];
+                __syncthreads();
+                halvedArray /= 2;
+            }
+        }
+    }
+    if (row == 0)
+        global_edges_left_to_cover[leafIndex] = degrees[0];
 }
 
 __global__ void InduceRowOfSubgraphs( int numberOfRows,
@@ -769,7 +815,7 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_paths_length, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_pendant_vertices_added_to_cover, treeSize * numberOfVerticesAllocatedForPendantEdges * sizeof(int) );
     cudaMalloc( (void**)&global_pendant_vertices_length, treeSize * sizeof(int) );
-
+    cudaMalloc( (void**)&global_edges_left_to_cover_count, treeSize * sizeof(int) );
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -852,6 +898,15 @@ void CallPopulateTree(int numberOfLevels,
                                                     global_values_dev_ptr,
                                                     global_paths_ptr,
                                                     global_paths_length);
+
+        SetDegreesAndCountEdgesLeftToCover<<<numberOfBlocks,threadsPerBlock>>>(numberOfRows,
+                                                        numberOfEdgesPerGraph,
+                                                        levelOffset,
+                                                        levelUpperBound,
+                                                        global_row_offsets_dev_ptr,
+                                                        global_values_dev_ptr,
+                                                        global_degrees_dev_ptr,
+                                                        global_edges_left_to_cover_count);
 
         levelOffset = levelUpperBound;
     } 
