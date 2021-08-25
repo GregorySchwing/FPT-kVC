@@ -186,6 +186,17 @@ Can't figure out a way to avoid these if conditionals without a kernel call to c
         }
     }
     __syncthreads();
+    if (threadIndex == 0){
+        printf("Block %d, levelOffset %d, leafIndex %d, children removed %d\n", blockIdx.x, levelOffset, leafIndex, children[0], children[1]);
+        for (int i = 0; i < global_edges_left_to_cover_count[leafIndex]; ++i){
+            printf("%d ",global_columns_dev_ptr[valsAndColsOffset + i]);
+        }
+        printf("\n");
+        for (int i = 0; i < global_edges_left_to_cover_count[leafIndex]; ++i){
+            printf("%d ",global_values_dev_ptr[valsAndColsOffset + i]);
+        }
+        printf("\n");
+    }
     // (u,v) is the form of edge pairs.  We are traversing over v's outgoing edges, 
     // looking for u as the destination and turning off that edge.
     // this may be more elegantly handled by 
@@ -209,6 +220,18 @@ Can't figure out a way to avoid these if conditionals without a kernel call to c
                 }
             }
         }
+    }
+    __syncthreads();
+    if (threadIndex == 0){
+        printf("Block %d, levelOffset %d, leafIndex %d, children removed %d\n", blockIdx.x, levelOffset, leafIndex, children[0], children[1]);
+        for (int i = 0; i < global_edges_left_to_cover_count[leafIndex]; ++i){
+            printf("%d ",global_columns_dev_ptr[valsAndColsOffset + i]);
+        }
+        printf("\n");
+        for (int i = 0; i < global_edges_left_to_cover_count[leafIndex]; ++i){
+            printf("%d ",global_values_dev_ptr[valsAndColsOffset + i]);
+        }
+        printf("\n");
     }
 }
 
