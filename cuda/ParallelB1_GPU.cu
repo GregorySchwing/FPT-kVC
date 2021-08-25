@@ -244,7 +244,7 @@ __global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
         }
     }
     if (row == 0)
-        global_edges_left_to_cover[leafIndex] = degrees[0];
+        global_edges_left_to_cover_count[leafIndex] = degrees[0];
 }
 
 __global__ void InduceRowOfSubgraphs( int numberOfRows,
