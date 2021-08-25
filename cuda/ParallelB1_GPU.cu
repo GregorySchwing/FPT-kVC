@@ -247,9 +247,8 @@ __global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
     }
     __syncthreads();
     if (threadIdx.x == 0){
-        printf("leafIndex %d, blockID %d set degrees\n", leafIndex, blockIdx.x);
         for (int i = 0; i < numberOfRows; ++i)
-            printf("%d ", degrees[i]);
+            printf("leafIndex %d, blockID %d vertex %d, degree %d\n", leafIndex, blockIdx.x, i, degrees[i]);
         printf("\n");
     }
     int halvedArray = numberOfRows/2;
