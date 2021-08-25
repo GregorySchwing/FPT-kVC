@@ -232,8 +232,13 @@ __global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
         global_degrees_dev_ptr[degreesOffset + iter] = degrees[iter];
     }
     __syncthreads();
-    printf("leafIndex %d, blockID %d set degrees\n", threadIdx.x, blockIdx.x);
-    int halvedArray = numberOfRows/2;
+    if (threadIdx.x == 0){
+        printf("leafIndex %d, blockID %d set degrees\n", leafIndex, blockIdx.x);
+        for (int i = 0; i < numberOfRows; ++i)
+            printf("%d ", degrees[i]);
+        printf("\n");
+    }
+    }int halvedArray = numberOfRows/2;
     while (halvedArray != 0) {
         // Neccessary since numberOfRows is likely greater than blockSize
         for (iter = row; iter < halvedArray; iter += blockDim.x){
