@@ -890,6 +890,8 @@ void CallPopulateTree(int numberOfLevels,
                                                         global_values_dev_ptr,
                                                         global_paths_ptr,
                                                         global_paths_length);
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
             std::cout << "Setting degrees - level " << level << std::endl;
             // 1 block per leaf
             SetDegreesAndCountEdgesLeftToCover<<<levelUpperBound-levelOffset,threadsPerBlock,sizeof(int)*numberOfRows>>>
@@ -901,6 +903,8 @@ void CallPopulateTree(int numberOfLevels,
                                     global_values_dev_ptr,
                                     global_degrees_dev_ptr,
                                     global_edges_left_to_cover_count);
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
             // 1 thread per leaf
             std::cout << "Calling new rowoffs - level " << level << std::endl;
             CalculateNewRowOffsets<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock>>>
@@ -909,6 +913,8 @@ void CallPopulateTree(int numberOfLevels,
                                     levelUpperBound,
                                     global_row_offsets_dev_ptr,
                                     global_degrees_dev_ptr);
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
          }
         // 1 thread per leaf
         std::cout << "Calling DFS - level " << level << std::endl;
@@ -926,6 +932,8 @@ void CallPopulateTree(int numberOfLevels,
                                     numberOfVerticesAllocatedForPendantEdges,
                                     global_pendant_vertices_added_to_cover,
                                     global_pendant_vertices_length);
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
 
         // Check if any pathlengths are != 4, since we are allocating only 4 spaces for pendant edges
         // It might be better to only process each vertex once in the kernel
@@ -942,6 +950,8 @@ void CallPopulateTree(int numberOfLevels,
                                     global_columns_dev_ptr,
                                     global_values_dev_ptr
                                     );
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
         }
         levelOffset = levelUpperBound;
     } 
