@@ -189,11 +189,11 @@ Can't figure out a way to avoid these if conditionals without a kernel call to c
     __syncthreads();
     if (threadIndex == 0){
         printf("Block %d, levelOffset %d, leafIndex %d, children removed %d %d\n", blockIdx.x, levelOffset, leafIndex, children[0], children[1]);
-        for (int i = 0; i < global_edges_left_to_cover_count[leafIndex]; ++i){
+        for (int i = 0; i < global_edges_left_to_cover_count[(leafIndex-1)/3]; ++i){
             printf("%d ",global_columns_dev_ptr[valsAndColsOffset + i]);
         }
         printf("\n");
-        for (int i = 0; i < global_edges_left_to_cover_count[leafIndex]; ++i){
+        for (int i = 0; i < global_edges_left_to_cover_count[(leafIndex-1)/3]; ++i){
             printf("%d ",global_values_dev_ptr[valsAndColsOffset + i]);
         }
         printf("\n");
