@@ -238,7 +238,7 @@ __global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
             printf("%d ", degrees[i]);
         printf("\n");
     }
-    }int halvedArray = numberOfRows/2;
+    int halvedArray = numberOfRows/2;
     while (halvedArray != 0) {
         // Neccessary since numberOfRows is likely greater than blockSize
         for (iter = row; iter < halvedArray; iter += blockDim.x){
