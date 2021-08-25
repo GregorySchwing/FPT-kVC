@@ -930,6 +930,7 @@ void CallPopulateTree(int numberOfLevels,
     cudaFree( global_paths_length );
     cudaFree( global_pendant_vertices_added_to_cover );
     cudaFree( global_pendant_vertices_length );
+    cudaFree( global_edges_left_to_cover_count );
     cudaDeviceSynchronize();
 }
 
