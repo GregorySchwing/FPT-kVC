@@ -270,6 +270,7 @@ __global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
 __global__ void InduceRowOfSubgraphs( int numberOfRows,
                                       int levelOffset,
                                       int levelUpperBound,
+                                      int numberOfEdgesPerGraph,
                                       int * global_edges_left_to_cover_count,
                                       int * global_row_offsets_dev_ptr,
                                       int * global_columns_dev_ptr,
@@ -292,7 +293,7 @@ __global__ void InduceRowOfSubgraphs( int numberOfRows,
     for (int child = 1; child <= 3; ++child){
         int row = threadIdx.x;
         int newRowOffsOffset = (3*leafIndex + child) * (numberOfRows + 1);
-        int newValsAndColsOffset = (3*leafIndex + child) * * numberOfEdgesPerGraph;
+        int newValsAndColsOffset = (3*leafIndex + child) * numberOfEdgesPerGraph;
 
         int * new_row_offsets_dev = &(global_row_offsets_dev_ptr[newRowOffsOffset]);
         int * new_columns_dev =  &(global_columns_dev_ptr[newValsAndColsOffset]);
@@ -978,6 +979,7 @@ void CallPopulateTree(int numberOfLevels,
                                     (numberOfRows,
                                     levelOffset,
                                     levelUpperBound,
+                                    numberOfEdgesPerGraph,
                                     global_edges_left_to_cover_count,
                                     global_row_offsets_dev_ptr,
                                     global_columns_dev_ptr,
