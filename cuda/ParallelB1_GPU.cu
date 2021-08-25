@@ -149,7 +149,9 @@ __global__ void SetEdges(int numberOfRows,
     int rowOffsOffset = (numberOfRows + 1) * (leafIndex-1)/3;
     int valsAndColsOffset = numberOfEdgesPerGraph * leafIndex;
     if (global_row_offsets_dev_ptr[rowOffsOffset + numberOfRows -1] != global_edges_left_to_cover_count[(leafIndex-1)/3])
-        printf("\n\n\nERROR in the row offsets and number of columns\n\n\n");
+        printf("\n\n\nERROR in the row offsets (%d) and number of columns (%d)\n\n\n", 
+            global_row_offsets_dev_ptr[rowOffsOffset + numberOfRows -1],
+            global_edges_left_to_cover_count[(leafIndex-1)/3]);
     int children[2], LB, UB, v, vLB, vUB;
     // Parent's DFS path
     int pathsOffset = ((leafIndex-1)/3) * 4;
