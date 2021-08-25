@@ -318,14 +318,16 @@ void ParallelB1::createVertexSetsForEachChild(std::vector< thrust::host_vector<i
         /* Each with 2 vertices */
         for (auto & cV : childrensVertices)
             cV.reserve(2);
-        childrensVertices[0].push_back(path[0]);
-        childrensVertices[0].push_back(path[1]);
-
-        childrensVertices[1].push_back(path[1]);
-        childrensVertices[1].push_back(path[2]);
 
         childrensVertices[2].push_back(path[0]);
         childrensVertices[2].push_back(path[2]);
+
+        childrensVertices[1].push_back(path[1]);
+        childrensVertices[1].push_back(path[2]);        
+
+        childrensVertices[0].push_back(path[1]);
+        childrensVertices[0].push_back(path[0]);
+
 
     } else if (caseNumber == 2) {
 
