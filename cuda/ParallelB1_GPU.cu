@@ -852,6 +852,8 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_pendant_vertices_length, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_edges_left_to_cover_count, treeSize * sizeof(int) );
 
+
+
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
@@ -859,7 +861,9 @@ void CallPopulateTree(int numberOfLevels,
                     global_row_offsets_dev_ptr,
                     global_columns_dev_ptr,
                     global_values_dev_ptr,
-                    global_degrees_dev_ptr);
+                    global_degrees_dev_ptr,
+                    numberOfEdgesPerGraph,
+                    global_edges_left_to_cover_count);
 
     long long levelOffset = 0;
     long long levelUpperBound;
@@ -1003,11 +1007,15 @@ void CopyGraphToDevice( Graph & g,
                         int * global_row_offsets_dev_ptr,
                         int * global_columns_dev_ptr,
                         int * global_values_dev_ptr,
-                        int * global_degrees_dev_ptr){
+                        int * global_degrees_dev_ptr,
+                        int numberOfEdgesPerGraph,
+                        int * global_edges_left_to_cover_count){
 
     int * new_degrees_ptr = thrust::raw_pointer_cast(g.GetNewDegRef().data());
     // Graph vectors
     cudaMemcpy(global_degrees_dev_ptr, new_degrees_ptr, g.GetNumberOfRows() * sizeof(int),
+                cudaMemcpyHostToDevice);
+    cudaMemcpy(global_edges_left_to_cover_count, &numberOfEdgesPerGraph, 1 * sizeof(int),
                 cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -1044,25 +1052,6 @@ void CopyGraphToDevice( Graph & g,
                             global_row_offsets_dev_ptr,
                             global_columns_dev_ptr,
                             global_values_dev_ptr);
-
-    
-/*
-    First_Graph_GPU<<<1,1>>>(g.GetVertexCount(),
-                            g.GetEdgesLeftToCover(),
-                            g.GetNumberOfRows(),
-                            old_row_offsets_dev_ptr,
-                            old_column_indices_dev_ptr,
-                            old_values_dev_ptr,
-                            new_row_offsets_dev_ptr,
-                            new_column_indices_dev_ptr,
-                            new_values_dev_ptr,
-                            old_degrees_dev_ptr,
-                            new_degrees_dev_ptr,
-                            global_row_offsets_dev_ptr,
-                            global_columns_dev_ptr,
-                            global_values_dev_ptr,
-                            global_degrees_dev_ptr);*/
-
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 

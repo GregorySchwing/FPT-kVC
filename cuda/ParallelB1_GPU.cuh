@@ -32,7 +32,9 @@ void CopyGraphToDevice( Graph & g,
                         int * new_row_offsets_dev_ptr,
                         int * new_columns_dev_ptr,
                         int * values_dev_ptr,
-                        int * new_degrees_dev_ptr);
+                        int * new_degrees_dev_ptr,
+                        int numberOfEdgesPerGraph,
+                        int * global_edges_left_to_cover_count);
 
 void CallPopulateTree(int numberOfLevels, 
                     Graph & gPrime);
@@ -107,6 +109,7 @@ __global__ void InduceSubgraph( int numberOfRows,
 __global__ void InduceRowOfSubgraphs( int numberOfRows,
                                       int levelOffset,
                                       int levelUpperBound,
+                                      int edgesLeftToCover,
                                       int * global_row_offsets_dev_ptr,
                                       int * global_columns_dev_ptr,
                                       int * global_values_dev_ptr
