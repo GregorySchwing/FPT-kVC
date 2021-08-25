@@ -238,9 +238,9 @@ __global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
         for (iter = row; iter < halvedArray; iter += blockDim.x){
             if (iter < halvedArray){
                 degrees[iter] += degrees[iter + halvedArray];
-                __syncthreads();
-                halvedArray /= 2;
             }
+            __syncthreads();
+            halvedArray /= 2;
         }
     }
     if (row == 0)
