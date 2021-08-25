@@ -214,7 +214,8 @@ __global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
 
     extern __shared__ int degrees[];
 
-    int rowOffsOffset = (numberOfRows + 1) * leafIndex;
+    // Use parent's row offs
+    int rowOffsOffset = (numberOfRows + 1) * (leafIndex-1)/3;
     int valsAndColsOffset = numberOfEdgesPerGraph * leafIndex;
     int degreesOffset = leafIndex * numberOfRows;
     int LB, UB, iter, row, edge;
