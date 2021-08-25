@@ -332,7 +332,7 @@ __global__ void CalculateNewRowOffsets( int numberOfRows,
     for (i = 1; i <= numberOfRows; ++i)
     {
         global_row_offsets_dev_ptr[rowOffsOffset + i] = global_degrees_dev_ptr[degreesOffset + i - 1] + global_row_offsets_dev_ptr[rowOffsOffset + i - 1];
-        printf("Thread %d, new_row_offsets_dev[%d] = %d", threadID, i, global_row_offsets_dev_ptr[rowOffsOffset + i]);
+        printf("Thread %d, new_row_offsets_dev[%d] = %d\n", threadID, i, global_row_offsets_dev_ptr[rowOffsOffset + i]);
     }
 }
 
