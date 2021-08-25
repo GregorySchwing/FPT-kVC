@@ -876,14 +876,15 @@ void CallPopulateTree(int numberOfLevels,
                                                         global_paths_ptr,
                                                         global_paths_length);
 
-            SetDegreesAndCountEdgesLeftToCover<<<numberOfBlocks,threadsPerBlock>>>(numberOfRows,
-                                                            numberOfEdgesPerGraph,
-                                                            levelOffset,
-                                                            levelUpperBound,
-                                                            global_row_offsets_dev_ptr,
-                                                            global_values_dev_ptr,
-                                                            global_degrees_dev_ptr,
-                                                            global_edges_left_to_cover_count);
+            SetDegreesAndCountEdgesLeftToCover<<<numberOfBlocks,threadsPerBlock,sizeof(int)*numberOfRows>>>
+                                                (numberOfRows,
+                                                numberOfEdgesPerGraph,
+                                                levelOffset,
+                                                levelUpperBound,
+                                                global_row_offsets_dev_ptr,
+                                                global_values_dev_ptr,
+                                                global_degrees_dev_ptr,
+                                                global_edges_left_to_cover_count);
         }
         DFSLevelWiseSamplesWithReplacement<<<numberOfBlocks,threadsPerBlock>>>(levelOffset,
                                                                 levelUpperBound,
