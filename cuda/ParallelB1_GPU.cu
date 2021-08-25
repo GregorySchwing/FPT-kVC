@@ -315,19 +315,24 @@ __global__ void InduceRowOfSubgraphs( int numberOfRows,
 }
 
 __global__ void CalculateNewRowOffsets( int numberOfRows,
-                                        int * old_degrees_dev,
-                                        int * new_row_offsets_dev){
+                                        int levelOffset,
+                                        int levelUpperBound,
+                                        int * global_row_offsets_dev_ptr,
+                                        int * global_degrees_dev_ptr){
     int threadID = threadIdx.x + blockDim.x * blockIdx.x;
-    if (threadID > 0) return;
-    int i = 0;
-    printf("Thread %d, new_row_offsets_dev[%d] = %d", threadID, i, new_row_offsets_dev[i]);
+    int leafIndex = levelOffset + threadID;
+    if (leafIndex >= levelUpperBound) return;
+    int rowOffsOffset = leafIndex * (numberOfRows + 1);
+    int degreesOffset = leafIndex * numberOfRows;
 
-    new_row_offsets_dev[i] = i;
+    int i = 0;
+    printf("Thread %d, new_row_offsets_dev[%d] = %d", threadID, i, global_row_offsets_dev_ptr[rowOffsOffset]);
+
+    global_row_offsets_dev_ptr[rowOffsOffset] = i;
     for (i = 1; i <= numberOfRows; ++i)
     {
-        new_row_offsets_dev[i] = old_degrees_dev[i-1] + new_row_offsets_dev[i-1];
-        printf("Thread %d, new_row_offsets_dev[%d] = %d", threadID, i, new_row_offsets_dev[i]);
-
+        global_row_offsets_dev_ptr[rowOffsOffset + i] = global_degrees_dev_ptr[degreesOffset + i - 1] + global_row_offsets_dev_ptr[rowOffsOffset + i - 1];
+        printf("Thread %d, new_row_offsets_dev[%d] = %d", threadID, i, global_row_offsets_dev_ptr[rowOffsOffset + i]);
     }
 }
 
@@ -828,12 +833,13 @@ void CallPopulateTree(int numberOfLevels,
 
     long long levelOffset = 0;
     long long levelUpperBound;
-    int numberOfBlocks;
+    int numberOfBlocksForOneThreadPerLeaf;
     //numberOfLevels = 1;
     for (int level = 0; level < numberOfLevels; ++level){
         levelUpperBound = CalculateLevelUpperBound(level);
         // ceil(numberOfLeaves/32)
-        numberOfBlocks = ((levelUpperBound - levelOffset) + 32 - 1) / 32;
+        // 
+        numberOfBlocksForOneThreadPerLeaf = ((levelUpperBound - levelOffset) + threadsPerBlock - 1) / threadsPerBlock;
         // Without replacement, problematic handling of pendant edges..if we convert to a modifiable
         // data structure we'd be able to use a deterministic approach
         // however with the current csr, which is nontrivial to modify,
@@ -866,7 +872,8 @@ void CallPopulateTree(int numberOfLevels,
         // First graph is assumed to already been processed
         // This allows for continuing runs on subtrees easily
         if (level != 0){
-            SetEdges<<<numberOfBlocks,threadsPerBlock>>>(numberOfRows,
+            // 1 block per leaf
+            SetEdges<<<levelUpperBound-levelOffset,threadsPerBlock>>>(numberOfRows,
                                                         numberOfEdgesPerGraph,
                                                         levelOffset,
                                                         levelUpperBound,
@@ -875,44 +882,55 @@ void CallPopulateTree(int numberOfLevels,
                                                         global_values_dev_ptr,
                                                         global_paths_ptr,
                                                         global_paths_length);
-
-            SetDegreesAndCountEdgesLeftToCover<<<numberOfBlocks,threadsPerBlock,sizeof(int)*numberOfRows>>>
-                                                (numberOfRows,
-                                                numberOfEdgesPerGraph,
-                                                levelOffset,
-                                                levelUpperBound,
-                                                global_row_offsets_dev_ptr,
-                                                global_values_dev_ptr,
-                                                global_degrees_dev_ptr,
-                                                global_edges_left_to_cover_count);
+            // 1 block per leaf
+            SetDegreesAndCountEdgesLeftToCover<<<levelUpperBound-levelOffset,threadsPerBlock,sizeof(int)*numberOfRows>>>
+                                    (numberOfRows,
+                                    numberOfEdgesPerGraph,
+                                    levelOffset,
+                                    levelUpperBound,
+                                    global_row_offsets_dev_ptr,
+                                    global_values_dev_ptr,
+                                    global_degrees_dev_ptr,
+                                    global_edges_left_to_cover_count);
+            // 1 thread per leaf
+            CalculateNewRowOffsets<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock>>>
+                                    (numberOfRows,
+                                    levelOffset,
+                                    levelUpperBound,
+                                    global_degrees_dev_ptr,
+                                    global_row_offsets_dev_ptr);
         }
-        DFSLevelWiseSamplesWithReplacement<<<numberOfBlocks,threadsPerBlock>>>(levelOffset,
-                                                                levelUpperBound,
-                                                                numberOfRows,
-                                                                numberOfEdgesPerGraph,
-                                                                global_degrees_dev_ptr,
-                                                                global_row_offsets_dev_ptr,
-                                                                global_columns_dev_ptr,
-                                                                global_values_dev_ptr,
-                                                                global_paths_ptr,
-                                                                global_paths_length,
-                                                                numberOfVerticesAllocatedForPendantEdges,
-                                                                global_pendant_vertices_added_to_cover,
-                                                                global_pendant_vertices_length);
+        // 1 thread per leaf
+        DFSLevelWiseSamplesWithReplacement<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock>>>
+                                    (levelOffset,
+                                    levelUpperBound,
+                                    numberOfRows,
+                                    numberOfEdgesPerGraph,
+                                    global_degrees_dev_ptr,
+                                    global_row_offsets_dev_ptr,
+                                    global_columns_dev_ptr,
+                                    global_values_dev_ptr,
+                                    global_paths_ptr,
+                                    global_paths_length,
+                                    numberOfVerticesAllocatedForPendantEdges,
+                                    global_pendant_vertices_added_to_cover,
+                                    global_pendant_vertices_length);
 
         // Check if any pathlengths are != 4, since we are allocating only 4 spaces for pendant edges
         // It might be better to only process each vertex once in the kernel
         // and handle pendant edges in a separate kernel
         // assuming there were no pendant edges...
-        if (level + 1 != numberOfLevels)
-            InduceRowOfSubgraphs<<<numberOfBlocks,threadsPerBlock>>>(numberOfRows,
-                                                        levelOffset,
-                                                        levelUpperBound,
-                                                        global_row_offsets_dev_ptr,
-                                                        global_columns_dev_ptr,
-                                                        global_values_dev_ptr
-                                                        );
-
+        if (level + 1 != numberOfLevels){
+            // 1 block per leaf
+            InduceRowOfSubgraphs<<<numberOfBlocks,threadsPerBlock>>>
+                                    (numberOfRows,
+                                    levelOffset,
+                                    levelUpperBound,
+                                    global_row_offsets_dev_ptr,
+                                    global_columns_dev_ptr,
+                                    global_values_dev_ptr
+                                    );
+        }
         levelOffset = levelUpperBound;
     } 
 
@@ -964,8 +982,10 @@ void CopyGraphToDevice( Graph & g,
     // Currenly only sets the first graph in the cuda memory
     // Might as well be host code
     CalculateNewRowOffsets<<<1,1>>>(g.GetNumberOfRows(),
+                                        0,
+                                        1,
                                         global_degrees_dev_ptr,
-                                        global_row_offsets_dev_ptr);
+                                        global_row_offsets_dev_ptr); 
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
