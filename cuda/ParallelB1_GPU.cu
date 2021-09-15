@@ -847,7 +847,7 @@ void CallPopulateTree(int numberOfLevels,
     std::cout << "Your GPU RAM has " << double(free)/1024/1024/1024 << " GB available" << std::endl;
     do 
     {
-        std::cout << '\n' << "Press a key to continue...; ctrl-c to terminate";
+        std::cout << '\n' << "Press enter to continue...; ctrl-c to terminate";
     } while (std::cin.get() != '\n');
 
     int * global_row_offsets_dev_ptr;
@@ -899,7 +899,7 @@ void CallPopulateTree(int numberOfLevels,
     long long levelOffset = 0;
     long long levelUpperBound;
     int numberOfBlocksForOneThreadPerLeaf;
-    //numberOfLevels = 1;
+    numberOfLevels = 3;
     for (int level = 0; level < numberOfLevels; ++level){
         levelUpperBound = CalculateLevelUpperBound(level);
         // ceil(numberOfLeaves/32)
@@ -911,29 +911,6 @@ void CallPopulateTree(int numberOfLevels,
         // the sampling of vertices and edges is easier with replacement,
         // this will be a problem on large graphs though as fewer vertices 
         // remain.
-        /*
-        CreateSubsetOfRemainingVerticesLevelWise<<<32,numberOfBlocks>>>(levelOffset,
-                                                levelUpperBound,
-                                                numberOfRows,
-                                                global_degrees_dev_ptr,
-                                                global_vertices_remaining,
-                                                global_vertices_remaining_count);
-        DFSLevelWise<<<32,numberOfBlocks>>>(levelOffset,
-                        levelUpperBound,
-                        numberOfRows,
-                        maxDegree,
-                        numberOfEdgesPerGraph,
-                        global_degrees_dev_ptr,
-                        global_row_offsets_dev_ptr,
-                        global_columns_dev_ptr,
-                        global_values_dev_ptr,
-                        global_vertices_remaining,
-                        global_vertices_remaining_count,
-                        global_paths_ptr,
-                        global_paths_length,
-                        global_outgoing_edge_vertices,
-                        global_outgoing_edge_vertices_count);
-            */
         // First graph is assumed to already been processed
         // This allows for continuing runs on subtrees easily
         if (level != 0){
