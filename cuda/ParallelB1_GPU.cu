@@ -525,134 +525,60 @@ __global__ void DFSLevelWise(int levelOffset,
     }
 }
 
-// Single thread per leaf
-// When this method returns, an entire level has found a path which identifies 3 new children per leaf
-// Pendant edges were processed immediately.
-__global__ void DFSLevelWiseSamplesWithReplacement(int levelOffset,
-                            int levelUpperBound,
-                            int numberOfRows,
-                            int numberOfEdgesPerGraph,
-                            int * global_degrees_dev_ptr,
-                            int * global_row_offsets_dev_ptr,
-                            int * global_columns_dev_ptr,
-                            int * global_values_dev_ptr,
-                            int * global_paths_ptr,
-                            int * global_paths_length,
-                            int numberOfVerticesAllocatedForPendantEdges,
-                            int * global_pendant_vertices_added_to_cover,
-                            int * global_papendant_vertices_length){
+__global__ void GetRandomVertex(int levelOffset,
+                                int levelUpperBound,
+                                int numberOfRows,
+                                int * global_remaining_vertices_dev_ptr,
+                                int * global_remaining_vertices_size_dev_ptr,
+                                int * global_paths_ptr){
 
     int threadID = threadIdx.x + blockDim.x * blockIdx.x;
-    int leafIndex = levelOffset + threadID;
+    // Since each thread calculates four random numbers
+    int leafIndex = levelOffset + threadID * 4;
     if (leafIndex >= levelUpperBound) return;
 
-    int degreesOffset = leafIndex * numberOfRows;
-    int pathsOffset = leafIndex * 4;
-    int rowOffsOffset = leafIndex * (numberOfRows + 1);
-    int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
-    int pendantEdgeOffset = numberOfVerticesAllocatedForPendantEdges * leafIndex;
     RNG::ctr_type r;
-    int randomVertex;
-
     unsigned int counter = 0;
     ulong seed = 0;
-    int randIt = 0;
-    int u;
-    bool firstIter = true;
-    do {
-        // Path must be either length 2 or 3
-        if(!firstIter){
-            // If length is 3, u is 1
-            // IF length is 2, u is 0
-            // This corresponds to the desired behavior of Case 1 and 2 from B1 Algo
-            u = global_paths_length[leafIndex] % 2;
-            if(global_papendant_vertices_length[leafIndex]>3){
-                // We have run out space for pendant edges, we will check the path lengths of all the leaves
-                // if the path length of a leaf is 2 or 3, we know we returned here.
-                return;
-            }
-            global_pendant_vertices_added_to_cover[pendantEdgeOffset + 
-                global_papendant_vertices_length[leafIndex]] = u;
-            ++global_papendant_vertices_length[leafIndex];
-            // Set u's edges to 0 and sets u's degree to 0
-            SetOutgoingEdges(rowOffsOffset,
-                            valsAndColsOffset,
-                            degreesOffset,
-                            u,
-                            global_row_offsets_dev_ptr,
-                            global_columns_dev_ptr,
-                            global_values_dev_ptr,
-                            global_degrees_dev_ptr);
-            // Sets the incoming edges to 0 decrements the degrees of the source vertices by 1
-            SetIncomingEdges(rowOffsOffset,
-                            valsAndColsOffset,
-                            degreesOffset,
-                            u,
-                            global_row_offsets_dev_ptr,
-                            global_columns_dev_ptr,
-                            global_values_dev_ptr,
-                            global_degrees_dev_ptr);
-            if (randIt == 4){
-                ++counter;
-                r = randomGPU_four(counter, leafIndex, seed);
-                randIt = 0;
-            }
-        } else {
-            r = randomGPU_four(counter, leafIndex, seed);
-        }
-        randomVertex = r[randIt] % numberOfRows;
-        ++randIt;
+    int remainingVertsOffset, pathsOffset, iteration, remainingVerticesSize; 
+    remainingVertsOffset = leafIndex * numberOfRows;
+    pathsOffset = leafIndex * 4;
+    // r contains 4 random ints
+    r = randomGPU_four(counter, leafIndex, seed);
+    for(iteration = 0; iteration < 4 && (leafIndex + iteration) < levelUpperBound; ++iteration){
+        remainingVerticesSize = 
+        global_paths_ptr[pathsOffset] = r[iteration] % remainingVerticesSize;
+        remainingVertsOffset += numberOfRows;
+        pathsOffset += 4;
+    }
+}
 
-        while(global_degrees_dev_ptr[degreesOffset + randomVertex] == 0){
-            if (randIt == 4){
-                ++counter;
-                r = randomGPU_four(counter, leafIndex, seed);
-                randIt = 0;
-            }
-            randomVertex = r[randIt] % numberOfRows;
-            ++randIt;
-        }
+__global__ void GetRandomVertexSharedMem(int levelOffset,
+                                int levelUpperBound,
+                                int numberOfRows,
+                                int * global_remaining_vertices_dev_ptr,
+                                int * global_remaining_vertices_size_dev_ptr,
+                                int * global_paths_ptr){
 
-        global_paths_ptr[pathsOffset + 0] = randomVertex;
-        global_paths_length[leafIndex]++;
-        printf("Thread %d, randomVertex : %d, path position : %d\n\n", threadID, randomVertex, 0);
-    // dfs 
-        int edgeCount, randomOutgoingEdge, randomIndex, randomOutgoingVertex, edgeLB, edgeUB;
-        for (int i = 1; i < 4; ++i){
-            edgeLB = global_row_offsets_dev_ptr[rowOffsOffset + randomVertex];
-            edgeUB = global_row_offsets_dev_ptr[rowOffsOffset + randomVertex + 1];
-            edgeCount = edgeUB - edgeLB;
-            // Skip simple cycles, unless the source vertex is degree 1, then we will end the dfs
-            do {
-                // Get a non-zero outgoing edge
-                do {
-                    if (randIt == 4){
-                        ++counter;
-                        r = randomGPU_four(counter, leafIndex, seed);
-                        randIt = 0;
-                    }
-                    randomIndex = r[randIt] % edgeCount;
-                    ++randIt;
-                    randomOutgoingEdge = global_values_dev_ptr[valsAndColsOffset + edgeLB + randomIndex];
-                    randomOutgoingVertex = global_columns_dev_ptr[valsAndColsOffset + edgeLB + randomIndex];
-                } while (randomOutgoingEdge == 0);
-            } while (i > 1 && global_degrees_dev_ptr[degreesOffset + randomVertex]>1 &&
-                    randomOutgoingVertex == global_paths_ptr[pathsOffset + (i-2)]);
-        
-            // We exited the previous while loop so if we enter this if condition
-            // The degree of the current vertex is 1, and we are a pendant edge
-            if (i > 1 && randomOutgoingVertex == global_paths_ptr[pathsOffset + (i-2)])
-                // pendant edge resulting in unavoidable simple cycle
-                break;
-            else{
-                randomVertex = randomOutgoingVertex;
-                global_paths_ptr[pathsOffset + i] = randomVertex;
-                ++global_paths_length[leafIndex];
-            }
-            printf("Thread %d, randomVertex : %d, path position : %d\n\n", threadID, randomVertex, i);
-        }
-        firstIter = false;
-    } while (global_paths_length[leafIndex] == 2 || global_paths_length[leafIndex] == 3);
+    int threadID = threadIdx.x + blockDim.x * blockIdx.x;
+    // Since each thread calculates four random numbers
+    int leafIndex = levelOffset + threadID * 4;
+    extern __shared__ RNG::ctr_type random123Objects[];
+    unsigned int counter = 0;
+    ulong seed = 0;
+    int r123Index = threadIdx.x / 4;
+    
+    if (threadIdx.x % 4 == 0)
+       random123Objects[r123Index] = randomGPU_four(counter, leafIndex, seed);
+    __syncthreads();
+
+    if(leafIndex < levelUpperBound){
+        int remainingVertsOffset = leafIndex * numberOfRows;
+        int pathsOffset = leafIndex * 4;
+        int randomNumIndex = threadIdx.x % 4;
+        int remainingVerticesSize = global_remaining_vertices_size_dev_ptr[remainingVertsOffset];
+        global_paths_ptr[pathsOffset] = (random123Objects[r123Index])[randomNumIndex] % remainingVerticesSize;
+    }
 }
 
 
@@ -855,6 +781,8 @@ void CallPopulateTree(int numberOfLevels,
     int * global_values_dev_ptr;
     int * global_degrees_dev_ptr; 
     int * global_paths_ptr; 
+    int * global_remaining_vertices_ptr;
+    int * global_remaining_vertices_size_dev_ptr;
     //int * global_vertices_remaining;
     //int * global_vertices_remaining_count;
     //int * global_outgoing_edge_vertices;
@@ -874,11 +802,15 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_values_dev_ptr, (numberOfEdgesPerGraph*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_paths_ptr, (max_dfs_depth*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_remaining_vertices_ptr, (numberOfRows*treeSize) * sizeof(int) );
+
     //cudaMalloc( (void**)&global_vertices_remaining, (numberOfRows*treeSize) * sizeof(int) );
     //cudaMalloc( (void**)&global_vertices_remaining_count, treeSize * sizeof(int) );
     //cudaMalloc( (void**)&global_outgoing_edge_vertices, treeSize * maxDegree * sizeof(int) );
     //cudaMalloc( (void**)&global_outgoing_edge_vertices_count, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_paths_length, treeSize * sizeof(int) );
+    cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr, treeSize * sizeof(int) );
+
     cudaMalloc( (void**)&global_pendant_vertices_added_to_cover, treeSize * numberOfVerticesAllocatedForPendantEdges * sizeof(int) );
     cudaMalloc( (void**)&global_pendant_vertices_length, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_edges_left_to_cover_count, treeSize * sizeof(int) );
@@ -902,96 +834,19 @@ void CallPopulateTree(int numberOfLevels,
     numberOfLevels = 3;
     for (int level = 0; level < numberOfLevels; ++level){
         levelUpperBound = CalculateLevelUpperBound(level);
-        // ceil(numberOfLeaves/32)
-        // 
         numberOfBlocksForOneThreadPerLeaf = ((levelUpperBound - levelOffset) + threadsPerBlock - 1) / threadsPerBlock;
-        // Without replacement, problematic handling of pendant edges..if we convert to a modifiable
-        // data structure we'd be able to use a deterministic approach
-        // however with the current csr, which is nontrivial to modify,
-        // the sampling of vertices and edges is easier with replacement,
-        // this will be a problem on large graphs though as fewer vertices 
-        // remain.
-        // First graph is assumed to already been processed
-        // This allows for continuing runs on subtrees easily
-        if (level != 0){
-            // 1 block per leaf
-            std::cout << "Setting edges - level " << level << std::endl;
-            SetEdges<<<levelUpperBound-levelOffset,threadsPerBlock>>>(numberOfRows,
-                                                        numberOfEdgesPerGraph,
-                                                        levelOffset,
-                                                        levelUpperBound,
-                                                        global_row_offsets_dev_ptr,
-                                                        global_columns_dev_ptr,
-                                                        global_values_dev_ptr,
-                                                        global_paths_ptr,
-                                                        global_paths_length,
-                                                        global_edges_left_to_cover_count);
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
-            std::cout << "Setting degrees - level " << level << std::endl;
-            // 1 block per leaf
-            SetDegreesAndCountEdgesLeftToCover<<<levelUpperBound-levelOffset,threadsPerBlock,sizeof(int)*numberOfRows>>>
-                                    (numberOfRows,
-                                    numberOfEdgesPerGraph,
-                                    levelOffset,
-                                    levelUpperBound,
-                                    global_row_offsets_dev_ptr,
-                                    global_values_dev_ptr,
-                                    global_degrees_dev_ptr,
-                                    global_edges_left_to_cover_count);
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
-            // 1 thread per leaf
-            std::cout << "Calling new rowoffs - level " << level << std::endl;
-            CalculateNewRowOffsets<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock>>>
-                                    (numberOfRows,
-                                    levelOffset,
-                                    levelUpperBound,
-                                    global_row_offsets_dev_ptr,
-                                    global_degrees_dev_ptr);
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
-        }
         // 1 thread per leaf
         std::cout << "Calling DFS - level " << level << std::endl;
-        DFSLevelWiseSamplesWithReplacement<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock>>>
+        GetRandomVertex<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock>>>
                                     (levelOffset,
                                     levelUpperBound,
                                     numberOfRows,
-                                    numberOfEdgesPerGraph,
-                                    global_degrees_dev_ptr,
-                                    global_row_offsets_dev_ptr,
-                                    global_columns_dev_ptr,
-                                    global_values_dev_ptr,
-                                    global_paths_ptr,
-                                    global_paths_length,
-                                    numberOfVerticesAllocatedForPendantEdges,
-                                    global_pendant_vertices_added_to_cover,
-                                    global_pendant_vertices_length);
+                                    global_remaining_vertices_ptr,
+                                    global_remaining_vertices_size_dev_ptr,
+                                    global_paths_ptr);
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        // Check if any pathlengths are != 4, since we are allocating only 4 spaces for pendant edges
-        // It might be better to only process each vertex once in the kernel
-        // and handle pendant edges in a separate kernel
-        // assuming there were no pendant edges...
-        if (level + 1 != numberOfLevels){
-            // 1 block per leaf
-            std::cout << "Inducing children - level " << level << std::endl;
-            InduceRowOfSubgraphs<<<levelUpperBound-levelOffset,threadsPerBlock>>>
-                                    (numberOfRows,
-                                    levelOffset,
-                                    levelUpperBound,
-                                    numberOfEdgesPerGraph,
-                                    global_edges_left_to_cover_count,
-                                    global_row_offsets_dev_ptr,
-                                    global_columns_dev_ptr,
-                                    global_values_dev_ptr
-                                    );
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
-        }
-        levelOffset = levelUpperBound;
     } 
 
     cudaDeviceSynchronize();

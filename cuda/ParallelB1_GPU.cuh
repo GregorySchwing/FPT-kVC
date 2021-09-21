@@ -146,19 +146,19 @@ __global__ void DFSLevelWise(int levelOffset,
                             int * global_outgoing_edge_vertices,
                             int * global_outgoing_edge_vertices_count);
 
-__global__ void DFSLevelWiseSamplesWithReplacement(int levelOffset,
-                            int levelUpperBound,
-                            int numberOfRows,
-                            int numberOfEdgesPerGraph,
-                            int * global_degrees_dev_ptr,
-                            int * global_row_offsets_dev_ptr,
-                            int * global_columns_dev_ptr,
-                            int * global_values_dev_ptr,
-                            int * global_paths_ptr,
-                            int * global_paths_length,
-                            int numberOfVerticesAllocatedForPendantEdges,
-                            int * global_pendant_vertices_added_to_cover,
-                            int * global_papendant_vertices_length);
+__global__ void GetRandomVertex(int levelOffset,
+                                int levelUpperBound,
+                                int numberOfRows,
+                                int * global_remaining_vertices_dev_ptr,
+                                int * global_remaining_vertices_size_dev_ptr,
+                                int * global_paths_ptr);
+
+__global__ void GetRandomVertexSharedMem(int levelOffset,
+                                int levelUpperBound,
+                                int numberOfRows,
+                                int * global_remaining_vertices_dev_ptr,
+                                int * global_remaining_vertices_size_dev_ptr,
+                                int * global_paths_ptr);
 
 __device__ void SetOutgoingEdges(int rowOffsOffset,
                                 int valsAndColsOffset,
