@@ -548,7 +548,7 @@ __global__ void GetRandomVertex(int levelOffset,
     for(iteration = 0; iteration < 4 && (leafIndex + iteration) < levelUpperBound; ++iteration){
         remainingVerticesSize = 
         global_paths_ptr[pathsOffset] = r[iteration] % remainingVerticesSize;
-        printf("Thread %d, leafIndex %d, random vertex &d", threadID, leafIndex, global_paths_ptr[pathsOffset]);
+        printf("Thread %d, leafIndex %d, random vertex %d", threadID, leafIndex, global_paths_ptr[pathsOffset]);
         remainingVertsOffset += numberOfRows;
         pathsOffset += 4;
     }
