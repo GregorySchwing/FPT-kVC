@@ -34,7 +34,10 @@ void CopyGraphToDevice( Graph & g,
                         int * values_dev_ptr,
                         int * new_degrees_dev_ptr,
                         int numberOfEdgesPerGraph,
-                        int * global_edges_left_to_cover_count);
+                        int * global_edges_left_to_cover_count,
+                        int * global_remaining_vertices_dev_ptr,
+                        int * global_remaining_vertices_size_dev_ptr,
+                        int verticesRemainingInGraph);
 
 void CallPopulateTree(int numberOfLevels, 
                     Graph & gPrime);

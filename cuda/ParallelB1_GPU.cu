@@ -548,6 +548,7 @@ __global__ void GetRandomVertex(int levelOffset,
     for(iteration = 0; iteration < 4 && (leafIndex + iteration) < levelUpperBound; ++iteration){
         remainingVerticesSize = 
         global_paths_ptr[pathsOffset] = r[iteration] % remainingVerticesSize;
+        printf("Thread %d, leafIndex %d, random vertex &d", threadID, leafIndex, global_paths_ptr[pathsOffset]);
         remainingVertsOffset += numberOfRows;
         pathsOffset += 4;
     }
@@ -796,6 +797,7 @@ void CallPopulateTree(int numberOfLevels,
     int max_dfs_depth = 4;
     int numberOfRows = g.GetNumberOfRows();
     int numberOfEdgesPerGraph = g.GetEdgesLeftToCover(); 
+    int verticesRemainingInGraph = g.GetRemainingVertices().size(); 
 
     cudaMalloc( (void**)&global_row_offsets_dev_ptr, ((numberOfRows+1)*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_columns_dev_ptr, (numberOfEdgesPerGraph*treeSize) * sizeof(int) );
@@ -826,12 +828,15 @@ void CallPopulateTree(int numberOfLevels,
                     global_values_dev_ptr,
                     global_degrees_dev_ptr,
                     numberOfEdgesPerGraph,
-                    global_edges_left_to_cover_count);
+                    global_edges_left_to_cover_count,
+                    global_remaining_vertices_ptr,
+                    global_remaining_vertices_size_dev_ptr,
+                    verticesRemainingInGraph);
 
     long long levelOffset = 0;
     long long levelUpperBound;
     int numberOfBlocksForOneThreadPerLeaf;
-    numberOfLevels = 3;
+    numberOfLevels = 1;
     for (int level = 0; level < numberOfLevels; ++level){
         levelUpperBound = CalculateLevelUpperBound(level);
         numberOfBlocksForOneThreadPerLeaf = ((levelUpperBound - levelOffset) + threadsPerBlock - 1) / threadsPerBlock;
@@ -876,14 +881,22 @@ void CopyGraphToDevice( Graph & g,
                         int * global_values_dev_ptr,
                         int * global_degrees_dev_ptr,
                         int numberOfEdgesPerGraph,
-                        int * global_edges_left_to_cover_count){
+                        int * global_edges_left_to_cover_count,
+                        int * global_remaining_vertices_dev_ptr,
+                        int * global_remaining_vertices_size_dev_ptr,
+                        int verticesRemainingInGraph){
 
     int * new_degrees_ptr = thrust::raw_pointer_cast(g.GetNewDegRef().data());
+    int * vertices_remaining_ptr = thrust::raw_pointer_cast(g.GetRemainingVertices().data());
     // Graph vectors
     cudaMemcpy(global_degrees_dev_ptr, new_degrees_ptr, g.GetNumberOfRows() * sizeof(int),
                 cudaMemcpyHostToDevice);
     cudaMemcpy(global_edges_left_to_cover_count, &numberOfEdgesPerGraph, 1 * sizeof(int),
                 cudaMemcpyHostToDevice);
+    cudaMemcpy(global_remaining_vertices_dev_ptr, vertices_remaining_ptr, g.GetRemainingVertices().size() * sizeof(int),
+            cudaMemcpyHostToDevice);         
+    cudaMemcpy(global_remaining_vertices_size_dev_ptr, &verticesRemainingInGraph, 1 * sizeof(int),
+            cudaMemcpyHostToDevice);    
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
     // CSR vectors
@@ -892,7 +905,7 @@ void CopyGraphToDevice( Graph & g,
 
     // SparseMatrix vectors
     thrust::device_vector<int> new_values_dev = g.GetCSR().GetNewValRef();
-
+    thrust::device_vector<int> remaining_vertices_dev = g.GetRemainingVertices();
     // CSR pointers
     int * old_row_offsets_dev_ptr = thrust::raw_pointer_cast(old_row_offsets_dev.data());
     int * old_column_indices_dev_ptr = thrust::raw_pointer_cast(old_column_indices_dev.data());
@@ -1272,5 +1285,3 @@ __host__ __device__ void TraverseUpTree(int index,
 */
 
 #endif
-
-                                                        
