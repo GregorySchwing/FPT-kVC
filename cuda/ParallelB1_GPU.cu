@@ -837,6 +837,8 @@ void CallPopulateTree(int numberOfLevels,
         numberOfBlocksForOneThreadPerLeaf = ((levelUpperBound - levelOffset) + threadsPerBlock - 1) / threadsPerBlock;
         // 1 thread per leaf
         std::cout << "Calling DFS - level " << level << std::endl;
+        // 
+        //GetRandomVertexSharedMem<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock,threadsPerBlock/4>>>
         GetRandomVertex<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock>>>
                                     (levelOffset,
                                     levelUpperBound,
@@ -1271,3 +1273,4 @@ __host__ __device__ void TraverseUpTree(int index,
 
 #endif
 
+                                                        
