@@ -641,7 +641,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
         __syncthreads();
         i /= 2;
     }
-    global_pendant_path_dev_ptr[leafIndex] = !pathsAndPendantStatus[isInvalidPathBooleanArrayOffset];
+    global_pendant_path_dev_ptr[blockIdx.x] = !pathsAndPendantStatus[isInvalidPathBooleanArrayOffset];
     // A nonpendant exists
     if (!pathsAndPendantStatus[isInvalidPathBooleanArrayOffset]){
         // Regenerate pendant booleans
@@ -836,6 +836,7 @@ void CallPopulateTree(int numberOfLevels,
     //int treeSize = 200000;
     int counters = 2;
     numberOfLevels = 2;
+    int deepestLevelSize = pow(3.0, numberOfLevels-1);
     long long treeSize = CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
     int expandedData = g.GetEdgesLeftToCover();
     int condensedData = g.GetVertexCount();
@@ -890,7 +891,7 @@ void CallPopulateTree(int numberOfLevels,
     //cudaMalloc( (void**)&global_outgoing_edge_vertices_count, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_paths_length, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr, treeSize * sizeof(int) );
-    cudaMalloc( (void**)&global_pendant_path_dev_ptr, treeSize * sizeof(int) );
+    cudaMalloc( (void**)&global_pendant_path_dev_ptr, deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_edges_left_to_cover_count, treeSize * sizeof(int) );
 
 
