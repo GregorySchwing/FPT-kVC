@@ -163,17 +163,6 @@ __global__ void GetRandomVertexSharedMem(int levelOffset,
                                 int * global_remaining_vertices_size_dev_ptr,
                                 int * global_paths_ptr);
 
-__global__ void ParallelDFS(int levelOffset,
-                            int levelUpperBound,
-                            int numberOfRows,
-                            int numberOfEdgesPerGraph,
-                            int * global_row_offsets_dev_ptr,
-                            int * global_columns_dev_ptr,
-                            int * global_remaining_vertices_dev_ptr,
-                            int * global_remaining_vertices_size_dev_ptr,
-                            int * global_paths_ptr,
-                            int * global_pendant_path_dev_ptr);
-
 __global__ void ParallelDFSRandom(int levelOffset,
                             int levelUpperBound,
                             int numberOfRows,

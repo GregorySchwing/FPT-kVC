@@ -667,66 +667,6 @@ __global__ void ParallelDFSRandom(int levelOffset,
     }
 }
 
-__global__ void ParallelDFS(int levelOffset,
-                            int levelUpperBound,
-                            int numberOfRows,
-                            int numberOfEdgesPerGraph,
-                            int * global_row_offsets_dev_ptr,
-                            int * global_columns_dev_ptr,
-                            int * global_remaining_vertices_dev_ptr,
-                            int * global_remaining_vertices_size_dev_ptr,
-                            int * global_paths_ptr){
-    int leafIndex = levelOffset + blockIdx.x;
-    int globalPathOffset = leafIndex * 4;
-    int pathPosition = 0;
-    int rowOffsOffset = leafIndex * (numberOfRows + 1);
-    int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
-    extern __shared__ int pathsAndPendantStatus[];
-    int isInvalidPathBooleanArrayOffset = blockDim.x * 3;
-    int outEdgesCount, randomVertRowOff, outEdgesCountInternal, randomVertRowOffInternal;
-
-    int outEdgesCovered = 0;
-    int outEdgesCoveredInternal = 0;
-
-    int threadPlusCovered = 0;
-    int threadPlusCoveredInternal = 0;
-    int outVertex, outVertexIndex;
-    randomVertRowOff = global_row_offsets_dev_ptr[rowOffsOffset + global_paths_ptr[globalPathOffset + pathPosition]];
-    outEdgesCount = global_row_offsets_dev_ptr[rowOffsOffset  + global_paths_ptr[globalPathOffset + pathPosition] + 1] - randomVertRowOff;
-    // Store tPB outgoing vertices of depth 1
-    for (threadPlusCovered = outEdgesCovered + threadIdx.x; threadPlusCovered < outEdgesCount; outEdgesCovered += blockDim.x){
-        pathPosition = 0;
-        pathsAndPendantStatus[blockDim.x*(pathPosition%2) + threadIdx.x] =  global_columns_dev_ptr[valsAndColsOffset + randomVertRowOff + threadPlusCovered];
-        // Check each vertex at depth 1 for a valid outgoing path 
-        for (outVertexIndex = 0; outVertexIndex < blockDim.x; ++outVertexIndex){
-            outEdgesCoveredInternal = 0;
-            outVertex = pathsAndPendantStatus[blockDim.x*(pathPosition%2) + outVertexIndex];
-            randomVertRowOffInternal = global_row_offsets_dev_ptr[rowOffsOffset + outVertex];
-            pathPosition = 1;
-            outEdgesCountInternal = global_row_offsets_dev_ptr[rowOffsOffset + outVertex + 1] - randomVertRowOffInternal;
-            for (threadPlusCoveredInternal = outEdgesCoveredInternal + threadIdx.x; threadPlusCoveredInternal < outEdgesCountInternal; outEdgesCoveredInternal += blockDim.x){
-                pathsAndPendantStatus[blockDim.x*(pathPosition%2) + threadIdx.x] =  global_columns_dev_ptr[valsAndColsOffset + randomVertRowOff + threadPlusCovered];
-            }
-        }
-    }
-/*
-    if (threadIdx.x < outEdgesCount)
-    ++pathPosition;
-
-    pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] = (pathsAndPendantStatus[pathsAndPendantStatus + 0] == pathsAndPendantStatus[pathsAndPendantStatus + 2]);
-    pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] |= (pathsAndPendantStatus[pathsAndPendantStatus + 1] == pathsAndPendantStatus[pathsAndPendantStatus + 3]);
-    if (threadIdx.x == 0){
-        for (int i = 0; i < blockDim.x; ++i)
-            if (!pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + i]){
-                for (int j = 0; j < 4; ++j)
-                    global_paths_ptr[globalPathOffset + j] = pathsAndPendantStatus[i*4 + j];
-            
-        }
-
-    }
-*/
-}
-
 __device__ void SetOutgoingEdges(int rowOffsOffset,
                                 int valsAndColsOffset,
                                 int degreesOffset,
@@ -929,14 +869,9 @@ void CallPopulateTree(int numberOfLevels,
     int * global_remaining_vertices_ptr;
     int * global_remaining_vertices_size_dev_ptr;
     int * global_pendant_path_dev_ptr;
-    //int * global_vertices_remaining;
-    //int * global_vertices_remaining_count;
     //int * global_outgoing_edge_vertices;
     //int * global_outgoing_edge_vertices_count;
     int * global_paths_length;
-    int numberOfVerticesAllocatedForPendantEdges = 4;
-    int * global_pendant_vertices_added_to_cover;
-    int * global_pendant_vertices_length;
     int * global_edges_left_to_cover_count;
 
     int max_dfs_depth = 4;
@@ -951,16 +886,11 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_paths_ptr, (max_dfs_depth*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_ptr, (numberOfRows*treeSize) * sizeof(int) );
 
-    //cudaMalloc( (void**)&global_vertices_remaining, (numberOfRows*treeSize) * sizeof(int) );
-    //cudaMalloc( (void**)&global_vertices_remaining_count, treeSize * sizeof(int) );
     //cudaMalloc( (void**)&global_outgoing_edge_vertices, treeSize * maxDegree * sizeof(int) );
     //cudaMalloc( (void**)&global_outgoing_edge_vertices_count, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_paths_length, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_pendant_path_dev_ptr, treeSize * sizeof(int) );
-
-    cudaMalloc( (void**)&global_pendant_vertices_added_to_cover, treeSize * numberOfVerticesAllocatedForPendantEdges * sizeof(int) );
-    cudaMalloc( (void**)&global_pendant_vertices_length, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_edges_left_to_cover_count, treeSize * sizeof(int) );
 
 
@@ -995,7 +925,7 @@ void CallPopulateTree(int numberOfLevels,
         // Hence + threadsPerBlock
         ParallelDFSRandom<<<levelUpperBound-levelOffset,threadsPerBlock,threadsPerBlock*4 + threadsPerBlock>>>
                             (levelOffset,
-                            evelUpperBound,
+                            levelUpperBound,
                             numberOfRows,
                             numberOfEdgesPerGraph,
                             global_row_offsets_dev_ptr,
@@ -1004,6 +934,8 @@ void CallPopulateTree(int numberOfLevels,
                             global_remaining_vertices_size_dev_ptr,
                             global_paths_ptr,
                             global_pendant_path_dev_ptr);
+
+        
         
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -1023,8 +955,6 @@ void CallPopulateTree(int numberOfLevels,
     //cudaFree( global_outgoing_edge_vertices );
     //cudaFree( global_outgoing_edge_vertices_count );
     cudaFree( global_paths_length );
-    cudaFree( global_pendant_vertices_added_to_cover );
-    cudaFree( global_pendant_vertices_length );
     cudaFree( global_edges_left_to_cover_count );
     cudaDeviceSynchronize();
 }
