@@ -997,7 +997,11 @@ void CallPopulateTree(int numberOfLevels,
                                     global_remaining_vertices_size_dev_ptr,
                                     global_paths_ptr);
         // 1 block per leaf; tries tPB random paths in G
-        ParallelDFS<<<levelUpperBound-levelOffset,threadsPerBlock,threadsPerBlock*3>>>
+        // Hence threadsPerBlock*4,
+        // Each thread checks it's path's pendant status
+        // These booleans are reduced in shared memory
+        // Hence + threadsPerBlock
+        ParallelDFSRandom<<<levelUpperBound-levelOffset,threadsPerBlock,threadsPerBlock*4 + threadsPerBlock>>>
                             (levelOffset,
                             levelUpperBound,
                             numberOfRows,
