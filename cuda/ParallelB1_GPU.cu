@@ -590,7 +590,8 @@ __global__ void ParallelDFSRandom(int levelOffset,
                             int * global_columns_dev_ptr,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
-                            int * global_paths_ptr){
+                            int * global_paths_ptr,
+                            int * global_pendant_path_dev_ptr){
     int leafIndex = levelOffset + blockIdx.x;
     int globalPathOffset = leafIndex * 4;
     int sharedMemPathOffset = threadIdx.x * 4;
@@ -640,7 +641,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
         __syncthreads();
         i /= 2;
     }
-    
+    global_pendant_path_dev_ptr[leafIndex] = !pathsAndPendantStatus[isInvalidPathBooleanArrayOffset];
     // A nonpendant exists
     if (!pathsAndPendantStatus[isInvalidPathBooleanArrayOffset]){
         // Regenerate pendant booleans
@@ -927,7 +928,7 @@ void CallPopulateTree(int numberOfLevels,
     int * global_paths_ptr; 
     int * global_remaining_vertices_ptr;
     int * global_remaining_vertices_size_dev_ptr;
-    int * global_successful_path_dev_ptr;
+    int * global_pendant_path_dev_ptr;
     //int * global_vertices_remaining;
     //int * global_vertices_remaining_count;
     //int * global_outgoing_edge_vertices;
@@ -956,7 +957,7 @@ void CallPopulateTree(int numberOfLevels,
     //cudaMalloc( (void**)&global_outgoing_edge_vertices_count, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_paths_length, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr, treeSize * sizeof(int) );
-    cudaMalloc( (void**)&global_successful_path_dev_ptr, treeSize * sizeof(int) );
+    cudaMalloc( (void**)&global_pendant_path_dev_ptr, treeSize * sizeof(int) );
 
     cudaMalloc( (void**)&global_pendant_vertices_added_to_cover, treeSize * numberOfVerticesAllocatedForPendantEdges * sizeof(int) );
     cudaMalloc( (void**)&global_pendant_vertices_length, treeSize * sizeof(int) );
@@ -994,14 +995,15 @@ void CallPopulateTree(int numberOfLevels,
         // Hence + threadsPerBlock
         ParallelDFSRandom<<<levelUpperBound-levelOffset,threadsPerBlock,threadsPerBlock*4 + threadsPerBlock>>>
                             (levelOffset,
-                            levelUpperBound,
+                            evelUpperBound,
                             numberOfRows,
                             numberOfEdgesPerGraph,
                             global_row_offsets_dev_ptr,
                             global_columns_dev_ptr,
                             global_remaining_vertices_ptr,
                             global_remaining_vertices_size_dev_ptr,
-                            global_paths_ptr);
+                            global_paths_ptr,
+                            global_pendant_path_dev_ptr);
         
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);

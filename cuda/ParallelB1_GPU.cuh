@@ -171,7 +171,8 @@ __global__ void ParallelDFS(int levelOffset,
                             int * global_columns_dev_ptr,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
-                            int * global_paths_ptr);
+                            int * global_paths_ptr,
+                            int * global_pendant_path_dev_ptr);
 
 __global__ void ParallelDFSRandom(int levelOffset,
                             int levelUpperBound,
