@@ -987,15 +987,6 @@ void CallPopulateTree(int numberOfLevels,
         numberOfBlocksForOneThreadPerLeaf = ((levelUpperBound - levelOffset) + threadsPerBlock - 1) / threadsPerBlock;
         // 1 thread per leaf
         std::cout << "Calling DFS - level " << level << std::endl;
-        // 
-        //GetRandomVertexSharedMem<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock,threadsPerBlock/4>>>
-        GetRandomVertex<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock>>>
-                                    (levelOffset,
-                                    levelUpperBound,
-                                    numberOfRows,
-                                    global_remaining_vertices_ptr,
-                                    global_remaining_vertices_size_dev_ptr,
-                                    global_paths_ptr);
         // 1 block per leaf; tries tPB random paths in G
         // Hence threadsPerBlock*4,
         // Each thread checks it's path's pendant status
