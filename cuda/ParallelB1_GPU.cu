@@ -641,7 +641,8 @@ __global__ void ParallelDFSRandom(int levelOffset,
         __syncthreads();
         i /= 2;
     }
-    global_pendant_path_dev_ptr[blockIdx.x] = !pathsAndPendantStatus[isInvalidPathBooleanArrayOffset];
+    // Write pendant status to global memory
+    global_pendant_path_dev_ptr[blockIdx.x] = pathsAndPendantStatus[isInvalidPathBooleanArrayOffset];
     // A nonpendant exists
     if (!pathsAndPendantStatus[isInvalidPathBooleanArrayOffset]){
         // Regenerate pendant booleans
@@ -844,6 +845,10 @@ void CallPopulateTree(int numberOfLevels,
     long long sizeOfSingleGraph = expandedData*2 + 2*condensedData + condensedData_plus1 + maxDegree + counters;
     long long totalMem = sizeOfSingleGraph * treeSize * sizeof(int);
 
+    std::vector<std::vector<int>> pendantChildren(treeSize);
+    int pendantNodeIndex;
+    int pendantChild;
+
     int num_gpus;
     size_t free, total;
     cudaGetDeviceCount( &num_gpus );
@@ -894,8 +899,6 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_pendant_path_dev_ptr, deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_edges_left_to_cover_count, treeSize * sizeof(int) );
 
-
-
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
@@ -935,8 +938,37 @@ void CallPopulateTree(int numberOfLevels,
                             global_remaining_vertices_size_dev_ptr,
                             global_paths_ptr,
                             global_pendant_path_dev_ptr);
+        int childIndex;
+        for (int node = levelOffset; node < levelUpperBound; ++node){
+            // global_pendant_path_dev_ptr was defined as an OR of 
+            // 0) path[0] == path[2]
+            // 1) path[1] == path[3]
+            if (global_pendant_path_dev_ptr[node]){
+                // We give Case 3 priority over Case 2,
+                // Since the serial algorithm short-circuits 
+                // upon finding a pendant edge
 
-        
+                // We know either 
+                // Case 3 - length 2
+                // v, v1
+                //path[0] == path[2], desired child is v
+                // If path[0] == path[2] then path[0] != path[2]
+                // Hence, cI == 0, since false casted to int is 0
+                // Therefore, v == path[cI]
+                childIndex = global_paths_ptr[node*4 + 0] != global_paths_ptr[node*4 + 2];
+                // or
+                // Case 2 - length 3
+                // v, v1, v2
+                // if path[0] != path[2] was true, then path[1] == path[3]
+                // cI == 1, since true casted to int is 1
+                // Desired child is v1
+                // Therefore, v1 == path[cI]
+                cudaMemcpy(&pendantChild, &global_paths_ptr[node*4+childIndex], sizeof(int), cudaMemcpyDeviceToHost);
+                cudaMemcpy(&pendantNodeIndex, &node, sizeof(int), cudaMemcpyDeviceToHost);
+                pendantChildren[pendantNodeIndex].push_back(pendantChild);
+
+            }
+        }
         
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
