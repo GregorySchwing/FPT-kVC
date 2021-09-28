@@ -591,8 +591,12 @@ __global__ void ParallelDFSRandom(int levelOffset,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
                             int * global_paths_ptr,
-                            int * global_pendant_path_dev_ptr){
+                            int * global_nonpendant_path_dev_ptr){
     int leafIndex = levelOffset + blockIdx.x;
+    // Initialized to 0, so will always perform DFS on first call
+    // Subsequently, only perform DFS on pendant edges, so nonpendant false
+    if (global_nonpendant_path_dev_ptr[leafIndex])
+        return;
     int globalPathOffset = leafIndex * 4;
     int sharedMemPathOffset = threadIdx.x * 4;
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
@@ -642,7 +646,8 @@ __global__ void ParallelDFSRandom(int levelOffset,
         i /= 2;
     }
     // Write pendant status to global memory
-    global_pendant_path_dev_ptr[blockIdx.x] = pathsAndPendantStatus[isInvalidPathBooleanArrayOffset];
+    // We detected pendant, but we store the converse, nonpendantness
+    global_nonpendant_path_dev_ptr[blockIdx.x] = !pathsAndPendantStatus[isInvalidPathBooleanArrayOffset];
     // A nonpendant exists
     if (!pathsAndPendantStatus[isInvalidPathBooleanArrayOffset]){
         // Regenerate pendant booleans
@@ -668,6 +673,123 @@ __global__ void ParallelDFSRandom(int levelOffset,
     }
 }
 
+__global__ void ParallelProcessPendantEdge(int levelOffset,
+                            int levelUpperBound,
+                            int numberOfRows,
+                            int numberOfEdgesPerGraph,
+                            int * global_row_offsets_dev_ptr,
+                            int * global_columns_dev_ptr,
+                            int * global_values_dev_ptr,
+                            int * global_remaining_vertices_dev_ptr,
+                            int * global_remaining_vertices_size_dev_ptr,
+                            int * global_paths_ptr,
+                            int * global_nonpendant_path_dev_ptr){
+
+    int leafIndex = levelOffset + blockIdx.x;
+    // Only process pendant edges
+    if (!global_nonpendant_path_dev_ptr[leafIndex])
+        return;
+    int pathsOffset = leafIndex * 4;
+    int rowOffsOffset = leafIndex * (numberOfRows + 1);
+    int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
+    int degreesOffset = leafIndex * numberOfRows;
+    int childIndex = global_paths_ptr[leafIndex*4 + 0] != global_paths_ptr[leafIndex*4 + 2];
+    int child = global_paths_ptr[leafIndex*4 + childIndex];
+    int LB, UB, v, vLB, vUB;
+    // Set out-edges
+    for (int i = 0; i < 2; ++i){
+        LB = global_row_offsets_dev_ptr[rowOffsOffset + child];
+        UB = global_row_offsets_dev_ptr[rowOffsOffset + child + 1];    
+        for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
+            global_values_dev_ptr[valsAndColsOffset + edge] = 0;
+        }
+    }
+    __syncthreads();
+    if (threadIdx.x == 0 && blockIdx.x == 0){
+        printf("Block %d, levelOffset %d, leafIndex %d, child removed %d\n", blockIdx.x, levelOffset, leafIndex, child);
+        printf("\n");
+    }
+    // (u,v) is the form of edge pairs.  We are traversing over v's outgoing edges, 
+    // looking for u as the destination and turning off that edge.
+    // this may be more elegantly handled by 
+    // (1) an associative data structure
+    // (2) an undirected graph 
+    // Parallel implementations of both of these need to be investigated.
+    for (int i = 0; i < 2; ++i){
+        LB = global_row_offsets_dev_ptr[rowOffsOffset + child];
+        UB = global_row_offsets_dev_ptr[rowOffsOffset + child + 1];    // Set out-edges
+        for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
+            v = global_columns_dev_ptr[valsAndColsOffset + edge];
+            // guarunteed to only have one incoming and one outgoing edge connecting (x,y)
+            vLB = global_row_offsets_dev_ptr[rowOffsOffset + v];
+            vUB = global_row_offsets_dev_ptr[rowOffsOffset + v + 1];
+            for (int outgoingEdgeOfV = vLB + threadIdx.x; 
+                    outgoingEdgeOfV < vUB; 
+                        outgoingEdgeOfV += blockDim.x){
+                if (child == global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfV]){
+                    // Set in-edge
+                    global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV] = 0;
+                }
+            }
+        }
+    }
+    __syncthreads();
+}
+
+/*
+__global__ void SerialProcessPendantEdge(int levelOffset,
+                            int levelUpperBound,
+                            int numberOfRows,
+                            int numberOfEdgesPerGraph,
+                            int * global_row_offsets_dev_ptr,
+                            int * global_columns_dev_ptr,
+                            int * global_remaining_vertices_dev_ptr,
+                            int * global_remaining_vertices_size_dev_ptr,
+                            int * global_paths_ptr,
+                            int * global_nonpendant_path_dev_ptr){
+    // Set out-edges
+    for (int i = 0; i < 2; ++i){
+        LB = global_row_offsets_dev_ptr[rowOffsOffset + children[i]];
+        UB = global_row_offsets_dev_ptr[rowOffsOffset + children[i] + 1];    
+        for (int edge = LB + threadIndex; edge < UB; edge += blockDim.x){
+            global_values_dev_ptr[valsAndColsOffset + edge] = 0;
+        }
+    }
+    __syncthreads();
+    if (threadIndex == 0 && blockIdx.x == 0){
+        printf("Block %d, levelOffset %d, leafIndex %d, children removed %d %d\n", blockIdx.x, levelOffset, leafIndex, children[0], children[1]);
+        for (int i = 0; i < global_edges_left_to_cover_count[(leafIndex-1)/3]; ++i){
+            printf("(%d, %d) ",global_columns_dev_ptr[valsAndColsOffset + i], global_values_dev_ptr[valsAndColsOffset + i]);
+        }
+        printf("\n");
+    }
+    // (u,v) is the form of edge pairs.  We are traversing over v's outgoing edges, 
+    // looking for u as the destination and turning off that edge.
+    // this may be more elegantly handled by 
+    // (1) an associative data structure
+    // (2) an undirected graph 
+    // Parallel implementations of both of these need to be investigated.
+    for (int i = 0; i < 2; ++i){
+        LB = global_row_offsets_dev_ptr[rowOffsOffset + children[i]];
+        UB = global_row_offsets_dev_ptr[rowOffsOffset + children[i] + 1];    // Set out-edges
+        for (int edge = LB + threadIndex; edge < UB; edge += blockDim.x){
+            v = global_columns_dev_ptr[valsAndColsOffset + edge];
+            // guarunteed to only have one incoming and one outgoing edge connecting (x,y)
+            vLB = global_row_offsets_dev_ptr[rowOffsOffset + v];
+            vUB = global_row_offsets_dev_ptr[rowOffsOffset + v + 1];
+            for (int outgoingEdgeOfV = vLB + threadIndex; 
+                    outgoingEdgeOfV < vUB; 
+                        outgoingEdgeOfV += blockDim.x){
+                if (children[i] == global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfV]){
+                    // Set in-edge
+                    global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV] = 0;
+                }
+            }
+        }
+    }
+    __syncthreads();
+}
+*/
 __device__ void SetOutgoingEdges(int rowOffsOffset,
                                 int valsAndColsOffset,
                                 int degreesOffset,
@@ -874,7 +996,7 @@ void CallPopulateTree(int numberOfLevels,
     int * global_paths_ptr; 
     int * global_remaining_vertices_ptr;
     int * global_remaining_vertices_size_dev_ptr;
-    int * global_pendant_path_dev_ptr;
+    int * global_nonpendant_path_dev_ptr;
     //int * global_outgoing_edge_vertices;
     //int * global_outgoing_edge_vertices_count;
     int * global_paths_length;
@@ -896,7 +1018,7 @@ void CallPopulateTree(int numberOfLevels,
     //cudaMalloc( (void**)&global_outgoing_edge_vertices_count, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_paths_length, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr, treeSize * sizeof(int) );
-    cudaMalloc( (void**)&global_pendant_path_dev_ptr, deepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_nonpendant_path_dev_ptr, deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_edges_left_to_cover_count, treeSize * sizeof(int) );
 
     cudaDeviceSynchronize();
@@ -917,6 +1039,7 @@ void CallPopulateTree(int numberOfLevels,
     long long levelUpperBound;
     int numberOfBlocksForOneThreadPerLeaf;
     numberOfLevels = 1;
+    bool pendantNodeExists = true;
     for (int level = 0; level < numberOfLevels; ++level){
         levelUpperBound = CalculateLevelUpperBound(level);
         numberOfBlocksForOneThreadPerLeaf = ((levelUpperBound - levelOffset) + threadsPerBlock - 1) / threadsPerBlock;
@@ -927,46 +1050,68 @@ void CallPopulateTree(int numberOfLevels,
         // Each thread checks it's path's pendant status
         // These booleans are reduced in shared memory
         // Hence + threadsPerBlock
-        ParallelDFSRandom<<<levelUpperBound-levelOffset,threadsPerBlock,threadsPerBlock*4 + threadsPerBlock>>>
-                            (levelOffset,
-                            levelUpperBound,
-                            numberOfRows,
-                            numberOfEdgesPerGraph,
-                            global_row_offsets_dev_ptr,
-                            global_columns_dev_ptr,
-                            global_remaining_vertices_ptr,
-                            global_remaining_vertices_size_dev_ptr,
-                            global_paths_ptr,
-                            global_pendant_path_dev_ptr);
-        int childIndex;
-        for (int node = levelOffset; node < levelUpperBound; ++node){
-            // global_pendant_path_dev_ptr was defined as an OR of 
-            // 0) path[0] == path[2]
-            // 1) path[1] == path[3]
-            if (global_pendant_path_dev_ptr[node]){
-                // We give Case 3 priority over Case 2,
-                // Since the serial algorithm short-circuits 
-                // upon finding a pendant edge
+        while(pendantNodeExists){
+            ParallelDFSRandom<<<levelUpperBound-levelOffset,threadsPerBlock,threadsPerBlock*4 + threadsPerBlock>>>
+                                (levelOffset,
+                                levelUpperBound,
+                                numberOfRows,
+                                numberOfEdgesPerGraph,
+                                global_row_offsets_dev_ptr,
+                                global_columns_dev_ptr,
+                                global_remaining_vertices_ptr,
+                                global_remaining_vertices_size_dev_ptr,
+                                global_paths_ptr,
+                                global_nonpendant_path_dev_ptr);
+            int childIndex;
+            pendantNodeExists = false;
+            for (int node = levelOffset; node < levelUpperBound; ++node){
+                // global_nonpendant_path_dev_ptr was defined as an OR of 
+                // 0) path[0] == path[2]
+                // 1) path[1] == path[3]
+                if (!global_nonpendant_path_dev_ptr[node]){
+                    pendantNodeExists = true;
+                    // We give Case 3 priority over Case 2,
+                    // Since the serial algorithm short-circuits 
+                    // upon finding a pendant edge
 
-                // We know either 
-                // Case 3 - length 2
-                // v, v1
-                //path[0] == path[2], desired child is v
-                // If path[0] == path[2] then path[0] != path[2]
-                // Hence, cI == 0, since false casted to int is 0
-                // Therefore, v == path[cI]
-                childIndex = global_paths_ptr[node*4 + 0] != global_paths_ptr[node*4 + 2];
-                // or
-                // Case 2 - length 3
-                // v, v1, v2
-                // if path[0] != path[2] was true, then path[1] == path[3]
-                // cI == 1, since true casted to int is 1
-                // Desired child is v1
-                // Therefore, v1 == path[cI]
-                cudaMemcpy(&pendantChild, &global_paths_ptr[node*4+childIndex], sizeof(int), cudaMemcpyDeviceToHost);
-                cudaMemcpy(&pendantNodeIndex, &node, sizeof(int), cudaMemcpyDeviceToHost);
-                pendantChildren[pendantNodeIndex].push_back(pendantChild);
+                    // We know either 
+                    // Case 3 - length 2
+                    // v, v1
+                    //path[0] == path[2], desired child is v
+                    // If path[0] == path[2] then path[0] != path[2]
+                    // Hence, cI == 0, since false casted to int is 0
+                    // Therefore, v == path[cI]
+                    childIndex = global_paths_ptr[node*4 + 0] != global_paths_ptr[node*4 + 2];
+                    // or
+                    // Case 2 - length 3
+                    // v, v1, v2
+                    // if path[0] != path[2] was true, then path[1] == path[3]
+                    // cI == 1, since true casted to int is 1
+                    // Desired child is v1
+                    // Therefore, v1 == path[cI]
+                    
+                    // Currently serial, could parallelize by allocating 2 arrays of 
+                    // size maxLevelWidth, one for child one for node
+                    cudaMemcpy(&pendantChild, &global_paths_ptr[node*4+childIndex], sizeof(int), cudaMemcpyDeviceToHost);
+                    cudaMemcpy(&pendantNodeIndex, &node, sizeof(int), cudaMemcpyDeviceToHost);
+                    pendantChildren[pendantNodeIndex].push_back(pendantChild);
 
+                }
+                // Each node assigned a block,  outgoing and incoming edges of child 
+                // from pendant path processed at thread level
+                // Block immediately returns if nonpendant path
+                ParallelProcessPendantEdge<<<levelUpperBound-levelOffset,threadsPerBlock>>>
+                                (levelOffset,
+                                levelUpperBound,
+                                numberOfRows,
+                                numberOfEdgesPerGraph,
+                                global_row_offsets_dev_ptr,
+                                global_columns_dev_ptr,
+                                global_values_dev_ptr,
+                                global_remaining_vertices_ptr,
+                                global_remaining_vertices_size_dev_ptr,
+                                global_paths_ptr,
+                                global_nonpendant_path_dev_ptr);
             }
         }
         
