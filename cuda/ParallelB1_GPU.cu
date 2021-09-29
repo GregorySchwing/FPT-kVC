@@ -590,6 +590,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
                             int * global_columns_dev_ptr,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
+                            int * global_degrees_dev_ptr,
                             int * global_paths_ptr,
                             int * global_nonpendant_path_dev_ptr){
     int leafIndex = levelOffset + blockIdx.x;
@@ -601,6 +602,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
     int sharedMemPathOffset = threadIdx.x * 4;
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
     int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
+    int degreesOffset = leafIndex * numberOfRows;
     extern __shared__ int pathsAndPendantStatus[];
     int isInvalidPathBooleanArrayOffset = blockDim.x * 4;
     int iteration = 0;
@@ -616,15 +618,21 @@ __global__ void ParallelDFSRandom(int levelOffset,
 
     // Set random out at depth 1
     int randomVertRowOff = global_row_offsets_dev_ptr[rowOffsOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]];
-    outEdgesCount = global_row_offsets_dev_ptr[rowOffsOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1] + 1]
+    // Using degrees allow us to ignore the edges which have been turned off
+    outEdgesCount = global_degrees_dev_ptr[degreesOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]]
                     - randomVertRowOff;
+    //outEdgesCount = global_row_offsets_dev_ptr[rowOffsOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1] + 1]
+    //                - randomVertRowOff;
     pathsAndPendantStatus[sharedMemPathOffset + iteration] =  global_columns_dev_ptr[valsAndColsOffset + randomVertRowOff + (r[iteration] % outEdgesCount)];
     ++iteration;
     // Depth 2 and 3
     for (; iteration < 4; ++iteration){
         randomVertRowOff = global_row_offsets_dev_ptr[rowOffsOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]];
-        outEdgesCount = global_row_offsets_dev_ptr[rowOffsOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1] + 1]
-                        - randomVertRowOff;
+        // Using degrees allow us to ignore the edges which have been turned off
+        outEdgesCount = global_degrees_dev_ptr[degreesOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]]
+                - randomVertRowOff;
+        //outEdgesCount = global_row_offsets_dev_ptr[rowOffsOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1] + 1]
+        //                - randomVertRowOff;
         pathsAndPendantStatus[sharedMemPathOffset + iteration] =  global_columns_dev_ptr[valsAndColsOffset + randomVertRowOff + (r[iteration] % outEdgesCount)];
         // OutEdgesCount != 2 means there is another path that isn't a cycle
         if(pathsAndPendantStatus[sharedMemPathOffset + iteration] == 
@@ -682,6 +690,7 @@ __global__ void ParallelProcessPendantEdge(int levelOffset,
                             int * global_values_dev_ptr,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
+                            int * global_degrees_dev_ptr,
                             int * global_paths_ptr,
                             int * global_nonpendant_path_dev_ptr){
 
@@ -693,17 +702,23 @@ __global__ void ParallelProcessPendantEdge(int levelOffset,
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
     int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
     int degreesOffset = leafIndex * numberOfRows;
-    int childIndex = global_paths_ptr[leafIndex*4 + 0] != global_paths_ptr[leafIndex*4 + 2];
-    int child = global_paths_ptr[leafIndex*4 + childIndex];
+    int childIndex = global_paths_ptr[pathsOffset + 0] != global_paths_ptr[pathsOffset + 2];
+    int child = global_paths_ptr[pathsOffset + childIndex];
     int LB, UB, v, vLB, vUB;
     // Set out-edges
-    for (int i = 0; i < 2; ++i){
-        LB = global_row_offsets_dev_ptr[rowOffsOffset + child];
-        UB = global_row_offsets_dev_ptr[rowOffsOffset + child + 1];    
-        for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
-            global_values_dev_ptr[valsAndColsOffset + edge] = 0;
-        }
+    LB = global_row_offsets_dev_ptr[rowOffsOffset + child];
+    UB = global_row_offsets_dev_ptr[rowOffsOffset + child + 1];    
+    for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
+        // This way we only decrement the degree once if this method 
+        // called more than once prior to a defrag
+        // Since subtracting by zero wont change the degree
+        global_degrees_dev_ptr[degreesOffset + 
+            global_columns_dev_ptr[valsAndColsOffset + edge]] 
+                -= global_values_dev_ptr[valsAndColsOffset + edge];
+        global_values_dev_ptr[valsAndColsOffset + edge] = 0;
+
     }
+    
     __syncthreads();
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("Block %d, levelOffset %d, leafIndex %d, child removed %d\n", blockIdx.x, levelOffset, leafIndex, child);
@@ -715,24 +730,28 @@ __global__ void ParallelProcessPendantEdge(int levelOffset,
     // (1) an associative data structure
     // (2) an undirected graph 
     // Parallel implementations of both of these need to be investigated.
-    for (int i = 0; i < 2; ++i){
-        LB = global_row_offsets_dev_ptr[rowOffsOffset + child];
-        UB = global_row_offsets_dev_ptr[rowOffsOffset + child + 1];    // Set out-edges
-        for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
-            v = global_columns_dev_ptr[valsAndColsOffset + edge];
-            // guarunteed to only have one incoming and one outgoing edge connecting (x,y)
-            vLB = global_row_offsets_dev_ptr[rowOffsOffset + v];
-            vUB = global_row_offsets_dev_ptr[rowOffsOffset + v + 1];
-            for (int outgoingEdgeOfV = vLB + threadIdx.x; 
-                    outgoingEdgeOfV < vUB; 
-                        outgoingEdgeOfV += blockDim.x){
-                if (child == global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfV]){
-                    // Set in-edge
-                    global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV] = 0;
-                }
+    LB = global_row_offsets_dev_ptr[rowOffsOffset + child];
+    UB = global_row_offsets_dev_ptr[rowOffsOffset + child + 1];    // Set out-edges
+    for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
+        v = global_columns_dev_ptr[valsAndColsOffset + edge];
+        // guarunteed to only have one incoming and one outgoing edge connecting (x,y)
+        vLB = global_row_offsets_dev_ptr[rowOffsOffset + v];
+        vUB = global_row_offsets_dev_ptr[rowOffsOffset + v + 1];
+        for (int outgoingEdgeOfV = vLB + threadIdx.x; 
+                outgoingEdgeOfV < vUB; 
+                    outgoingEdgeOfV += blockDim.x){
+            if (child == global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfV]){
+                // This way we only decrement the degree once if this method 
+                // called more than once prior to a defrag
+                global_degrees_dev_ptr[degreesOffset + 
+                    global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfV]] 
+                        -= global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV];
+                // Set in-edge
+                global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV] = 0;
             }
         }
     }
+    
     __syncthreads();
 }
 
@@ -1051,6 +1070,8 @@ void CallPopulateTree(int numberOfLevels,
         // These booleans are reduced in shared memory
         // Hence + threadsPerBlock
         while(pendantNodeExists){
+            // Assumes all edges are turned on.  We need to compress a graph
+            // after processing the edges of pendant paths
             ParallelDFSRandom<<<levelUpperBound-levelOffset,threadsPerBlock,threadsPerBlock*4 + threadsPerBlock>>>
                                 (levelOffset,
                                 levelUpperBound,
@@ -1060,6 +1081,7 @@ void CallPopulateTree(int numberOfLevels,
                                 global_columns_dev_ptr,
                                 global_remaining_vertices_ptr,
                                 global_remaining_vertices_size_dev_ptr,
+                                global_degrees_dev_ptr,
                                 global_paths_ptr,
                                 global_nonpendant_path_dev_ptr);
             int childIndex;
@@ -1110,8 +1132,18 @@ void CallPopulateTree(int numberOfLevels,
                                 global_values_dev_ptr,
                                 global_remaining_vertices_ptr,
                                 global_remaining_vertices_size_dev_ptr,
+                                global_degrees_dev_ptr,
                                 global_paths_ptr,
                                 global_nonpendant_path_dev_ptr);
+
+                // We now remove the unset edges since our DFS 
+                // Assumes all edges are set.
+                // To achieve this goal in linear time,
+                // we will stable sort the rows by edge value,
+                // and rely on degree[v] for setting the
+                // upperbound of a row instead of rowOffs[v] + 1
+                // in the ParallelDFS.
+
             }
         }
         

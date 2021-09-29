@@ -171,6 +171,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
                             int * global_columns_dev_ptr,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
+                            int * global_degrees_dev_ptr,
                             int * global_paths_ptr);
 
 __global__ void ParallelProcessPendantEdge(int levelOffset,
@@ -182,6 +183,7 @@ __global__ void ParallelProcessPendantEdge(int levelOffset,
                             int * global_values_dev_ptr,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
+                            int * global_degrees_dev_ptr,
                             int * global_paths_ptr,
                             int * global_nonpendant_path_dev_ptr);
                             /*
