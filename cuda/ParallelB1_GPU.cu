@@ -1253,54 +1253,51 @@ void CallPopulateTree(int numberOfLevels,
 
                     pendantChildren[node].push_back(pendantChild);
                     std::cout << "node " << node << "'s pendantChild " << pendantChild << " was pushed" << std::endl;
-
-
                 }
-                cudaDeviceSynchronize();
-                checkLastErrorCUDA(__FILE__, __LINE__);
-                // Each node assigned a block,  outgoing and incoming edges of child 
-                // from pendant path processed at thread level
-                // Block immediately returns if nonpendant path
-                ParallelProcessPendantEdges<<<levelUpperBound-levelOffset,threadsPerBlock>>>
-                                (levelOffset,
-                                levelUpperBound,
-                                numberOfRows,
-                                numberOfEdgesPerGraph,
-                                global_row_offsets_dev_ptr,
-                                global_columns_dev_ptr,
-                                global_values_dev_ptr,
-                                global_remaining_vertices_ptr,
-                                global_remaining_vertices_size_dev_ptr,
-                                global_degrees_dev_ptr,
-                                global_paths_ptr,
-                                global_nonpendant_path_bool_dev_ptr);
-                cudaDeviceSynchronize();
-                checkLastErrorCUDA(__FILE__, __LINE__);
-
-
-                // We now remove the unset edges since our DFS 
-                // Assumes all edges are set.
-                // we sort the rows by value,
-                // and rely on degree[v] for setting the
-                // upperbound of a row instead of rowOffs[v] + 1
-                // in the ParallelDFS.
-
-                // 2 sorting avenues can be used
-                // a stable (Use Dutch National Flag Modification) 
-                // and inplace rowwise quicksort - O(N^2), is degree
-                // a stable but noninplace counting sort - O(N + 1)
-                // Stability is important for increasing cache hits
-                // Quicksort by row
-
-
-
-
             }
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+            // Each node assigned a block,  outgoing and incoming edges of child 
+            // from pendant path processed at thread level
+            // Block immediately returns if nonpendant path
+            ParallelProcessPendantEdges<<<levelUpperBound-levelOffset,threadsPerBlock>>>
+                            (levelOffset,
+                            levelUpperBound,
+                            numberOfRows,
+                            numberOfEdgesPerGraph,
+                            global_row_offsets_dev_ptr,
+                            global_columns_dev_ptr,
+                            global_values_dev_ptr,
+                            global_remaining_vertices_ptr,
+                            global_remaining_vertices_size_dev_ptr,
+                            global_degrees_dev_ptr,
+                            global_paths_ptr,
+                            global_nonpendant_path_bool_dev_ptr);
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+
+
+            // We now remove the unset edges since our DFS 
+            // Assumes all edges are set.
+            // we sort the rows by value,
+            // and rely on degree[v] for setting the
+            // upperbound of a row instead of rowOffs[v] + 1
+            // in the ParallelDFS.
+
+            // 2 sorting avenues can be used
+            // a stable (Use Dutch National Flag Modification) 
+            // and inplace rowwise quicksort - O(N^2), is degree
+            // a stable but noninplace counting sort - O(N + 1)
+            // Stability is important for increasing cache hits
+            // Quicksort by row
+
+
+
+
         }
         
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
-
     }
 
     for (const auto& inner: pendantChildren) { // auto is std::vector<int>
