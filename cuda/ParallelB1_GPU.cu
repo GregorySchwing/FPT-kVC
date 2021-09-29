@@ -1140,7 +1140,8 @@ void CallPopulateTree(int numberOfLevels,
 
             // Assumes all edges are turned on.  We need to compress a graph
             // after processing the edges of pendant paths
-            ParallelDFSRandom<<<levelUpperBound-levelOffset,threadsPerBlock,threadsPerBlock*4 + threadsPerBlock>>>
+            int sharedMemorySize = threadsPerBlock*4 + threadsPerBlock;
+            ParallelDFSRandom<<<levelUpperBound-levelOffset,threadsPerBlock,sharedMemorySize*sizeof(int)>>>
                                 (levelOffset,
                                 levelUpperBound,
                                 numberOfRows,
