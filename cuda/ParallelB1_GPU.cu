@@ -1128,6 +1128,8 @@ void CallPopulateTree(int numberOfLevels,
         // These booleans are reduced in shared memory
         // Hence + threadsPerBlock
         while(pendantNodeExists){
+            std::cout << "pendantNodeExists - true " << std::endl;
+
             // Assumes all edges are turned on.  We need to compress a graph
             // after processing the edges of pendant paths
             ParallelDFSRandom<<<levelUpperBound-levelOffset,threadsPerBlock,threadsPerBlock*4 + threadsPerBlock>>>
