@@ -186,6 +186,15 @@ __global__ void ParallelProcessPendantEdge(int levelOffset,
                             int * global_degrees_dev_ptr,
                             int * global_paths_ptr,
                             int * global_nonpendant_path_dev_ptr);
+
+__global__ void ParallelQuicksortWithDNF(int levelOffset,
+                            int levelUpperBound,
+                            int numberOfRows,
+                            int numberOfEdgesPerGraph,
+                            int * global_row_offsets_dev_ptr,
+                            int * global_columns_dev_ptr,
+                            int * global_values_dev_ptr,
+                            int * global_degrees_dev_ptr);
                             /*
 __global__ void SerialProcessPendantEdge(int levelOffset,
                             int levelUpperBound,

@@ -755,6 +755,25 @@ __global__ void ParallelProcessPendantEdge(int levelOffset,
     __syncthreads();
 }
 
+__global__ void ParallelQuicksortWithDNF(int levelOffset,
+                            int levelUpperBound,
+                            int numberOfRows,
+                            int numberOfEdgesPerGraph,
+                            int * global_row_offsets_dev_ptr,
+                            int * global_columns_dev_ptr,
+                            int * global_values_dev_ptr,
+                            int * global_degrees_dev_ptr){
+
+    int row = threadIdx.x;
+
+    
+
+    for (int iter = row; iter < numberOfRows; iter += blockDim.x){
+
+    }
+
+}
+
 /*
 __global__ void SerialProcessPendantEdge(int levelOffset,
                             int levelUpperBound,
@@ -1138,11 +1157,20 @@ void CallPopulateTree(int numberOfLevels,
 
                 // We now remove the unset edges since our DFS 
                 // Assumes all edges are set.
-                // To achieve this goal in linear time,
-                // we will stable sort the rows by edge value,
+                // we sort the rows by value,
                 // and rely on degree[v] for setting the
                 // upperbound of a row instead of rowOffs[v] + 1
                 // in the ParallelDFS.
+
+                // 2 sorting avenues can be used
+                // a stable (Use Dutch National Flag Modification) 
+                // and inplace rowwise quicksort - O(N^2), is degree
+                // a stable but noninplace counting sort - O(N + 1)
+                // Stability is important for increasing cache hits
+                // Quicksort by row
+
+
+
 
             }
         }
