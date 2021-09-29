@@ -1202,6 +1202,10 @@ void CallPopulateTree(int numberOfLevels,
                 // 0) path[0] == path[2]
                 // 1) path[1] == path[3]
                 std::cout << "node " << node << std::endl;
+                std::cout << "global_nonpendant_path_dev_ptr[node] " << global_nonpendant_path_dev_ptr[node] << std::endl;
+
+                std::cout << "!global_nonpendant_path_dev_ptr[node] " << !global_nonpendant_path_dev_ptr[node] << std::endl;
+
                 if (!global_nonpendant_path_dev_ptr[node]){
                     std::cout << "node " << node << " is pendant" << std::endl;
 
