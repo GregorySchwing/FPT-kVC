@@ -722,8 +722,14 @@ __global__ void ParallelDFSRandom(int levelOffset,
     } else {
         if (threadIdx.x == 0){
             // Since these are random paths, using the first pendant isnt biased
-            for (int j = 0; j < 4; ++j)
+            for (int j = 0; j < 4; ++j){
                 global_paths_ptr[globalPathOffset + j] = pathsAndPendantStatus[j];
+            }
+            printf("leaf index %d, path (%d -> %d -> %d -> %d)\n", leafIndex, 
+                global_paths_ptr[globalPathOffset + 0],
+                global_paths_ptr[globalPathOffset + 1],
+                global_paths_ptr[globalPathOffset + 2],
+                global_paths_ptr[globalPathOffset + 3]);
         }
     }
     if (threadIdx.x == 0 && blockIdx.x == 0){
