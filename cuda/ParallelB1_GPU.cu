@@ -872,6 +872,46 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     __syncthreads();
 }
 
+__global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
+                            int levelUpperBound,
+                            int numberOfRows,
+                            int * global_remaining_vertices_dev_ptr,
+                            int * global_remaining_vertices_size_dev_ptr,
+                            int * global_degrees_dev_ptr){
+
+    if (threadIdx.x == 0 && blockIdx.x == 0){
+        printf("Entered ProcessDeg0\n");
+        printf("\n");
+    }
+    int leafIndex = levelOffset + blockIdx.x;
+    if (leafIndex >= levelUpperBound)
+        return;    
+
+    extern __shared__ int degreeZeroVertex[];
+
+    int degreesOffset = leafIndex * numberOfRows;
+    int vertexOffset = 0;
+    int numVertices = global_remaining_vertices_size_dev_ptr[leafIndex];
+    int numVerticesRemoved = 0;
+    for (int vertex = vertexOffset + threadIdx.x; vertex < numVertices; vertexOffset += blockDim.x){
+        // Reinitialize
+        degreeZeroVertex[threadIdx.x] = 0;
+        degreeZeroVertex[threadIdx.x] = (0 == global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[degreesOffset + vertex]]);
+        int i = blockDim.x/2;
+        __syncthreads();
+        // Checks for any nonpendant edge path exists
+        while (i != 0) {
+            if (threadIdx.x < i){
+                degreeZeroVertex[threadIdx.x] += degreeZeroVertex[threadIdx.x + i];
+            }
+            __syncthreads();
+            i /= 2;
+        }
+        if (threadIdx.x == 0)
+            numVerticesRemoved += degreeZeroVertex[threadIdx.x];
+    }
+}
+
 __global__ void ParallelQuicksortWithDNF(int levelOffset,
                             int levelUpperBound,
                             int numberOfRows,
