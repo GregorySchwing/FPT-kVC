@@ -763,7 +763,7 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
                 // we are using row offsets, which may include some edges turned off on a previous
                 // pendant edge processing step.
                 global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV] ^= (foundChild & tmp);
-            }
+        
         }
     }
     __syncthreads();
