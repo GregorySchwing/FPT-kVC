@@ -702,9 +702,13 @@ __global__ void ParallelDFSRandom(int levelOffset,
         __syncthreads();
         i /= 2;
     }
+
     // Write pendant status to global memory
     // We detected pendant, but we store the converse, nonpendantness
-    global_nonpendant_path_dev_ptr[blockIdx.x] = !pathsAndPendantStatus[isInvalidPathBooleanArrayOffset];
+    if (threadIdx.x == 0){
+        global_nonpendant_path_dev_ptr[leafIndex] = !pathsAndPendantStatus[isInvalidPathBooleanArrayOffset];
+        printf("leafIndex %d is %s\n", leafIndex, global_nonpendant_path_dev_ptr[leafIndex] ? "nonpendant" : "pendant");
+    }
     // A nonpendant exists
     if (!pathsAndPendantStatus[isInvalidPathBooleanArrayOffset]){
         // Regenerate pendant booleans
