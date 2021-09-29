@@ -1144,6 +1144,10 @@ void CallPopulateTree(int numberOfLevels,
                                 global_degrees_dev_ptr,
                                 global_paths_ptr,
                                 global_nonpendant_path_dev_ptr);
+            
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+            
             int childIndex;
             pendantNodeExists = false;
             for (int node = levelOffset; node < levelUpperBound; ++node){
