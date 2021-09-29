@@ -662,7 +662,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
     //outEdgesCount = global_row_offsets_dev_ptr[rowOffsOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1] + 1]
     //                - randomVertRowOff;
     if (threadIdx.x == 0 && blockIdx.x == 0){
-        printf("valsAndColsOffset + randomVertRowOff + (r[iteration] % outEdgesCount) %d\n",valsAndColsOffset + randomVertRowOff + (r[iteration] % outEdgesCount));
+        printf("valsAndColsOffset + randomVertRowOff + (r[iteration] mod outEdgesCount) %d\n", valsAndColsOffset + randomVertRowOff + (r[iteration] % outEdgesCount));
     }
     pathsAndPendantStatus[sharedMemPathOffset + iteration] =  global_columns_dev_ptr[valsAndColsOffset + randomVertRowOff + (r[iteration] % outEdgesCount)];
     ++iteration;
@@ -733,7 +733,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
         }
     }
     if (threadIdx.x == 0 && blockIdx.x == 0){
-        printf("Finished DFS\n", blockIdx.x);
+        printf("Block ID %d Finished DFS\n", blockIdx.x);
         printf("\n");
     }
 }
@@ -766,7 +766,7 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     LB = global_row_offsets_dev_ptr[rowOffsOffset + child];
     UB = global_row_offsets_dev_ptr[rowOffsOffset + child + 1]; 
     if (threadIdx.x == 0 && blockIdx.x == 0){
-        printf("Set offsets in PPP\n", blockIdx.x);
+        printf("block ID %d Set offsets in PPP\n", blockIdx.x);
         printf("\n");
     }   
     for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
@@ -783,7 +783,7 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     }
     __syncthreads();
     if (threadIdx.x == 0 && blockIdx.x == 0){
-        printf("Finished out edges PPP\n", blockIdx.x);
+        printf("Block ID %d Finished out edges PPP\n", blockIdx.x);
         printf("\n");
     }  
     if (threadIdx.x == 0 && blockIdx.x == 0){
@@ -1195,7 +1195,10 @@ void CallPopulateTree(int numberOfLevels,
                 // global_nonpendant_path_dev_ptr was defined as an OR of 
                 // 0) path[0] == path[2]
                 // 1) path[1] == path[3]
+                std::cout << "node " << node << std::endl;
                 if (!global_nonpendant_path_dev_ptr[node]){
+                    std::cout << "node " << node << " is pendant" << std::endl;
+
                     pendantNodeExists = true;
                     // We give Case 3 priority over Case 2,
                     // Since the serial algorithm short-circuits 
@@ -1209,6 +1212,8 @@ void CallPopulateTree(int numberOfLevels,
                     // Hence, cI == 0, since false casted to int is 0
                     // Therefore, v == path[cI]
                     childIndex = global_paths_ptr[node*4 + 0] != global_paths_ptr[node*4 + 2];
+                    std::cout << "node " << node << "'s cI is" << childIndex <<std::endl;
+
                     // or
                     // Case 2 - length 3
                     // v, v1, v2
@@ -1221,7 +1226,11 @@ void CallPopulateTree(int numberOfLevels,
                     // size maxLevelWidth, one for child one for node
                     cudaMemcpy(&pendantChild, &global_paths_ptr[node*4+childIndex], sizeof(int), cudaMemcpyDeviceToHost);
                     cudaMemcpy(&pendantNodeIndex, &node, sizeof(int), cudaMemcpyDeviceToHost);
+                    std::cout << "node " << node << "'s cI " << childIndex << " was memcpy'd" << std::endl;
+
                     pendantChildren[pendantNodeIndex].push_back(pendantChild);
+                    std::cout << "node " << node << "'s cI " << childIndex << " was pushed" << std::endl;
+
 
                 }
                 cudaDeviceSynchronize();
