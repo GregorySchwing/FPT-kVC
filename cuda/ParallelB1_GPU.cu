@@ -745,7 +745,7 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
                 outgoingEdgeOfV < vUB; 
                     outgoingEdgeOfV += blockDim.x){
 
-                foundChild = child == global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfV]);
+                foundChild = child == global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfV];
                 // Set in-edge
                 // store edge status
                 tmp = global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV];
