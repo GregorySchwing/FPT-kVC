@@ -764,7 +764,11 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     int LB, UB, v, vLB, vUB;
     // Set out-edges
     LB = global_row_offsets_dev_ptr[rowOffsOffset + child];
-    UB = global_row_offsets_dev_ptr[rowOffsOffset + child + 1];    
+    UB = global_row_offsets_dev_ptr[rowOffsOffset + child + 1]; 
+    if (threadIdx.x == 0 && blockIdx.x == 0){
+        printf("Set offsets in PPP\n", blockIdx.x);
+        printf("\n");
+    }   
     for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
         // Since there are only 2 edges b/w each node,
         // We can safely decrement the target node's degree
@@ -778,6 +782,10 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
             global_degrees_dev_ptr[degreesOffset + child] = 0;
     }
     __syncthreads();
+    if (threadIdx.x == 0 && blockIdx.x == 0){
+        printf("Finished out edges PPP\n", blockIdx.x);
+        printf("\n");
+    }  
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("Block %d, levelOffset %d, leafIndex %d, child removed %d\n", blockIdx.x, levelOffset, leafIndex, child);
         printf("\n");
@@ -1216,6 +1224,8 @@ void CallPopulateTree(int numberOfLevels,
                     pendantChildren[pendantNodeIndex].push_back(pendantChild);
 
                 }
+                cudaDeviceSynchronize();
+                checkLastErrorCUDA(__FILE__, __LINE__);
                 // Each node assigned a block,  outgoing and incoming edges of child 
                 // from pendant path processed at thread level
                 // Block immediately returns if nonpendant path
@@ -1232,7 +1242,8 @@ void CallPopulateTree(int numberOfLevels,
                                 global_degrees_dev_ptr,
                                 global_paths_ptr,
                                 global_nonpendant_path_dev_ptr);
-
+                cudaDeviceSynchronize();
+                checkLastErrorCUDA(__FILE__, __LINE__);
 
 
                 // We now remove the unset edges since our DFS 
