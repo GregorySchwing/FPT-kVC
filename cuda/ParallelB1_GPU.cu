@@ -594,6 +594,12 @@ __global__ void ParallelDFSRandom(int levelOffset,
                             int * global_paths_ptr,
                             int * global_nonpendant_path_dev_ptr){
     int leafIndex = levelOffset + blockIdx.x;
+    if (leafIndex >= levelUpperBound)
+        return;
+    if (threadIdx.x == 0 && blockIdx.x == 0){
+        printf("Set leafIndex\n");
+        printf("\n");
+    }
     // Initialized to 0, so will always perform DFS on first call
     // Subsequently, only perform DFS on pendant edges, so nonpendant false
     if (global_nonpendant_path_dev_ptr[leafIndex])
