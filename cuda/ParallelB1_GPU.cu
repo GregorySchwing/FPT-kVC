@@ -691,6 +691,8 @@ __global__ void ParallelDFSRandom(int levelOffset,
         printf("Block %d, levelOffset %d, leafIndex %d, got through last 2 iterations\n", blockIdx.x, levelOffset, leafIndex);
         printf("\n");
     }
+    printf("Thread %d is %s\n", threadIdx.x, pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] ? "pendant" : "nonpendant");
+
     int i = blockDim.x/2;
     // Checks for any nonpendant edge path exists
     while (i != 0) {
