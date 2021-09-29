@@ -681,7 +681,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
     }
 }
 
-__global__ void ParallelProcessPendantEdge(int levelOffset,
+__global__ void ParallelProcessPendantEdges(int levelOffset,
                             int levelUpperBound,
                             int numberOfRows,
                             int numberOfEdgesPerGraph,
@@ -709,16 +709,17 @@ __global__ void ParallelProcessPendantEdge(int levelOffset,
     LB = global_row_offsets_dev_ptr[rowOffsOffset + child];
     UB = global_row_offsets_dev_ptr[rowOffsOffset + child + 1];    
     for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
-        // This way we only decrement the degree once if this method 
-        // called more than once prior to a defrag
-        // Since subtracting by zero wont change the degree
+        // Since there are only 2 edges b/w each node,
+        // We can safely decrement the target node's degree
         global_degrees_dev_ptr[degreesOffset + 
             global_columns_dev_ptr[valsAndColsOffset + edge]] 
                 -= global_values_dev_ptr[valsAndColsOffset + edge];
         global_values_dev_ptr[valsAndColsOffset + edge] = 0;
-
     }
-    
+
+    if (threadIdx.x == 0){
+            global_degrees_dev_ptr[degreesOffset + child] = 0;
+    }
     __syncthreads();
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("Block %d, levelOffset %d, leafIndex %d, child removed %d\n", blockIdx.x, levelOffset, leafIndex, child);
@@ -730,28 +731,41 @@ __global__ void ParallelProcessPendantEdge(int levelOffset,
     // (1) an associative data structure
     // (2) an undirected graph 
     // Parallel implementations of both of these need to be investigated.
+    bool foundChild, tmp;
     LB = global_row_offsets_dev_ptr[rowOffsOffset + child];
     UB = global_row_offsets_dev_ptr[rowOffsOffset + child + 1];    // Set out-edges
     for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
         v = global_columns_dev_ptr[valsAndColsOffset + edge];
         // guarunteed to only have one incoming and one outgoing edge connecting (x,y)
+        // All outgoing edges were set and are separated from this method by a __syncthreads
+        // Thus there is no chance of decrementing the degree of the same node simulataneously
         vLB = global_row_offsets_dev_ptr[rowOffsOffset + v];
         vUB = global_row_offsets_dev_ptr[rowOffsOffset + v + 1];
         for (int outgoingEdgeOfV = vLB + threadIdx.x; 
                 outgoingEdgeOfV < vUB; 
                     outgoingEdgeOfV += blockDim.x){
-            if (child == global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfV]){
-                // This way we only decrement the degree once if this method 
-                // called more than once prior to a defrag
-                global_degrees_dev_ptr[degreesOffset + 
-                    global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfV]] 
-                        -= global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV];
+
+                foundChild = child == global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfV]);
                 // Set in-edge
-                global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV] = 0;
+                // store edge status
+                tmp = global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV];
+                //   foundChild     tmp   (foundChild & tmp)  (foundChild & tmp)^tmp
+                //1)      0          0            0                       0
+                //2)      1          0            0                       0
+                //3)      0          1            0                       1
+                //4)      1          1            1                       0
+                //
+                // Case 1: isnt child and edge is off, stay off
+                // Case 2: is child and edge is off, stay off
+                // Case 3: isn't child and edge is on, stay on
+                // Case 4: is child and edge is on, turn off
+                // All this logic is necessary because we aren't using degree to set upperbound
+                // we are using row offsets, which may include some edges turned off on a previous
+                // pendant edge processing step.
+                global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV] ^= (foundChild & tmp);
             }
         }
     }
-    
     __syncthreads();
 }
 
@@ -766,7 +780,7 @@ __global__ void ParallelQuicksortWithDNF(int levelOffset,
 
     int row = threadIdx.x;
 
-    
+
 
     for (int iter = row; iter < numberOfRows; iter += blockDim.x){
 
@@ -1141,7 +1155,7 @@ void CallPopulateTree(int numberOfLevels,
                 // Each node assigned a block,  outgoing and incoming edges of child 
                 // from pendant path processed at thread level
                 // Block immediately returns if nonpendant path
-                ParallelProcessPendantEdge<<<levelUpperBound-levelOffset,threadsPerBlock>>>
+                ParallelProcessPendantEdges<<<levelUpperBound-levelOffset,threadsPerBlock>>>
                                 (levelOffset,
                                 levelUpperBound,
                                 numberOfRows,
@@ -1154,6 +1168,8 @@ void CallPopulateTree(int numberOfLevels,
                                 global_degrees_dev_ptr,
                                 global_paths_ptr,
                                 global_nonpendant_path_dev_ptr);
+
+
 
                 // We now remove the unset edges since our DFS 
                 // Assumes all edges are set.
@@ -1178,8 +1194,14 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-    } 
+    }
 
+    for (const auto& inner: pendantChildren) { // auto is std::vector<int>
+        for (auto e: inner) { // auto is int
+            std::cout << e << " ";
+        }
+        std::cout << std::endl;
+    }
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 

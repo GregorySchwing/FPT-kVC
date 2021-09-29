@@ -174,7 +174,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
                             int * global_degrees_dev_ptr,
                             int * global_paths_ptr);
 
-__global__ void ParallelProcessPendantEdge(int levelOffset,
+__global__ void ParallelProcessPendantEdges(int levelOffset,
                             int levelUpperBound,
                             int numberOfRows,
                             int numberOfEdgesPerGraph,
