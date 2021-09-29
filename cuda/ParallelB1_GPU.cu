@@ -1119,7 +1119,6 @@ void CallPopulateTree(int numberOfLevels,
     long long totalMem = sizeOfSingleGraph * treeSize * sizeof(int);
 
     std::vector<std::vector<int>> pendantChildren(treeSize);
-    int pendantNodeIndex;
     int pendantChild;
 
     int num_gpus;
@@ -1252,8 +1251,9 @@ void CallPopulateTree(int numberOfLevels,
                     pendantNodeExists = true;
                     pendantChild = pendantChildrenOfLevel[node];
 
-                    pendantChildren[pendantNodeIndex].push_back(pendantChild);
+                    pendantChildren[node].push_back(pendantChild);
                     std::cout << "node " << node << "'s pendantChild " << pendantChild << " was pushed" << std::endl;
+
 
                 }
                 cudaDeviceSynchronize();
