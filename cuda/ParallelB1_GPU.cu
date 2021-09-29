@@ -593,6 +593,10 @@ __global__ void ParallelDFSRandom(int levelOffset,
                             int * global_degrees_dev_ptr,
                             int * global_paths_ptr,
                             int * global_nonpendant_path_dev_ptr){
+    if (threadIdx.x == 0 && blockIdx.x == 0){
+        printf("Entered DFS\n");
+        printf("\n");
+    }
     int leafIndex = levelOffset + blockIdx.x;
     if (leafIndex >= levelUpperBound)
         return;
