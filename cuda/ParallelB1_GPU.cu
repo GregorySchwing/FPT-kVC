@@ -45,6 +45,12 @@ __host__ __device__ long long CalculateSpaceForDesiredNumberOfLevels(int NumberO
     return summand;
 }
 
+__host__ __device__ long long CalculateDeepestLevelWidth(int deepestLevelSize){
+    long long summand= 0;
+    summand += pow (3.0, deepestLevelSize);
+    return summand;
+}
+
 
 __host__ __device__ long long CalculateSizeRequirement(int startingLevel,
                                                         int endingLevel){
@@ -592,7 +598,8 @@ __global__ void ParallelDFSRandom(int levelOffset,
                             int * global_remaining_vertices_size_dev_ptr,
                             int * global_degrees_dev_ptr,
                             int * global_paths_ptr,
-                            int * global_nonpendant_path_dev_ptr){
+                            int * global_nonpendant_path_bool_dev_ptr,
+                            int * global_nonpendant_child_dev_ptr){
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("Entered DFS\n");
         printf("\n");
@@ -606,7 +613,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
     }
     // Initialized to 0, so will always perform DFS on first call
     // Subsequently, only perform DFS on pendant edges, so nonpendant false
-    if (global_nonpendant_path_dev_ptr[leafIndex])
+    if (global_nonpendant_path_bool_dev_ptr[leafIndex])
         return;
     int globalPathOffset = leafIndex * 4;
     int sharedMemPathOffset = threadIdx.x * 4;
@@ -706,14 +713,35 @@ __global__ void ParallelDFSRandom(int levelOffset,
     // Write pendant status to global memory
     // We detected pendant, but we store the converse, nonpendantness
     if (threadIdx.x == 0){
-        global_nonpendant_path_dev_ptr[leafIndex] = !pathsAndPendantStatus[isInvalidPathBooleanArrayOffset];
-        printf("leafIndex %d is %s\n", leafIndex, global_nonpendant_path_dev_ptr[leafIndex] ? "nonpendant" : "pendant");
+        global_nonpendant_path_bool_dev_ptr[leafIndex] = !pathsAndPendantStatus[isInvalidPathBooleanArrayOffset];
+        printf("leafIndex %d is %s\n", leafIndex, global_nonpendant_path_bool_dev_ptr[leafIndex] ? "nonpendant" : "pendant");
     }
     // A nonpendant exists
     if (!pathsAndPendantStatus[isInvalidPathBooleanArrayOffset]){
         // Regenerate pendant booleans
         pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] = (pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + 0] == pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + 2]);
         pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] |= (pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + 1] == pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + 3]);
+        // We give Case 3 priority over Case 2,
+        // Since the serial algorithm short-circuits 
+        // upon finding a pendant edge
+
+        // We know either 
+        // Case 3 - length 2
+        // v, v1
+        //path[0] == path[2], desired child is v
+        // If path[0] == path[2] then path[0] != path[2]
+        // Hence, cI == 0, since false casted to int is 0
+        // Therefore, v == path[cI]
+        int childIndex = global_paths_ptr[globalPathOffset + 0] != global_paths_ptr[globalPathOffset + 2];
+
+        // or
+        // Case 2 - length 3
+        // v, v1, v2
+        // if path[0] != path[2] was true, then path[1] == path[3]
+        // cI == 1, since true casted to int is 1
+        // Desired child is v1
+        // Therefore, v1 == path[cI]
+        global_nonpendant_child_dev_ptr[blockIdx.x] = global_paths_ptr[globalPathOffset + childIndex];
         if (threadIdx.x == 0){
             // One of these is guarunteed nonpendant
             for (int i = 0; i < blockDim.x; ++i){
@@ -755,11 +783,11 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
                             int * global_remaining_vertices_size_dev_ptr,
                             int * global_degrees_dev_ptr,
                             int * global_paths_ptr,
-                            int * global_nonpendant_path_dev_ptr){
+                            int * global_nonpendant_path_bool_dev_ptr){
 
     int leafIndex = levelOffset + blockIdx.x;
     // Only process pendant edges
-    if (!global_nonpendant_path_dev_ptr[leafIndex])
+    if (!global_nonpendant_path_bool_dev_ptr[leafIndex])
         return;
     int pathsOffset = leafIndex * 4;
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
@@ -869,7 +897,7 @@ __global__ void SerialProcessPendantEdge(int levelOffset,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
                             int * global_paths_ptr,
-                            int * global_nonpendant_path_dev_ptr){
+                            int * global_nonpendant_path_bool_dev_ptr){
     // Set out-edges
     for (int i = 0; i < 2; ++i){
         LB = global_row_offsets_dev_ptr[rowOffsOffset + children[i]];
@@ -1082,7 +1110,7 @@ void CallPopulateTree(int numberOfLevels,
     //int treeSize = 200000;
     int counters = 2;
     numberOfLevels = 2;
-    int deepestLevelSize = pow(3.0, numberOfLevels-1);
+    int deepestLevelSize = CalculateDeepestLevelWidth(numberOfLevels-1);;
     long long treeSize = CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
     int expandedData = g.GetEdgesLeftToCover();
     int condensedData = g.GetVertexCount();
@@ -1119,7 +1147,8 @@ void CallPopulateTree(int numberOfLevels,
     int * global_paths_ptr; 
     int * global_remaining_vertices_ptr;
     int * global_remaining_vertices_size_dev_ptr;
-    int * global_nonpendant_path_dev_ptr;
+    int * global_nonpendant_path_bool_dev_ptr;
+    int * global_nonpendant_child_dev_ptr;
     //int * global_outgoing_edge_vertices;
     //int * global_outgoing_edge_vertices_count;
     int * global_paths_length;
@@ -1141,7 +1170,9 @@ void CallPopulateTree(int numberOfLevels,
     //cudaMalloc( (void**)&global_outgoing_edge_vertices_count, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_paths_length, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr, treeSize * sizeof(int) );
-    cudaMalloc( (void**)&global_nonpendant_path_dev_ptr, deepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_nonpendant_path_bool_dev_ptr, deepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_nonpendant_child_dev_ptr, deepestLevelSize * sizeof(int) );
+
     cudaMalloc( (void**)&global_edges_left_to_cover_count, treeSize * sizeof(int) );
 
     cudaDeviceSynchronize();
@@ -1163,6 +1194,11 @@ void CallPopulateTree(int numberOfLevels,
     int numberOfBlocksForOneThreadPerLeaf;
     numberOfLevels = 1;
     bool pendantNodeExists = true;
+
+    int * pendantBools = new int[deepestLevelSize];
+    int * pendantChildrenOfLevel = new int[deepestLevelSize];
+
+
     for (int level = 0; level < numberOfLevels; ++level){
         levelUpperBound = CalculateLevelUpperBound(level);
         numberOfBlocksForOneThreadPerLeaf = ((levelUpperBound - levelOffset) + threadsPerBlock - 1) / threadsPerBlock;
@@ -1190,57 +1226,34 @@ void CallPopulateTree(int numberOfLevels,
                                 global_remaining_vertices_size_dev_ptr,
                                 global_degrees_dev_ptr,
                                 global_paths_ptr,
-                                global_nonpendant_path_dev_ptr);
+                                global_nonpendant_path_bool_dev_ptr,
+                                global_nonpendant_child_dev_ptr);
             
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
 
-            int childIndex;
             pendantNodeExists = false;
+            cudaMemcpy(pendantBools, global_nonpendant_path_bool_dev_ptr, deepestLevelSize*sizeof(int), cudaMemcpyDeviceToHost);
+            cudaMemcpy(pendantChildrenOfLevel, global_nonpendant_child_dev_ptr, deepestLevelSize*sizeof(int), cudaMemcpyDeviceToHost);
+            
+
             for (int node = levelOffset; node < levelUpperBound; ++node){
-                // global_nonpendant_path_dev_ptr was defined as an OR of 
+                // global_nonpendant_path_bool_dev_ptr was defined as an OR of 
                 // 0) path[0] == path[2]
                 // 1) path[1] == path[3]
                 std::cout << "node " << node << std::endl;
-                std::cout << "global_nonpendant_path_dev_ptr[node] " << global_nonpendant_path_dev_ptr[node] << std::endl;
+                std::cout << "global_nonpendant_path_bool_dev_ptr[node] " << pendantBools[node] << std::endl;
 
-                std::cout << "!global_nonpendant_path_dev_ptr[node] " << !global_nonpendant_path_dev_ptr[node] << std::endl;
+                std::cout << "!global_nonpendant_path_bool_dev_ptr[node] " << !pendantBools[node] << std::endl;
 
-                if (!global_nonpendant_path_dev_ptr[node]){
+                if (!pendantBools[node]){
                     std::cout << "node " << node << " is pendant" << std::endl;
 
                     pendantNodeExists = true;
-                    // We give Case 3 priority over Case 2,
-                    // Since the serial algorithm short-circuits 
-                    // upon finding a pendant edge
-
-                    // We know either 
-                    // Case 3 - length 2
-                    // v, v1
-                    //path[0] == path[2], desired child is v
-                    // If path[0] == path[2] then path[0] != path[2]
-                    // Hence, cI == 0, since false casted to int is 0
-                    // Therefore, v == path[cI]
-                    childIndex = global_paths_ptr[node*4 + 0] != global_paths_ptr[node*4 + 2];
-                    std::cout << "node " << node << "'s cI is" << childIndex <<std::endl;
-
-                    // or
-                    // Case 2 - length 3
-                    // v, v1, v2
-                    // if path[0] != path[2] was true, then path[1] == path[3]
-                    // cI == 1, since true casted to int is 1
-                    // Desired child is v1
-                    // Therefore, v1 == path[cI]
-                    
-                    // Currently serial, could parallelize by allocating 2 arrays of 
-                    // size maxLevelWidth, one for child one for node
-                    cudaMemcpy(&pendantChild, &global_paths_ptr[node*4+childIndex], sizeof(int), cudaMemcpyDeviceToHost);
-                    cudaMemcpy(&pendantNodeIndex, &node, sizeof(int), cudaMemcpyDeviceToHost);
-                    std::cout << "node " << node << "'s cI " << childIndex << " was memcpy'd" << std::endl;
+                    pendantChild = pendantChildrenOfLevel[node];
 
                     pendantChildren[pendantNodeIndex].push_back(pendantChild);
-                    std::cout << "node " << node << "'s cI " << childIndex << " was pushed" << std::endl;
-
+                    std::cout << "node " << node << "'s pendantChild " << pendantChild << " was pushed" << std::endl;
 
                 }
                 cudaDeviceSynchronize();
@@ -1260,7 +1273,7 @@ void CallPopulateTree(int numberOfLevels,
                                 global_remaining_vertices_size_dev_ptr,
                                 global_degrees_dev_ptr,
                                 global_paths_ptr,
-                                global_nonpendant_path_dev_ptr);
+                                global_nonpendant_path_bool_dev_ptr);
                 cudaDeviceSynchronize();
                 checkLastErrorCUDA(__FILE__, __LINE__);
 

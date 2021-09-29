@@ -48,6 +48,7 @@ CUDA_HOSTDEV long long CalculateSizeRequirement(int startingLevel,
                                                             int endingLevel);
 CUDA_HOSTDEV long long CalculateLevelOffset(int level);
 CUDA_HOSTDEV long long CalculateLevelUpperBound(int level);
+CUDA_HOSTDEV long long CalculateDeepestLevelWidth(int maxLevel);
 
 __global__ void First_Graph_GPU(int vertexCount, 
                                 int size,
@@ -172,7 +173,8 @@ __global__ void ParallelDFSRandom(int levelOffset,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
                             int * global_degrees_dev_ptr,
-                            int * global_paths_ptr);
+                            int * global_paths_ptr,
+                            int * global_nonpendant_child_dev_ptr);
 
 __global__ void ParallelProcessPendantEdges(int levelOffset,
                             int levelUpperBound,
@@ -185,7 +187,7 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
                             int * global_remaining_vertices_size_dev_ptr,
                             int * global_degrees_dev_ptr,
                             int * global_paths_ptr,
-                            int * global_nonpendant_path_dev_ptr);
+                            int * global_nonpendant_path_bool_dev_ptr);
 
 __global__ void ParallelQuicksortWithDNF(int levelOffset,
                             int levelUpperBound,
@@ -205,7 +207,7 @@ __global__ void SerialProcessPendantEdge(int levelOffset,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
                             int * global_paths_ptr,
-                            int * global_nonpendant_path_dev_ptr);
+                            int * global_nonpendant_path_bool_dev_ptr);
 */
 
 __device__ void SetOutgoingEdges(int rowOffsOffset,
