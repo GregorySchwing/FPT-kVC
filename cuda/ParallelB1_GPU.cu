@@ -657,7 +657,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
     outEdgesCount = global_degrees_dev_ptr[degreesOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]]
                     - randomVertRowOff;
     if (threadIdx.x == 0 && blockIdx.x == 0){
-        printf("outEdgesCount\n");
+        printf("outEdgesCount %d\n", outEdgesCount);
         printf("\n");
     }
     //outEdgesCount = global_row_offsets_dev_ptr[rowOffsOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1] + 1]
