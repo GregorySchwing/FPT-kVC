@@ -625,6 +625,10 @@ __global__ void ParallelDFSRandom(int levelOffset,
     //                - randomVertRowOff;
     pathsAndPendantStatus[sharedMemPathOffset + iteration] =  global_columns_dev_ptr[valsAndColsOffset + randomVertRowOff + (r[iteration] % outEdgesCount)];
     ++iteration;
+    if (threadIdx.x == 0 && blockIdx.x == 0){
+        printf("Block %d, levelOffset %d, leafIndex %d, got through first 2 iterations\n", blockIdx.x, levelOffset, leafIndex);
+        printf("\n");
+    }
     // Depth 2 and 3
     for (; iteration < 4; ++iteration){
         randomVertRowOff = global_row_offsets_dev_ptr[rowOffsOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]];
@@ -643,7 +647,10 @@ __global__ void ParallelDFSRandom(int levelOffset,
     }
     pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] = (pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + 0] == pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + 2]);
     pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] |= (pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + 1] == pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + 3]);
-    
+    if (threadIdx.x == 0 && blockIdx.x == 0){
+        printf("Block %d, levelOffset %d, leafIndex %d, got through last 2 iterations\n", blockIdx.x, levelOffset, leafIndex);
+        printf("\n");
+    }
     int i = blockDim.x/2;
     // Checks for any nonpendant edge path exists
     while (i != 0) {
@@ -678,6 +685,10 @@ __global__ void ParallelDFSRandom(int levelOffset,
             for (int j = 0; j < 4; ++j)
                 global_paths_ptr[globalPathOffset + j] = pathsAndPendantStatus[j];
         }
+    }
+    if (threadIdx.x == 0 && blockIdx.x == 0){
+        printf("Finished DFS\n", blockIdx.x);
+        printf("\n");
     }
 }
 
