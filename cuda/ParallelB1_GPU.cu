@@ -785,9 +785,13 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
                             int * global_paths_ptr,
                             int * global_nonpendant_path_bool_dev_ptr){
 
+    if (threadIdx.x == 0 && blockIdx.x == 0){
+        printf("Block ID %d Started ParallelProcessPendantEdges\n", blockIdx.x);
+        printf("\n");
+    }
     int leafIndex = levelOffset + blockIdx.x;
     // Only process pendant edges
-    if (!global_nonpendant_path_bool_dev_ptr[leafIndex])
+    if (global_nonpendant_path_bool_dev_ptr[leafIndex])
         return;
     int pathsOffset = leafIndex * 4;
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
