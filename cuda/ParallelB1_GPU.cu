@@ -624,10 +624,18 @@ __global__ void ParallelDFSRandom(int levelOffset,
         printf("\n");
     }
     int remainingVerticesSize = global_remaining_vertices_size_dev_ptr[leafIndex];
+    if (threadIdx.x == 0 && blockIdx.x == 0){
+        printf("remainingVerticesSize\n");
+        printf("\n");
+    }
     int outEdgesCount;
     r = randomGPU_four(counter, leafIndex, seed);
     // Random starting point
     pathsAndPendantStatus[sharedMemPathOffset + iteration] = r[iteration] % remainingVerticesSize;
+    if (threadIdx.x == 0 && blockIdx.x == 0){
+        printf("pathsAndPendantStatus\n");
+        printf("\n");
+    }
     ++iteration;
 
     // Set random out at depth 1
@@ -1147,7 +1155,7 @@ void CallPopulateTree(int numberOfLevels,
             
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
-            
+
             int childIndex;
             pendantNodeExists = false;
             for (int node = levelOffset; node < levelUpperBound; ++node){
