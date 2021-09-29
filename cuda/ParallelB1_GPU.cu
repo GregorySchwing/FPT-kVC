@@ -609,6 +609,10 @@ __global__ void ParallelDFSRandom(int levelOffset,
     RNG::ctr_type r;
     unsigned int counter = 0;
     ulong seed = threadIdx.x;
+    if (threadIdx.x == 0 && blockIdx.x == 0){
+        printf("Setup offsets\n");
+        printf("\n");
+    }
     int remainingVerticesSize = global_remaining_vertices_size_dev_ptr[leafIndex];
     int outEdgesCount;
     r = randomGPU_four(counter, leafIndex, seed);
