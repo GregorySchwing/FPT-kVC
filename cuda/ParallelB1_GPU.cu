@@ -897,6 +897,9 @@ __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
         // Reinitialize
         degreeZeroVertex[threadIdx.x] = 0;
         degreeZeroVertex[threadIdx.x] = (0 == global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[degreesOffset + vertex]]);
+        // Makes this entry INT_MAX if degree 0
+        // Leaves unaltered if not degree 0
+        global_remaining_vertices_dev_ptr[degreesOffset + vertex] += (INT_MAX - global_remaining_vertices_dev_ptr[degreesOffset + vertex])*degreeZeroVertex[threadIdx.x];
         int i = blockDim.x/2;
         __syncthreads();
         // Checks for any nonpendant edge path exists
@@ -910,6 +913,10 @@ __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
         if (threadIdx.x == 0)
             numVerticesRemoved += degreeZeroVertex[threadIdx.x];
     }
+    // Update remaining vert size
+    // Now just need to sort those INT_MAX entries to the end of the array
+    if (threadIdx.x == 0)
+        global_remaining_vertices_size_dev_ptr[leafIndex] -= numVerticesRemoved;
 }
 
 __global__ void ParallelQuicksortWithDNF(int levelOffset,
@@ -1328,15 +1335,19 @@ void CallPopulateTree(int numberOfLevels,
             // upperbound of a row instead of rowOffs[v] + 1
             // in the ParallelDFS.
 
-            // 2 sorting avenues can be used
-            // a stable (Use Dutch National Flag Modification) 
-            // and inplace rowwise quicksort - O(N^2), is degree
-            // a stable but noninplace counting sort - O(N + 1)
-            // Stability is important for increasing cache hits
-            // Quicksort by row
+            //      TimSort
+            //      Great performance on arrays with preexisting internal structure
+            //      Being able to maintain a stable sort
+            //      We'll use this for sorting the edges.
+            //      Edges have associated column vals so 
+            //      we want to be stable
 
-
-
+            //      MergeSort
+            //      Not stable
+            //      We'll use this for remaining vertices since
+            //      there is no associated value so we dont need
+            //      to be stable
+            
 
         }
         

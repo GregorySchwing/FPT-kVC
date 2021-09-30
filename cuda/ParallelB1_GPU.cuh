@@ -19,6 +19,8 @@
 #include "CUDAUtils.cuh"
 #include "Graph.h"
 #include "Random123/philox.h"
+#include <stdint.h>
+
 typedef r123::Philox4x32 RNG;
 //static const double RAND_INTERVAL_GPU = 1.0/static_cast<double>(ULONG_MAX);
 
