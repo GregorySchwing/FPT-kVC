@@ -64,8 +64,8 @@ __global__ void  PrintEdges(int levelOffset,
 __global__ void  PrintVerts(int levelOffset,
                                     int levelUpperBound,
                                     int numberOfRows,
-                                    int * global_columns_tree,
-                                    int * global_offsets_buffer,
+                                    int * global_verts_tree,
+                                    int * global_vertex_buffer,
                                     int * printAlt,
                                     int * printCurr);
 

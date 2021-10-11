@@ -93,7 +93,7 @@ __global__ void  PrintVerts(int levelOffset,
                                     int levelUpperBound,
                                     int numberOfRows,
                                     int * global_verts_tree,
-                                    int * global_offsets_buffer,
+                                    int * global_vertex_buffer,
                                     int * printAlt,
                                     int * printCurr){
     if (threadIdx.x > 0 || blockIdx.x > 0)
@@ -111,7 +111,7 @@ __global__ void  PrintVerts(int levelOffset,
     for (int g = 0; g < (levelUpperBound-levelOffset); ++g){
         printf("\n");
         for (int i = 0; i < numberOfRows; ++i){
-            printf("%d ",global_verts_tree[g*numberOfRows + i]);
+            printf("%d ",global_vertex_buffer[g*numberOfRows + i]);
         }
     }
     printf("\n");
@@ -981,24 +981,21 @@ __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
         printf("threadIdx.x %d, blockIdx.x %d, Vertex %d loop\n", threadIdx.x, blockIdx.x, vertex);
         // Reinitialize
         degreeZeroVertex[threadIdx.x] = 0;
-                if (threadIdx.x == 0 && blockIdx.x == 0){
-        printf("degreesOffset %d \n", degreesOffset);
-        printf("vertex %d \n", vertex);
-        printf("global_remaining_vertices_dev_ptr[degreesOffset + vertex] %d \n", global_remaining_vertices_dev_ptr[degreesOffset + vertex]);
-        printf("full %d \n", global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[degreesOffset + vertex]]);
-        printf("\n");
+        if (threadIdx.x == 0 && blockIdx.x == 0){
+            printf("degreesOffset %d \n", degreesOffset);
+            printf("vertex %d \n", vertex);
+            printf("global_remaining_vertices_dev_ptr[degreesOffset + vertex] %d \n", global_remaining_vertices_dev_ptr[degreesOffset + vertex]);
+            printf("full %d \n", global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[degreesOffset + vertex]]);
         }
         degreeZeroVertex[threadIdx.x] = (0 == global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[degreesOffset + vertex]]);
         if (threadIdx.x == 0 && blockIdx.x == 0){
-        printf("Vertex %d set degreeZeroVertex\n", vertex);
-        printf("\n");
+            printf("Vertex %d set degreeZeroVertex\n", vertex);
         }
         // Makes this entry INT_MAX if degree 0
         // Leaves unaltered if not degree 0
         global_remaining_vertices_dev_ptr[degreesOffset + vertex] += (INT_MAX - global_remaining_vertices_dev_ptr[degreesOffset + vertex])*degreeZeroVertex[threadIdx.x];
         if (blockIdx.x == 0){
             printf("Vertex %d set global_remaining_vertices_dev_ptr %d\n", vertex, global_remaining_vertices_dev_ptr[degreesOffset + vertex]);
-            printf("\n");
         }
         
         int i = blockDim.x/2;
@@ -1046,7 +1043,7 @@ __global__ void ParallelCreateLevelAwareRowOffsets(int levelOffset,
     if(threadIdx.x == 0){
         printf("LevelAware RowOffs \n");
         for (int i = 0; i < numberOfRows+1; ++i){
-            printf("global_offsets_buffer[%d] = %d ",i, global_offsets_buffer[bufferRowOffsOffset+i]);
+            printf("global_offsets_buffer[%d] = %d  \n",i, global_offsets_buffer[bufferRowOffsOffset+i]);
         }
         printf("\n");
     }
