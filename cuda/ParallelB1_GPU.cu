@@ -53,7 +53,7 @@ __host__ __device__ long long CalculateDeepestLevelWidth(int deepestLevelSize){
     return summand;
 }
 
-__host__ __device__ void PrintStuff(int levelOffset,
+__global__ void  PrintStuff(int levelOffset,
                                     int levelUpperBound,
                                     int numberOfRows,
                                     int numberOfEdgesPerGraph,
@@ -61,7 +61,8 @@ __host__ __device__ void PrintStuff(int levelOffset,
                                     int * global_column_buffer,
                                     int * printAlt,
                                     int * printCurr){
-
+    if (threadIdx.x > 0 || blockId.x > 0)
+        return;
     printf("Tree\n");
     for (int i = 0; i < (levelUpperBound-levelOffset)*numberOfEdgesPerGraph; ++i){
         printf("%d ",global_columns_tree[i]);
@@ -1448,7 +1449,7 @@ void CallPopulateTree(int numberOfLevels,
             int * printAlt = d_values.Alternate();
             int * printCurr = d_values.Current();
 
-            PrintStuff  (levelOffset,
+            PrintStuff<<<1,1>>>  (levelOffset,
                         levelUpperBound,
                         numberOfRows,
                         numberOfEdgesPerGraph,
