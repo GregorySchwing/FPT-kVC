@@ -980,7 +980,7 @@ __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
     int vertexOffset = 0;
     for (int iter = 0; iter < UB; vertexOffset += blockDim.x){
         degreeZeroVertex[threadIdx.x] = 0;
-        for (int vertex = vertexOffset + threadIdx.x; vertex < numVertices; vertex += blockDim.x){
+        for (int vertex = vertexOffset + threadIdx.x; vertex < blockDim.x; vertex += blockDim.x){
             numVerticesRemoved = 0;
             printf("threadIdx.x %d, blockIdx.x %d, Vertex %d loop\n", threadIdx.x, blockIdx.x, vertex);
             if (threadIdx.x == 0 && blockIdx.x == 0){
