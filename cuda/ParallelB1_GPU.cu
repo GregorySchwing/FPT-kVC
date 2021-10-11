@@ -968,11 +968,16 @@ __global__ void ParallelCreateLevelAwareRowOffsets(int levelOffset,
     if (leafIndex >= levelUpperBound)
         return;    
 
+    printf("LevelAware RowOffs blockIdx %d is running\n", blockIdx.x);
+    printf("LevelAware RowOffs leaf index %d is running\n", leafIndex);
+
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
     int bufferRowOffsOffset = blockIdx.x * (numberOfRows + 1);
 
     for (int iter = threadIdx.x; iter < numberOfRows+1; iter += blockDim.x){
         global_offsets_buffer[bufferRowOffsOffset + iter] = (blockIdx.x * numberOfEdgesPerGraph) + global_row_offsets_dev_ptr[rowOffsOffset + iter];
+        printf("global_offsets_buffer[bufferRowOffsOffset + %d] = %d + %d\n", iter, (blockIdx.x * numberOfEdgesPerGraph), global_row_offsets_dev_ptr[rowOffsOffset + iter]);
+
     }
 
     if(threadIdx.x == 0){
