@@ -1417,8 +1417,6 @@ void CallPopulateTree(int numberOfLevels,
             }
             std::cout << std::endl;
 
-            int * printCurr = d_values.Current();
-
             std::cout << "Buffer" << std::endl;
             for (int i = 0; i < (levelUpperBound-levelOffset)*numberOfEdgesPerGraph; ++i){
                 std::cout << global_column_buffer[i] << " ";
