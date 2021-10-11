@@ -53,7 +53,7 @@ __host__ __device__ long long CalculateDeepestLevelWidth(int deepestLevelSize){
     return summand;
 }
 
-__global__ void  PrintStuff(int levelOffset,
+__global__ void  PrintEdges(int levelOffset,
                                     int levelUpperBound,
                                     int numberOfRows,
                                     int numberOfEdgesPerGraph,
@@ -85,6 +85,53 @@ __global__ void  PrintStuff(int levelOffset,
     printf("Sorted\n");
     for (int i = 0; i < (levelUpperBound-levelOffset)*numberOfEdgesPerGraph; ++i){
         printf("%d ",printCurr[i]);
+    }
+    printf("\n");
+}
+
+__global__ void  PrintVerts(int levelOffset,
+                                    int levelUpperBound,
+                                    int numberOfRows,
+                                    int * global_verts_tree,
+                                    int * global_offsets_buffer,
+                                    int * printAlt,
+                                    int * printCurr){
+    if (threadIdx.x > 0 || blockIdx.x > 0)
+        return;
+    printf("Tree\n");
+    for (int g = 0; g < (levelUpperBound-levelOffset); ++g){
+        printf("\n");
+        for (int i = 0; i < numberOfRows; ++i){
+            printf("%d ",global_verts_tree[g*numberOfRows + i]);
+        }
+    }
+    printf("\n");
+
+    printf("Buffer\n");
+    for (int g = 0; g < (levelUpperBound-levelOffset); ++g){
+        printf("\n");
+        for (int i = 0; i < numberOfRows; ++i){
+            printf("%d ",global_verts_tree[g*numberOfRows + i]);
+        }
+    }
+    printf("\n");
+
+    printf("Unsorted\n");
+
+    for (int g = 0; g < (levelUpperBound-levelOffset); ++g){
+        printf("\n");
+        for (int i = 0; i < numberOfRows; ++i){
+            printf("%d ",printAlt[g*numberOfRows + i]);
+        }
+    }
+    printf("\n");
+
+    printf("Sorted\n");
+    for (int g = 0; g < (levelUpperBound-levelOffset); ++g){
+        printf("\n");
+        for (int i = 0; i < numberOfRows; ++i){
+            printf("%d ",printCurr[g*numberOfRows + i]);
+        }
     }
     printf("\n");
 }
@@ -1277,7 +1324,7 @@ void CallPopulateTree(int numberOfLevels,
     int * global_values_dev_ptr;
     int * global_degrees_dev_ptr; 
     int * global_paths_ptr; 
-    int * global_remaining_vertices_ptr;
+    int * global_remaining_vertices_dev_ptr;
     int * global_remaining_vertices_size_dev_ptr;
     int * global_nonpendant_path_bool_dev_ptr;
     int * global_nonpendant_child_dev_ptr;
@@ -1301,9 +1348,9 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_paths_ptr, (max_dfs_depth*treeSize) * sizeof(int) );
 
-    cudaMalloc( (void**)&global_remaining_vertices_ptr, (numberOfRows*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&global_remaining_vertices_ptr, (numberOfRows*treeSize) * sizeof(int) );
-    cudaMemset(global_remaining_vertices_ptr, INT_MAX, (numberOfRows*treeSize) * sizeof(int));
+    cudaMalloc( (void**)&global_remaining_vertices_dev_ptr, (numberOfRows*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_remaining_vertices_dev_ptr, (numberOfRows*treeSize) * sizeof(int) );
+    cudaMemset(global_remaining_vertices_dev_ptr, INT_MAX, (numberOfRows*treeSize) * sizeof(int));
 
     cudaMalloc( (void**)&global_column_buffer, numberOfEdgesPerGraph * deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_value_buffer, numberOfEdgesPerGraph * deepestLevelSize * sizeof(int) );
@@ -1330,7 +1377,7 @@ void CallPopulateTree(int numberOfLevels,
                     global_degrees_dev_ptr,
                     numberOfEdgesPerGraph,
                     global_edges_left_to_cover_count,
-                    global_remaining_vertices_ptr,
+                    global_remaining_vertices_dev_ptr,
                     global_remaining_vertices_size_dev_ptr,
                     verticesRemainingInGraph);
 
@@ -1345,8 +1392,8 @@ void CallPopulateTree(int numberOfLevels,
 
     // Create Segment Offsets for RemainingVertices
     SetVerticesRemaingSegements<<<deepestLevelSize+1,threadsPerBlock>>>(deepestLevelSize,
-                                                                    numberOfRows,
-                                                                    global_vertex_segments);
+                                                                        numberOfRows,
+                                                                        global_vertex_segments);
 
     // Determine temporary device storage requirements
     int     *global_vertices_tree = NULL;
@@ -1378,7 +1425,7 @@ void CallPopulateTree(int numberOfLevels,
                                 numberOfEdgesPerGraph,
                                 global_row_offsets_dev_ptr,
                                 global_columns_dev_ptr,
-                                global_remaining_vertices_ptr,
+                                global_remaining_vertices_dev_ptr,
                                 global_remaining_vertices_size_dev_ptr,
                                 global_degrees_dev_ptr,
                                 global_paths_ptr,
@@ -1425,14 +1472,24 @@ void CallPopulateTree(int numberOfLevels,
                             global_row_offsets_dev_ptr,
                             global_columns_dev_ptr,
                             global_values_dev_ptr,
-                            global_remaining_vertices_ptr,
+                            global_remaining_vertices_dev_ptr,
                             global_remaining_vertices_size_dev_ptr,
                             global_degrees_dev_ptr,
                             global_paths_ptr,
                             global_nonpendant_path_bool_dev_ptr);
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
-          
+
+            ParallelProcessDegreeZeroVertices<<<levelUpperBound-levelOffset,threadsPerBlock>>>
+                            (levelOffset,
+                            levelUpperBound,
+                            numberOfRows,
+                            global_remaining_vertices_dev_ptr,
+                            global_remaining_vertices_size_dev_ptr,
+                            global_degrees_dev_ptr);
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+
             // Create pointer that starts at beginning of level
             // Leaves are indexed from 0; so I need to add the offset
             // of the leaf from the left of the tree * (numberOfRows+1) so the 
@@ -1465,26 +1522,18 @@ void CallPopulateTree(int numberOfLevels,
             cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
                 num_items, num_segments, &global_offsets_buffer[0], &global_offsets_buffer[num_segments+ 1]);
 
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
-
             // Allocate temporary storage
             cudaMalloc(&d_temp_storage, temp_storage_bytes);
-
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
 
             // Run sorting operation
             cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
                 num_items, num_segments, &global_offsets_buffer[0], &global_offsets_buffer[num_segments + 1]);
 
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
 
             int * printAlt = d_keys.Alternate();
             int * printCurr = d_keys.Current();
 
-            PrintStuff<<<1,1>>>  (levelOffset,
+            PrintEdges<<<1,1>>>  (levelOffset,
                         levelUpperBound,
                         numberOfRows,
                         numberOfEdgesPerGraph,
@@ -1492,24 +1541,38 @@ void CallPopulateTree(int numberOfLevels,
                         global_value_buffer,
                         printAlt,
                         printCurr);
-
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
                        // Determine temporary device storage requirements
             d_temp_storage = NULL;
             temp_storage_bytes = 0;
             num_items = (levelUpperBound-levelOffset)*numberOfRows;
             num_segments = levelUpperBound-levelOffset;
 
-            global_vertices_tree = &global_remaining_vertices_ptr[levelOffset*numberOfRows];
+            global_vertices_tree = &global_remaining_vertices_dev_ptr[levelOffset*numberOfRows];
             cub::DoubleBuffer<int> d_keys_verts(global_vertices_tree, global_vertex_buffer);
-            /*
+            
             cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys_verts,
-                num_items, num_segments, d_offsets, d_offsets + 1);
+                num_items, num_segments, &global_vertex_segments[0], &global_vertex_segments[num_segments+1]);
             // Allocate temporary storage
             cudaMalloc(&d_temp_storage, temp_storage_bytes);
             // Run sorting operation
             cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys_verts,
-                num_items, num_segments, d_offsets, d_offsets + 1);
-            */
+                num_items, num_segments, &global_vertex_segments[0], &global_vertex_segments[num_segments+1]);
+            
+            printAlt = d_keys_verts.Alternate();
+            printCurr = d_keys_verts.Current();
+
+            PrintVerts<<<1,1>>>  (levelOffset,
+                        levelUpperBound,
+                        numberOfRows,
+                        global_vertices_tree,
+                        global_vertex_buffer,
+                        printAlt,
+                        printCurr);
+
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
         }
         
         cudaDeviceSynchronize();

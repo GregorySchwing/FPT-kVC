@@ -52,6 +52,23 @@ CUDA_HOSTDEV long long CalculateLevelOffset(int level);
 CUDA_HOSTDEV long long CalculateLevelUpperBound(int level);
 CUDA_HOSTDEV long long CalculateDeepestLevelWidth(int maxLevel);
 
+__global__ void  PrintEdges(int levelOffset,
+                                    int levelUpperBound,
+                                    int numberOfRows,
+                                    int numberOfEdgesPerGraph,
+                                    int * global_columns_tree,
+                                    int * global_offsets_buffer,
+                                    int * printAlt,
+                                    int * printCurr);
+
+__global__ void  PrintVerts(int levelOffset,
+                                    int levelUpperBound,
+                                    int numberOfRows,
+                                    int * global_columns_tree,
+                                    int * global_offsets_buffer,
+                                    int * printAlt,
+                                    int * printCurr);
+
 __global__ void First_Graph_GPU(int vertexCount, 
                                 int size,
                                 int numberOfRows,
@@ -204,6 +221,10 @@ __global__ void ParallelCreateLevelAwareRowOffsets(int levelOffset,
                             int numberOfEdgesPerGraph,
                             int * global_row_offsets_dev_ptr,
                             int * global_offsets_buffer);
+
+__global__ void SetVerticesRemaingSegements(int deepestLevelSize,
+                                            int numberOfRows,
+                                            int * global_vertex_segments);
 
 __global__ void ParallelQuicksortWithDNF(int levelOffset,
                             int levelUpperBound,
