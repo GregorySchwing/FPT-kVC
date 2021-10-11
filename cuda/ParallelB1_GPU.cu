@@ -974,6 +974,14 @@ __global__ void ParallelCreateLevelAwareRowOffsets(int levelOffset,
     for (int iter = threadIdx.x; iter < numberOfRows+1; iter += blockDim.x){
         global_offsets_buffer[bufferRowOffsOffset + iter] = (blockIdx.x * numberOfEdgesPerGraph) + global_row_offsets_dev_ptr[rowOffsOffset + iter];
     }
+
+    if(threadIdx.x == 0){
+        printf("LevelAware RowOffs \n");
+        for (int i = 0; i < numberOfRows+1; ++i){
+            printf("%d ",i);
+        }
+        printf("\n");
+    }
 }
 
 __global__ void ParallelQuicksortWithDNF(int levelOffset,
