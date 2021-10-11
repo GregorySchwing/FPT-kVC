@@ -1410,14 +1410,29 @@ void CallPopulateTree(int numberOfLevels,
 
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
-/*
+
+            std::cout << "Tree" << std::endl;
+            for (int i = 0; i < (levelUpperBound-levelOffset)*numberOfEdgesPerGraph; ++i){
+                std::cout << global_columns_tree[i] << " ";
+            }
+            std::cout << std::endl;
+
+            int * printCurr = d_values.Current();
+
+            std::cout << "Buffer" << std::endl;
+            for (int i = 0; i < (levelUpperBound-levelOffset)*numberOfEdgesPerGraph; ++i){
+                std::cout << global_column_buffer[i] << " ";
+            }
+            std::cout << std::endl;
+
+
             int * printAlt = d_values.Alternate();
             std::cout << "Unsorted" << std::endl;
             for (int i = 0; i < (levelUpperBound-levelOffset)*numberOfEdgesPerGraph; ++i){
                 std::cout << printAlt[i] << " ";
             }
             std::cout << std::endl;
-*/
+
             int * printCurr = d_values.Current();
 
             std::cout << "Sorted" << std::endl;
