@@ -1540,7 +1540,8 @@ void CallPopulateTree(int numberOfLevels,
             cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
                 num_items, num_segments, &global_offsets_buffer[0], &global_offsets_buffer[num_segments + 1]);
 
-
+            cudaFree(d_temp_storage);
+            
             int * printAlt = d_keys.Alternate();
             int * printCurr = d_keys.Current();
 
