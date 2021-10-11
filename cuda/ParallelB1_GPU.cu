@@ -1012,8 +1012,10 @@ __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
     }
     // Update remaining vert size
     // Now just need to sort those INT_MAX entries to the end of the array
-    if (threadIdx.x == 0)
+    if (threadIdx.x == 0){
+        printf("numVerticesRemoved %d\n", numVerticesRemoved);
         global_remaining_vertices_size_dev_ptr[leafIndex] -= numVerticesRemoved;
+    }
 }
 
 
