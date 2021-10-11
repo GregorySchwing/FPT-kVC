@@ -985,12 +985,20 @@ __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
         // Reinitialize
         degreeZeroVertex[threadIdx.x] = 0;
         degreeZeroVertex[threadIdx.x] = (0 == global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[degreesOffset + vertex]]);
+                if (threadIdx.x == 0 && blockIdx.x == 0){
+        printf("Vertex %d set degreeZeroVertex\n", vertex);
+        printf("\n");
+        }
         // Makes this entry INT_MAX if degree 0
         // Leaves unaltered if not degree 0
         global_remaining_vertices_dev_ptr[degreesOffset + vertex] += (INT_MAX - global_remaining_vertices_dev_ptr[degreesOffset + vertex])*degreeZeroVertex[threadIdx.x];
+                       if (threadIdx.x == 0 && blockIdx.x == 0){
+        printf("Vertex %d set global_remaining_vertices_dev_ptr\n", vertex);
+        printf("\n");
+        }
+        
         int i = blockDim.x/2;
         __syncthreads();
-        // Checks for any nonpendant edge path exists
         while (i != 0) {
             if (threadIdx.x < i){
                 degreeZeroVertex[threadIdx.x] += degreeZeroVertex[threadIdx.x + i];
