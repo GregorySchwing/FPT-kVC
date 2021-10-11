@@ -1446,15 +1446,15 @@ void CallPopulateTree(int numberOfLevels,
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
 
-            int * printAlt = d_values.Alternate();
-            int * printCurr = d_values.Current();
+            int * printAlt = d_keys.Alternate();
+            int * printCurr = d_keys.Current();
 
             PrintStuff<<<1,1>>>  (levelOffset,
                         levelUpperBound,
                         numberOfRows,
                         numberOfEdgesPerGraph,
-                        global_columns_tree,
-                        global_column_buffer,
+                        global_values_tree,
+                        global_value_buffer,
                         printAlt,
                         printCurr);
         }
