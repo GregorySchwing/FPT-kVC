@@ -1638,6 +1638,8 @@ void CopyGraphToDevice( Graph & g,
     for (auto & v : g.GetRemainingVertices())
         std::cout << v << " ";
     std::cout << std::endl;
+    std::cout << "remaining verts size " << g.GetRemainingVertices().size() << std::endl;
+
     // Graph vectors
     cudaMemcpy(global_degrees_dev_ptr, new_degrees_ptr, g.GetNumberOfRows() * sizeof(int),
                 cudaMemcpyHostToDevice);
