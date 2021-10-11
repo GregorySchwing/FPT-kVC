@@ -61,7 +61,7 @@ __global__ void  PrintStuff(int levelOffset,
                                     int * global_column_buffer,
                                     int * printAlt,
                                     int * printCurr){
-    if (threadIdx.x > 0 || blockId.x > 0)
+    if (threadIdx.x > 0 || blockIdx.x > 0)
         return;
     printf("Tree\n");
     for (int i = 0; i < (levelUpperBound-levelOffset)*numberOfEdgesPerGraph; ++i){
