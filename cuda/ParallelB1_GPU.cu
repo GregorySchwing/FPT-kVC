@@ -1541,7 +1541,7 @@ void CallPopulateTree(int numberOfLevels,
                 num_items, num_segments, &global_offsets_buffer[0], &global_offsets_buffer[num_segments + 1]);
 
             cudaFree(d_temp_storage);
-            
+
             int * printAlt = d_keys.Alternate();
             int * printCurr = d_keys.Current();
 
@@ -1556,7 +1556,7 @@ void CallPopulateTree(int numberOfLevels,
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
                        // Determine temporary device storage requirements
-            d_temp_storage = NULL;
+            void     *d_temp_storage2 = NULL;
             temp_storage_bytes = 0;
             num_items = (levelUpperBound-levelOffset)*numberOfRows;
             num_segments = levelUpperBound-levelOffset;
@@ -1564,12 +1564,12 @@ void CallPopulateTree(int numberOfLevels,
             global_vertices_tree = &global_remaining_vertices_dev_ptr[levelOffset*numberOfRows];
             cub::DoubleBuffer<int> d_keys_verts(global_vertices_tree, global_vertex_buffer);
             
-            cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys_verts,
+            cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage2, temp_storage_bytes, d_keys_verts,
                 num_items, num_segments, &global_vertex_segments[0], &global_vertex_segments[num_segments+1]);
             // Allocate temporary storage
-            cudaMalloc(&d_temp_storage, temp_storage_bytes);
+            cudaMalloc(&d_temp_storage2, temp_storage_bytes);
             // Run sorting operation
-            cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys_verts,
+            cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage2, temp_storage_bytes, d_keys_verts,
                 num_items, num_segments, &global_vertex_segments[0], &global_vertex_segments[num_segments+1]);
             
             printAlt = d_keys_verts.Alternate();
