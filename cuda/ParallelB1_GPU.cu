@@ -999,9 +999,9 @@ __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
         // Makes this entry INT_MAX if degree 0
         // Leaves unaltered if not degree 0
         global_remaining_vertices_dev_ptr[degreesOffset + vertex] += (INT_MAX - global_remaining_vertices_dev_ptr[degreesOffset + vertex])*degreeZeroVertex[threadIdx.x];
-                       if (threadIdx.x == 0 && blockIdx.x == 0){
-        printf("Vertex %d set global_remaining_vertices_dev_ptr\n", vertex);
-        printf("\n");
+        if (blockIdx.x == 0){
+            printf("Vertex %d set global_remaining_vertices_dev_ptr %d\n", vertex, global_remaining_vertices_dev_ptr[degreesOffset + vertex]);
+            printf("\n");
         }
         
         int i = blockDim.x/2;
