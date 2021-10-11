@@ -1563,7 +1563,7 @@ void CallPopulateTree(int numberOfLevels,
 
             global_vertices_tree = &global_remaining_vertices_dev_ptr[levelOffset*numberOfRows];
             cub::DoubleBuffer<int> d_keys_verts(global_vertex_buffer, global_vertices_tree);
-            /*
+            
             cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys_verts,
                 num_items, num_segments, &global_vertex_segments[0], &global_vertex_segments[num_segments+1]);
             // Allocate temporary storage
@@ -1571,7 +1571,7 @@ void CallPopulateTree(int numberOfLevels,
             // Run sorting operation
             cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys_verts,
                 num_items, num_segments, &global_vertex_segments[0], &global_vertex_segments[num_segments+1]);
-            */
+            
             printAlt = d_keys_verts.Alternate();
             printCurr = d_keys_verts.Current();
 
