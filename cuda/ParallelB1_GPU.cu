@@ -989,6 +989,15 @@ __global__ void ParallelCreateLevelAwareRowOffsets(int levelOffset,
     }
 }
 
+__global__ void SetVerticesRemaingSegements(int deepestLevelSize,
+                                            int numberOfRows,
+                                            int * global_vertex_segments){
+    int leafIndex = blockIdx.x;
+    if (leafIndex >= deepestLevelSize+1)
+        return;
+    global_vertex_segments[leafIndex] = numberOfRows*leafIndex;
+}
+
 __global__ void ParallelQuicksortWithDNF(int levelOffset,
                             int levelUpperBound,
                             int numberOfRows,
@@ -1279,6 +1288,7 @@ void CallPopulateTree(int numberOfLevels,
     int * global_vertex_buffer;
     int * global_value_buffer;
     int * global_offsets_buffer;
+    int * global_vertex_segments;
 
     int max_dfs_depth = 4;
     int numberOfRows = g.GetNumberOfRows();
@@ -1290,12 +1300,17 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_values_dev_ptr, (numberOfEdgesPerGraph*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_paths_ptr, (max_dfs_depth*treeSize) * sizeof(int) );
+
     cudaMalloc( (void**)&global_remaining_vertices_ptr, (numberOfRows*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_remaining_vertices_ptr, (numberOfRows*treeSize) * sizeof(int) );
+    cudaMemset(global_remaining_vertices_ptr, INT_MAX, (numberOfRows*treeSize) * sizeof(int));
 
     cudaMalloc( (void**)&global_column_buffer, numberOfEdgesPerGraph * deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_value_buffer, numberOfEdgesPerGraph * deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_vertex_buffer, numberOfRows * deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_offsets_buffer, (numberOfRows+1) * deepestLevelSize * sizeof(int) );
+    // Since we statically allocate vertices remaining
+    cudaMalloc( (void**)&global_vertex_segments, (deepestLevelSize+1) * sizeof(int) );
 
 
     cudaMalloc( (void**)&global_paths_length, treeSize * sizeof(int) );
@@ -1328,6 +1343,13 @@ void CallPopulateTree(int numberOfLevels,
     int * pendantBools = new int[deepestLevelSize];
     int * pendantChildrenOfLevel = new int[deepestLevelSize];
 
+    // Create Segment Offsets for RemainingVertices
+    SetVerticesRemaingSegements<<<deepestLevelSize+1,threadsPerBlock>>>(deepestLevelSize,
+                                                                    numberOfRows,
+                                                                    global_vertex_segments);
+
+    // Determine temporary device storage requirements
+    int     *global_vertices_tree = NULL;
     // Determine temporary device storage requirements
     int     *global_columns_tree = NULL;
     // Determine temporary device storage requirements
@@ -1472,21 +1494,22 @@ void CallPopulateTree(int numberOfLevels,
                         printCurr);
 
                        // Determine temporary device storage requirements
-            *d_temp_storage = NULL;
+            d_temp_storage = NULL;
             temp_storage_bytes = 0;
             num_items = (levelUpperBound-levelOffset)*numberOfRows;
             num_segments = levelUpperBound-levelOffset;
 
             global_vertices_tree = &global_remaining_vertices_ptr[levelOffset*numberOfRows];
-            cub::DoubleBuffer<int> d_keys(global_vertices_tree, global_vertex_buffer);
-            cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys,
+            cub::DoubleBuffer<int> d_keys_verts(global_vertices_tree, global_vertex_buffer);
+            /*
+            cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys_verts,
                 num_items, num_segments, d_offsets, d_offsets + 1);
             // Allocate temporary storage
             cudaMalloc(&d_temp_storage, temp_storage_bytes);
             // Run sorting operation
-            cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys,
+            cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys_verts,
                 num_items, num_segments, d_offsets, d_offsets + 1);
-
+            */
         }
         
         cudaDeviceSynchronize();
