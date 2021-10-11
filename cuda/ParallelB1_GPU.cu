@@ -1375,6 +1375,9 @@ void CallPopulateTree(int numberOfLevels,
                                                 numberOfEdgesPerGraph,
                                                 global_row_offsets_dev_ptr,
                                                 global_offsets_buffer);
+
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
             
             global_columns_tree = &global_columns_dev_ptr[levelOffset*numberOfEdgesPerGraph];
             global_values_tree = &global_values_dev_ptr[levelOffset*numberOfEdgesPerGraph];
