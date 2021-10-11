@@ -722,15 +722,12 @@ __global__ void ParallelDFSRandom(int levelOffset,
     int outEdgesCount;
     r = randomGPU_four(counter, leafIndex, seed);
     // Random starting point
-    pathsAndPendantStatus[sharedMemPathOffset + iteration] = global_remaining_vertices_dev_ptr[degreesOffset + (r[iteration] % remainingVerticesSize)]];
+    pathsAndPendantStatus[sharedMemPathOffset + iteration] = global_remaining_vertices_dev_ptr[degreesOffset + (r[iteration] % remainingVerticesSize])];
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("pathsAndPendantStatus %d\n", pathsAndPendantStatus[sharedMemPathOffset + iteration]);
         printf("\n");
     }
     ++iteration;
-
-
-
 
     // Set random out at depth 1
     int randomVertRowOff = global_row_offsets_dev_ptr[rowOffsOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]];
