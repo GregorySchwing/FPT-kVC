@@ -1451,7 +1451,6 @@ void CallPopulateTree(int numberOfLevels,
             cudaMemcpy(pendantBools, global_nonpendant_path_bool_dev_ptr, deepestLevelSize*sizeof(int), cudaMemcpyDeviceToHost);
             cudaMemcpy(pendantChildrenOfLevel, global_nonpendant_child_dev_ptr, deepestLevelSize*sizeof(int), cudaMemcpyDeviceToHost);
             
-
             for (int node = levelOffset; node < levelUpperBound; ++node){
                 // global_nonpendant_path_bool_dev_ptr was defined as an OR of 
                 // 0) path[0] == path[2]
