@@ -1368,7 +1368,6 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_paths_ptr, (max_dfs_depth*treeSize) * sizeof(int) );
 
     cudaMalloc( (void**)&global_remaining_vertices_dev_ptr, (numberOfRows*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&global_remaining_vertices_dev_ptr, (numberOfRows*treeSize) * sizeof(int) );
     cudaMemset(global_remaining_vertices_dev_ptr, INT_MAX, (numberOfRows*treeSize) * sizeof(int));
 
     cudaMalloc( (void**)&global_column_buffer, numberOfEdgesPerGraph * deepestLevelSize * sizeof(int) );
@@ -1634,6 +1633,11 @@ void CopyGraphToDevice( Graph & g,
 
     int * new_degrees_ptr = thrust::raw_pointer_cast(g.GetNewDegRef().data());
     int * vertices_remaining_ptr = thrust::raw_pointer_cast(g.GetRemainingVertices().data());
+    
+    std::cout << "remaining verts" << std::endl;
+    for (auto & v : g.GetRemainingVertices())
+        std::cout << v << " ";
+    std::cout << std::endl;
     // Graph vectors
     cudaMemcpy(global_degrees_dev_ptr, new_degrees_ptr, g.GetNumberOfRows() * sizeof(int),
                 cudaMemcpyHostToDevice);
