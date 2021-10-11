@@ -1499,7 +1499,7 @@ void CallPopulateTree(int numberOfLevels,
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
 
-            ParallelProcessDegreeZeroVertices<<<levelUpperBound-levelOffset,threadsPerBlock>>>
+            ParallelProcessDegreeZeroVertices<<<levelUpperBound-levelOffset,threadsPerBlock,threadsPerBlock>>>
                             (levelOffset,
                             levelUpperBound,
                             numberOfRows,
