@@ -1418,8 +1418,8 @@ void CallPopulateTree(int numberOfLevels,
             global_values_tree = &global_values_dev_ptr[levelOffset*numberOfEdgesPerGraph];
 
             // Create a set of DoubleBuffers to wrap pairs of device pointers
-            cub::DoubleBuffer<int> d_keys(global_columns_tree, global_column_buffer);
-            cub::DoubleBuffer<int> d_values(global_values_tree, global_value_buffer);
+            cub::DoubleBuffer<int> d_values(global_columns_tree, global_column_buffer);
+            cub::DoubleBuffer<int> d_keys(global_values_tree, global_value_buffer);
 
             // Determine temporary device storage requirements
             void     *d_temp_storage = NULL;
@@ -1427,7 +1427,7 @@ void CallPopulateTree(int numberOfLevels,
             int num_items = (levelUpperBound-levelOffset)*numberOfEdgesPerGraph;
             int num_segments = (levelUpperBound-levelOffset)*(numberOfRows+1);
 
-            cub::DeviceSegmentedRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, d_keys, d_values,
+            cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
                 num_items, num_segments, global_offsets_buffer, global_offsets_buffer + 1);
 
             cudaDeviceSynchronize();
@@ -1440,7 +1440,7 @@ void CallPopulateTree(int numberOfLevels,
             checkLastErrorCUDA(__FILE__, __LINE__);
 
             // Run sorting operation
-            cub::DeviceSegmentedRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, d_keys, d_values,
+            cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
                 num_items, num_segments, global_offsets_buffer, global_offsets_buffer + 1);
 
             cudaDeviceSynchronize();
