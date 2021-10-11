@@ -1003,6 +1003,7 @@ __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
         __syncthreads();
         while (i != 0) {
             if (threadIdx.x < i){
+                printf("degreeZeroVertex[%d] = %d + %d\n", threadIdx.x, degreeZeroVertex[threadIdx.x], degreeZeroVertex[threadIdx.x + i]);
                 degreeZeroVertex[threadIdx.x] += degreeZeroVertex[threadIdx.x + i];
             }
             __syncthreads();
