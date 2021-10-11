@@ -1538,7 +1538,7 @@ void CallPopulateTree(int numberOfLevels,
 
             // Run sorting operation
             cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
-                num_items, num_segments, &global_offsets_buffer[0], &global_offsets_buffer[num_segments + 1]);
+                num_items, num_segments, global_offsets_buffer, global_offsets_buffer + 1);
 
             cudaFree(d_temp_storage);
 
@@ -1570,7 +1570,7 @@ void CallPopulateTree(int numberOfLevels,
             cudaMalloc(&d_temp_storage2, temp_storage_bytes);
             // Run sorting operation
             cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage2, temp_storage_bytes, d_keys_verts,
-                num_items, num_segments, &global_vertex_segments[0], &global_vertex_segments[num_segments+1]);
+                num_items, num_segments, global_vertex_segments, global_vertex_segments + 1);
             
             printAlt = d_keys_verts.Alternate();
             printCurr = d_keys_verts.Current();
