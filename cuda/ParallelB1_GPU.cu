@@ -2,6 +2,8 @@
 
 #include "ParallelB1_GPU.cuh"
 #include <math.h>       /* pow */
+#include "cub/cub.cuh"
+
 // Sum of i = 0 to n/2
 // 3^i
 
@@ -919,6 +921,26 @@ __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
         global_remaining_vertices_size_dev_ptr[leafIndex] -= numVerticesRemoved;
 }
 
+
+__global__ void ParallelCreateLevelAwareRowOffsets(int levelOffset,
+                            int levelUpperBound,
+                            int numberOfRows,
+                            int numberOfEdgesPerGraph,
+                            int * global_row_offsets_dev_ptr,
+                            int * global_offsets_buffer){
+
+    int leafIndex = levelOffset + blockIdx.x;
+    if (leafIndex >= levelUpperBound)
+        return;    
+
+    int rowOffsOffset = leafIndex * (numberOfRows + 1);
+    int bufferRowOffsOffset = blockIdx.x * (numberOfRows + 1);
+
+    for (int iter = threadIdx.x; iter < numberOfRows+1; iter += blockDim.x){
+        global_offsets_buffer[bufferRowOffsOffset + iter] = (blockIdx.x * numberOfEdgesPerGraph) + global_row_offsets_dev_ptr[rowOffsOffset + iter];
+    }
+}
+
 __global__ void ParallelQuicksortWithDNF(int levelOffset,
                             int levelUpperBound,
                             int numberOfRows,
@@ -1163,11 +1185,14 @@ void CallPopulateTree(int numberOfLevels,
     numberOfLevels = 2;
     int deepestLevelSize = CalculateDeepestLevelWidth(numberOfLevels-1);;
     long long treeSize = CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
+    long long bufferSize = deepestLevelSize;
     int expandedData = g.GetEdgesLeftToCover();
     int condensedData = g.GetVertexCount();
     int condensedData_plus1 = condensedData + 1;
     long long sizeOfSingleGraph = expandedData*2 + 2*condensedData + condensedData_plus1 + maxDegree + counters;
-    long long totalMem = sizeOfSingleGraph * treeSize * sizeof(int);
+    long long totalMem = sizeOfSingleGraph * treeSize * sizeof(int) + 
+        condensedData * bufferSize * sizeof(int) +
+            2 * expandedData * bufferSize * sizeof(int);
 
     std::vector<std::vector<int>> pendantChildren(treeSize);
     int pendantChild;
@@ -1199,10 +1224,13 @@ void CallPopulateTree(int numberOfLevels,
     int * global_remaining_vertices_size_dev_ptr;
     int * global_nonpendant_path_bool_dev_ptr;
     int * global_nonpendant_child_dev_ptr;
-    //int * global_outgoing_edge_vertices;
-    //int * global_outgoing_edge_vertices_count;
     int * global_paths_length;
     int * global_edges_left_to_cover_count;
+
+    int * global_column_buffer;
+    int * global_vertex_buffer;
+    int * global_value_buffer;
+    int * global_offsets_buffer;
 
     int max_dfs_depth = 4;
     int numberOfRows = g.GetNumberOfRows();
@@ -1216,8 +1244,12 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_paths_ptr, (max_dfs_depth*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_ptr, (numberOfRows*treeSize) * sizeof(int) );
 
-    //cudaMalloc( (void**)&global_outgoing_edge_vertices, treeSize * maxDegree * sizeof(int) );
-    //cudaMalloc( (void**)&global_outgoing_edge_vertices_count, treeSize * sizeof(int) );
+    cudaMalloc( (void**)&global_column_buffer, numberOfEdgesPerGraph * deepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_value_buffer, numberOfEdgesPerGraph * deepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_vertex_buffer, numberOfRows * deepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_offsets_buffer, (numberOfRows+1) * deepestLevelSize * sizeof(int) );
+
+
     cudaMalloc( (void**)&global_paths_length, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_nonpendant_path_bool_dev_ptr, deepestLevelSize * sizeof(int) );
@@ -1248,6 +1280,10 @@ void CallPopulateTree(int numberOfLevels,
     int * pendantBools = new int[deepestLevelSize];
     int * pendantChildrenOfLevel = new int[deepestLevelSize];
 
+    // Determine temporary device storage requirements
+    int     *global_columns_tree = NULL;
+    // Determine temporary device storage requirements
+    int     *global_values_tree = NULL;
 
     for (int level = 0; level < numberOfLevels; ++level){
         levelUpperBound = CalculateLevelUpperBound(level);
@@ -1326,28 +1362,41 @@ void CallPopulateTree(int numberOfLevels,
                             global_nonpendant_path_bool_dev_ptr);
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
-
-
-            // We now remove the unset edges since our DFS 
-            // Assumes all edges are set.
-            // we sort the rows by value,
-            // and rely on degree[v] for setting the
-            // upperbound of a row instead of rowOffs[v] + 1
-            // in the ParallelDFS.
-
-            //      TimSort
-            //      Great performance on arrays with preexisting internal structure
-            //      Being able to maintain a stable sort
-            //      We'll use this for sorting the edges.
-            //      Edges have associated column vals so 
-            //      we want to be stable
-
-            //      MergeSort
-            //      Not stable
-            //      We'll use this for remaining vertices since
-            //      there is no associated value so we dont need
-            //      to be stable
+          
+            // Create pointer that starts at beginning of level
+            // Leaves are indexed from 0; so I need to add the offset
+            // of the leaf from the left of the tree * (numberOfRows+1) so the 
+            // sorting operation works on an entire level.
+            // global_offsets_buffer = &global_row_offsets_dev_ptr[levelOffset*(numberOfRows+1)];
+            ParallelCreateLevelAwareRowOffsets<<<levelUpperBound-levelOffset,threadsPerBlock>>>
+                                                (levelOffset,
+                                                levelUpperBound,
+                                                numberOfRows,
+                                                numberOfEdgesPerGraph,
+                                                global_row_offsets_dev_ptr,
+                                                global_offsets_buffer);
             
+            global_columns_tree = &global_columns_dev_ptr[levelOffset*numberOfEdgesPerGraph];
+            global_values_tree = &global_values_dev_ptr[levelOffset*numberOfEdgesPerGraph];
+
+            // Create a set of DoubleBuffers to wrap pairs of device pointers
+            cub::DoubleBuffer<int> d_keys(global_columns_tree, global_column_buffer);
+            cub::DoubleBuffer<int> d_values(global_values_tree, global_value_buffer);
+
+            // Determine temporary device storage requirements
+            void     *d_temp_storage = NULL;
+            size_t   temp_storage_bytes = 0;
+            int num_items = (levelUpperBound-levelOffset)*numberOfEdgesPerGraph;
+            int num_segments = (levelUpperBound-levelOffset)*(numberOfRows+1);
+
+            cub::DeviceSegmentedRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, d_keys, d_values,
+                num_items, num_segments, global_offsets_buffer, global_offsets_buffer + 1);
+
+            // Allocate temporary storage
+            cudaMalloc(&d_temp_storage, temp_storage_bytes);
+            // Run sorting operation
+            cub::DeviceSegmentedRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, d_keys, d_values,
+                num_items, num_segments, global_offsets_buffer, global_offsets_buffer + 1);
 
         }
         

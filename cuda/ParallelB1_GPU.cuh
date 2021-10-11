@@ -198,6 +198,13 @@ __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
                             int * global_remaining_vertices_size_dev_ptr,
                             int * global_degrees_dev_ptr);
 
+__global__ void ParallelCreateLevelAwareRowOffsets(int levelOffset,
+                            int levelUpperBound,
+                            int numberOfRows,
+                            int numberOfEdgesPerGraph,
+                            int * global_row_offsets_dev_ptr,
+                            int * global_offsets_buffer);
+
 __global__ void ParallelQuicksortWithDNF(int levelOffset,
                             int levelUpperBound,
                             int numberOfRows,
