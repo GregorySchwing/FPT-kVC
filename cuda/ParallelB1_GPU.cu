@@ -983,7 +983,7 @@ __global__ void ParallelCreateLevelAwareRowOffsets(int levelOffset,
     if(threadIdx.x == 0){
         printf("LevelAware RowOffs \n");
         for (int i = 0; i < numberOfRows+1; ++i){
-            printf("%d ",i);
+            printf("global_offsets_buffer[%d] = %d ",i, global_offsets_buffer[bufferRowOffsOffset+i]);
         }
         printf("\n");
     }
@@ -1470,6 +1470,23 @@ void CallPopulateTree(int numberOfLevels,
                         global_value_buffer,
                         printAlt,
                         printCurr);
+
+                       // Determine temporary device storage requirements
+            *d_temp_storage = NULL;
+            temp_storage_bytes = 0;
+            num_items = (levelUpperBound-levelOffset)*numberOfRows;
+            num_segments = levelUpperBound-levelOffset;
+
+            global_vertices_tree = &global_remaining_vertices_ptr[levelOffset*numberOfRows];
+            cub::DoubleBuffer<int> d_keys(global_vertices_tree, global_vertex_buffer);
+            cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys,
+                num_items, num_segments, d_offsets, d_offsets + 1);
+            // Allocate temporary storage
+            cudaMalloc(&d_temp_storage, temp_storage_bytes);
+            // Run sorting operation
+            cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys,
+                num_items, num_segments, d_offsets, d_offsets + 1);
+
         }
         
         cudaDeviceSynchronize();
