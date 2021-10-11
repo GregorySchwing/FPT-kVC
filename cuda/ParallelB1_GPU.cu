@@ -1395,12 +1395,21 @@ void CallPopulateTree(int numberOfLevels,
             cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
                 num_items, num_segments, global_offsets_buffer, global_offsets_buffer + 1);
 
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+
             // Allocate temporary storage
             cudaMalloc(&d_temp_storage, temp_storage_bytes);
+
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+
             // Run sorting operation
             cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
                 num_items, num_segments, global_offsets_buffer, global_offsets_buffer + 1);
 
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
 
             int * printAlt = d_values.Alternate();
             std::cout << "Unsorted" << std::endl;
