@@ -1398,14 +1398,19 @@ void CallPopulateTree(int numberOfLevels,
             cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
                 num_items, num_segments, global_offsets_buffer, global_offsets_buffer + 1);
 
+
+            int * printAlt = d_values.Alternate();
             std::cout << "Unsorted" << std::endl;
             for (int i = 0; i < (levelUpperBound-levelOffset)*numberOfEdgesPerGraph; ++i){
-                std::cout << d_values.Alternate()[i] << " ";
+                std::cout << printAlt[i] << " ";
             }
             std::cout << std::endl;
+
+            int * printCurr = d_values.Current();
+
             std::cout << "Sorted" << std::endl;
             for (int i = 0; i < (levelUpperBound-levelOffset)*numberOfEdgesPerGraph; ++i){
-                std::cout << d_values.Current()[i] << " ";
+                std::cout << printCurr[i] << " ";
             }
             std::cout << std::endl;
         }
