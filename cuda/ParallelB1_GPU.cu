@@ -978,6 +978,10 @@ __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
     int numVertices = global_remaining_vertices_size_dev_ptr[leafIndex];
     int numVerticesRemoved = 0;
     for (int vertex = vertexOffset + threadIdx.x; vertex < numVertices; vertexOffset += blockDim.x){
+        if (threadIdx.x == 0 && blockIdx.x == 0){
+        printf("Vertex %d loop\n", vertex);
+        printf("\n");
+        }
         // Reinitialize
         degreeZeroVertex[threadIdx.x] = 0;
         degreeZeroVertex[threadIdx.x] = (0 == global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[degreesOffset + vertex]]);
