@@ -716,7 +716,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
     }
     int remainingVerticesSize = global_remaining_vertices_size_dev_ptr[leafIndex];
     if (threadIdx.x == 0 && blockIdx.x == 0){
-        printf("remainingVerticesSize\n");
+        printf("remainingVerticesSize %d\n", remainingVerticesSize);
         printf("\n");
     }
     int outEdgesCount;
@@ -724,7 +724,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
     // Random starting point
     pathsAndPendantStatus[sharedMemPathOffset + iteration] = r[iteration] % remainingVerticesSize;
     if (threadIdx.x == 0 && blockIdx.x == 0){
-        printf("pathsAndPendantStatus\n");
+        printf("pathsAndPendantStatus %d\n", pathsAndPendantStatus[sharedMemPathOffset + iteration]);
         printf("\n");
     }
     ++iteration;
