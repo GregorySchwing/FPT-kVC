@@ -722,12 +722,15 @@ __global__ void ParallelDFSRandom(int levelOffset,
     int outEdgesCount;
     r = randomGPU_four(counter, leafIndex, seed);
     // Random starting point
-    pathsAndPendantStatus[sharedMemPathOffset + iteration] = r[iteration] % remainingVerticesSize;
+    pathsAndPendantStatus[sharedMemPathOffset + iteration] = global_remaining_vertices_dev_ptr[degreesOffset + (r[iteration] % remainingVerticesSize)]];
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("pathsAndPendantStatus %d\n", pathsAndPendantStatus[sharedMemPathOffset + iteration]);
         printf("\n");
     }
     ++iteration;
+
+
+
 
     // Set random out at depth 1
     int randomVertRowOff = global_row_offsets_dev_ptr[rowOffsOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]];
@@ -976,7 +979,6 @@ __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
     int degreesOffset = leafIndex * numberOfRows;
     int vertexOffset = 0;
     int numVertices = global_remaining_vertices_size_dev_ptr[leafIndex];
-    int UB = (numVertices + blockDim.x - 1) / blockDim.x;
     int numVerticesRemoved = 0;
     for (int iter = 0; iter < blockDim.x; iter += blockDim.x){
         degreeZeroVertex[threadIdx.x] = 0;
