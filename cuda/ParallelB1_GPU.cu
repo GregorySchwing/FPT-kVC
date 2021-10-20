@@ -1321,7 +1321,7 @@ void CallPopulateTree(int numberOfLevels,
         condensedData * bufferSize * sizeof(int) +
             2 * expandedData * bufferSize * sizeof(int);
 
-    std::vector<std::vector<int>> pendantChildren(treeSize);
+    std::vector<std::set<int>> pendantChildren(treeSize);
     int pendantChild;
 
     int num_gpus;
@@ -1482,7 +1482,7 @@ void CallPopulateTree(int numberOfLevels,
                 for (int pendantPathIndex = 0; pendantPathIndex < threadsPerBlock; ++pendantPathIndex){
                     if(pendantBools[pendantPathIndex]){
                         pendantChild = pendantChildrenOfLevel[(node - levelOffset)*threadsPerBlock + pendantPathIndex];
-                        pendantChildren[node].push_back(pendantChild);
+                        pendantChildren[node].insert(pendantChild);
                         std::cout << "node " << node << "'s pendantChild " << pendantChild << " was pushed" << std::endl;
                     }
                 }
