@@ -699,7 +699,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
     // Subsequently, only perform DFS on pendant edges, so nonpendant false
     if (global_nonpendant_path_bool_dev_ptr[leafIndex])
         return;
-    int globalPathOffset = leafIndex * 4;
+    int globalPathOffset = leafIndex * 4 * blockDim.x;
     int sharedMemPathOffset = threadIdx.x * 4;
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
     int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
@@ -783,6 +783,12 @@ __global__ void ParallelDFSRandom(int levelOffset,
         printf("\n");
     }
     printf("Thread %d is %s\n", threadIdx.x, pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] ? "pendant" : "nonpendant");
+
+    // Each thread has a different - sharedMemPathOffset
+    global_paths_ptr[globalPathOffset + sharedMemPathOffset + 0] = pathsAndPendantStatus[sharedMemPathOffset + 0];
+    global_paths_ptr[globalPathOffset + sharedMemPathOffset + 1] = pathsAndPendantStatus[sharedMemPathOffset + 1];
+    global_paths_ptr[globalPathOffset + sharedMemPathOffset + 2] = pathsAndPendantStatus[sharedMemPathOffset + 2];
+    global_paths_ptr[globalPathOffset + sharedMemPathOffset + 3] = pathsAndPendantStatus[sharedMemPathOffset + 3];
 
     int i = blockDim.x/2;
     // Checks for any nonpendant edge path exists
@@ -1369,7 +1375,7 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_columns_dev_ptr, (numberOfEdgesPerGraph*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_values_dev_ptr, (numberOfEdgesPerGraph*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&global_paths_ptr, (max_dfs_depth*treeSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_paths_ptr, (max_dfs_depth*treeSize*threadsPerBlock) * sizeof(int) );
 
     cudaMalloc( (void**)&global_remaining_vertices_dev_ptr, (numberOfRows*treeSize) * sizeof(int) );
     cudaMemset(global_remaining_vertices_dev_ptr, INT_MAX, (numberOfRows*treeSize) * sizeof(int));
