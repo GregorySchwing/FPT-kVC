@@ -849,8 +849,32 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     }
     int leafIndex = levelOffset + blockIdx.x;
     // Only process pendant edges
-    if (!global_pendant_path_bool_dev_ptr[blockIdx.x * blockDim.x + threadIdx.x])
+    // 1 block per child, up to 32 children per node
+    if (!global_pendant_path_bool_dev_ptr[blockIdx.x])
         return;
+    int myChild = global_pendant_path_bool_dev_ptr[blockIdx.x];
+    // Beginning of group of TPB pendant children
+    int myBlockOffset = blockIdx.x / blockDim.x;
+    int myBlockIndex = blockIdx.x % blockDim.x;
+    extern __shared__ int childrenAndDuplicateStatus[];
+    // Write all 32 pendant children to shared memory
+    childrenAndDuplicateStatus[threadIdx.x] = global_pendant_child_dev_ptr[myBlockOffset * blockDim.x + threadIdx.x];
+    // See if myChild is duplicated, 1 vs all comparison written to shared memory
+    // Also, if it is duplicated, only process the largest index duplicate
+    // If it isn't duplicated, process the child.
+    childrenAndDuplicateStatus[blockDim.x + threadIdx.x] = (childrenAndDuplicateStatus[blockDim.x + threadIdx.x] == myChild) && myBlockIndex < threadIdx.x;
+    int i = blockDim.x/2;
+    // Checks for any duplicate children which have a smaller index than their other self
+    while (i != 0) {
+        if (threadIdx.x < i){
+            childrenAndDuplicateStatus[blockDim.x + threadIdx.x] |= childrenAndDuplicateStatus[blockDim.x + threadIdx.x + i];
+        }
+        __syncthreads();
+        i /= 2;
+    }
+    if (childrenAndDuplicateStatus[blockDim.x])
+        return;
+
     int pathsOffset = leafIndex * 4;
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
     int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
@@ -870,9 +894,6 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
         // If these are atomic, then duplicate children isn't a problem
         // Since we'd be decrementing by 0 the second, third, ...etc time 
         // a duplicate child was processed.
-
-        // An alternative would be to remove duplicates from the
-        // 32 potential pendant children.  Note sure how to efficiently do this.
         global_degrees_dev_ptr[degreesOffset + 
             global_columns_dev_ptr[valsAndColsOffset + edge]] 
                 -= global_values_dev_ptr[valsAndColsOffset + edge];
@@ -1472,7 +1493,7 @@ void CallPopulateTree(int numberOfLevels,
         // Each node assigned a block,  outgoing and incoming edges of child 
         // from pendant path processed at thread level
         // Block immediately returns if nonpendant path
-        ParallelProcessPendantEdges<<<levelUpperBound-levelOffset,threadsPerBlock>>>
+        ParallelProcessPendantEdges<<<levelUpperBound-levelOffset,threadsPerBlock,2*threadsPerBlock>>>
                         (levelOffset,
                         levelUpperBound,
                         numberOfRows,
