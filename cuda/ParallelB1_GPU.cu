@@ -738,9 +738,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
         printf("degreesOffset  %d\n",degreesOffset);
         printf("pathsAndPendantStatus[sharedMemPathOffset + iteration - 1] %d\n",pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]);
         outEdgesCount = global_degrees_dev_ptr[degreesOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]];
-        printf("outEdgesCount %d\n", outEdgesCount);
-        printf("\n");
-    
+        printf("outEdgesCount %d\n", outEdgesCount);    
     //outEdgesCount = global_row_offsets_dev_ptr[rowOffsOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1] + 1]
     //                - randomVertRowOff;
         printf("valsAndColsOffset + randomVertRowOff + (r[iteration] mod outEdgesCount) %d\n", valsAndColsOffset + randomVertRowOff + (r[iteration] % outEdgesCount));
@@ -748,6 +746,8 @@ __global__ void ParallelDFSRandom(int levelOffset,
     // Assumes the starting point isn't degree 0
     pathsAndPendantStatus[sharedMemPathOffset + iteration] =  global_columns_dev_ptr[valsAndColsOffset + randomVertRowOff + (r[iteration] % outEdgesCount)];
     ++iteration;
+        printf("(r[iteration] % outEdgesCount) %d\n", (r[iteration] % outEdgesCount));
+
     if (threadIdx.x == 0){
         printf("Block %d, levelOffset %d, leafIndex %d, got through first 2 iterations\n", blockIdx.x, levelOffset, leafIndex);
         printf("\n");
