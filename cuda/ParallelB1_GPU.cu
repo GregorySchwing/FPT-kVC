@@ -683,6 +683,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
                             int * global_degrees_dev_ptr,
                             int * global_paths_ptr,
                             int * global_nonpendant_path_bool_dev_ptr,
+                            int * global_nonpendant_path_reduced_bool_dev_ptr,
                             int * global_nonpendant_child_dev_ptr){
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("Entered DFS\n");
@@ -697,8 +698,8 @@ __global__ void ParallelDFSRandom(int levelOffset,
     }
     // Initialized to 0, so will always perform DFS on first call
     // Subsequently, only perform DFS on pendant edges, so nonpendant false
-    if (global_nonpendant_path_bool_dev_ptr[leafIndex])
-        return;
+    //if (global_nonpendant_path_bool_dev_ptr[leafIndex + threadIdx.x])
+    //    return;
     int globalPathOffset = leafIndex * 4 * blockDim.x;
     int sharedMemPathOffset = threadIdx.x * 4;
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
@@ -815,6 +816,18 @@ __global__ void ParallelDFSRandom(int levelOffset,
     // Desired child is v1
     // Therefore, v1 == path[cI]
     global_nonpendant_child_dev_ptr[blockIdx.x + threadIdx.x] = pathsAndPendantStatus[sharedMemPathOffset + childIndex];
+
+    int i = blockDim.x/2;
+    // Checks for any nonpendant edge path exists
+    while (i != 0) {
+        if (threadIdx.x < i){
+            pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] += pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x + i];
+        }
+        __syncthreads();
+        i /= 2;
+    }
+    if (threadIdx.x == 0)
+        global_nonpendant_path_reduced_bool_dev_ptr[blockIdx.x] = pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x];
 }
 
 __global__ void ParallelProcessPendantEdges(int levelOffset,
@@ -1311,6 +1324,7 @@ void CallPopulateTree(int numberOfLevels,
     int * global_remaining_vertices_dev_ptr;
     int * global_remaining_vertices_size_dev_ptr;
     int * global_nonpendant_path_bool_dev_ptr;
+    int * global_nonpendant_path_reduced_bool_dev_ptr;
     int * global_nonpendant_child_dev_ptr;
     int * global_paths_length;
     int * global_edges_left_to_cover_count;
@@ -1347,6 +1361,8 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr, treeSize * sizeof(int) );
     // Each node can process tPB pendant edges per call
     cudaMalloc( (void**)&global_nonpendant_path_bool_dev_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_nonpendant_path_reduced_bool_dev_ptr, deepestLevelSize * sizeof(int) );
+
     cudaMalloc( (void**)&global_nonpendant_child_dev_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
 
     cudaMalloc( (void**)&global_edges_left_to_cover_count, treeSize * sizeof(int) );
@@ -1371,8 +1387,8 @@ void CallPopulateTree(int numberOfLevels,
     numberOfLevels = 1;
     bool pendantNodeExists = true;
 
-    int * pendantBools = new int[deepestLevelSize];
-    int * pendantChildrenOfLevel = new int[deepestLevelSize];
+    int * pendantBools = new int[deepestLevelSize*threadsPerBlock];
+    int * pendantChildrenOfLevel = new int[deepestLevelSize*threadsPerBlock];
 
     // Create Segment Offsets for RemainingVertices
     SetVerticesRemaingSegements<<<deepestLevelSize+1,threadsPerBlock>>>(deepestLevelSize,
@@ -1396,168 +1412,164 @@ void CallPopulateTree(int numberOfLevels,
         // Each thread checks it's path's pendant status
         // These booleans are reduced in shared memory
         // Hence + threadsPerBlock
-        while(pendantNodeExists){
-            std::cout << "pendantNodeExists - true " << std::endl;
+        std::cout << "pendantNodeExists - true " << std::endl;
 
-            // Assumes all edges are turned on.  We need to compress a graph
-            // after processing the edges of pendant paths
-            int sharedMemorySize = threadsPerBlock*4 + threadsPerBlock;
-            ParallelDFSRandom<<<levelUpperBound-levelOffset,threadsPerBlock,sharedMemorySize*sizeof(int)>>>
-                                (levelOffset,
-                                levelUpperBound,
-                                numberOfRows,
-                                numberOfEdgesPerGraph,
-                                global_row_offsets_dev_ptr,
-                                global_columns_dev_ptr,
-                                global_remaining_vertices_dev_ptr,
-                                global_remaining_vertices_size_dev_ptr,
-                                global_degrees_dev_ptr,
-                                global_paths_ptr,
-                                global_nonpendant_path_bool_dev_ptr,
-                                global_nonpendant_child_dev_ptr);
-            
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
-
-            pendantNodeExists = false;
-            cudaMemcpy(pendantBools, global_nonpendant_path_bool_dev_ptr, deepestLevelSize*sizeof(int), cudaMemcpyDeviceToHost);
-            cudaMemcpy(pendantChildrenOfLevel, global_nonpendant_child_dev_ptr, deepestLevelSize*sizeof(int), cudaMemcpyDeviceToHost);
-            
-            for (int node = levelOffset; node < levelUpperBound; ++node){
-                // global_nonpendant_path_bool_dev_ptr was defined as an OR of 
-                // 0) path[0] == path[2]
-                // 1) path[1] == path[3]
-                std::cout << "node " << node << std::endl;
-                std::cout << "global_nonpendant_path_bool_dev_ptr[node] " << pendantBools[node] << std::endl;
-
-                std::cout << "!global_nonpendant_path_bool_dev_ptr[node] " << !pendantBools[node] << std::endl;
-
-                if (!pendantBools[node]){
-                    std::cout << "node " << node << " is pendant" << std::endl;
-
-                    pendantNodeExists = true;
-                    pendantChild = pendantChildrenOfLevel[node];
-
-                    pendantChildren[node].push_back(pendantChild);
-                    std::cout << "node " << node << "'s pendantChild " << pendantChild << " was pushed" << std::endl;
-                }
-            }
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
-            // Each node assigned a block,  outgoing and incoming edges of child 
-            // from pendant path processed at thread level
-            // Block immediately returns if nonpendant path
-            ParallelProcessPendantEdges<<<levelUpperBound-levelOffset,threadsPerBlock>>>
+        // Assumes all edges are turned on.  We need to compress a graph
+        // after processing the edges of pendant paths
+        int sharedMemorySize = threadsPerBlock*4 + threadsPerBlock;
+        ParallelDFSRandom<<<levelUpperBound-levelOffset,threadsPerBlock,sharedMemorySize*sizeof(int)>>>
                             (levelOffset,
                             levelUpperBound,
                             numberOfRows,
                             numberOfEdgesPerGraph,
                             global_row_offsets_dev_ptr,
                             global_columns_dev_ptr,
-                            global_values_dev_ptr,
                             global_remaining_vertices_dev_ptr,
                             global_remaining_vertices_size_dev_ptr,
                             global_degrees_dev_ptr,
                             global_paths_ptr,
-                            global_nonpendant_path_bool_dev_ptr);
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
+                            global_nonpendant_path_bool_dev_ptr,
+                            global_nonpendant_path_reduced_bool_dev_ptr,
+                            global_nonpendant_child_dev_ptr);
+        
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
 
-            ParallelProcessDegreeZeroVertices<<<levelUpperBound-levelOffset,threadsPerBlock,threadsPerBlock>>>
-                            (levelOffset,
-                            levelUpperBound,
-                            numberOfRows,
-                            global_remaining_vertices_dev_ptr,
-                            global_remaining_vertices_size_dev_ptr,
-                            global_degrees_dev_ptr);
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
+        pendantNodeExists = false;
+        cudaMemcpy(pendantBools, global_nonpendant_path_bool_dev_ptr, threadsPerBlock*(levelUpperBound - levelOffset)*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(pendantChildrenOfLevel, global_nonpendant_child_dev_ptr, threadsPerBlock*(levelUpperBound - levelOffset)*sizeof(int), cudaMemcpyDeviceToHost);
+        
+        for (int node = levelOffset; node < levelUpperBound; ++node){
+            // global_nonpendant_path_bool_dev_ptr was defined as an OR of 
+            // 0) path[0] == path[2]
+            // 1) path[1] == path[3]
+            std::cout << "node " << node << std::endl;
+            std::cout << "global_nonpendant_path_bool_dev_ptr[node] " << pendantBools[node] << std::endl;
 
-            // Create pointer that starts at beginning of level
-            // Leaves are indexed from 0; so I need to add the offset
-            // of the leaf from the left of the tree * (numberOfRows+1) so the 
-            // sorting operation works on an entire level.
-            // global_offsets_buffer = &global_row_offsets_dev_ptr[levelOffset*(numberOfRows+1)];
-            ParallelCreateLevelAwareRowOffsets<<<levelUpperBound-levelOffset,threadsPerBlock>>>
-                                                (levelOffset,
-                                                levelUpperBound,
-                                                numberOfRows,
-                                                numberOfEdgesPerGraph,
-                                                global_row_offsets_dev_ptr,
-                                                global_offsets_buffer);
+            std::cout << "!global_nonpendant_path_bool_dev_ptr[node] " << !pendantBools[node] << std::endl;
 
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
-            
-            global_columns_tree = &global_columns_dev_ptr[levelOffset*numberOfEdgesPerGraph];
-            global_values_tree = &global_values_dev_ptr[levelOffset*numberOfEdgesPerGraph];
+            if (!pendantBools[node]){
+                std::cout << "node " << node << " is pendant" << std::endl;
 
-            // Create a set of DoubleBuffers to wrap pairs of device pointers
-            cub::DoubleBuffer<int> d_values(global_columns_tree, global_column_buffer);
-            cub::DoubleBuffer<int> d_keys(global_values_tree, global_value_buffer);
+                pendantNodeExists = true;
+                pendantChild = pendantChildrenOfLevel[node];
 
-            // Determine temporary device storage requirements
-            void     *d_temp_storage = NULL;
-            size_t   temp_storage_bytes = 0;
-            int num_items = (levelUpperBound-levelOffset)*numberOfEdgesPerGraph;
-            int num_segments = (levelUpperBound-levelOffset)*(numberOfRows+1);
-
-            cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
-                num_items, num_segments, &global_offsets_buffer[0], &global_offsets_buffer[num_segments+ 1]);
-
-            // Allocate temporary storage
-            cudaMalloc(&d_temp_storage, temp_storage_bytes);
-
-            // Run sorting operation
-            cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
-                num_items, num_segments, global_offsets_buffer, global_offsets_buffer + 1);
-
-            cudaFree(d_temp_storage);
-
-            int * printAlt = d_keys.Alternate();
-            int * printCurr = d_keys.Current();
-
-            PrintEdges<<<1,1>>>  (levelOffset,
+                pendantChildren[node].push_back(pendantChild);
+                std::cout << "node " << node << "'s pendantChild " << pendantChild << " was pushed" << std::endl;
+            }
+        }
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+        // Each node assigned a block,  outgoing and incoming edges of child 
+        // from pendant path processed at thread level
+        // Block immediately returns if nonpendant path
+        ParallelProcessPendantEdges<<<levelUpperBound-levelOffset,threadsPerBlock>>>
+                        (levelOffset,
                         levelUpperBound,
                         numberOfRows,
                         numberOfEdgesPerGraph,
-                        global_values_tree,
-                        global_value_buffer,
-                        printAlt,
-                        printCurr);
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
-                       // Determine temporary device storage requirements
-            void     *d_temp_storage2 = NULL;
-            temp_storage_bytes = 0;
-            num_items = (levelUpperBound-levelOffset)*numberOfRows;
-            num_segments = levelUpperBound-levelOffset;
+                        global_row_offsets_dev_ptr,
+                        global_columns_dev_ptr,
+                        global_values_dev_ptr,
+                        global_remaining_vertices_dev_ptr,
+                        global_remaining_vertices_size_dev_ptr,
+                        global_degrees_dev_ptr,
+                        global_paths_ptr,
+                        global_nonpendant_path_bool_dev_ptr);
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
 
-            global_vertices_tree = &global_remaining_vertices_dev_ptr[levelOffset*numberOfRows];
-            cub::DoubleBuffer<int> d_keys_verts(global_vertices_tree, global_vertex_buffer);
-            
-            cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage2, temp_storage_bytes, d_keys_verts,
-                num_items, num_segments, &global_vertex_segments[0], &global_vertex_segments[num_segments+1]);
-            // Allocate temporary storage
-            cudaMalloc(&d_temp_storage2, temp_storage_bytes);
-            // Run sorting operation
-            cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage2, temp_storage_bytes, d_keys_verts,
-                num_items, num_segments, global_vertex_segments, global_vertex_segments + 1);
-            
-            printAlt = d_keys_verts.Alternate();
-            printCurr = d_keys_verts.Current();
-
-            PrintVerts<<<1,1>>>  (levelOffset,
+        ParallelProcessDegreeZeroVertices<<<levelUpperBound-levelOffset,threadsPerBlock,threadsPerBlock>>>
+                        (levelOffset,
                         levelUpperBound,
                         numberOfRows,
-                        global_vertices_tree,
-                        global_vertex_buffer,
-                        printAlt,
-                        printCurr);
+                        global_remaining_vertices_dev_ptr,
+                        global_remaining_vertices_size_dev_ptr,
+                        global_degrees_dev_ptr);
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
 
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
-        }
+        // Create pointer that starts at beginning of level
+        // Leaves are indexed from 0; so I need to add the offset
+        // of the leaf from the left of the tree * (numberOfRows+1) so the 
+        // sorting operation works on an entire level.
+        // global_offsets_buffer = &global_row_offsets_dev_ptr[levelOffset*(numberOfRows+1)];
+        ParallelCreateLevelAwareRowOffsets<<<levelUpperBound-levelOffset,threadsPerBlock>>>
+                                            (levelOffset,
+                                            levelUpperBound,
+                                            numberOfRows,
+                                            numberOfEdgesPerGraph,
+                                            global_row_offsets_dev_ptr,
+                                            global_offsets_buffer);
+
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+        
+        global_columns_tree = &global_columns_dev_ptr[levelOffset*numberOfEdgesPerGraph];
+        global_values_tree = &global_values_dev_ptr[levelOffset*numberOfEdgesPerGraph];
+
+        // Create a set of DoubleBuffers to wrap pairs of device pointers
+        cub::DoubleBuffer<int> d_values(global_columns_tree, global_column_buffer);
+        cub::DoubleBuffer<int> d_keys(global_values_tree, global_value_buffer);
+
+        // Determine temporary device storage requirements
+        void     *d_temp_storage = NULL;
+        size_t   temp_storage_bytes = 0;
+        int num_items = (levelUpperBound-levelOffset)*numberOfEdgesPerGraph;
+        int num_segments = (levelUpperBound-levelOffset)*(numberOfRows+1);
+
+        cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
+            num_items, num_segments, &global_offsets_buffer[0], &global_offsets_buffer[num_segments+ 1]);
+
+        // Allocate temporary storage
+        cudaMalloc(&d_temp_storage, temp_storage_bytes);
+
+        // Run sorting operation
+        cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
+            num_items, num_segments, global_offsets_buffer, global_offsets_buffer + 1);
+
+        cudaFree(d_temp_storage);
+
+        int * printAlt = d_keys.Alternate();
+        int * printCurr = d_keys.Current();
+
+        PrintEdges<<<1,1>>>  (levelOffset,
+                    levelUpperBound,
+                    numberOfRows,
+                    numberOfEdgesPerGraph,
+                    global_values_tree,
+                    global_value_buffer,
+                    printAlt,
+                    printCurr);
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+                    // Determine temporary device storage requirements
+        void     *d_temp_storage2 = NULL;
+        temp_storage_bytes = 0;
+        num_items = (levelUpperBound-levelOffset)*numberOfRows;
+        num_segments = levelUpperBound-levelOffset;
+
+        global_vertices_tree = &global_remaining_vertices_dev_ptr[levelOffset*numberOfRows];
+        cub::DoubleBuffer<int> d_keys_verts(global_vertices_tree, global_vertex_buffer);
+        
+        cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage2, temp_storage_bytes, d_keys_verts,
+            num_items, num_segments, &global_vertex_segments[0], &global_vertex_segments[num_segments+1]);
+        // Allocate temporary storage
+        cudaMalloc(&d_temp_storage2, temp_storage_bytes);
+        // Run sorting operation
+        cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage2, temp_storage_bytes, d_keys_verts,
+            num_items, num_segments, global_vertex_segments, global_vertex_segments + 1);
+        
+        printAlt = d_keys_verts.Alternate();
+        printCurr = d_keys_verts.Current();
+
+        PrintVerts<<<1,1>>>  (levelOffset,
+                    levelUpperBound,
+                    numberOfRows,
+                    global_vertices_tree,
+                    global_vertex_buffer,
+                    printAlt,
+                    printCurr);
         
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
