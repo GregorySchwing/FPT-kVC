@@ -1490,10 +1490,15 @@ void CallPopulateTree(int numberOfLevels,
         }
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
-        // Each node assigned a block,  outgoing and incoming edges of child 
-        // from pendant path processed at thread level
-        // Block immediately returns if nonpendant path
-        ParallelProcessPendantEdges<<<levelUpperBound-levelOffset,threadsPerBlock,2*threadsPerBlock>>>
+        // Each node assigned threadsPerBlock blocks,  
+        // Up to threadsPerBlock pendant children are processed
+        // 1 pendant child per block
+        // outgoing and incoming edges of the pendant child 
+        // are processed at thread level
+        // Block immediately returns if nonpendant child 
+        // or duplicate pendant child and not the largest
+        // indexed instance of that child
+        ParallelProcessPendantEdges<<<(levelUpperBound-levelOffset)*threadsPerBlock,threadsPerBlock,2*threadsPerBlock>>>
                         (levelOffset,
                         levelUpperBound,
                         numberOfRows,
