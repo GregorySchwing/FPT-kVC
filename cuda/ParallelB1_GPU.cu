@@ -746,7 +746,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
     // Assumes the starting point isn't degree 0
     pathsAndPendantStatus[sharedMemPathOffset + iteration] =  global_columns_dev_ptr[valsAndColsOffset + randomVertRowOff + (r[iteration] % outEdgesCount)];
     ++iteration;
-        printf("(r[iteration] % outEdgesCount) %d\n", (r[iteration] % outEdgesCount));
+        printf("(r[iteration] mod outEdgesCount) %d\n", (r[iteration] % outEdgesCount));
 
     if (threadIdx.x == 0){
         printf("Block %d, levelOffset %d, leafIndex %d, got through first 2 iterations\n", blockIdx.x, levelOffset, leafIndex);
