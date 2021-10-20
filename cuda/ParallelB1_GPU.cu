@@ -1388,7 +1388,9 @@ void CallPopulateTree(int numberOfLevels,
     bool pendantNodeExists = true;
 
     int * pendantBools = new int[deepestLevelSize*threadsPerBlock];
+    int * pendantReducedBools = new int[deepestLevelSize];
     int * pendantChildrenOfLevel = new int[deepestLevelSize*threadsPerBlock];
+
 
     // Create Segment Offsets for RemainingVertices
     SetVerticesRemaingSegements<<<deepestLevelSize+1,threadsPerBlock>>>(deepestLevelSize,
@@ -1437,8 +1439,9 @@ void CallPopulateTree(int numberOfLevels,
 
         pendantNodeExists = false;
         cudaMemcpy(pendantBools, global_nonpendant_path_bool_dev_ptr, threadsPerBlock*(levelUpperBound - levelOffset)*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(pendantReducedBools, global_nonpendant_path_reduced_bool_dev_ptr, (levelUpperBound - levelOffset)*sizeof(int), cudaMemcpyDeviceToHost);
         cudaMemcpy(pendantChildrenOfLevel, global_nonpendant_child_dev_ptr, threadsPerBlock*(levelUpperBound - levelOffset)*sizeof(int), cudaMemcpyDeviceToHost);
-        
+
         for (int node = levelOffset; node < levelUpperBound; ++node){
             // global_nonpendant_path_bool_dev_ptr was defined as an OR of 
             // 0) path[0] == path[2]
@@ -1448,14 +1451,15 @@ void CallPopulateTree(int numberOfLevels,
 
             std::cout << "!global_nonpendant_path_bool_dev_ptr[node] " << !pendantBools[node] << std::endl;
 
-            if (!pendantBools[node]){
-                std::cout << "node " << node << " is pendant" << std::endl;
-
-                pendantNodeExists = true;
-                pendantChild = pendantChildrenOfLevel[node];
-
-                pendantChildren[node].push_back(pendantChild);
-                std::cout << "node " << node << "'s pendantChild " << pendantChild << " was pushed" << std::endl;
+            if (pendantReducedBools[node]){
+                std::cout << "node " << node << " contains a pendant edge" << std::endl;
+                for (int pendantPathIndex = 0; pendantPathIndex < threadsPerBlock; ++pendantPathIndex){
+                    if(pendantBools[pendantPathIndex]){
+                        pendantChild = pendantChildrenOfLevel[(node - levelOffset)*threadsPerBlock + pendantPathIndex];
+                        pendantChildren[node].push_back(pendantChild);
+                        std::cout << "node " << node << "'s pendantChild " << pendantChild << " was pushed" << std::endl;
+                    }
+                }
             }
         }
         cudaDeviceSynchronize();
