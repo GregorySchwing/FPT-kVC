@@ -733,29 +733,18 @@ __global__ void ParallelDFSRandom(int levelOffset,
     // Set random out at depth 1
     int randomVertRowOff = global_row_offsets_dev_ptr[rowOffsOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]];
     // Using degrees allow us to ignore the edges which have been turned off
-    if (threadIdx.x == 0){
         printf("randomVertRowOff %d\n", randomVertRowOff);
-        printf("\n");
-    }
-    if (threadIdx.x == 0){
         printf("degreesOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1] %d\n",degreesOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]);
-    }
-       if (threadIdx.x == 0){
         printf("degreesOffset  %d\n",degreesOffset);
-    }
-    if (threadIdx.x == 0){
         printf("pathsAndPendantStatus[sharedMemPathOffset + iteration - 1] %d\n",pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]);
-    }
-    outEdgesCount = global_degrees_dev_ptr[degreesOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]];
-    if (threadIdx.x == 0){
+        outEdgesCount = global_degrees_dev_ptr[degreesOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]];
         printf("outEdgesCount %d\n", outEdgesCount);
         printf("\n");
-    }
+    
     //outEdgesCount = global_row_offsets_dev_ptr[rowOffsOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1] + 1]
     //                - randomVertRowOff;
-    if (threadIdx.x == 0){
         printf("valsAndColsOffset + randomVertRowOff + (r[iteration] mod outEdgesCount) %d\n", valsAndColsOffset + randomVertRowOff + (r[iteration] % outEdgesCount));
-    }
+    
     // Assumes the starting point isn't degree 0
     pathsAndPendantStatus[sharedMemPathOffset + iteration] =  global_columns_dev_ptr[valsAndColsOffset + randomVertRowOff + (r[iteration] % outEdgesCount)];
     ++iteration;
