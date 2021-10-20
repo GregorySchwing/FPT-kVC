@@ -770,7 +770,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
         //outEdgesCount = global_row_offsets_dev_ptr[rowOffsOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1] + 1]
         //                - randomVertRowOff;
         pathsAndPendantStatus[sharedMemPathOffset + iteration] =  global_columns_dev_ptr[valsAndColsOffset + randomVertRowOff + (r[iteration] % outEdgesCount)];
-        // OutEdgesCount != 2 means there is another path that isn't a cycle
+        // OutEdgesCount != 1 means there is another path that isn't a simple cycle
         if(pathsAndPendantStatus[sharedMemPathOffset + iteration] == 
             pathsAndPendantStatus[sharedMemPathOffset + iteration - 2]
                 && outEdgesCount != 1){
@@ -784,7 +784,12 @@ __global__ void ParallelDFSRandom(int levelOffset,
         printf("Block %d, levelOffset %d, leafIndex %d, got through last 2 iterations\n", blockIdx.x, levelOffset, leafIndex);
         printf("\n");
     }
-    printf("Thread %d is %s\n", threadIdx.x, pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] ? "pendant" : "nonpendant");
+    printf("Thread %d (path %d -> %d -> %d -> %d) is %s\n", threadIdx.x, 
+                                                            pathsAndPendantStatus[sharedMemPathOffset + 0],
+                                                            pathsAndPendantStatus[sharedMemPathOffset + 1],
+                                                            pathsAndPendantStatus[sharedMemPathOffset + 2],
+                                                            pathsAndPendantStatus[sharedMemPathOffset + 3],
+                                                            pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] ? "pendant" : "nonpendant");
 
     // Each thread has a different - sharedMemPathOffset
     // Copy each thread's path to global memory
