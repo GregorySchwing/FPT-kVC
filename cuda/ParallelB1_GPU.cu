@@ -776,8 +776,9 @@ __global__ void ParallelDFSRandom(int levelOffset,
             pathsAndPendantStatus[sharedMemPathOffset + iteration] =  global_columns_dev_ptr[valsAndColsOffset + randomVertRowOff + ((r[iteration] + 1) % outEdgesCount)];
         }
     }
-    pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] = (pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + 0] == pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + 2]);
-    pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] |= (pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + 1] == pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + 3]);
+    // Check 0,2 and 1,3 for pendantness in my thread's path
+    pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] = (pathsAndPendantStatus[sharedMemPathOffset + 0] == pathsAndPendantStatus[sharedMemPathOffset + 2]);
+    pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] |= (pathsAndPendantStatus[sharedMemPathOffset + 1] == pathsAndPendantStatus[sharedMemPathOffset + 3]);
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("Block %d, levelOffset %d, leafIndex %d, got through last 2 iterations\n", blockIdx.x, levelOffset, leafIndex);
         printf("\n");
@@ -785,81 +786,35 @@ __global__ void ParallelDFSRandom(int levelOffset,
     printf("Thread %d is %s\n", threadIdx.x, pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] ? "pendant" : "nonpendant");
 
     // Each thread has a different - sharedMemPathOffset
+    // Copy each thread's path to global memory
     global_paths_ptr[globalPathOffset + sharedMemPathOffset + 0] = pathsAndPendantStatus[sharedMemPathOffset + 0];
     global_paths_ptr[globalPathOffset + sharedMemPathOffset + 1] = pathsAndPendantStatus[sharedMemPathOffset + 1];
     global_paths_ptr[globalPathOffset + sharedMemPathOffset + 2] = pathsAndPendantStatus[sharedMemPathOffset + 2];
     global_paths_ptr[globalPathOffset + sharedMemPathOffset + 3] = pathsAndPendantStatus[sharedMemPathOffset + 3];
 
-    int i = blockDim.x/2;
-    // Checks for any nonpendant edge path exists
-    while (i != 0) {
-        if (threadIdx.x < i){
-            pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] &= pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x + i];
-        }
-        __syncthreads();
-        i /= 2;
-    }
+    // Copy each path's pendantness boolean to global memory
+    global_nonpendant_path_bool_dev_ptr[blockIdx.x + threadIdx.x] = pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x];
+    // We give Case 3 priority over Case 2,
+    // Since the serial algorithm short-circuits 
+    // upon finding a pendant edge
 
-    // Write pendant status to global memory
-    // We detected pendant, but we store the converse, nonpendantness
-    if (threadIdx.x == 0){
-        global_nonpendant_path_bool_dev_ptr[leafIndex] = !pathsAndPendantStatus[isInvalidPathBooleanArrayOffset];
-        printf("leafIndex %d is %s\n", leafIndex, global_nonpendant_path_bool_dev_ptr[leafIndex] ? "nonpendant" : "pendant");
-    }
-    // A nonpendant exists
-    if (!pathsAndPendantStatus[isInvalidPathBooleanArrayOffset]){
-        // Regenerate pendant booleans
-        pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] = (pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + 0] == pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + 2]);
-        pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] |= (pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + 1] == pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + 3]);
-        // We give Case 3 priority over Case 2,
-        // Since the serial algorithm short-circuits 
-        // upon finding a pendant edge
+    // We know either 
+    // Case 3 - length 2
+    // v, v1
+    //path[0] == path[2], desired child is v
+    // If path[0] == path[2] then path[0] != path[2]
+    // Hence, cI == 0, since false casted to int is 0
+    // Therefore, v == path[cI]
+    int childIndex = global_paths_ptr[globalPathOffset + 0] != global_paths_ptr[globalPathOffset + 2];
 
-        // We know either 
-        // Case 3 - length 2
-        // v, v1
-        //path[0] == path[2], desired child is v
-        // If path[0] == path[2] then path[0] != path[2]
-        // Hence, cI == 0, since false casted to int is 0
-        // Therefore, v == path[cI]
-        int childIndex = global_paths_ptr[globalPathOffset + 0] != global_paths_ptr[globalPathOffset + 2];
-
-        // or
-        // Case 2 - length 3
-        // v, v1, v2
-        // if path[0] != path[2] was true, then path[1] == path[3]
-        // cI == 1, since true casted to int is 1
-        // Desired child is v1
-        // Therefore, v1 == path[cI]
-        global_nonpendant_child_dev_ptr[blockIdx.x] = global_paths_ptr[globalPathOffset + childIndex];
-        if (threadIdx.x == 0){
-            // One of these is guarunteed nonpendant
-            for (int i = 0; i < blockDim.x; ++i){
-                // Since these are random paths, using the first possible nonpendant isnt biased
-                if (!pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + i]){
-                    for (int j = 0; j < 4; ++j)
-                        global_paths_ptr[globalPathOffset + j] = pathsAndPendantStatus[i*4 + j];
-                    return;
-                }
-            }
-        }
-    } else {
-        if (threadIdx.x == 0){
-            // Since these are random paths, using the first pendant isnt biased
-            for (int j = 0; j < 4; ++j){
-                global_paths_ptr[globalPathOffset + j] = pathsAndPendantStatus[j];
-            }
-            printf("leaf index %d, path (%d -> %d -> %d -> %d)\n", leafIndex, 
-                global_paths_ptr[globalPathOffset + 0],
-                global_paths_ptr[globalPathOffset + 1],
-                global_paths_ptr[globalPathOffset + 2],
-                global_paths_ptr[globalPathOffset + 3]);
-        }
-    }
-    if (threadIdx.x == 0 && blockIdx.x == 0){
-        printf("Block ID %d Finished DFS\n", blockIdx.x);
-        printf("\n");
-    }
+    // or
+    // Case 2 - length 3
+    // v, v1, v2
+    // if path[0] != path[2] was true, then path[1] == path[3]
+    // cI == 1, since true casted to int is 1
+    // Desired child is v1
+    // Therefore, v1 == path[cI]
+    global_nonpendant_child_dev_ptr[blockIdx.x + threadIdx.x] = pathsAndPendantStatus[sharedMemPathOffset + childIndex];
 }
 
 __global__ void ParallelProcessPendantEdges(int levelOffset,
@@ -1390,8 +1345,9 @@ void CallPopulateTree(int numberOfLevels,
 
     cudaMalloc( (void**)&global_paths_length, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr, treeSize * sizeof(int) );
-    cudaMalloc( (void**)&global_nonpendant_path_bool_dev_ptr, deepestLevelSize * sizeof(int) );
-    cudaMalloc( (void**)&global_nonpendant_child_dev_ptr, deepestLevelSize * sizeof(int) );
+    // Each node can process tPB pendant edges per call
+    cudaMalloc( (void**)&global_nonpendant_path_bool_dev_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_nonpendant_child_dev_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
 
     cudaMalloc( (void**)&global_edges_left_to_cover_count, treeSize * sizeof(int) );
 
