@@ -412,8 +412,8 @@ void Graph::RemoveDegreeZeroVertices(){
     for (int vertex = 0; vertex < vertexCount; ++vertex){
         if(new_degrees[vertex] == 0)
             if (hasntBeenRemoved[vertex]){
-                std::cout << "removing newly degree zero vertex" << j << std::endl;
-                removeVertex(j);
+                std::cout << "removing degree zero vertex" << vertex << std::endl;
+                removeVertex(vertex);
             }
     }
 }
