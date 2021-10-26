@@ -895,11 +895,10 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
     int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
     int degreesOffset = leafIndex * numberOfRows;
-    int child = global_pendant_child_dev_ptr[blockIdx.x * blockDim.x + threadIdx.x];
     int LB, UB, v, vLB, vUB;
     // Set out-edges
-    LB = global_row_offsets_dev_ptr[rowOffsOffset + child];
-    UB = global_row_offsets_dev_ptr[rowOffsOffset + child + 1]; 
+    LB = global_row_offsets_dev_ptr[rowOffsOffset + myChild];
+    UB = global_row_offsets_dev_ptr[rowOffsOffset + myChild + 1]; 
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("block ID %d Set offsets in PPP\n", blockIdx.x);
         printf("\n");
@@ -907,9 +906,9 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
         // Since there are only 2 edges b/w each node,
         // We can safely decrement the target node's degree
-        // If these are atomic, then duplicate children isn't a problem
+        // If these are atomic, then duplicate myChildren isn't a problem
         // Since we'd be decrementing by 0 the second, third, ...etc time 
-        // a duplicate child was processed.
+        // a duplicate myChild was processed.
         global_degrees_dev_ptr[degreesOffset + 
             global_columns_dev_ptr[valsAndColsOffset + edge]] 
                 -= global_values_dev_ptr[valsAndColsOffset + edge];
@@ -917,7 +916,7 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     }
 
     if (threadIdx.x == 0){
-            global_degrees_dev_ptr[degreesOffset + child] = 0;
+            global_degrees_dev_ptr[degreesOffset + myChild] = 0;
     }
     __syncthreads();
     if (threadIdx.x == 0 && blockIdx.x == 0){
@@ -925,7 +924,7 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
         printf("\n");
     }  
     if (threadIdx.x == 0 && blockIdx.x == 0){
-        printf("Block %d, levelOffset %d, leafIndex %d, child removed %d\n", blockIdx.x, levelOffset, leafIndex, child);
+        printf("Block %d, levelOffset %d, leafIndex %d, myChild removed %d\n", blockIdx.x, levelOffset, leafIndex, myChild);
         printf("\n");
     }
     // (u,v) is the form of edge pairs.  We are traversing over v's outgoing edges, 
@@ -935,8 +934,8 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     // (2) an undirected graph 
     // Parallel implementations of both of these need to be investigated.
     bool foundChild, tmp;
-    LB = global_row_offsets_dev_ptr[rowOffsOffset + child];
-    UB = global_row_offsets_dev_ptr[rowOffsOffset + child + 1];    // Set out-edges
+    LB = global_row_offsets_dev_ptr[rowOffsOffset + myChild];
+    UB = global_row_offsets_dev_ptr[rowOffsOffset + myChild + 1];    // Set out-edges
     for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
         v = global_columns_dev_ptr[valsAndColsOffset + edge];
         // guarunteed to only have one incoming and one outgoing edge connecting (x,y)
@@ -948,7 +947,7 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
                 outgoingEdgeOfV < vUB; 
                     outgoingEdgeOfV += blockDim.x){
 
-                foundChild = child == global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfV];
+                foundChild = myChild == global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfV];
                 // Set in-edge
                 // store edge status
                 tmp = global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV];
@@ -958,10 +957,10 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
                 //3)      0          1            0                       1
                 //4)      1          1            1                       0
                 //
-                // Case 1: isnt child and edge is off, stay off
-                // Case 2: is child and edge is off, stay off
-                // Case 3: isn't child and edge is on, stay on
-                // Case 4: is child and edge is on, turn off
+                // Case 1: isnt myChild and edge is off, stay off
+                // Case 2: is myChild and edge is off, stay off
+                // Case 3: isn't myChild and edge is on, stay on
+                // Case 4: is myChild and edge is on, turn off
                 // All this logic is necessary because we aren't using degree to set upperbound
                 // we are using row offsets, which may include some edges turned off on a previous
                 // pendant edge processing step.
