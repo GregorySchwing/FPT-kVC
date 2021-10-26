@@ -862,7 +862,7 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     childrenAndDuplicateStatus[threadIdx.x] = global_pendant_child_dev_ptr[myBlockOffset + threadIdx.x];
     __syncthreads();
     if (blockIdx.x == 0){
-        printf("Block ID %d's childrenAndDuplicateStatus[%d] is %d\n", blockIdx.x, childrenAndDuplicateStatus[threadIdx.x]);
+        printf("Block ID %d's childrenAndDuplicateStatus[%d] is %d\n", blockIdx.x, threadIdx.x, childrenAndDuplicateStatus[threadIdx.x]);
     }
     // See if myChild is duplicated, 1 vs all comparison written to shared memory
     // Also, if it is duplicated, only process the largest index duplicate
