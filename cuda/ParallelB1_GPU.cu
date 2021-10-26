@@ -865,7 +865,7 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     // See if myChild is duplicated, 1 vs all comparison written to shared memory
     // Also, if it is duplicated, only process the largest index duplicate
     // If it isn't duplicated, process the child.
-    childrenAndDuplicateStatus[blockDim.x + threadIdx.x] = (childrenAndDuplicateStatus[blockDim.x + threadIdx.x] == myChild) 
+    childrenAndDuplicateStatus[blockDim.x + threadIdx.x] = (childrenAndDuplicateStatus[threadIdx.x] == myChild) 
                                                             && myBlockIndex < threadIdx.x 
                                                                 && global_pendant_path_bool_dev_ptr[threadIdx.x];
     if (blockIdx.x == 0){
