@@ -887,7 +887,8 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     if (childrenAndDuplicateStatus[blockDim.x])
         return;
 
-    printf("Block ID %d made it past the return\n", blockIdx.x);
+    if (threadIdx.x == 0)
+        printf("Block ID %d made it past the return\n", blockIdx.x);
 
 
     int pathsOffset = leafIndex * 4;
