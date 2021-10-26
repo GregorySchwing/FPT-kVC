@@ -79,6 +79,7 @@ void Graph::InitGPrime(Graph & g_parent,
         SetVerticesToIncludeInCover(S);
     } else {
         new_degrees = GetOldDegRef();
+        RemoveDegreeZeroVertices();
     }
     // This line is throwing an error in valgrind
     // Conditional jump or move depends on uninitialised value(s)
