@@ -867,6 +867,7 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
         __syncthreads();
         i /= 2;
     }
+    __syncthreads();
     if (childrenAndDuplicateStatus[blockDim.x])
         return;
 
