@@ -838,7 +838,7 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
                             int * global_pendant_path_bool_dev_ptr,
                             int * global_pendant_child_dev_ptr){
 
-    if (threadIdx.x == 0 && blockIdx.x == 0){
+    if (threadIdx.x == 0){
         printf("Block ID %d Started ParallelProcessPendantEdges\n", blockIdx.x);
         printf("\n");
     }
@@ -847,13 +847,22 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     // 1 block per child, up to 32 children per node
     if (!global_pendant_path_bool_dev_ptr[blockIdx.x])
         return;
+    if (threadIdx.x == 0){
+        printf("Block ID %d is pendant\n", blockIdx.x);
+    }
     int myChild = global_pendant_path_bool_dev_ptr[blockIdx.x];
+    if (threadIdx.x == 0){
+        printf("Block ID %d's child is %d\n", blockIdx.x, myChild);
+    }
     // Beginning of group of TPB pendant children
     int myBlockOffset = blockIdx.x / blockDim.x;
     int myBlockIndex = blockIdx.x % blockDim.x;
     extern __shared__ int childrenAndDuplicateStatus[];
     // Write all 32 pendant children to shared memory
     childrenAndDuplicateStatus[threadIdx.x] = global_pendant_child_dev_ptr[myBlockOffset * blockDim.x + threadIdx.x];
+    if (blockIdx.x == 0){
+        printf("Block ID %d's childrenAndDuplicateStatus[%d] is %d\n", blockIdx.x, childrenAndDuplicateStatus[threadIdx.x]);
+    }
     // See if myChild is duplicated, 1 vs all comparison written to shared memory
     // Also, if it is duplicated, only process the largest index duplicate
     // If it isn't duplicated, process the child.
