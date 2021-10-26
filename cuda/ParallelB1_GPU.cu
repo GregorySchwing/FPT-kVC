@@ -919,11 +919,11 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
             global_degrees_dev_ptr[degreesOffset + myChild] = 0;
     }
     __syncthreads();
-    if (threadIdx.x == 0 && blockIdx.x == 0){
+    if (threadIdx.x == 0){
         printf("Block ID %d Finished out edges PPP\n", blockIdx.x);
         printf("\n");
     }  
-    if (threadIdx.x == 0 && blockIdx.x == 0){
+    if (threadIdx.x == 0){
         printf("Block %d, levelOffset %d, leafIndex %d, myChild removed %d\n", blockIdx.x, levelOffset, leafIndex, myChild);
         printf("\n");
     }
