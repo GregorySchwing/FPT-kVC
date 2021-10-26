@@ -75,11 +75,11 @@ void Graph::InitGPrime(Graph & g_parent,
         // This method doesnt remove vertices which were disconnected at the start
         //RemoveNewlyDegreeZeroVertices(S, GetCSR().GetNewRowOffRef(), GetCSR().GetNewColRef());
         // Check every vertex if it's new degree is zero.  This lets the GPU code work as is.
-        RemoveDegreeZeroVertices();
+        //RemoveDegreeZeroVertices();
         SetVerticesToIncludeInCover(S);
     } else {
         new_degrees = GetOldDegRef();
-        RemoveDegreeZeroVertices();
+        //RemoveDegreeZeroVertices();
     }
     // This line is throwing an error in valgrind
     // Conditional jump or move depends on uninitialised value(s)

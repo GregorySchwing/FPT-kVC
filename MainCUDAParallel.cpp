@@ -61,9 +61,9 @@ int main(int argc, char *argv[])
     for (auto & v: newCols)
         std::cout << v << " ";
     std::cout << std::endl;
-
+    g.RemoveDegreeZeroVertices();
     CallPopulateTree(endingLevel - startingLevel, 
-                    graphs[0]);
+                    g);
     //thrust::device_vector< int > verticesToIncludeInCover_dev(g.GetVertexCount()*treeSize);
     //thrust::device_vector< int > verticesRemaining_dev(g.GetVertexCount()*treeSize);
     //thrust::device_vector< int > hasntBeenRemoved_dev(g.GetVertexCount()*treeSize);

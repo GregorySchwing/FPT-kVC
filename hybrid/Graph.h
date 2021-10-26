@@ -58,6 +58,7 @@ public:
     void SetVerticesToIncludeInCover(thrust::host_vector<int> & verticesRef);
     Graph & GetParent();
     int GetLargestDegree();
+    void RemoveDegreeZeroVertices();
 
 
 private:
@@ -117,7 +118,6 @@ private:
     void RemoveNewlyDegreeZeroVertices(thrust::host_vector<int> & verticesToRemove,
                                         thrust::host_vector<int> & oldRowOffets,
                                         thrust::host_vector<int> & oldColumnIndices);
-    void RemoveDegreeZeroVertices();
 
     friend class Graph_GPU;
 
