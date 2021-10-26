@@ -72,7 +72,10 @@ void Graph::InitGPrime(Graph & g_parent,
     if(S.size() != 0){
         SetEdgesOfSSymParallel(S, GetCSR().GetNewRowOffRef(), GetCSR().GetNewColRef()); 
         SetEdgesLeftToCoverParallel(GetCSR().GetNewRowOffRef());
-        RemoveNewlyDegreeZeroVertices(S, GetCSR().GetNewRowOffRef(), GetCSR().GetNewColRef());
+        // This method doesnt remove vertices which were disconnected at the start
+        //RemoveNewlyDegreeZeroVertices(S, GetCSR().GetNewRowOffRef(), GetCSR().GetNewColRef());
+        // Check every vertex if it's new degree is zero.  This lets the GPU code work as is.
+        RemoveDegreeZeroVertices();
         SetVerticesToIncludeInCover(S);
     } else {
         new_degrees = GetOldDegRef();
@@ -401,6 +404,17 @@ void Graph::RemoveNewlyDegreeZeroVertices(thrust::host_vector<int> & verticesToR
 	    		removeVertex(j);
                 }
         }
+    }
+}
+
+// Highly unoptimized, but should work for now
+void Graph::RemoveDegreeZeroVertices(){
+    for (int vertex = 0; vertex < vertexCount; ++vertex){
+        if(new_degrees[vertex] == 0)
+            if (hasntBeenRemoved[vertex]){
+                std::cout << "removing newly degree zero vertex" << j << std::endl;
+                removeVertex(j);
+            }
     }
 }
 

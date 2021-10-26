@@ -117,6 +117,7 @@ private:
     void RemoveNewlyDegreeZeroVertices(thrust::host_vector<int> & verticesToRemove,
                                         thrust::host_vector<int> & oldRowOffets,
                                         thrust::host_vector<int> & oldColumnIndices);
+    void RemoveDegreeZeroVertices();
 
     friend class Graph_GPU;
 
