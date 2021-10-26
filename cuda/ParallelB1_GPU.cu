@@ -862,15 +862,15 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     // This offset works because it isnt treewise global, just levelwise
     childrenAndDuplicateStatus[threadIdx.x] = global_pendant_child_dev_ptr[myBlockOffset + threadIdx.x];
     __syncthreads();
-    if (blockIdx.x == 0){
-        printf("Block ID %d's childrenAndDuplicateStatus[%d] is %d\n", blockIdx.x, threadIdx.x, childrenAndDuplicateStatus[threadIdx.x]);
-    }
     // See if myChild is duplicated, 1 vs all comparison written to shared memory
     // Also, if it is duplicated, only process the largest index duplicate
     // If it isn't duplicated, process the child.
     childrenAndDuplicateStatus[blockDim.x + threadIdx.x] = (childrenAndDuplicateStatus[blockDim.x + threadIdx.x] == myChild) 
                                                             && myBlockIndex < threadIdx.x 
                                                                 && global_pendant_path_bool_dev_ptr[threadIdx.x];
+    if (blockIdx.x == 0){
+        printf("Block ID %d's childrenAndDuplicateStatus[%d] is %d\n", blockIdx.x, threadIdx.x, childrenAndDuplicateStatus[blockDim.x + threadIdx.x]);
+    }
     int i = blockDim.x/2;
     // Checks for any duplicate children which have a smaller index than their other self
     while (i != 0) {
