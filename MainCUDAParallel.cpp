@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
     std::cout << std::endl;
 
     CallPopulateTree(endingLevel - startingLevel, 
-                    g[0]);
+                    graphs[0]);
     //thrust::device_vector< int > verticesToIncludeInCover_dev(g.GetVertexCount()*treeSize);
     //thrust::device_vector< int > verticesRemaining_dev(g.GetVertexCount()*treeSize);
     //thrust::device_vector< int > hasntBeenRemoved_dev(g.GetVertexCount()*treeSize);
