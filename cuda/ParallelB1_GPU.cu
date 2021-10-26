@@ -850,7 +850,7 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     if (threadIdx.x == 0){
         printf("Block ID %d is pendant\n", blockIdx.x);
     }
-    int myChild = global_pendant_path_bool_dev_ptr[blockIdx.x];
+    int myChild = global_pendant_child_dev_ptr[blockIdx.x];
     if (threadIdx.x == 0){
         printf("Block ID %d's child is %d\n", blockIdx.x, myChild);
     }
