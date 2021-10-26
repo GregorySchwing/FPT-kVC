@@ -855,11 +855,12 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
         printf("Block ID %d's child is %d\n", blockIdx.x, myChild);
     }
     // Beginning of group of TPB pendant children
-    int myBlockOffset = blockIdx.x / blockDim.x;
+    int myBlockOffset = (blockIdx.x / blockDim.x) * blockDim.x;
     int myBlockIndex = blockIdx.x % blockDim.x;
     extern __shared__ int childrenAndDuplicateStatus[];
     // Write all 32 pendant children to shared memory
-    childrenAndDuplicateStatus[threadIdx.x] = global_pendant_child_dev_ptr[myBlockOffset * blockDim.x + threadIdx.x];
+    childrenAndDuplicateStatus[threadIdx.x] = global_pendant_child_dev_ptr[myBlockOffset + threadIdx.x];
+    __syncthreads();
     if (blockIdx.x == 0){
         printf("Block ID %d's childrenAndDuplicateStatus[%d] is %d\n", blockIdx.x, childrenAndDuplicateStatus[threadIdx.x]);
     }
