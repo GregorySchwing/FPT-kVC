@@ -901,8 +901,8 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     // By the pigeonhole principle, 
     // there are only so many smallest index duplications.
     // If there is 1, then all 32 threads are equal,
-    // Since we are or-redudcing, every block will return except the
-    // first one.
+    // Since we are or-redudcing, every block will 
+    // return true except the first one.
     // If there are two or more, then at least one
     // of the masks (1-31) will set it false, and 
     // all the masks larger than it will mask the 
@@ -1618,7 +1618,7 @@ void CallPopulateTree(int numberOfLevels,
         int num_segments = (levelUpperBound-levelOffset)*(numberOfRows+1);
 
         cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
-            num_items, num_segments, &global_offsets_buffer[0], &global_offsets_buffer[num_segments+ 1]);
+            num_items, num_segments, global_offsets_buffer, global_offsets_buffer + 1);
 
         // Allocate temporary storage
         cudaMalloc(&d_temp_storage, temp_storage_bytes);
@@ -1652,7 +1652,7 @@ void CallPopulateTree(int numberOfLevels,
         cub::DoubleBuffer<int> d_keys_verts(global_vertices_tree, global_vertex_buffer);
         
         cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage2, temp_storage_bytes, d_keys_verts,
-            num_items, num_segments, &global_vertex_segments[0], &global_vertex_segments[num_segments+1]);
+            num_items, num_segments, global_vertex_segments, global_vertex_segments + 1);
         // Allocate temporary storage
         cudaMalloc(&d_temp_storage2, temp_storage_bytes);
         // Run sorting operation
