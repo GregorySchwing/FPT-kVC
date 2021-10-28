@@ -806,7 +806,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
     // cI = (path[0] != path[2])
     // Hence, cI == 0, since false casted to int is 0
     // Therefore, v == path[cI]
-    int childIndex = global_paths_ptr[globalPathOffset + 0] != global_paths_ptr[globalPathOffset + 2];
+    int childIndex = pathsAndPendantStatus[sharedMemPathOffset + 0] != pathsAndPendantStatus[sharedMemPathOffset + 2];
 
     // or
     // Case 2 - length 3
