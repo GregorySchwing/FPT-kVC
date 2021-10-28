@@ -879,8 +879,8 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     // By the cardinality of rational numbers, 
     childrenAndDuplicateStatus[blockDim.x + threadIdx.x] = ((childrenAndDuplicateStatus[threadIdx.x] == myChild) 
                                                             && myBlockIndex < threadIdx.x);
-    if (blockIdx.x == 0 && threadIdx.x == 0){
-        printf("Block ID %d's childrenAndDuplicateStatus[%d] is %d\n", blockIdx.x, childrenAndDuplicateStatus[blockDim.x + blockIdx.x]);
+    if (blockIdx.x == 0){
+        printf("Block ID %d's childrenAndDuplicateStatus[%d] is %d\n", blockIdx.x, threadIdx.x, childrenAndDuplicateStatus[blockDim.x + blockIdx.x]);
     }
 
     int i = blockDim.x/2;
@@ -893,9 +893,9 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     // MASK 0: 0 0 ... 0
     // MASK 1: 1 0 ... 0
     // MASK 2: 1 1 ... 0
-            .
-            .
-            .
+    //        .
+    //        .
+    //        .
     // MASK 3: 1 1 . 1 0
     // By the pigeonhole principle, 
     // there are only so many smallest index duplications.
