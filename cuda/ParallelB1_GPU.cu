@@ -672,6 +672,10 @@ __global__ void GetRandomVertexSharedMem(int levelOffset,
     }
 }
 
+// It is very important to only use the value in global_pendant_child_dev_ptr[]
+// if global_pendant_path_bool_dev_ptr[] is true.  Otherwhise this path shouldnt
+// be processed in the next step.
+
 __global__ void ParallelDFSRandom(int levelOffset,
                             int levelUpperBound,
                             int numberOfRows,
@@ -798,7 +802,8 @@ __global__ void ParallelDFSRandom(int levelOffset,
     // Case 3 - length 2
     // v, v1
     //path[0] == path[2], desired child is v
-    // If path[0] == path[2] then path[0] != path[2]
+    // If path[0] == path[2] then path[0] != path[2] is false
+    // cI = (path[0] != path[2])
     // Hence, cI == 0, since false casted to int is 0
     // Therefore, v == path[cI]
     int childIndex = global_paths_ptr[globalPathOffset + 0] != global_paths_ptr[globalPathOffset + 2];
@@ -850,6 +855,8 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     if (threadIdx.x == 0){
         printf("Block ID %d is pendant\n", blockIdx.x);
     }
+    // My child won't be set unless this block represents a valid pendant path
+    // Could be a shared var
     int myChild = global_pendant_child_dev_ptr[blockIdx.x];
     if (threadIdx.x == 0){
         printf("Block ID %d's child is %d\n", blockIdx.x, myChild);
@@ -868,14 +875,45 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     // See if myChild is duplicated, 1 vs all comparison written to shared memory
     // Also, if it is duplicated, only process the largest index duplicate
     // If it isn't duplicated, process the child.
-    childrenAndDuplicateStatus[blockDim.x + threadIdx.x] = (childrenAndDuplicateStatus[threadIdx.x] == myChild) 
-                                                            && myBlockIndex < threadIdx.x 
-                                                                && global_pendant_path_bool_dev_ptr[threadIdx.x];
-    if (blockIdx.x == 0){
-        printf("Block ID %d's childrenAndDuplicateStatus[%d] is %d\n", blockIdx.x, threadIdx.x, childrenAndDuplicateStatus[blockDim.x + threadIdx.x]);
+
+    // By the cardinality of rational numbers, 
+    childrenAndDuplicateStatus[blockDim.x + threadIdx.x] = ((childrenAndDuplicateStatus[threadIdx.x] == myChild) 
+                                                            && myBlockIndex < threadIdx.x);
+    if (blockIdx.x == 0 && threadIdx.x == 0){
+        printf("Block ID %d's childrenAndDuplicateStatus[%d] is %d\n", blockIdx.x, childrenAndDuplicateStatus[blockDim.x + blockIdx.x]);
     }
+
     int i = blockDim.x/2;
     // Checks for any duplicate children which have a smaller index than their other self
+    // Only the smallest instance of a duplication will be false for both
+    // 1) childrenAndDuplicateStatus[threadIdx.x] == myChild)
+    // 2) myBlockIndex < threadIdx.x
+
+    // We have a growing mask from the second condition like so
+    // MASK 0: 0 0 ... 0
+    // MASK 1: 1 0 ... 0
+    // MASK 2: 1 1 ... 0
+            .
+            .
+            .
+    // MASK 3: 1 1 . 1 0
+    // By the pigeonhole principle, 
+    // there are only so many smallest index duplications.
+    // If there is 1, then all 32 threads are equal,
+    // Since we are or-redudcing, every block will return except the
+    // first one.
+    // If there are two or more, then at least one
+    // of the masks (1-31) will set it false, and 
+    // all the masks larger than it will mask the 
+    // non-smallest duplicate to true.
+
+    // Finally, the fact that mask 31 has a zero
+    // in the last index is ok, because this child is
+    // either the smallest duplicate and therefore 
+    // should be false and added to the cover
+    // or it is not the smallest, and it will be masked
+    // by one of the smaller masks (0-30).
+
     while (i != 0) {
         if (threadIdx.x < i){
             childrenAndDuplicateStatus[blockDim.x + threadIdx.x] |= childrenAndDuplicateStatus[blockDim.x + threadIdx.x + i];
@@ -1404,6 +1442,7 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_pendant_path_bool_dev_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_pendant_path_reduced_bool_dev_ptr, deepestLevelSize * sizeof(int) );
 
+    // Not global to the entire tree, overwritten every level
     cudaMalloc( (void**)&global_pendant_child_dev_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
 
     cudaMalloc( (void**)&global_edges_left_to_cover_count, treeSize * sizeof(int) );
