@@ -974,7 +974,16 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     bool foundChild, tmp;
     LB = global_row_offsets_dev_ptr[rowOffsOffset + myChild];
     UB = global_row_offsets_dev_ptr[rowOffsOffset + myChild + 1];    // Set out-edges
-    for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
+    // There are two possibilities for parallelization here:
+    // 1) Each thread will take an out edge, and then each thread will scan the edges leaving 
+    // that vertex for the original vertex.
+    //for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
+
+    // Basically, each thread is reading wildly different data
+    // 2) 1 out edge is traversed at a time, and then all the threads scan
+    // all the edges leaving that vertex for the original vertex.
+    // This is the more favorable data access pattern.
+    for (int edge = LB; edge < UB; ++edge){
         v = global_columns_dev_ptr[valsAndColsOffset + edge];
         // guarunteed to only have one incoming and one outgoing edge connecting (x,y)
         // All outgoing edges were set and are separated from this method by a __syncthreads
