@@ -847,7 +847,6 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
         printf("Block ID %d Started ParallelProcessPendantEdges\n", blockIdx.x);
         printf("\n");
     }
-    int leafIndex = levelOffset + blockIdx.x;
     // Only process pendant edges
     // 1 block per child, up to 32 children per node
     if (!global_pendant_path_bool_dev_ptr[blockIdx.x])
@@ -864,6 +863,8 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     // Beginning of group of TPB pendant children
     int myBlockOffset = (blockIdx.x / blockDim.x) * blockDim.x;
     int myBlockIndex = blockIdx.x % blockDim.x;
+    int leafIndex = levelOffset + (blockIdx.x / blockDim.x);
+
     extern __shared__ int childrenAndDuplicateStatus[];
     // Write all 32 pendant children to shared memory
     // This offset works because it isnt treewise global, just levelwise
