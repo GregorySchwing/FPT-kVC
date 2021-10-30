@@ -1052,7 +1052,6 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
     // Path is a global offset var for now
     // Meaning we have record of all the paths from every level we search on
     int globalPathOffset = leafIndex * 4 * blockDim.x;
-    int sharedMemPathOffset = threadIdx.x * 4;
     extern __shared__ int pathsAndIndependentStatus[];
     // Write all 32 nonpendant paths to shared memory
     for (int start = threadIdx.x; start < blockDim.x*4; start += blockDim.x){
@@ -1079,29 +1078,28 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
         // vertex % 4             vertex / 4
             //int myPathIndex = blockIdx.x % blockDim.x;
 
+    // my path corresponds to a row in the adj matrix
+    // vertex is for creating the adj parallapiped 
+    // for a single path.  We column-or-reduce this to get 
+    // the existence of edges, for each column in the
+    // adj matrix.
+    int sharedMemPathOffset = threadIdx.x * 4;
     // Luby's Algorithm - https://en.wikipedia.org/wiki/Maximal_independent_set#Parallelization_of_finding_maximum_independent_sets
     for (int myPathIndex = 0; myPathIndex < blockDim.x; ++myPathIndex){
+        // blockDim.x*4 +  -- to skip the paths
+        // the adj matrix size (32x32)
+        int adjMatrixOffset = blockDim.x * 4 + myPathIndex * blockDim.x;
+        int myPathOffset = myPathIndex * 4;
         for (int vertex = 0; vertex < 4*4; ++vertex){
-            // Each block takes one path
-            int myBlocksPathOffset = myPathIndex * 4;
             // Same path for all TPB threads
-            int myChild = pathsAndIndependentStatus[myBlocksPathOffset + vertex % 4];
-            // Different path for all TPB threads
-            int comparatorChild = pathsAndIndependentStatus[sharedMemPathOffset + vertex / 4];
-            // blockDim.x*4 +  -- to skip the paths
-            // If we use 1 byte per entry, 16.38 KB of shared memory, plus the little bit for the paths.
-            // vertex*blockDim.x -- to get the offset into each row of a 3D adj parallelapiped (4 x 32 x 4)
-            // myPathIndex*(4*blockDim.x*4) -- each individual 3D adj parallelapiped
-            int adjMatrixOffset = blockDim.x*4 + myPathIndex*(4*blockDim.x*4) + vertex*blockDim.x;
-            // I will use blockIndex for arbitrarily breaking ties, Idk if I should include it yet
-            //pathsAndIndependentStatus[adjMatrixOffset + threadIdx.x] = ((comparatorChild == myChild) 
-            //                                                        && myBlockIndex < threadIdx.x);
-            pathsAndIndependentStatus[adjMatrixOffset + threadIdx.x] = (comparatorChild == myChild);
+            int myChild = pathsAndIndependentStatus[myPathOffset + vertex / 4];
+            // Different comparator child for all TPB threads
+            int comparatorChild = pathsAndIndependentStatus[threadIdx.x*4 + vertex % 4];
+            pathsAndIndependentStatus[adjMatrixOffset + threadIdx.x] |= (comparatorChild == myChild);
         }
-        __syncthreads();
     }
     __syncthreads();
-  }
+}
 
 __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
                             int levelUpperBound,
