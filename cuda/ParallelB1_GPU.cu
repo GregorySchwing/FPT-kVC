@@ -1063,20 +1063,20 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
     // If it isn't duplicated, process the path.
 
     // I need a for loop to define who "my path" is TPB times
-        // my v1 versus 31 comparator v1's
-        // my v2 versus 31 comparator v1's
-        // my v3 versus 31 comparator v1's
-        // my v4 versus 31 comparator v1's
-        //              .
-        //              .
-        // my v1 versus 31 comparator v4's
-        // my v2 versus 31 comparator v4's
-        // my v3 versus 31 comparator v4's
-        // my v4 versus 31 comparator v4's
-        // myChild               comparatorChild 
-        // ____________________________________
-        // vertex % 4             vertex / 4
-            //int myPathIndex = blockIdx.x % blockDim.x;
+    // my v1 versus 31 comparator v1's
+    // my v2 versus 31 comparator v1's
+    // my v3 versus 31 comparator v1's
+    // my v4 versus 31 comparator v1's
+    //              .
+    //              .
+    // my v1 versus 31 comparator v4's
+    // my v2 versus 31 comparator v4's
+    // my v3 versus 31 comparator v4's
+    // my v4 versus 31 comparator v4's
+    // myChild               comparatorChild 
+    // ____________________________________
+    // vertex % 4             vertex / 4
+    //int myPathIndex = blockIdx.x % blockDim.x;
 
     // my path corresponds to a row in the adj matrix
     // vertex is for creating the adj parallapiped 
