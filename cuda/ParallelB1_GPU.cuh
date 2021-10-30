@@ -208,7 +208,7 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
                             int * global_nonpendant_path_bool_dev_ptr,
                             int * global_pendant_child_dev_ptr);
 
-__global__ void ParallelIdentifyNonIntersectingNonPendantPaths(int levelOffset,
+__global__ void ParallelIdentifyEdgeDisjointNonPendantPaths(int levelOffset,
                             int levelUpperBound,
                             int numberOfRows,
                             int numberOfEdgesPerGraph,

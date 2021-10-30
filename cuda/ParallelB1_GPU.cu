@@ -1022,7 +1022,7 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     __syncthreads();
 }
 
-__global__ void ParallelIdentifyNonIntersectingNonPendantPaths(int levelOffset,
+__global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
                             int levelUpperBound,
                             int numberOfRows,
                             int numberOfEdgesPerGraph,
@@ -1032,7 +1032,7 @@ __global__ void ParallelIdentifyNonIntersectingNonPendantPaths(int levelOffset,
                             int * global_pendant_path_bool_dev_ptr,
                             int * global_paths_ptr){
     if (threadIdx.x == 0){
-        printf("Block ID %d Started ParallelIdentifyNonIntersectingNonPendantPaths\n", blockIdx.x);
+        printf("Block ID %d Started ParallelIdentifyVertexDisjointNonPendantPaths\n", blockIdx.x);
         printf("\n");
     }
     // Only process nonpendant paths
@@ -1050,14 +1050,54 @@ __global__ void ParallelIdentifyNonIntersectingNonPendantPaths(int levelOffset,
     // Subsequently, only perform DFS on pendant edges, so nonpendant false
     //if (global_pendant_path_bool_dev_ptr[leafIndex + threadIdx.x])
     //    return;
+    // Path is a global offset var for now
+    // Meaning we have record of all the paths from every level we search on
     int globalPathOffset = leafIndex * 4 * blockDim.x;
     int sharedMemPathOffset = threadIdx.x * 4;
+    // Each block takes one path
+    int myBlocksPathOffset = myBlockIndex * 4;
     extern __shared__ int pathsAndIndependentStatus[];
     // Write all 32 nonpendant paths to shared memory
-    for (int start = threadIDx.x; start < blockDim.x*4; start += blockDim.x){
+    for (int start = threadIdx.x; start < blockDim.x*4; start += blockDim.x){
         pathsAndIndependentStatus[start] = global_paths_ptr[globalPathOffset + start];
     }
     __syncthreads();
+    // See if each vertex in my path is duplicated, 1 vs all comparison written to shared memory
+    // Also, if it is duplicated, only process the largest index duplicate
+    // If it isn't duplicated, process the path.
+
+    // By the cardinality of rational numbers, 
+    // Check each vertex for duplicates in other paths.
+    // 2 or more duplicates would be disqualifying.
+    // If each vertex is duplicated in another path once, 
+    // I need to verify at one path is processed.
+    // my v1 versus 31 comparator v1's
+    // my v2 versus 31 comparator v1's
+    // my v3 versus 31 comparator v1's
+    // my v4 versus 31 comparator v1's
+    //              .
+    //              .
+    // my v1 versus 31 comparator v4's
+    // my v2 versus 31 comparator v4's
+    // my v3 versus 31 comparator v4's
+    // my v4 versus 31 comparator v4's
+    // myChild               comparatorChild 
+    // ____________________________________
+    // vertex % 4             vertex / 4
+    for (int vertex = 0; vertex < 4*4; ++vertex){
+        // Same path for all TPB threads
+        int myChild = pathsAndIndependentStatus[myBlocksPathOffset + vertex % 4];
+        // Different path for all TPB threads
+        int comparatorChild = pathsAndIndependentStatus[sharedMemPathOffset + vertex / 4];
+        // blockDim.x*4 +  -- to skip the paths
+        // vertex*blockDim.x -- to get the offset into each row of a 3D adj parallelapiped (4 x 32 x 4)
+        int adjMatrixOffset = blockDim.x*4 + vertex*blockDim.x;
+        pathsAndIndependentStatus[adjMatrixOffset + threadIdx.x] = ((comparatorChild == myChild) 
+                                                                && myBlockIndex < threadIdx.x);
+
+    }
+    __syncthreads();
+
     
 }
 
@@ -1612,8 +1652,6 @@ void CallPopulateTree(int numberOfLevels,
                         global_row_offsets_dev_ptr,
                         global_columns_dev_ptr,
                         global_values_dev_ptr,
-                        global_remaining_vertices_dev_ptr,
-                        global_remaining_vertices_size_dev_ptr,
                         global_degrees_dev_ptr,
                         global_pendant_path_bool_dev_ptr,
                         global_pendant_child_dev_ptr);
