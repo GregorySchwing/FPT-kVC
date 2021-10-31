@@ -1035,6 +1035,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
         printf("Block ID %d Started ParallelIdentifyVertexDisjointNonPendantPaths\n", blockIdx.x);
         printf("\n");
     }
+
     // Only process nonpendant paths
     // 1 block per path, up to 32 paths per node
     if (global_pendant_path_bool_dev_ptr[blockIdx.x])
@@ -1052,6 +1053,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
     // Path is a global offset var for now
     // Meaning we have record of all the paths from every level we search on
     int globalPathOffset = leafIndex * 4 * blockDim.x;
+
     extern __shared__ int pathsAndIndependentStatus[];
     // Write all 32 nonpendant paths to shared memory
     for (int start = threadIdx.x; start < blockDim.x*4; start += blockDim.x){
@@ -1084,6 +1086,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
     // the existence of edges, for each column in the
     // adj matrix.
     int sharedMemPathOffset = threadIdx.x * 4;
+
     // Luby's Algorithm - https://en.wikipedia.org/wiki/Maximal_independent_set#Parallelization_of_finding_maximum_independent_sets
     for (int myPathIndex = 0; myPathIndex < blockDim.x; ++myPathIndex){
         // blockDim.x*4 +  -- to skip the paths
@@ -1095,10 +1098,24 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
             int myChild = pathsAndIndependentStatus[myPathOffset + vertex / 4];
             // Different comparator child for all TPB threads
             int comparatorChild = pathsAndIndependentStatus[threadIdx.x*4 + vertex % 4];
+            // Guarunteed to be true at least once, when i == j in adj matrix
+            // We have a diagonal of ones.
             pathsAndIndependentStatus[adjMatrixOffset + threadIdx.x] |= (comparatorChild == myChild);
         }
+        __syncthreads();
     }
     __syncthreads();
+    // Corresponds to a boolean array indicating whether a path is in the MIS
+    int randomNumbersOffset = blockDim.x * 4 + blockDim.x * blockDim.x;
+    unsigned int counter = 0;
+    RNG::ctr_type randGen =  randomGPU_four(counter, leafIndex, threadIdx.x);
+
+    // This way every thread has its own randGen, and no thread sync is neccessary.
+    pathsAndIndependentStatus[randomNumbersOffset + threadIdx.x] = randGen[0];
+
+    // Corresponds to a boolean array indicating whether a path is in the MIS
+    int setInclusionOffset = blockDim.x * 4 + blockDim.x * blockDim.x + blockDim.x;
+
 }
 
 __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
