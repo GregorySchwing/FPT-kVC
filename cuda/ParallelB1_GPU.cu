@@ -1087,7 +1087,6 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
     // adj matrix.
     int sharedMemPathOffset = threadIdx.x * 4;
 
-    // Luby's Algorithm - https://en.wikipedia.org/wiki/Maximal_independent_set#Parallelization_of_finding_maximum_independent_sets
     for (int myPathIndex = 0; myPathIndex < blockDim.x; ++myPathIndex){
         // blockDim.x*4 +  -- to skip the paths
         // the adj matrix size (32x32)
@@ -1116,6 +1115,8 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
     // Corresponds to a boolean array indicating whether a path is in the MIS
     int setInclusionOffset = blockDim.x * 4 + blockDim.x * blockDim.x + blockDim.x;
 
+    // Luby's Algorithm - https://en.wikipedia.org/wiki/Maximal_independent_set#Parallelization_of_finding_maximum_independent_sets
+    // We can ensure we never pick a
 }
 
 __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
