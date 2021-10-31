@@ -3,6 +3,7 @@
 #include "ParallelB1_GPU.cuh"
 #include <math.h>       /* pow */
 #include "cub/cub.cuh"
+#include "Random123/boxmuller.hpp"
 
 // Sum of i = 0 to n/2
 // 3^i
@@ -28,8 +29,7 @@ __device__ inline double randomGPUDouble(unsigned int counter, ulong step, ulong
   RNG::key_type k = uk;
   c[0] = counter;
   RNG::ctr_type r = philox4x32(c, k);
-  return 1.0;
-  //return r123::u01<double>(r[0]);
+  return r123::u01<double>(r[0]);
 }
 
 __device__ RNG::ctr_type randomGPU_four(unsigned int counter, ulong step, ulong seed)
