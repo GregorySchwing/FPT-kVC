@@ -19,6 +19,18 @@ __device__ int randomGPU(unsigned int counter, ulong step, ulong seed)
   return r[0];
 }
 
+__device__ inline double randomGPU(unsigned int counter, ulong step, ulong seed)
+{
+  RNG::ctr_type c = {{}};
+  RNG::ukey_type uk = {{}};
+  uk[0] = step;
+  uk[1] = seed;
+  RNG::key_type k = uk;
+  c[0] = counter;
+  RNG::ctr_type r = philox4x64(c, k);
+  return r123::u01<double>(r[0]);
+}
+
 __device__ RNG::ctr_type randomGPU_four(unsigned int counter, ulong step, ulong seed)
 {
   RNG::ctr_type c = {{}};
@@ -1104,19 +1116,40 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
         __syncthreads();
     }
     __syncthreads();
+
     // Corresponds to a boolean array indicating whether a path is in the MIS
-    int randomNumbersOffset = blockDim.x * 4 + blockDim.x * blockDim.x;
-    unsigned int counter = 0;
-    RNG::ctr_type randGen =  randomGPU_four(counter, leafIndex, threadIdx.x);
+    int degreesOffset = blockDim.x * 4 + blockDim.x * blockDim.x;
+
+    // Calculate degree of each vertex in the adj matrix
+    // Use the setInclusion array as a buffer for reducing the row of the adj matrix
+    // Still need to figure out if I will include pendant paths in this matrix..
+    for (int vertex = 0; vertex < blockDim.x; ++vertex){
+         pathsAndIndependentStatus[setInclusionOffset + threadIdx.x] = pathsAndIndependentStatus[adjMatrixOffset + vertex*blockDim.x + threadIdx.x];
+        __syncthreads();
+        int i = blockDim.x/2;
+        __syncthreads();
+        while (i != 0) {
+            if (threadIdx.x < i){
+                pathsAndIndependentStatus[setInclusionOffset + threadIdx.x] += degreeZeroVertex[threadIdx.xpathsAndIndependentStatus[setInclusionOffset + threadIdx.x + i];
+            }
+            __syncthreads();
+            i /= 2;
+        }
+        if (threadIdx.x == 0)
+            pathsAndIndependentStatus[degreesOffset + vertex] = pathsAndIndependentStatus[setInclusionOffset];
+    }
 
     // This way every thread has its own randGen, and no thread sync is neccessary.
-    pathsAndIndependentStatus[randomNumbersOffset + threadIdx.x] = randGen[0];
+    unsigned int counter = 0;
+    double rand =  randomGPU(counter, leafIndex, threadIdx.x);  
 
     // Corresponds to a boolean array indicating whether a path is in the MIS
     int setInclusionOffset = blockDim.x * 4 + blockDim.x * blockDim.x + blockDim.x;
 
     // Luby's Algorithm - https://en.wikipedia.org/wiki/Maximal_independent_set#Parallelization_of_finding_maximum_independent_sets
-    // We can ensure we never pick a
+    // Choose a random set of vertices S ⊆ V, by selecting each vertex v independently with probability 1/(2d(v)), 
+    // where d is the degree of v (the number of neighbours of v).
+    pathsAndIndependentStatus[setInclusionOffset + threadIdx.x] = (rand < 0.5 * (1.0 / pathsAndIndependentStatus[degreesOffset + threadIdx.x]));
 }
 
 __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
