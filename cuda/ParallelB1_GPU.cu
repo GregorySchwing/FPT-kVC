@@ -1049,22 +1049,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
         printf("\n");
     }
 
-    // Only process nonpendant paths
-    // 1 block per path, up to 32 paths per node
-    if (global_pendant_path_bool_dev_ptr[blockIdx.x])
-        return;
-    if (threadIdx.x == 0){
-        printf("Block ID %d is nonpendant\n", blockIdx.x);
-    }
-    // Beginning of group of TPB npnpendant paths
-    int myBlockOffset = (blockIdx.x / blockDim.x) * blockDim.x;
-    int leafIndex = levelOffset + (blockIdx.x / blockDim.x);
-    // Initialized to 0, so will always perform DFS on first call
-    // Subsequently, only perform DFS on pendant edges, so nonpendant false
-    //if (global_pendant_path_bool_dev_ptr[leafIndex + threadIdx.x])
-    //    return;
-    // Path is a global offset var for now
-    // Meaning we have record of all the paths from every level we search on
+    int leafIndex = levelOffset + blockIdx.x;
     int globalPathOffset = leafIndex * 4 * blockDim.x;
 
     extern __shared__ int pathsAndIndependentStatus[];
@@ -1118,40 +1103,63 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
     }
     __syncthreads();
 
-    // Corresponds to a boolean array indicating whether a path is in the MIS
-    int degreesOffset = blockDim.x * 4 + blockDim.x * blockDim.x;
+    int adjMatrixOffset = blockDim.x * 4 + myPathIndex * blockDim.x;
+
+
+    // Corresponds to an array of random numbers between [0,1]
+    int randNumOffset = blockDim.x * 4 + blockDim.x * blockDim.x;
+    // This way every thread has its own randGen, and no thread sync is neccessary.
+    unsigned int counter = 0;
+    double rand =  randomGPUDouble(counter, leafIndex, threadIdx.x); 
+    pathsAndIndependentStatus[randNumOffset + threadIdx.x] = rand;
 
     // Corresponds to a boolean array indicating whether a path is in the MIS
     int setInclusionOffset = blockDim.x * 4 + blockDim.x * blockDim.x + blockDim.x;
+    int neighborsWithAPendantOffset = blockDim.x * 4 + blockDim.x * blockDim.x + 2*blockDim.x;
+    int setReductionOffset = blockDim.x * 4 + blockDim.x * blockDim.x + 3*blockDim.x;
 
-    // Calculate degree of each vertex in the adj matrix
-    // Use the setInclusion array as a buffer for reducing the row of the adj matrix
-    // Still need to figure out if I will include pendant paths in this matrix..
-    for (int vertex = 0; vertex < blockDim.x; ++vertex){
-        int adjMatrixOffset = blockDim.x * 4 + vertex * blockDim.x;
-         pathsAndIndependentStatus[setInclusionOffset + threadIdx.x] = pathsAndIndependentStatus[adjMatrixOffset + vertex*blockDim.x + threadIdx.x];
-        __syncthreads();
+    for (int row = 0; row < blockDim.x; ++row){
+        // Check if any of my neighbors are pendant paths.
+        // If I have a pendant neighbor I won't ever be included in the set.
+        pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[adjMatrixOffset + row*blockDim.x + threadIdx.x]  &&   
+                                                                    && pathsAndIndependentStatus[pendantBoolOffset + threadIdx.x];
         int i = blockDim.x/2;
         __syncthreads();
         while (i != 0) {
             if (threadIdx.x < i){
-                pathsAndIndependentStatus[setInclusionOffset + threadIdx.x] += pathsAndIndependentStatus[setInclusionOffset + threadIdx.x + i];
+                pathsAndIndependentStatus[setReductionOffset + threadIdx.x] |= pathsAndIndependentStatus[setReductionOffset + threadIdx.x + i];
             }
             __syncthreads();
             i /= 2;
         }
-        if (threadIdx.x == 0)
-            pathsAndIndependentStatus[degreesOffset + vertex] = pathsAndIndependentStatus[setInclusionOffset];
+        if (threadIdx.x == 0){
+            pathsAndIndependentStatus[neighborsWithAPendantOffset + row] = pathsAndIndependentStatus[setReductionOffset + threadIdx.x];
+        }                               
     }
 
-    // This way every thread has its own randGen, and no thread sync is neccessary.
-    unsigned int counter = 0;
-    double rand =  randomGPUDouble(counter, leafIndex, threadIdx.x);  
-
-    // Luby's Algorithm - https://en.wikipedia.org/wiki/Maximal_independent_set#Parallelization_of_finding_maximum_independent_sets
-    // Choose a random set of vertices S ⊆ V, by selecting each vertex v independently with probability 1/(2d(v)), 
-    // where d is the degree of v (the number of neighbours of v).
-    pathsAndIndependentStatus[setInclusionOffset + threadIdx.x] = (rand < 0.5 * (1.0 / pathsAndIndependentStatus[degreesOffset + threadIdx.x]));
+    // https://en.wikipedia.org/wiki/Maximal_independent_set#:~:text=Random-priority%20parallel%20algorithm%5Bedit%5D
+    for (int row = 0; row < blockDim.x; ++row){
+        // Check if any of my neighbors are less than me or are pendant paths.
+        // If so, there will be a true in this array, which when or-reduced, will be true
+        // We then flip this bit, and use that as the flag to include in the 
+        pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[adjMatrixOffset + row*blockDim.x + threadIdx.x]
+                                                                    && !pathsAndIndependentStatus[neighborsWithAPendantOffset + threadIdx.x]
+                                                                    && (pathsAndIndependentStatus[randNumOffset + threadIdx.x]
+                                                                         < pathsAndIndependentStatus[randNumOffset + row]);
+                                                                                  int i = blockDim.x/2;
+        __syncthreads();
+        while (i != 0) {
+            if (threadIdx.x < i){
+                pathsAndIndependentStatus[setReductionOffset + threadIdx.x] |= pathsAndIndependentStatus[setReductionOffset + threadIdx.x + i];
+            }
+            __syncthreads();
+            i /= 2;
+        }
+        if (threadIdx.x == 0){
+            pathsAndIndependentStatus[setInclusionOffset + row] = pathsAndIndependentStatus[setReductionOffset + threadIdx.x];
+        }    
+    }
+    // Copy from shared mem to global..
 }
 
 __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
