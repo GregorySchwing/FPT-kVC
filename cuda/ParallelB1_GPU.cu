@@ -1139,14 +1139,13 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
 
     // https://en.wikipedia.org/wiki/Maximal_independent_set#:~:text=Random-priority%20parallel%20algorithm%5Bedit%5D
     for (int row = 0; row < blockDim.x; ++row){
-        // Check if any of my neighbors are less than me or are pendant paths.
-        // If so, there will be a true in this array, which when or-reduced, will be true
-        // We then flip this bit, and use that as the flag to include in the 
+        // If a neighboring vertex has a random number less than mine and said vertex isn't
+        // neighbors with a pendant edge, it should be added to the set, not me.
         pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[adjMatrixOffset + row*blockDim.x + threadIdx.x]
                                                                     && !pathsAndIndependentStatus[neighborsWithAPendantOffset + threadIdx.x]
                                                                     && (pathsAndIndependentStatus[randNumOffset + threadIdx.x]
                                                                          < pathsAndIndependentStatus[randNumOffset + row]);
-                                                                                  int i = blockDim.x/2;
+        int i = blockDim.x/2;
         __syncthreads();
         while (i != 0) {
             if (threadIdx.x < i){
