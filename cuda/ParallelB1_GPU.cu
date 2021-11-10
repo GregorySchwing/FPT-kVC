@@ -1273,10 +1273,10 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
             __syncthreads();
             i /= 2;
         }
-        __syncthreads();
-        
         // when V is empty the algorithm terminates
         cardinalityOfV = pathsAndIndependentStatus[setReductionOffset];
+        __syncthreads();
+        
         if (threadIdx.x == 0){
             printf("Block ID %d cardinality of the V set is %d\n", blockIdx.x, cardinalityOfV);
         }
