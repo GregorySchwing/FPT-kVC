@@ -1065,8 +1065,9 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
 
     int leafIndex = levelOffset + blockIdx.x;
     int globalPathOffset = leafIndex * 4 * blockDim.x;
+    // Only allocated for one level, not tree global
     int globalPendantPathBoolOffset = blockIdx.x * blockDim.x;
-
+    int globalSetInclusionBoolOffset = blockIdx.x * blockDim.x;
 
     extern __shared__ int pathsAndIndependentStatus[];
 
@@ -1138,7 +1139,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
         // Check if any of my neighbors are pendant paths.
         // If I have a pendant neighbor I won't ever be included in the set.
         // Notably, the diagonal is true if the vertex is pendant
-        pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[rowOffset + threadIdx.x]  &&   
+        pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[rowOffset + threadIdx.x]   
                                                                     && pathsAndIndependentStatus[pendantBoolOffset + threadIdx.x];
         int i = blockDim.x/2;
         __syncthreads();
@@ -1231,7 +1232,9 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
         // when V is empty the algorithm terminates
         cardinalityOfV = pathsAndIndependentStatus[setReductionOffset];
     }
+
     // Copy from shared mem to global..
+    global_set_inclusion_bool_ptr[globalSetInclusionBoolOffset + threadIdx.x] = pathsAndIndependentStatus[setInclusionOffset + threadIdx.x];
 }
 
 __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
@@ -1630,6 +1633,7 @@ void CallPopulateTree(int numberOfLevels,
     int * global_pendant_path_bool_dev_ptr;
     int * global_pendant_path_reduced_bool_dev_ptr;
     int * global_pendant_child_dev_ptr;
+    int * global_set_inclusion_bool_ptr;
     int * global_paths_length;
     int * global_edges_left_to_cover_count;
 
@@ -1666,9 +1670,9 @@ void CallPopulateTree(int numberOfLevels,
     // Each node can process tPB pendant edges per call
     cudaMalloc( (void**)&global_pendant_path_bool_dev_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_pendant_path_reduced_bool_dev_ptr, deepestLevelSize * sizeof(int) );
-
     // Not global to the entire tree, overwritten every level
     cudaMalloc( (void**)&global_pendant_child_dev_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_set_inclusion_bool_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
 
     cudaMalloc( (void**)&global_edges_left_to_cover_count, treeSize * sizeof(int) );
 
