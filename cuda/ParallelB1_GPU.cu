@@ -1254,26 +1254,24 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
                 pathsAndIndependentStatus[setRemainingOffset + row] &= !pathsAndIndependentStatus[setReductionOffset];
             }    
             if (threadIdx.x == 0){
-                printf("Block ID %d row %d %s is remaining the V set\n", blockIdx.x, row, 
+                printf("Block ID %d row %d %s remaining the V set\n", blockIdx.x, row, 
                     pathsAndIndependentStatus[setRemainingOffset + row] ? "is" :  "isn't");
             }
         }
 
-        for (int row = 0; row < blockDim.x; ++row){
-            // Do we share an edge and were you included
-            pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[adjMatrixOffset + row*blockDim.x + threadIdx.x]
-                                                                        && pathsAndIndependentStatus[setInclusionOffset + threadIdx.x];
-            int i = blockDim.x/2;
-            __syncthreads();
-            while (i != 0) {
-                if (threadIdx.x < i){
-                    pathsAndIndependentStatus[setReductionOffset + threadIdx.x] += pathsAndIndependentStatus[setReductionOffset + threadIdx.x + i];
-                }
-                __syncthreads();
-                i /= 2;
+        // Am I remaining?
+        pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[setRemainingOffset + threadIdx.x];
+        int i = blockDim.x/2;
+        __syncthreads();
+        while (i != 0) {
+            if (threadIdx.x < i){
+                pathsAndIndependentStatus[setReductionOffset + threadIdx.x] += pathsAndIndependentStatus[setReductionOffset + threadIdx.x + i];
             }
             __syncthreads();
+            i /= 2;
         }
+        __syncthreads();
+        
         // when V is empty the algorithm terminates
         cardinalityOfV = pathsAndIndependentStatus[setReductionOffset];
         if (threadIdx.x == 0){
