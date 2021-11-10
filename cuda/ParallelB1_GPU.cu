@@ -1139,8 +1139,9 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
         // Check if any of my neighbors are pendant paths.
         // If I have a pendant neighbor I won't ever be included in the set.
         // Notably, the diagonal is true if the vertex is pendant
+        // At this point the set I is the pendant paths
         pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[rowOffset + threadIdx.x]   
-                                                                    && pathsAndIndependentStatus[pendantBoolOffset + threadIdx.x];
+                                                                    && pathsAndIndependentStatus[setInclusionOffset + threadIdx.x];
         int i = blockDim.x/2;
         __syncthreads();
         while (i != 0) {
@@ -1197,7 +1198,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
             // Do we share an edge and were you included
             pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[adjMatrixOffset + row*blockDim.x + threadIdx.x]
                                                                         && pathsAndIndependentStatus[setInclusionOffset + threadIdx.x];
-            i = blockDim.x/2;
+            int i = blockDim.x/2;
             __syncthreads();
             while (i != 0) {
                 if (threadIdx.x < i){
@@ -1218,7 +1219,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
             // Do we share an edge and were you included
             pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[adjMatrixOffset + row*blockDim.x + threadIdx.x]
                                                                         && pathsAndIndependentStatus[setInclusionOffset + threadIdx.x];
-            i = blockDim.x/2;
+            int i = blockDim.x/2;
             __syncthreads();
             while (i != 0) {
                 if (threadIdx.x < i){
