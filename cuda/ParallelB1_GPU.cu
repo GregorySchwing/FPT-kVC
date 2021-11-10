@@ -1078,6 +1078,18 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
     int setInclusionOffset = setReductionOffset + blockDim.x;
     int setRemainingOffset = setInclusionOffset + blockDim.x;
 
+    if (threadIdx.x == 0){
+        printf("Block ID %d globalPathOffset %d\n", blockIdx.x, globalPathOffset);
+        printf("Block ID %d globalPendantPathBoolOffset %d\n", blockIdx.x, globalPendantPathBoolOffset);
+        printf("Block ID %d globalSetInclusionBoolOffset %d\n", blockIdx.x, globalSetInclusionBoolOffset);
+        printf("Block ID %d adjMatrixOffset %d\n", blockIdx.x, adjMatrixOffset);
+        printf("Block ID %d randNumOffset %d\n", blockIdx.x, randNumOffset);
+        printf("Block ID %d neighborsWithAPendantOffset %d\n", blockIdx.x, neighborsWithAPendantOffset);
+        printf("Block ID %d setReductionOffset %d\n", blockIdx.x, setReductionOffset);
+        printf("Block ID %d setInclusionOffset %d\n", blockIdx.x, setInclusionOffset);
+        printf("Block ID %d setRemainingOffset %d\n", blockIdx.x, setRemainingOffset);
+    }
+
     // Write all 32 nonpendant paths to shared memory
     for (int start = threadIdx.x; start < blockDim.x*4; start += blockDim.x){
         pathsAndIndependentStatus[start] = global_paths_ptr[globalPathOffset + start];
