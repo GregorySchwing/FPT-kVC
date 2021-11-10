@@ -1103,7 +1103,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
     // Automatically include pendant  paths to set
     pathsAndIndependentStatus[setInclusionOffset + threadIdx.x] = 
         global_pendant_path_bool_dev_ptr[globalPendantPathBoolOffset + threadIdx.x];
-        
+
     printf("Block ID %d path %d %s pendant\n", blockIdx.x, threadIdx.x, 
     pathsAndIndependentStatus[setInclusionOffset + threadIdx.x] ? "is" : "isn't");
 
@@ -1842,7 +1842,7 @@ void CallPopulateTree(int numberOfLevels,
         checkLastErrorCUDA(__FILE__, __LINE__);
 
         ParallelIdentifyVertexDisjointNonPendantPaths<<<levelUpperBound-levelOffset,threadsPerBlock,
-            threadsPerBlock*threadsPerBlock + 10*threadsPerBlock>>>
+            (threadsPerBlock*threadsPerBlock + 10*threadsPerBlock)>>>
                         (levelOffset,
                         levelUpperBound,
                         numberOfRows,
