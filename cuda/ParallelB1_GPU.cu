@@ -1129,14 +1129,13 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
     //int myPathIndex = blockIdx.x % blockDim.x;
 
     int rowOffset;
-    for (int myPathIndex = 0; myPathIndex < blockDim.x; ++myPathIndex){
+    for (int row = 0; row < blockDim.x; ++row){
         // blockDim.x*4 +  -- to skip the paths
         // the adj matrix size (32x32)
-        rowOffset = adjMatrixOffset + myPathIndex * blockDim.x;
-        int myPathOffset = myPathIndex * 4;
+        rowOffset = adjMatrixOffset + row * blockDim.x;
         for (int vertex = 0; vertex < 4*4; ++vertex){
             // Same path for all TPB threads
-            int myChild = pathsAndIndependentStatus[myPathOffset + vertex / 4];
+            int myChild = pathsAndIndependentStatus[rowOffset + vertex / 4];
             // Different comparator child for all TPB threads
             int comparatorChild = pathsAndIndependentStatus[threadIdx.x*4 + vertex % 4];
             // Guarunteed to be true at least once, when i == j in adj matrix
