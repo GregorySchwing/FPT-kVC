@@ -1127,7 +1127,8 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
     // ____________________________________
     // vertex % 4             vertex / 4
     //int myPathIndex = blockIdx.x % blockDim.x;
-
+    printf("Block ID %d thread %d about to start adj mat\n", blockIdx.x, threadIdx.x);
+        
     int row, rowOffset, myChild, comparatorChild, vertex, myPathOffset, comparatorPathOffset;
     for (row = 0; row < blockDim.x; ++row){
         // blockDim.x*4 +  -- to skip the paths
