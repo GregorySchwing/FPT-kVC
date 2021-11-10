@@ -1230,10 +1230,10 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
                 pathsAndIndependentStatus[setInclusionOffset + row] |= !pathsAndIndependentStatus[setReductionOffset];
             }    
             __syncthreads();
-            if (threadIdx.x == 0){
-                printf("Block ID %d row %d %s included in the I set\n", blockIdx.x, row, 
-                    pathsAndIndependentStatus[setInclusionOffset + row] ? "is" :  "isn't");
-            }
+            //if (threadIdx.x == 0){
+            //    printf("Block ID %d row %d %s included in the I set\n", blockIdx.x, row, 
+            //        pathsAndIndependentStatus[setInclusionOffset + row] ? "is" :  "isn't");
+            //}
         }
 
         for (int row = 0; row < blockDim.x; ++row){
@@ -1281,7 +1281,9 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
             printf("Block ID %d cardinality of the V set is %d\n", blockIdx.x, cardinalityOfV);
         }
     }
-
+    
+    // We only have use for the non-pendant members of I, 
+    // since the pendant paths have been processed already
     pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[setInclusionOffset + threadIdx.x]
         && !pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x];
     int i = blockDim.x/2;
@@ -1296,9 +1298,16 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
     __syncthreads();
 
     // Copy from shared mem to global..
-    // We only have use for the non-pendant sets.
+    // We only have use for the non-pendant members of I, 
+    // since the pendant paths have been processed already
     global_set_inclusion_bool_ptr[globalSetInclusionBoolOffset + threadIdx.x] = pathsAndIndependentStatus[setInclusionOffset + threadIdx.x]
         && !pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x];
+
+    if (threadIdx.x == 0){
+        printf("Block ID %d row %d %s included in the I set\n", blockIdx.x, threadIdx.x, 
+            pathsAndIndependentStatus[setInclusionOffset + threadIdx.x]
+        && !pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x] ? "is" :  "isn't");           
+    }
 
     // and the cardinality of the set.  If |I| = 0; we don't induce children
     // Else we will induce (2*|I| children)
