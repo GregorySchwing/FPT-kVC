@@ -1151,11 +1151,15 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
             __syncthreads();
             i /= 2;
         }
+        __syncthreads();
         if (threadIdx.x == 0){
+            printf("Block ID %d row %d %s neighbors with a pendant edge\n", blockIdx.x, row, 
+                pathsAndIndependentStatus[setReductionOffset] ? "is" :  "isn't");
             pathsAndIndependentStatus[neighborsWithAPendantOffset + row] = pathsAndIndependentStatus[setReductionOffset];
             // If it is neighbors (is) a pendant - false, it is not remaining; else - true
             pathsAndIndependentStatus[setRemainingOffset + row] = !pathsAndIndependentStatus[neighborsWithAPendantOffset + row];
-        }                               
+        }              
+        __syncthreads();       
     }
     // S = {p | p is a set of length 4 of vertex indices in G}
     // An edge (u,v), where u ∈ S, v ∈ S, and u ∩ v ≠ ∅
@@ -1192,6 +1196,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
             if (threadIdx.x == 0){
                 pathsAndIndependentStatus[setInclusionOffset + row] |= !pathsAndIndependentStatus[setReductionOffset];
             }    
+            __syncthreads();
         }
 
         for (int row = 0; row < blockDim.x; ++row){
