@@ -902,6 +902,7 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
     if (blockIdx.x == 0){
         printf("Block ID %d's childrenAndDuplicateStatus[%d] is %d\n", blockIdx.x, threadIdx.x, childrenAndDuplicateStatus[blockDim.x + blockIdx.x]);
     }
+    __syncthreads();
 
     int i = blockDim.x/2;
     // Checks for any duplicate children which have a smaller index than their other self
