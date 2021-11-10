@@ -216,7 +216,8 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
                             int * global_columns_dev_ptr,
                             int * global_values_dev_ptr,
                             int * global_pendant_path_bool_dev_ptr,
-                            int * global_pendant_child_dev_ptr);
+                            int * global_pendant_child_dev_ptr,
+                            int * global_set_inclusion_bool_ptr);
 
 __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
                             int levelUpperBound,
