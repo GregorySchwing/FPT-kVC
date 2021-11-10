@@ -2,7 +2,7 @@
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 	message("-- Debug build type detected, passing : '-g -G --keep' to nvcc")
-	set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -g -G --keep")
+	set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -g -G --keep -lineinfo")
 endif()
 
 
