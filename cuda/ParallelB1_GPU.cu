@@ -1796,9 +1796,6 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        
-        
-
         ParallelProcessDegreeZeroVertices<<<levelUpperBound-levelOffset,threadsPerBlock,threadsPerBlock>>>
                         (levelOffset,
                         levelUpperBound,
@@ -1808,6 +1805,19 @@ void CallPopulateTree(int numberOfLevels,
                         global_degrees_dev_ptr);
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
+
+        ParallelIdentifyVertexDisjointNonPendantPaths<<<levelUpperBound-levelOffset,threadsPerBlock,
+            threadsPerBlock*threadsPerBlock + 10*threadsPerBlock>>>
+                        (levelOffset,
+                        levelUpperBound,
+                        numberOfRows,
+                        numberOfEdgesPerGraph,
+                        global_row_offsets_dev_ptr,
+                        global_columns_dev_ptr,
+                        global_values_dev_ptr,
+                        global_pendant_path_bool_dev_ptr,
+                        global_paths_ptr,
+                        global_set_inclusion_bool_ptr);
 
         if(false){
             // Create pointer that starts at beginning of level
