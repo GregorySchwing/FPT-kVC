@@ -1219,6 +1219,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
                 __syncthreads();
                 i /= 2;
             }
+
             // If there exists a remaining vertex that has a smaller number than me, 
             // this reduces is true, thus when we negate it, it has no effect when or'ed
             // else if it was false, then it didn't fail, is negated to true and includes 
@@ -1227,6 +1228,10 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
                 pathsAndIndependentStatus[setInclusionOffset + row] |= !pathsAndIndependentStatus[setReductionOffset];
             }    
             __syncthreads();
+            if (threadIdx.x == 0){
+                printf("Block ID %d row %d %s included in the I set\n", blockIdx.x, row, 
+                    pathsAndIndependentStatus[setInclusionOffset + row] ? "is" :  "isn't");
+            }
         }
 
         for (int row = 0; row < blockDim.x; ++row){
@@ -1248,6 +1253,10 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
             if (threadIdx.x == 0){
                 pathsAndIndependentStatus[setRemainingOffset + row] &= !pathsAndIndependentStatus[setReductionOffset];
             }    
+            if (threadIdx.x == 0){
+                printf("Block ID %d row %d %s is remaining the V set\n", blockIdx.x, row, 
+                    pathsAndIndependentStatus[setRemainingOffset + row] ? "is" :  "isn't");
+            }
         }
 
         for (int row = 0; row < blockDim.x; ++row){
@@ -1267,6 +1276,9 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
         }
         // when V is empty the algorithm terminates
         cardinalityOfV = pathsAndIndependentStatus[setReductionOffset];
+        if (threadIdx.x == 0){
+            printf("Block ID %d cardinality of the V set is %d\n", blockIdx.x, cardinalityOfV);
+        }
     }
 
     // Copy from shared mem to global..
