@@ -1128,21 +1128,29 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
     // vertex % 4             vertex / 4
     //int myPathIndex = blockIdx.x % blockDim.x;
 
-    int rowOffset;
-    for (int row = 0; row < blockDim.x; ++row){
+    int row, rowOffset, myChild, comparatorChild, vertex, myPathOffset, comparatorPathOffset;
+    for (row = 0; row < blockDim.x; ++row){
         // blockDim.x*4 +  -- to skip the paths
         // the adj matrix size (32x32)
         rowOffset = adjMatrixOffset + row * blockDim.x;
-        for (int vertex = 0; vertex < 4*4; ++vertex){
+        myPathOffset = row * 4;
+        comparatorPathOffset = threadIdx.x * 4;
+        if (threadIdx.x == 0){
+            printf("Block ID %d row %d started\n", blockIdx.x, row);
+        }
+        for (vertex = 0; vertex < 4*4; ++vertex){
             // Same path for all TPB threads
-            int myChild = pathsAndIndependentStatus[rowOffset + vertex / 4];
+            myChild = pathsAndIndependentStatus[myPathOffset + vertex / 4];
             // Different comparator child for all TPB threads
-            int comparatorChild = pathsAndIndependentStatus[threadIdx.x*4 + vertex % 4];
+            comparatorChild = pathsAndIndependentStatus[comparatorPathOffset + vertex % 4];
             // Guarunteed to be true at least once, when i == j in adj matrix
             // We have a diagonal of ones.
             pathsAndIndependentStatus[rowOffset + threadIdx.x] |= (comparatorChild == myChild);
         }
         __syncthreads();
+        if (threadIdx.x == 0){
+            printf("Block ID %d row %d done\n", blockIdx.x, row);
+        }
     }
     __syncthreads();
     if (threadIdx.x == 0){
