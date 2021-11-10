@@ -44,8 +44,7 @@ set_target_properties(GPU_bin PROPERTIES
     COMPILE_FLAGS "${GPU_bin_flags}")
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 target_compile_options(GPU_bin PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
-                       --generate-line-info
-)
+                       --generate-line-info>)
 message("-- Debug build type detected, GPU_NVT setting CUDA_RESOLVE_DEVICE_SYMBOLS ON")
 set_property(TARGET GPU_bin PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 endif()
