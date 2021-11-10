@@ -1817,7 +1817,9 @@ void CallPopulateTree(int numberOfLevels,
         // Block immediately returns if nonpendant child 
         // or duplicate pendant child and not the largest
         // indexed instance of that child
-        ParallelProcessPendantEdges<<<(levelUpperBound-levelOffset)*threadsPerBlock,threadsPerBlock,2*threadsPerBlock>>>
+        ParallelProcessPendantEdges<<<(levelUpperBound-levelOffset)*threadsPerBlock,
+                                    threadsPerBlock,
+                                    2*threadsPerBlock*sizeof(int)>>>
                         (levelOffset,
                         levelUpperBound,
                         numberOfRows,
@@ -1831,7 +1833,9 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        ParallelProcessDegreeZeroVertices<<<levelUpperBound-levelOffset,threadsPerBlock,threadsPerBlock>>>
+        ParallelProcessDegreeZeroVertices<<<levelUpperBound-levelOffset,
+                                            threadsPerBlock,
+                                            threadsPerBlock*sizeof(int)>>>
                         (levelOffset,
                         levelUpperBound,
                         numberOfRows,
@@ -1841,8 +1845,10 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        ParallelIdentifyVertexDisjointNonPendantPaths<<<levelUpperBound-levelOffset,threadsPerBlock,
-            (threadsPerBlock*threadsPerBlock + 10*threadsPerBlock)>>>
+        ParallelIdentifyVertexDisjointNonPendantPaths<<<levelUpperBound-levelOffset,
+                                                        threadsPerBlock,
+                                                        (threadsPerBlock*threadsPerBlock + 
+                                                        10*threadsPerBlock)*sizeof(int)>>>
                         (levelOffset,
                         levelUpperBound,
                         numberOfRows,
