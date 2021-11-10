@@ -1127,7 +1127,9 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
         __syncthreads();
     }
     __syncthreads();
-
+    if (threadIdx.x == 0){
+        printf("Block ID %d threadIdx.x created adj matrix\n", blockIdx.x, threadIdx.x);
+    }
     // Corresponds to an array of random numbers between [0,1]
     // This way every thread has its own randGen, and no thread sync is neccessary.
     unsigned int counter = 0;
