@@ -1131,6 +1131,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
                 __syncthreads();
 
     int row, rowOffset, myChild, comparatorChild, vertex, myPathOffset, comparatorPathOffset;
+    /*
     for (row = 0; row < blockDim.x; ++row){
         // blockDim.x*4 +  -- to skip the paths
         // the adj matrix size (32x32)
@@ -1151,6 +1152,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
         printf("Block ID %d row %d done\n", blockIdx.x, row);
 
     }
+    */
     __syncthreads();
     if (threadIdx.x == 0){
         printf("Block ID %d threadIdx.x created adj matrix\n", blockIdx.x, threadIdx.x);
