@@ -811,7 +811,8 @@ __global__ void ParallelDFSRandom(int levelOffset,
     global_paths_ptr[globalPathOffset + sharedMemPathOffset + 3] = pathsAndPendantStatus[sharedMemPathOffset + 3];
 
     // Copy each path's pendantness boolean to global memory
-    global_pendant_path_bool_dev_ptr[blockIdx.x + threadIdx.x] = pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x];
+    // Global is level global, not tree global
+    global_pendant_path_bool_dev_ptr[blockIdx.x*blockDim.x + threadIdx.x] = pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x];
     // We give Case 3 priority over Case 2,
     // Since the serial algorithm short-circuits 
     // upon finding a pendant edge
@@ -833,7 +834,8 @@ __global__ void ParallelDFSRandom(int levelOffset,
     // cI == 1, since true casted to int is 1
     // Desired child is v1
     // Therefore, v1 == path[cI]
-    global_pendant_child_dev_ptr[blockIdx.x + threadIdx.x] = pathsAndPendantStatus[sharedMemPathOffset + childIndex];
+    global_pendant_child_dev_ptr[blockIdx.x*blockDim.x + threadIdx.x] = pathsAndPendantStatus[sharedMemPathOffset + childIndex];
+    __syncthreads();
 
     int i = blockDim.x/2;
     // Checks for any nonpendant edge path exists
@@ -844,6 +846,7 @@ __global__ void ParallelDFSRandom(int levelOffset,
         __syncthreads();
         i /= 2;
     }
+    // Only 1 bool for 32 paths
     if (threadIdx.x == 0)
         global_pendant_path_reduced_bool_dev_ptr[blockIdx.x] = pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x];
 }
@@ -1255,6 +1258,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
                 printf("Block ID %d row %d %s remaining the V set\n", blockIdx.x, row, 
                     pathsAndIndependentStatus[setRemainingOffset + row] ? "is" :  "isn't");
             }
+            __syncthreads();
         }
 
         // Am I remaining?
