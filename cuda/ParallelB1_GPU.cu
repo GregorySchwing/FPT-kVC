@@ -1303,12 +1303,10 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
     global_set_inclusion_bool_ptr[globalSetInclusionBoolOffset + threadIdx.x] = pathsAndIndependentStatus[setInclusionOffset + threadIdx.x]
         && !pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x];
 
-    if (threadIdx.x == 0){
-        printf("Block ID %d row %d %s included in the I set\n", blockIdx.x, threadIdx.x, 
-            pathsAndIndependentStatus[setInclusionOffset + threadIdx.x]
-        && !pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x] ? "is" :  "isn't");           
-    }
-
+    printf("Block ID %d row %d %s included in the I set\n", blockIdx.x, threadIdx.x, 
+        pathsAndIndependentStatus[setInclusionOffset + threadIdx.x]
+    && !pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x] ? "is" :  "isn't");           
+    
     // and the cardinality of the set.  If |I| = 0; we don't induce children
     // Else we will induce (2*|I| children)
     global_reduced_set_inclusion_count_ptr[blockIdx.x] = pathsAndIndependentStatus[setReductionOffset];
