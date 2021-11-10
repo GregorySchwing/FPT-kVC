@@ -1103,6 +1103,9 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
     // Automatically include pendant  paths to set
     pathsAndIndependentStatus[setInclusionOffset + threadIdx.x] = 
         global_pendant_path_bool_dev_ptr[globalPendantPathBoolOffset + threadIdx.x];
+        
+    printf("Block ID %d path %d %s pendant\n", blockIdx.x, threadIdx.x, 
+    pathsAndIndependentStatus[setInclusionOffset + threadIdx.x] ? "is" : "isn't");
 
     __syncthreads();
     if (threadIdx.x == 0){
