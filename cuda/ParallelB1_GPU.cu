@@ -1088,7 +1088,9 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
         global_pendant_path_bool_dev_ptr[globalPendantPathBoolOffset + threadIdx.x];
 
     __syncthreads();
-
+    if (threadIdx.x == 0){
+        printf("Block ID %d threadIdx.x copied into sm\n", blockIdx.x, threadIdx.x);
+    }
     // See if each vertex in my path is duplicated, 1 vs all comparison written to shared memory
     // Also, if it is duplicated, only process the largest index duplicate
     // If it isn't duplicated, process the path.
