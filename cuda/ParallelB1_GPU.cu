@@ -1137,9 +1137,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
         rowOffset = adjMatrixOffset + row * blockDim.x;
         myPathOffset = row * 4;
         comparatorPathOffset = threadIdx.x * 4;
-        if (threadIdx.x == 0){
-            printf("Block ID %d row %d started\n", blockIdx.x, row);
-        }
+        printf("Block ID %d row %d started\n", blockIdx.x, row);
         for (vertex = 0; vertex < 4*4; ++vertex){
             // Same path for all TPB threads
             myChild = pathsAndIndependentStatus[myPathOffset + vertex / 4];
@@ -1150,9 +1148,8 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
             pathsAndIndependentStatus[rowOffset + threadIdx.x] |= (comparatorChild == myChild);
         }
         __syncthreads();
-        if (threadIdx.x == 0){
-            printf("Block ID %d row %d done\n", blockIdx.x, row);
-        }
+        printf("Block ID %d row %d done\n", blockIdx.x, row);
+
     }
     __syncthreads();
     if (threadIdx.x == 0){
