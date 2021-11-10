@@ -1073,6 +1073,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
 
     int adjMatrixOffset = blockDim.x * 4;
     int randNumOffset = adjMatrixOffset + blockDim.x * blockDim.x;
+    int pendPathBoolOffset = randNumOffset + blockDim.x;
     int neighborsWithAPendantOffset = randNumOffset + blockDim.x;
     int setReductionOffset = neighborsWithAPendantOffset + blockDim.x;
     int setInclusionOffset = setReductionOffset + blockDim.x;
@@ -1101,11 +1102,8 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
         global_pendant_path_bool_dev_ptr[globalPendantPathBoolOffset + threadIdx.x] ? "is" : "isn't");
 
     // Automatically include pendant  paths to set
-    pathsAndIndependentStatus[setInclusionOffset + threadIdx.x] = 
+    pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x] = 
         global_pendant_path_bool_dev_ptr[globalPendantPathBoolOffset + threadIdx.x];
-
-    printf("Block ID %d path %d %s pendant\n", blockIdx.x, threadIdx.x, 
-    pathsAndIndependentStatus[setInclusionOffset + threadIdx.x] ? "is" : "isn't");
 
     __syncthreads();
     if (threadIdx.x == 0){
@@ -1152,7 +1150,6 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
         }
         __syncthreads();
         printf("Block ID %d row %d done\n", blockIdx.x, row);
-
     }
     __syncthreads();
     if (threadIdx.x == 0){
@@ -1171,7 +1168,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
         // Notably, the diagonal is true if the vertex is pendant
         // At this point the set I is the pendant paths
         pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[rowOffset + threadIdx.x]   
-                                                                    && pathsAndIndependentStatus[setInclusionOffset + threadIdx.x];
+                                                                    && pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x];
         int i = blockDim.x/2;
         __syncthreads();
         while (i != 0) {
