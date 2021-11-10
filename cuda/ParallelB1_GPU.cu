@@ -1074,7 +1074,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
     int adjMatrixOffset = blockDim.x * 4;
     int randNumOffset = adjMatrixOffset + blockDim.x * blockDim.x;
     int pendPathBoolOffset = randNumOffset + blockDim.x;
-    int neighborsWithAPendantOffset = randNumOffset + blockDim.x;
+    int neighborsWithAPendantOffset = pendPathBoolOffset + blockDim.x;
     int setReductionOffset = neighborsWithAPendantOffset + blockDim.x;
     int setInclusionOffset = setReductionOffset + blockDim.x;
     int setRemainingOffset = setInclusionOffset + blockDim.x;
@@ -1084,6 +1084,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
         printf("Block ID %d globalPendantPathBoolOffset %d\n", blockIdx.x, globalPendantPathBoolOffset);
         printf("Block ID %d globalSetInclusionBoolOffset %d\n", blockIdx.x, globalSetInclusionBoolOffset);
         printf("Block ID %d adjMatrixOffset %d\n", blockIdx.x, adjMatrixOffset);
+        printf("Block ID %d randNumOffset %d\n", blockIdx.x, randNumOffset);
         printf("Block ID %d randNumOffset %d\n", blockIdx.x, randNumOffset);
         printf("Block ID %d neighborsWithAPendantOffset %d\n", blockIdx.x, neighborsWithAPendantOffset);
         printf("Block ID %d setReductionOffset %d\n", blockIdx.x, setReductionOffset);
