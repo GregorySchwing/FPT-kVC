@@ -1302,7 +1302,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
 
     // and the cardinality of the set.  If |I| = 0; we don't induce children
     // Else we will induce (2*|I| children)
-    global_reduced_set_inclusion_count_ptr[blockId.x] = pathsAndIndependentStatus[setReductionOffset];
+    global_reduced_set_inclusion_count_ptr[blockIdx.x] = pathsAndIndependentStatus[setReductionOffset];
 
 }
 
