@@ -1060,7 +1060,8 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
                             int * global_values_dev_ptr,
                             int * global_pendant_path_bool_dev_ptr,
                             int * global_paths_ptr,
-                            int * global_set_inclusion_bool_ptr){
+                            int * global_set_inclusion_bool_ptr,
+                            int * global_reduced_set_inclusion_count_ptr){
     if (threadIdx.x == 0){
         printf("Block ID %d Started ParallelIdentifyVertexDisjointNonPendantPaths\n", blockIdx.x);
         printf("\n");
@@ -1088,7 +1089,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
         printf("Block ID %d globalSetInclusionBoolOffset %d\n", blockIdx.x, globalSetInclusionBoolOffset);
         printf("Block ID %d adjMatrixOffset %d\n", blockIdx.x, adjMatrixOffset);
         printf("Block ID %d randNumOffset %d\n", blockIdx.x, randNumOffset);
-        printf("Block ID %d randNumOffset %d\n", blockIdx.x, randNumOffset);
+        printf("Block ID %d pendPathBoolOffset %d\n", blockIdx.x, pendPathBoolOffset);
         printf("Block ID %d neighborsWithAPendantOffset %d\n", blockIdx.x, neighborsWithAPendantOffset);
         printf("Block ID %d setReductionOffset %d\n", blockIdx.x, setReductionOffset);
         printf("Block ID %d setInclusionOffset %d\n", blockIdx.x, setInclusionOffset);
@@ -1281,8 +1282,28 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
         }
     }
 
+    pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[setInclusionOffset + threadIdx.x]
+        && !pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x];
+    int i = blockDim.x/2;
+    __syncthreads();
+    while (i != 0) {
+        if (threadIdx.x < i){
+            pathsAndIndependentStatus[setReductionOffset + threadIdx.x] += pathsAndIndependentStatus[setReductionOffset + threadIdx.x + i];
+        }
+        __syncthreads();
+        i /= 2;
+    }
+    __syncthreads();
+
     // Copy from shared mem to global..
-    global_set_inclusion_bool_ptr[globalSetInclusionBoolOffset + threadIdx.x] = pathsAndIndependentStatus[setInclusionOffset + threadIdx.x];
+    // We only have use for the non-pendant sets.
+    global_set_inclusion_bool_ptr[globalSetInclusionBoolOffset + threadIdx.x] = pathsAndIndependentStatus[setInclusionOffset + threadIdx.x]
+        && !pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x];
+
+    // and the cardinality of the set.  If |I| = 0; we don't induce children
+    // Else we will induce (2*|I| children)
+    global_reduced_set_inclusion_count_ptr[blockId.x] = pathsAndIndependentStatus[setReductionOffset];
+
 }
 
 __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
@@ -1682,6 +1703,7 @@ void CallPopulateTree(int numberOfLevels,
     int * global_pendant_path_reduced_bool_dev_ptr;
     int * global_pendant_child_dev_ptr;
     int * global_set_inclusion_bool_ptr;
+    int * global_reduced_set_inclusion_count_ptr;
     int * global_paths_length;
     int * global_edges_left_to_cover_count;
 
@@ -1721,7 +1743,7 @@ void CallPopulateTree(int numberOfLevels,
     // Not global to the entire tree, overwritten every level
     cudaMalloc( (void**)&global_pendant_child_dev_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_set_inclusion_bool_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
-
+    cudaMalloc( (void**)&global_reduced_set_inclusion_count_ptr, deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_edges_left_to_cover_count, treeSize * sizeof(int) );
 
     cudaDeviceSynchronize();
@@ -1870,7 +1892,8 @@ void CallPopulateTree(int numberOfLevels,
                         global_values_dev_ptr,
                         global_pendant_path_bool_dev_ptr,
                         global_paths_ptr,
-                        global_set_inclusion_bool_ptr);
+                        global_set_inclusion_bool_ptr,
+                        global_reduced_set_inclusion_count_ptr);
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
