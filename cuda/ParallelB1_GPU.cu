@@ -1819,6 +1819,9 @@ void CallPopulateTree(int numberOfLevels,
                         global_paths_ptr,
                         global_set_inclusion_bool_ptr);
 
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+
         if(false){
             // Create pointer that starts at beginning of level
             // Leaves are indexed from 0; so I need to add the offset
@@ -1921,10 +1924,6 @@ void CallPopulateTree(int numberOfLevels,
     cudaFree( global_values_dev_ptr );
     cudaFree( global_degrees_dev_ptr );
     cudaFree( global_paths_ptr );
-    //cudaFree( global_vertices_remaining );
-    //cudaFree( global_vertices_remaining_count );
-    //cudaFree( global_outgoing_edge_vertices );
-    //cudaFree( global_outgoing_edge_vertices_count );
     cudaFree( global_paths_length );
     cudaFree( global_edges_left_to_cover_count );
     cudaDeviceSynchronize();
