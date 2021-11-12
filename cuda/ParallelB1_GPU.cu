@@ -1886,6 +1886,9 @@ void CallPopulateTree(int numberOfLevels,
     int * pendantReducedBools = new int[deepestLevelSize];
     int * pendantChildrenOfLevel = new int[deepestLevelSize*threadsPerBlock];
 
+    int * nonpendantReducedCount = new int[deepestLevelSize];
+
+
 
     // Create Segment Offsets for RemainingVertices
     SetVerticesRemaingSegements<<<deepestLevelSize+1,threadsPerBlock>>>(deepestLevelSize,
@@ -2026,6 +2029,21 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
+        // We need the number of children for each leaf to induce.
+        cudaMemcpy(nonpendantReducedCount, global_reduced_set_inclusion_count_ptr, (levelUpperBound - levelOffset)*sizeof(int), cudaMemcpyDeviceToHost);
+
+        // For now I wjust copy the entire graph to all children
+        // My custom written induce subgraph method uses dynamically
+        // allocated arrays which are unpredictable.  The memory is already 
+        // allocated for the entire tree, and copying the entire graph likely
+        // doesnt effect runtime since d2d bandwith is very high.
+        for (int leafIndex = levelOffset; leafIndex <  levelUpperBound; ++leafIndex){
+            cudaMemcpy(global_row_offsets_dev_ptr, global_row_offsets_dev_ptr, (numberOfRows+1)*sizeof(int), cudaMemcpyDeviceToDevice);
+            cudaMemcpy(global_columns_dev_ptr, global_columns_dev_ptr, numberOfEdgesPerGraph*sizeof(int), cudaMemcpyDeviceToDevice);
+            cudaMemcpy(global_values_dev_ptr, global_values_dev_ptr, numberOfEdgesPerGraph*sizeof(int), cudaMemcpyDeviceToDevice);
+            cudaMemcpy(global_degrees_dev_ptr, global_degrees_dev_ptr, numberOfRows*sizeof(int), cudaMemcpyDeviceToDevice);
+            cudaMemcpy(global_remaining_vertices_dev_ptr, global_remaining_vertices_dev_ptr, numberOfRows*sizeof(int), cudaMemcpyDeviceToDevice);
+        }
     }
 
     for (const auto& inner: pendantChildren) { // auto is std::vector<int>
