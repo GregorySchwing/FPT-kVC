@@ -1417,8 +1417,8 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
     && !pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x] ? "is" :  "isn't");           
     
     // and the cardinality of the set.  If |I| = 0; we don't induce children
-    // Else we will induce (2*|I| children)
-    global_reduced_set_inclusion_count_ptr[blockIdx.x] = pathsAndIndependentStatus[setReductionOffset];
+    // Else we will induce (3*|I| children)
+    global_reduced_set_inclusion_count_ptr[leafIndex] = pathsAndIndependentStatus[setReductionOffset];
 
 }
 
@@ -1822,6 +1822,7 @@ void CallPopulateTree(int numberOfLevels,
     int * global_reduced_set_inclusion_count_ptr;
     int * global_paths_length;
     int * global_edges_left_to_cover_count;
+    int * global_skipped_vertex_boolean;
 
     int * global_column_buffer;
     int * global_vertex_buffer;
@@ -1859,8 +1860,15 @@ void CallPopulateTree(int numberOfLevels,
     // Not global to the entire tree, overwritten every level
     cudaMalloc( (void**)&global_pendant_child_dev_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_set_inclusion_bool_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
-    cudaMalloc( (void**)&global_reduced_set_inclusion_count_ptr, deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_edges_left_to_cover_count, treeSize * sizeof(int) );
+
+    // These two arrays direct the flow of the graph building process
+    // If a vertex is not skipped and it has 0 paths produced, it needs to enter the DFS method
+    // If a vertex is skipped, it doesn't do anything
+    // If a vertex is not skipped and it has n > 0 paths produced, the largest number of
+    // levels are induced, at least 1.
+    cudaMalloc( (void**)&global_reduced_set_inclusion_count_ptr, treeSize * sizeof(int) );
+    cudaMalloc( (void**)&global_skipped_vertex_boolean, treeSize * sizeof(int) );
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -2032,7 +2040,7 @@ void CallPopulateTree(int numberOfLevels,
         // We need the number of children for each leaf to induce.
         cudaMemcpy(nonpendantReducedCount, global_reduced_set_inclusion_count_ptr, (levelUpperBound - levelOffset)*sizeof(int), cudaMemcpyDeviceToHost);
 
-        // For now I wjust copy the entire graph to all children
+        // For now I just copy the entire graph to all children
         // My custom written induce subgraph method uses dynamically
         // allocated arrays which are unpredictable.  The memory is already 
         // allocated for the entire tree, and copying the entire graph likely
