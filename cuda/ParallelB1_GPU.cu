@@ -172,6 +172,115 @@ __host__ __device__ long long CalculateLevelUpperBound(int level){
         return pow(3.0, (level)) + 1;
 }
 
+__host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int levelUpperBound,
+                                                                            int levelOffset,
+                                                                            int threadsPerBlock,
+                                                                            int numberOfRows,
+                                                                            int numberOfEdgesPerGraph,
+                                                                            int * global_row_offsets_dev_ptr,
+                                                                            int * global_offsets_buffer,
+                                                                            int * global_column_buffer,
+                                                                            int * global_value_buffer,
+                                                                            int * global_vertex_buffer,
+                                                                            int * global_vertex_segments,
+                                                                            int * global_remaining_vertices_dev_ptr,
+                                                                            int * global_columns_dev_ptr,
+                                                                            int * global_values_dev_ptr){
+    // Create pointer that starts at beginning of level
+    // Leaves are indexed from 0; so I need to add the offset
+    // of the leaf from the left of the tree * (numberOfRows+1) so the 
+    // sorting operation works on an entire level.
+    // global_offsets_buffer = &global_row_offsets_dev_ptr[levelOffset*(numberOfRows+1)];
+    ParallelCreateLevelAwareRowOffsets<<<levelUpperBound-levelOffset,threadsPerBlock>>>
+                                        (levelOffset,
+                                        levelUpperBound,
+                                        numberOfRows,
+                                        numberOfEdgesPerGraph,
+                                        global_row_offsets_dev_ptr,
+                                        global_offsets_buffer);
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    // Determine temporary device storage requirements
+    int     *global_vertices_tree = NULL;
+    // Determine temporary device storage requirements
+    int     *global_columns_tree = NULL;
+    // Determine temporary device storage requirements
+    int     *global_values_tree = NULL;
+
+    global_columns_tree = &global_columns_dev_ptr[levelOffset*numberOfEdgesPerGraph];
+    global_values_tree = &global_values_dev_ptr[levelOffset*numberOfEdgesPerGraph];
+
+    // Create a set of DoubleBuffers to wrap pairs of device pointers
+    cub::DoubleBuffer<int> d_values(global_columns_tree, global_column_buffer);
+    cub::DoubleBuffer<int> d_keys(global_values_tree, global_value_buffer);
+
+    // Determine temporary device storage requirements
+    void     *d_temp_storage = NULL;
+    size_t   temp_storage_bytes = 0;
+    int num_items = (levelUpperBound-levelOffset)*numberOfEdgesPerGraph;
+    int num_segments = (levelUpperBound-levelOffset)*(numberOfRows+1);
+
+    cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
+        num_items, num_segments, global_offsets_buffer, global_offsets_buffer + 1);
+
+    // Allocate temporary storage
+    cudaMalloc(&d_temp_storage, temp_storage_bytes);
+
+    // Run sorting operation
+    cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
+        num_items, num_segments, global_offsets_buffer, global_offsets_buffer + 1);
+
+    cudaFree(d_temp_storage);
+
+    int * printAlt = d_keys.Alternate();
+    int * printCurr = d_keys.Current();
+
+    PrintEdges<<<1,1>>>  (levelOffset,
+                levelUpperBound,
+                numberOfRows,
+                numberOfEdgesPerGraph,
+                global_values_tree,
+                global_value_buffer,
+                printAlt,
+                printCurr);
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+                // Determine temporary device storage requirements
+    void     *d_temp_storage2 = NULL;
+    temp_storage_bytes = 0;
+    num_items = (levelUpperBound-levelOffset)*numberOfRows;
+    num_segments = levelUpperBound-levelOffset;
+
+    global_vertices_tree = &global_remaining_vertices_dev_ptr[levelOffset*numberOfRows];
+    cub::DoubleBuffer<int> d_keys_verts(global_vertices_tree, global_vertex_buffer);
+
+    cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage2, temp_storage_bytes, d_keys_verts,
+        num_items, num_segments, global_vertex_segments, global_vertex_segments + 1);
+    // Allocate temporary storage
+    cudaMalloc(&d_temp_storage2, temp_storage_bytes);
+    // Run sorting operation
+    cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage2, temp_storage_bytes, d_keys_verts,
+        num_items, num_segments, global_vertex_segments, global_vertex_segments + 1);
+
+    cudaFree(d_temp_storage2);
+
+    printAlt = d_keys_verts.Alternate();
+    printCurr = d_keys_verts.Current();
+
+    PrintVerts<<<1,1>>>  (levelOffset,
+                levelUpperBound,
+                numberOfRows,
+                global_vertices_tree,
+                global_vertex_buffer,
+                printAlt,
+                printCurr);
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+}
+
 typedef int inner_array_t[2];
 
 __global__ void InduceSubgraph( int numberOfRows,
@@ -1783,16 +1892,28 @@ void CallPopulateTree(int numberOfLevels,
                                                                         numberOfRows,
                                                                         global_vertex_segments);
 
-    // Determine temporary device storage requirements
-    int     *global_vertices_tree = NULL;
-    // Determine temporary device storage requirements
-    int     *global_columns_tree = NULL;
-    // Determine temporary device storage requirements
-    int     *global_values_tree = NULL;
-
     for (int level = 0; level < numberOfLevels; ++level){
         levelUpperBound = CalculateLevelUpperBound(level);
         numberOfBlocksForOneThreadPerLeaf = ((levelUpperBound - levelOffset) + threadsPerBlock - 1) / threadsPerBlock;
+        
+        if(false){
+            RestoreDataStructuresAfterRemovingChildrenVertices(levelUpperBound,
+                                                                levelOffset,
+                                                                threadsPerBlock,
+                                                                numberOfRows,
+                                                                numberOfEdgesPerGraph,
+                                                                global_row_offsets_dev_ptr,
+                                                                global_offsets_buffer,
+                                                                global_column_buffer,
+                                                                global_value_buffer,
+                                                                global_vertex_buffer,
+                                                                global_vertex_segments,
+                                                                global_remaining_vertices_dev_ptr,
+                                                                global_columns_dev_ptr,
+                                                                global_values_dev_ptr);
+        }
+        
+    
         // 1 thread per leaf
         std::cout << "Calling DFS - level " << level << std::endl;
         // 1 block per leaf; tries tPB random paths in G
@@ -1890,107 +2011,21 @@ void CallPopulateTree(int numberOfLevels,
                                                         threadsPerBlock,
                                                         (threadsPerBlock*threadsPerBlock + 
                                                         10*threadsPerBlock)*sizeof(int)>>>
-                        (levelOffset,
-                        levelUpperBound,
-                        numberOfRows,
-                        numberOfEdgesPerGraph,
-                        global_row_offsets_dev_ptr,
-                        global_columns_dev_ptr,
-                        global_values_dev_ptr,
-                        global_pendant_path_bool_dev_ptr,
-                        global_paths_ptr,
-                        global_set_inclusion_bool_ptr,
-                        global_reduced_set_inclusion_count_ptr);
+                                                        (levelOffset,
+                                                        levelUpperBound,
+                                                        numberOfRows,
+                                                        numberOfEdgesPerGraph,
+                                                        global_row_offsets_dev_ptr,
+                                                        global_columns_dev_ptr,
+                                                        global_values_dev_ptr,
+                                                        global_pendant_path_bool_dev_ptr,
+                                                        global_paths_ptr,
+                                                        global_set_inclusion_bool_ptr,
+                                                        global_reduced_set_inclusion_count_ptr);
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        if(false){
-            // Create pointer that starts at beginning of level
-            // Leaves are indexed from 0; so I need to add the offset
-            // of the leaf from the left of the tree * (numberOfRows+1) so the 
-            // sorting operation works on an entire level.
-            // global_offsets_buffer = &global_row_offsets_dev_ptr[levelOffset*(numberOfRows+1)];
-            ParallelCreateLevelAwareRowOffsets<<<levelUpperBound-levelOffset,threadsPerBlock>>>
-                                                (levelOffset,
-                                                levelUpperBound,
-                                                numberOfRows,
-                                                numberOfEdgesPerGraph,
-                                                global_row_offsets_dev_ptr,
-                                                global_offsets_buffer);
-
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
-            
-            global_columns_tree = &global_columns_dev_ptr[levelOffset*numberOfEdgesPerGraph];
-            global_values_tree = &global_values_dev_ptr[levelOffset*numberOfEdgesPerGraph];
-
-            // Create a set of DoubleBuffers to wrap pairs of device pointers
-            cub::DoubleBuffer<int> d_values(global_columns_tree, global_column_buffer);
-            cub::DoubleBuffer<int> d_keys(global_values_tree, global_value_buffer);
-
-            // Determine temporary device storage requirements
-            void     *d_temp_storage = NULL;
-            size_t   temp_storage_bytes = 0;
-            int num_items = (levelUpperBound-levelOffset)*numberOfEdgesPerGraph;
-            int num_segments = (levelUpperBound-levelOffset)*(numberOfRows+1);
-
-            cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
-                num_items, num_segments, global_offsets_buffer, global_offsets_buffer + 1);
-
-            // Allocate temporary storage
-            cudaMalloc(&d_temp_storage, temp_storage_bytes);
-
-            // Run sorting operation
-            cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
-                num_items, num_segments, global_offsets_buffer, global_offsets_buffer + 1);
-
-            cudaFree(d_temp_storage);
-
-            int * printAlt = d_keys.Alternate();
-            int * printCurr = d_keys.Current();
-
-            PrintEdges<<<1,1>>>  (levelOffset,
-                        levelUpperBound,
-                        numberOfRows,
-                        numberOfEdgesPerGraph,
-                        global_values_tree,
-                        global_value_buffer,
-                        printAlt,
-                        printCurr);
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
-                        // Determine temporary device storage requirements
-            void     *d_temp_storage2 = NULL;
-            temp_storage_bytes = 0;
-            num_items = (levelUpperBound-levelOffset)*numberOfRows;
-            num_segments = levelUpperBound-levelOffset;
-
-            global_vertices_tree = &global_remaining_vertices_dev_ptr[levelOffset*numberOfRows];
-            cub::DoubleBuffer<int> d_keys_verts(global_vertices_tree, global_vertex_buffer);
-            
-            cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage2, temp_storage_bytes, d_keys_verts,
-                num_items, num_segments, global_vertex_segments, global_vertex_segments + 1);
-            // Allocate temporary storage
-            cudaMalloc(&d_temp_storage2, temp_storage_bytes);
-            // Run sorting operation
-            cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage2, temp_storage_bytes, d_keys_verts,
-                num_items, num_segments, global_vertex_segments, global_vertex_segments + 1);
-            
-            printAlt = d_keys_verts.Alternate();
-            printCurr = d_keys_verts.Current();
-
-            PrintVerts<<<1,1>>>  (levelOffset,
-                        levelUpperBound,
-                        numberOfRows,
-                        global_vertices_tree,
-                        global_vertex_buffer,
-                        printAlt,
-                        printCurr);
-            
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
-        }
     }
 
     for (const auto& inner: pendantChildren) { // auto is std::vector<int>

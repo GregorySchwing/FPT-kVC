@@ -50,6 +50,20 @@ CUDA_HOSTDEV long long CalculateSizeRequirement(int startingLevel,
                                                             int endingLevel);
 CUDA_HOSTDEV long long CalculateLevelOffset(int level);
 CUDA_HOSTDEV long long CalculateLevelUpperBound(int level);
+__host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int levelUpperBound,
+                                                                            int levelOffset,
+                                                                            int threadsPerBlock,
+                                                                            int numberOfRows,
+                                                                            int numberOfEdgesPerGraph,
+                                                                            int * global_row_offsets_dev_ptr,
+                                                                            int * global_offsets_buffer,
+                                                                            int * global_column_buffer,
+                                                                            int * global_value_buffer,
+                                                                            int * global_vertex_buffer,
+                                                                            int * global_vertex_segments,
+                                                                            int * global_remaining_vertices_dev_ptr,
+                                                                            int * global_columns_dev_ptr,
+                                                                            int * global_values_dev_ptr);
 CUDA_HOSTDEV long long CalculateDeepestLevelWidth(int maxLevel);
 
 __global__ void  PrintEdges(int levelOffset,
