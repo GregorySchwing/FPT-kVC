@@ -66,6 +66,40 @@ __host__ __device__ long long CalculateDeepestLevelWidth(int deepestLevelSize){
     return summand;
 }
 
+__host__ __device__ int CalculateNumberOfFullLevels(int leavesThatICanGenerate){
+    //
+    // Level 0 : Size 1
+    // Level 1 : Size 3
+    // Level 2 : Size 9
+    // Level 3 : Size 27
+    // Level 4 : Size 81
+    // Level 5 : Size 243
+    // Level 6 : Size 729
+    // Level 7 : Size 2187
+    if (leavesThatICanGenerate / 1 == 0)
+        return 0;
+    else if (leavesThatICanGenerate / 4 == 0)
+        return 1;
+    else if (leavesThatICanGenerate / 13 == 0)
+        return 2;
+    else if (leavesThatICanGenerate / 40 == 0)
+        return 3;
+    else if (leavesThatICanGenerate /121 == 0)
+        return 4;
+    else if (leavesThatICanGenerate /364 == 0)
+        return 5;
+    else if (leavesThatICanGenerate / 1093 == 0)
+        return 6;
+    else
+        return -1;
+    // Current max number of threads per block is 2048
+    // Therefore, there shouldnt be a case where a vertex can generate
+    // greater than 3280 leaves
+    //else if (leavesThatICanGenerate / 3280 == 0)
+    //    return 7;
+    //else
+}
+
 __global__ void  PrintEdges(int levelOffset,
                                     int levelUpperBound,
                                     int numberOfRows,
@@ -1418,8 +1452,17 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
     
     // and the cardinality of the set.  If |I| = 0; we don't induce children
     // Else we will induce (3*|I| children)
-    global_reduced_set_inclusion_count_ptr[leafIndex] = pathsAndIndependentStatus[setReductionOffset];
+    int leavesThatICanInduce = pathsAndIndependentStatus[setReductionOffset];
+    if (threadIdx.x == 0){
+        global_reduced_set_inclusion_count_ptr[leafIndex] = leavesThatICanGenerate;
+    }
 
+    // Case 1: 
+    //0 < leavesThatICanGenerate < 3
+    if (leavesThatICanGenerate != 0){
+        int fullLevels = (int)(log(leavesThatICanGenerate) / log(3));
+        for (int nextLevel = 0; nextLevel < )
+    }
 }
 
 __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,

@@ -65,6 +65,7 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int levelUpperB
                                                                             int * global_columns_dev_ptr,
                                                                             int * global_values_dev_ptr);
 CUDA_HOSTDEV long long CalculateDeepestLevelWidth(int maxLevel);
+CUDA_HOSTDEV int CalculateNumberOfFullLevels(int leavesThatICanGenerate);
 
 __global__ void  PrintEdges(int levelOffset,
                                     int levelUpperBound,
