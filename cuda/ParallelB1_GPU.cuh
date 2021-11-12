@@ -223,7 +223,8 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
                             int * global_nonpendant_path_bool_dev_ptr,
                             int * global_pendant_child_dev_ptr);
 
-__global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
+__global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
+                            int levelOffset,
                             int levelUpperBound,
                             int numberOfRows,
                             int numberOfEdgesPerGraph,
@@ -233,7 +234,8 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
                             int * global_pendant_path_bool_dev_ptr,
                             int * global_pendant_child_dev_ptr,
                             int * global_set_inclusion_bool_ptr,
-                            int * global_reduced_set_inclusion_count_ptr);
+                            int * global_reduced_set_inclusion_count_ptr,
+                            int * global_active_vertex_boolean);
 
 __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
                             int levelUpperBound,

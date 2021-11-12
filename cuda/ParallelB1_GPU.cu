@@ -84,9 +84,9 @@ __host__ __device__ int CalculateNumberOfFullLevels(int leavesThatICanGenerate){
         return 2;
     else if (leavesThatICanGenerate / 40 == 0)
         return 3;
-    else if (leavesThatICanGenerate /121 == 0)
+    else if (leavesThatICanGenerate / 121 == 0)
         return 4;
-    else if (leavesThatICanGenerate /364 == 0)
+    else if (leavesThatICanGenerate / 364 == 0)
         return 5;
     else if (leavesThatICanGenerate / 1093 == 0)
         return 6;
@@ -204,6 +204,13 @@ __host__ __device__ long long CalculateLevelUpperBound(int level){
         return 1;
     else
         return pow(3.0, (level)) + 1;
+}
+
+__host__ __device__ long long CalculateLevelSize(int level){
+    if(level == 0)
+        return 0;
+    else 
+        return pow(3.0, level);
 }
 
 __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int levelUpperBound,
@@ -1194,7 +1201,8 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
 + ______________________________________
     blockDim ^ 2 + 10*blockDim
 */
-__global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
+__global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
+                            int levelOffset,
                             int levelUpperBound,
                             int numberOfRows,
                             int numberOfEdgesPerGraph,
@@ -1204,7 +1212,8 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
                             int * global_pendant_path_bool_dev_ptr,
                             int * global_paths_ptr,
                             int * global_set_inclusion_bool_ptr,
-                            int * global_reduced_set_inclusion_count_ptr){
+                            int * global_reduced_set_inclusion_count_ptr,
+                            int * global_active_vertex_boolean){
     if (threadIdx.x == 0){
         printf("Block ID %d Started ParallelIdentifyVertexDisjointNonPendantPaths\n", blockIdx.x);
         printf("\n");
@@ -1457,11 +1466,29 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(int levelOffset,
         global_reduced_set_inclusion_count_ptr[leafIndex] = leavesThatICanGenerate;
     }
 
-    // Case 1: 
-    //0 < leavesThatICanGenerate < 3
-    if (leavesThatICanGenerate != 0){
-        int fullLevels = (int)(log(leavesThatICanGenerate) / log(3));
-        for (int nextLevel = 0; nextLevel < )
+
+    int levelDepth = CalculateNumberOfFullLevels(leavesThatICanGenerate);
+
+    // int myLB = CalculateLevelOffset(levelDepth);
+    // int myUB = CalculateLevelUpperBound(levelDepth);
+    // int globalLevelOffset = CalculateLevelOffset(level + levelDepth);
+
+    int levelSize = CalculateLevelSize(levelDepth);
+    int leftMostLeafIndex = pow(3.0, levelDepth) * leafIndex;
+    // [my LB, myUB] correspond to a subset of the level of the global tree
+    //      0
+    //    0 x 0
+    // 000 yyy 000
+    // For example consider vertex 'x'.
+    // If it wanted to induce 1 level
+    // [my LB, myUB] would correspond to the global leaf indices of the 'y's
+
+    // This is for inducing the next lowest level
+    // I need to double check the math here.
+    // for (int c = 1; c <= 3; ++c){
+    //    graphs[3*leafIndex + c]
+    for (int child = 1; child <= levelSize; ++child){
+        global_active_vertex_boolean[leftMostLeafIndex + child] = 1;
     }
 }
 
@@ -1865,7 +1892,7 @@ void CallPopulateTree(int numberOfLevels,
     int * global_reduced_set_inclusion_count_ptr;
     int * global_paths_length;
     int * global_edges_left_to_cover_count;
-    int * global_skipped_vertex_boolean;
+    int * global_active_vertex_boolean;
 
     int * global_column_buffer;
     int * global_vertex_buffer;
@@ -1911,7 +1938,7 @@ void CallPopulateTree(int numberOfLevels,
     // If a vertex is not skipped and it has n > 0 paths produced, the largest number of
     // levels are induced, at least 1.
     cudaMalloc( (void**)&global_reduced_set_inclusion_count_ptr, treeSize * sizeof(int) );
-    cudaMalloc( (void**)&global_skipped_vertex_boolean, treeSize * sizeof(int) );
+    cudaMalloc( (void**)&global_active_vertex_boolean, treeSize * sizeof(int) );
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -2075,7 +2102,8 @@ void CallPopulateTree(int numberOfLevels,
                                                         global_pendant_path_bool_dev_ptr,
                                                         global_paths_ptr,
                                                         global_set_inclusion_bool_ptr,
-                                                        global_reduced_set_inclusion_count_ptr);
+                                                        global_reduced_set_inclusion_count_ptr,
+                                                        global_active_vertex_boolean);
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
