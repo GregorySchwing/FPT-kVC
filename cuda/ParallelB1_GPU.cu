@@ -1951,6 +1951,9 @@ void CallPopulateTree(int numberOfLevels,
     int * global_paths_length;
     int * global_edges_left_to_cover_count;
     int * global_active_vertex_boolean;
+    int * global_active_leaf_indices;
+    int global_active_leaf_indices_count;
+
 
     int * global_column_buffer;
     int * global_vertex_buffer;
@@ -1997,6 +2000,10 @@ void CallPopulateTree(int numberOfLevels,
     // levels are induced, at least 1.
     cudaMalloc( (void**)&global_reduced_set_inclusion_count_ptr, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_active_vertex_boolean, treeSize * sizeof(int) );
+    // For now I won't anticipate the decisions of deeper levels
+    // Therefore, I can only work of at most deepest level size, (perhaps second to most deepest)
+    cudaMalloc( (void**)&global_active_leaf_indices, deepestLevelSize * sizeof(int) );
+
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
