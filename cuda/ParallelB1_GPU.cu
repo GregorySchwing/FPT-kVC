@@ -2038,11 +2038,13 @@ void CallPopulateTree(int numberOfLevels,
                                                                         numberOfRows,
                                                                         global_vertex_segments);
 
+    bool notFirstCall = false;
     for (int level = 0; level < numberOfLevels; ++level){
         levelUpperBound = CalculateLevelUpperBound(level);
         numberOfBlocksForOneThreadPerLeaf = ((levelUpperBound - levelOffset) + threadsPerBlock - 1) / threadsPerBlock;
         
-        if(false){
+        // For all but the first instance I need to sort...
+        if(notFirstCall){
             RestoreDataStructuresAfterRemovingChildrenVertices(levelUpperBound,
                                                                 levelOffset,
                                                                 threadsPerBlock,
@@ -2188,6 +2190,8 @@ void CallPopulateTree(int numberOfLevels,
             cudaMemcpy(global_degrees_dev_ptr, global_degrees_dev_ptr, numberOfRows*sizeof(int), cudaMemcpyDeviceToDevice);
             cudaMemcpy(global_remaining_vertices_dev_ptr, global_remaining_vertices_dev_ptr, numberOfRows*sizeof(int), cudaMemcpyDeviceToDevice);
         }
+
+        notFirstCall = true;
     }
 
     for (const auto& inner: pendantChildren) { // auto is std::vector<int>
