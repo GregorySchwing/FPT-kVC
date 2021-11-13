@@ -1503,46 +1503,50 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
 
     if (threadIdx.x == 0){
         global_reduced_set_inclusion_count_ptr[leafIndex] = pathsAndIndependentStatus[setReductionOffset];
-    }
-    // and the cardinality of the set.  If |I| = 0; we don't induce children
-    // Else we will induce (3*|I| children)
-    // Each path induces 3 leaves.
-    int leavesThatICanProcess = pathsAndIndependentStatus[setReductionOffset];
+    
+    // Test this first then work on parallelization
+    //}
+        // and the cardinality of the set.  If |I| = 0; we don't induce children
+        // Else we will induce (3*|I| children)
+        // Each path induces 3 leaves.
+        int leavesThatICanProcess = pathsAndIndependentStatus[setReductionOffset];
 
-    int levelDepth = CalculateNumberOfFullLevels(leavesThatICanProcess);
+        int levelDepth = CalculateNumberOfFullLevels(leavesThatICanProcess);
 
-    // int myLB = CalculateLevelOffset(levelDepth);
-    // int myUB = CalculateLevelUpperBound(levelDepth);
-    // int globalLevelOffset = CalculateLevelOffset(level + levelDepth);
+        // int myLB = CalculateLevelOffset(levelDepth);
+        // int myUB = CalculateLevelUpperBound(levelDepth);
+        // int globalLevelOffset = CalculateLevelOffset(level + levelDepth);
 
-    int lowestFullLevelSize = CalculateLevelSize(levelDepth);
-    int leftMostLeafIndexOfFullLevel = pow(3.0, levelDepth) * leafIndex;
-    // [my LB, myUB] correspond to a subset of the level of the global tree
-    //      0
-    //    0 x 0
-    // 000 yyy 000
-    // For example consider vertex 'x'.
-    // If it wanted to induce 1 level
-    // [my LB, myUB] would correspond to the global leaf indices of the 'y's
+        int lowestFullLevelSize = CalculateLevelSize(levelDepth);
+        int leftMostLeafIndexOfFullLevel = pow(3.0, levelDepth) * leafIndex;
+        // [my LB, myUB] correspond to a subset of the level of the global tree
+        //      0
+        //    0 x 0
+        // 000 yyy 000
+        // For example consider vertex 'x'.
+        // If it wanted to induce 1 level
+        // [my LB, myUB] would correspond to the global leaf indices of the 'y's
 
-    // This is for inducing the next full lowest level
-    // I need to double check the math here.
-    // for (int c = 1; c <= 3; ++c){
-    //    graphs[3*leafIndex + c]
-    int numberOfToSkipInFullLevel = CalculateNumberInIncompleteLevel(leavesThatICanProcess);
+        // This is for inducing the next full lowest level
+        // I need to double check the math here.
+        // for (int c = 1; c <= 3; ++c){
+        //    graphs[3*leafIndex + c]
+        int numberOfToSkipInFullLevel = CalculateNumberInIncompleteLevel(leavesThatICanProcess);
 
-    // To skip activating a node in the full level with an active child
-    // Ceiling Divide by 3
-    int numberWithActiveChildren = (numberOfToSkipInFullLevel + 3 - 1) / 3;
-    for (int child = numberWithActiveChildren + 1; child <= lowestFullLevelSize; ++child){
-        global_active_vertex_boolean[leftMostLeafIndexOfFullLevel + child] = 1;
-    }
+        // To skip activating a node in the full level with an active child
+        // Ceiling Divide by 3
+        int numberWithActiveChildren = (numberOfToSkipInFullLevel + 3 - 1) / 3;
+        for (int child = numberWithActiveChildren + 1; child <= lowestFullLevelSize; ++child){
+            global_active_vertex_boolean[leftMostLeafIndexOfFullLevel + child] = 1;
+        }
 
-    // Deactivates the members of the lowest full level
-    // which have children lower than them
-    int leftMostLeafIndexOfIncompleteLevel = pow(3.0, levelDepth+1) * leafIndex;
-    for (int child = 1; child <= numberWithActiveChildren * 3; ++child){
-        global_active_vertex_boolean[leftMostLeafIndexOfIncompleteLevel + child] = 1;
+        // Deactivates the members of the lowest full level
+        // which have children lower than them
+        int leftMostLeafIndexOfIncompleteLevel = pow(3.0, levelDepth+1) * leafIndex;
+        for (int child = 1; child <= numberWithActiveChildren * 3; ++child){
+            global_active_vertex_boolean[leftMostLeafIndexOfIncompleteLevel + child] = 1;
+        }
+
     }
 }
 
