@@ -66,7 +66,7 @@ __host__ __device__ long long CalculateDeepestLevelWidth(int deepestLevelSize){
     return summand;
 }
 
-__host__ __device__ int CalculateNumberOfFullLevels(int leavesThatICanGenerate){
+__host__ __device__ int CalculateNumberOfFullLevels(int leavesThatICanProcess){
     //
     // Level 0 : Size 1
     // Level 1 : Size 3
@@ -76,28 +76,69 @@ __host__ __device__ int CalculateNumberOfFullLevels(int leavesThatICanGenerate){
     // Level 5 : Size 243
     // Level 6 : Size 729
     // Level 7 : Size 2187
-    if (leavesThatICanGenerate / 1 == 0)
+    if (leavesThatICanProcess / 1 == 0)
         return 0;
-    else if (leavesThatICanGenerate / 4 == 0)
+    else if (leavesThatICanProcess / 4 == 0)
         return 1;
-    else if (leavesThatICanGenerate / 13 == 0)
+    else if (leavesThatICanProcess / 13 == 0)
         return 2;
-    else if (leavesThatICanGenerate / 40 == 0)
+    else if (leavesThatICanProcess / 40 == 0)
         return 3;
-    else if (leavesThatICanGenerate / 121 == 0)
+    else if (leavesThatICanProcess / 121 == 0)
         return 4;
-    else if (leavesThatICanGenerate / 364 == 0)
+    else if (leavesThatICanProcess / 364 == 0)
         return 5;
-    else if (leavesThatICanGenerate / 1093 == 0)
+    else if (leavesThatICanProcess / 1093 == 0)
         return 6;
+    else if (leavesThatICanProcess / 3280 == 0)
+        return 7;
     else
         return -1;
     // Current max number of threads per block is 2048
-    // Therefore, there shouldnt be a case where a vertex can generate
-    // greater than 3280 leaves
-    //else if (leavesThatICanGenerate / 3280 == 0)
-    //    return 7;
-    //else
+    // Each thread can find a path, therefore, 
+    // there shouldnt be a case where a vertex can generate
+    // greater than 2048*3 = 6144 leaves 
+    // The next number in the succession would be
+    // 9841 leaves.
+
+}
+
+
+__host__ __device__ int CalculateNumberInIncompleteLevel(int leavesThatICanProcess){
+    //
+    // Level 0 : Size 1
+    // Level 1 : Size 3
+    // Level 2 : Size 9
+    // Level 3 : Size 27
+    // Level 4 : Size 81
+    // Level 5 : Size 243
+    // Level 6 : Size 729
+    // Level 7 : Size 2187
+    if (leavesThatICanProcess / 1 == 0)
+        return 0;
+    else if (leavesThatICanProcess / 4 == 0)
+        return leavesThatICanProcess - 1;
+    else if (leavesThatICanProcess / 13 == 0)
+        return leavesThatICanProcess - 4;
+    else if (leavesThatICanProcess / 40 == 0)
+        return leavesThatICanProcess - 13;
+    else if (leavesThatICanProcess / 121 == 0)
+        return leavesThatICanProcess -40;
+    else if (leavesThatICanProcess / 364 == 0)
+        return leavesThatICanProcess - 121;
+    else if (leavesThatICanProcess / 1093 == 0)
+        return leavesThatICanProcess - 364;
+    else if (leavesThatICanProcess / 3280 == 0)
+        return leavesThatICanProcess - 1093;
+    else
+        return -1;
+    // Current max number of threads per block is 2048
+    // Each thread can find a path, therefore, 
+    // there shouldnt be a case where a vertex can generate
+    // greater than 2048*3 = 6144 leaves 
+    // The next number in the succession would be
+    // 9841 leaves.
+
 }
 
 __global__ void  PrintEdges(int levelOffset,
@@ -1459,22 +1500,23 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
         pathsAndIndependentStatus[setInclusionOffset + threadIdx.x]
     && !pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x] ? "is" :  "isn't");           
     
+
+    if (threadIdx.x == 0){
+        global_reduced_set_inclusion_count_ptr[leafIndex] = pathsAndIndependentStatus[setReductionOffset];
+    }
     // and the cardinality of the set.  If |I| = 0; we don't induce children
     // Else we will induce (3*|I| children)
-    int leavesThatICanInduce = pathsAndIndependentStatus[setReductionOffset];
-    if (threadIdx.x == 0){
-        global_reduced_set_inclusion_count_ptr[leafIndex] = leavesThatICanGenerate;
-    }
+    // Each path induces 3 leaves.
+    int leavesThatICanProcess = pathsAndIndependentStatus[setReductionOffset];
 
-
-    int levelDepth = CalculateNumberOfFullLevels(leavesThatICanGenerate);
+    int levelDepth = CalculateNumberOfFullLevels(leavesThatICanProcess);
 
     // int myLB = CalculateLevelOffset(levelDepth);
     // int myUB = CalculateLevelUpperBound(levelDepth);
     // int globalLevelOffset = CalculateLevelOffset(level + levelDepth);
 
-    int levelSize = CalculateLevelSize(levelDepth);
-    int leftMostLeafIndex = pow(3.0, levelDepth) * leafIndex;
+    int lowestFullLevelSize = CalculateLevelSize(levelDepth);
+    int leftMostLeafIndexOfFullLevel = pow(3.0, levelDepth) * leafIndex;
     // [my LB, myUB] correspond to a subset of the level of the global tree
     //      0
     //    0 x 0
@@ -1483,12 +1525,24 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
     // If it wanted to induce 1 level
     // [my LB, myUB] would correspond to the global leaf indices of the 'y's
 
-    // This is for inducing the next lowest level
+    // This is for inducing the next full lowest level
     // I need to double check the math here.
     // for (int c = 1; c <= 3; ++c){
     //    graphs[3*leafIndex + c]
-    for (int child = 1; child <= levelSize; ++child){
-        global_active_vertex_boolean[leftMostLeafIndex + child] = 1;
+    int numberOfToSkipInFullLevel = CalculateNumberInIncompleteLevel(leavesThatICanProcess);
+
+    // To skip activating a node in the full level with an active child
+    // Ceiling Divide by 3
+    int numberWithActiveChildren = (numberOfToSkipInFullLevel + 3 - 1) / 3;
+    for (int child = numberWithActiveChildren + 1; child <= lowestFullLevelSize; ++child){
+        global_active_vertex_boolean[leftMostLeafIndexOfFullLevel + child] = 1;
+    }
+
+    // Deactivates the members of the lowest full level
+    // which have children lower than them
+    int leftMostLeafIndexOfIncompleteLevel = pow(3.0, levelDepth+1) * leafIndex;
+    for (int child = 1; child <= numberWithActiveChildren * 3; ++child){
+        global_active_vertex_boolean[leftMostLeafIndexOfIncompleteLevel + child] = 1;
     }
 }
 
