@@ -2238,7 +2238,7 @@ void CopyGraphToDevice( Graph & g,
                         int * global_edges_left_to_cover_count,
                         int * global_remaining_vertices_dev_ptr,
                         int * global_remaining_vertices_size_dev_ptr,
-                        int verticesRemainingInGraph,,
+                        int verticesRemainingInGraph,
                         int * global_active_leaf_indices){
 
     int * new_degrees_ptr = thrust::raw_pointer_cast(g.GetNewDegRef().data());
