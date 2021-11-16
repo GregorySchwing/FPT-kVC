@@ -66,7 +66,7 @@ if (CMAKE_CUDA_COMPILER)
     include(${PROJECT_SOURCE_DIR}/CMake/GPU.cmake)
 endif()
 
-include_directories(simpleParallel)
+#include_directories(simpleParallel)
 include_directories(test/src)
 
 #Optional CMake Argument
