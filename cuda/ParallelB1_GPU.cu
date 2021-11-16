@@ -1510,14 +1510,18 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
         // Else we will induce (3*|I| children)
         // Each path induces 3 leaves.
         int leavesThatICanProcess = pathsAndIndependentStatus[setReductionOffset];
+        printf("Block ID %d thread  %d %s can process %d leaves\n", blockIdx.x, threadIdx.x, leavesThatICanProcess);
 
         int levelDepth = CalculateNumberOfFullLevels(leavesThatICanProcess);
+        printf("Block ID %d thread  %d %s can process %d full levels\n", blockIdx.x, threadIdx.x, levelDepth);
 
         // int myLB = CalculateLevelOffset(levelDepth);
         // int myUB = CalculateLevelUpperBound(levelDepth);
         // int globalLevelOffset = CalculateLevelOffset(level + levelDepth);
 
         int lowestFullLevelSize = CalculateLevelSize(levelDepth);
+        printf("Block ID %d thread  %d %s can process %d leaves in the lowers full levely\n", blockIdx.x, threadIdx.x, lowestFullLevelSize);
+
         int leftMostLeafIndexOfFullLevel = pow(3.0, levelDepth) * leafIndex;
         // [my LB, myUB] correspond to a subset of the level of the global tree
         //      0
