@@ -1585,7 +1585,7 @@ __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
         }
         degreeZeroVertex[threadIdx.x] = (0 == global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[degreesOffset + vertex]]);
         if (blockIdx.x == 0){
-            printf("Vertex %d set degreeZeroVertex %d since degree is %d\n", vertex, degreeZeroVertex[threadIdx.x], global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[degreesOffset + vertex]]);
+            printf("Vertex %d set degreeZeroVertex %d since degree is %d\n", vertex, degreeZeroVertex[threadIdx.x], global_degrees_dev_ptr[:qdegreesOffset + global_remaining_vertices_dev_ptr[degreesOffset + vertex]]);
         }
         // Makes this entry INT_MAX if degree 0
         // Leaves unaltered if not degree 0
@@ -2180,6 +2180,7 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
+        std::cout << "TREE" << std::endl;
         for (int level = 0; level < numberOfLevels; ++level){
             int levelOffsetForPrinting = CalculateLevelOffset(level);
             int levelUpperBoundForPrinting = CalculateLevelUpperBound(level);
