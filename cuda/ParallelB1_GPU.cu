@@ -671,7 +671,6 @@ __global__ void CalculateNewRowOffsets( int numberOfRows,
                                         int * global_degrees_dev_ptr){
     int threadID = threadIdx.x + blockDim.x * blockIdx.x;
     int leafIndex = levelOffset + threadID;
-    if (leafIndex >= levelUpperBound) return;
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
     int degreesOffset = leafIndex * numberOfRows;
 
@@ -679,6 +678,7 @@ __global__ void CalculateNewRowOffsets( int numberOfRows,
     printf("leafIndex %d, degreesOffset = %d\n", leafIndex, degreesOffset);
     printf("leafIndex %d, rowOffsOffset = %d\n", leafIndex, rowOffsOffset);
     printf("leafIndex %d, new_row_offsets_dev[%d] = %d\n", leafIndex, i, global_row_offsets_dev_ptr[rowOffsOffset]);
+    if (leafIndex >= levelUpperBound) return;
 
     global_row_offsets_dev_ptr[rowOffsOffset] = i;
     for (i = 1; i <= numberOfRows; ++i)
