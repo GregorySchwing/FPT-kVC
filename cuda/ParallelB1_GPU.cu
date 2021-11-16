@@ -2298,7 +2298,7 @@ void CopyGraphToDevice( Graph & g,
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     std::cout << "Activate root of tree" << std::endl;
-    cudaMemSet(global_active_leaf_indices, 1, 1*sizeof(int));
+    cudaMemset(global_active_leaf_indices, 1, 1*sizeof(int));
     std::cout << "Activated root of tree" << std::endl;
 
     cudaDeviceSynchronize();
