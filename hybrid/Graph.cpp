@@ -292,7 +292,7 @@ void Graph::SetEdgesOfSSymParallel(thrust::host_vector<int> & S,
     }
 
     // Set out-edges
-    #ifdef _OPENMP
+    #if 0
     #pragma omp parallel for default(none) shared(row_offsets_ref, \
     column_indices_ref, values, S) private (v)
     #endif
@@ -305,7 +305,7 @@ void Graph::SetEdgesOfSSymParallel(thrust::host_vector<int> & S,
     }
 
     // Set in-edges
-    #ifdef _OPENMP
+    #if 0
     #pragma omp parallel for default(none) shared(row_offsets_ref, \
     column_indices_ref, values, S) private (low, v, intraRowOffset)
     #endif
