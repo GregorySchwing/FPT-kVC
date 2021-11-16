@@ -1585,7 +1585,7 @@ __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
         }
         degreeZeroVertex[threadIdx.x] = (0 == global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[degreesOffset + vertex]]);
         if (blockIdx.x == 0){
-            printf("Vertex %d set degreeZeroVertex %d since degree is %d\n", vertex, degreeZeroVertex[threadIdx.x], global_remaining_vertices_dev_ptr[degreesOffset + vertex]);
+            printf("Vertex %d set degreeZeroVertex %d since degree is %d\n", vertex, degreeZeroVertex[threadIdx.x], global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[degreesOffset + vertex]]);
         }
         // Makes this entry INT_MAX if degree 0
         // Leaves unaltered if not degree 0
