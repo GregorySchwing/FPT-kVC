@@ -2031,7 +2031,7 @@ void CallPopulateTree(int numberOfLevels,
 
     int * nonpendantReducedCount = new int[deepestLevelSize];
 
-
+    int * activeFlags = new int[treeSize];
 
     // Create Segment Offsets for RemainingVertices
     SetVerticesRemaingSegements<<<deepestLevelSize+1,threadsPerBlock>>>(deepestLevelSize,
@@ -2175,6 +2175,20 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
+        cudaMemcpy(activeFlags, global_active_vertex_boolean, treeSize*sizeof(int), cudaMemcpyDeviceToHost);
+
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+
+        for (int level = 0; level < numberOfLevels; ++level){
+            int levelOffsetForPrinting = CalculateLevelOffset(level);
+            int levelUpperBoundForPrinting = CalculateLevelUpperBound(level);
+            for (int i = levelOffsetForPrinting; i < levelUpperBoundForPrinting; ++i)
+                std::cout << activeFlags[i];
+            std::cout << std::endl;
+        }
+
+        /*
         // We need the number of children for each leaf to induce.
         cudaMemcpy(nonpendantReducedCount, global_reduced_set_inclusion_count_ptr, (levelUpperBound - levelOffset)*sizeof(int), cudaMemcpyDeviceToHost);
 
@@ -2192,6 +2206,7 @@ void CallPopulateTree(int numberOfLevels,
         }
 
         notFirstCall = true;
+        */
     }
 
     for (const auto& inner: pendantChildren) { // auto is std::vector<int>
