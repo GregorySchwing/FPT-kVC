@@ -292,25 +292,23 @@ void Graph::SetEdgesOfSSymParallel(thrust::host_vector<int> & S,
     }
 
     // Set out-edges
-    #if 0
     #pragma omp parallel for default(none) shared(row_offsets_ref, \
     column_indices_ref, values, S) private (v)
-    #endif
-    for (auto u : S)
+    for (int sI = 0; sI < S.size(); ++sI)
     {
-        for (int i = row_offsets_ref[u]; i < row_offsets_ref[u+1]; ++i){
+        int u = S[sI];
+        for (int i = row_offsets_ref[S[u]]; i < row_offsets_ref[u+1]; ++i){
             v = column_indices_ref[i];
             values[i] = 0;
         }
     }
 
     // Set in-edges
-    #if 0
     #pragma omp parallel for default(none) shared(row_offsets_ref, \
     column_indices_ref, values, S) private (low, v, intraRowOffset)
-    #endif
-    for (auto u : S)
+    for (int sI = 0; sI < S.size(); ++sI)
     {
+        int u = S[sI];
         for (int i = row_offsets_ref[u]; i < row_offsets_ref[u+1]; ++i){
             v = column_indices_ref[i];
             /* Break this into 2 independent for loops */
