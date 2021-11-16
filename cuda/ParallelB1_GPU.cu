@@ -1573,7 +1573,7 @@ __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
     //for (int iter = 0; iter < blockDim.x; iter += blockDim.x){
     //    degreeZeroVertex[threadIdx.x] = 0;
     //}
-    _//_syncthreads();
+    //_syncthreads();
     for (int vertex = threadIdx.x; vertex < numVertices; vertex += blockDim.x){
         numVerticesRemoved = 0;
         printf("threadIdx.x %d, blockIdx.x %d, Vertex %d loop\n", threadIdx.x, blockIdx.x, vertex);
