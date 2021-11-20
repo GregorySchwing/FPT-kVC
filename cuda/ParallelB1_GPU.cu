@@ -1383,6 +1383,8 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
             pathsAndIndependentStatus[neighborsWithAPendantOffset + row] = pathsAndIndependentStatus[setReductionOffset];
             // If it is neighbors (is) a pendant - false, it is not remaining; else - true
             pathsAndIndependentStatus[setRemainingOffset + row] = !pathsAndIndependentStatus[neighborsWithAPendantOffset + row];
+            printf("Block ID %d row %d %s remaining in V\n", blockIdx.x, row, 
+                pathsAndIndependentStatus[setRemainingOffset + row] ? "is" :  "isn't");
         }              
         __syncthreads();       
     }
