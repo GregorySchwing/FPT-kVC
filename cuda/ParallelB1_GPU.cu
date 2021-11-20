@@ -1359,12 +1359,11 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
     RNG::ctr_type r;
     r =  randomGPU_four(threadIdx.x, leafIndex, seed); 
     pathsAndIndependentStatus[randNumOffset + threadIdx.x] = r[0];
-    printf("Thread id % rand num %d", r[0]);
     __syncthreads();
      
     if (threadIdx.x == 0){
         for (int row = 0; row < blockDim.x; ++row){
-            printf("Block ID %d threadIdx.x %d rand num %lu \n", blockIdx.x, threadIdx.x, (unsigned long)pathsAndIndependentStatus[randNumOffset + row]);
+            printf("Block ID %d threadIdx.x %d rand num %d\n", blockIdx.x, row, pathsAndIndependentStatus[randNumOffset + row]);
         }
     }
     for (int row = 0; row < blockDim.x; ++row){
