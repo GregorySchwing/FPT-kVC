@@ -1497,6 +1497,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
             printf("Block ID %d cardinality of the V set is %d\n", blockIdx.x, cardinalityOfV);
         }
     }
+    // Everything works to this point :)
     
     // We only have use for the non-pendant members of I, 
     // since the pendant paths have been processed already
