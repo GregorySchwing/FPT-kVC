@@ -1388,6 +1388,16 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
         }              
         __syncthreads();       
     }
+    if (threadIdx.x == 0){
+        printf("Adj Mat\n");
+        for (int row = 0; row < blockDim.x; ++row){
+            for(int colIndex = 0; colIndex < blockDim.x; ++colIndex){
+                rowOffset = adjMatrixOffset + row*blockDim.x;
+                printf("%d ", pathsAndIndependentStatus[rowOffset + colIndex];
+            }
+            printf("\n");
+        }
+    }
     // S = {p | p is a set of length 4 of vertex indices in G}
     // An edge (u,v), where u ∈ S, v ∈ S, and u ∩ v ≠ ∅
     // At this point I = {∀p ∈ S | p is pendant}
@@ -1416,6 +1426,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
                 __syncthreads();
                 i /= 2;
             }
+            __syncthreads();
 
             // If there exists a remaining vertex that has a smaller number than me, 
             // this reduces is true, thus when we negate it, it has no effect when or'ed
