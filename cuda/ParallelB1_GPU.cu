@@ -1359,6 +1359,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
     RNG::ctr_type r;
     r =  randomGPU_four(threadIdx.x, leafIndex, seed); 
     pathsAndIndependentStatus[randNumOffset + threadIdx.x] = r[0];
+    printf("Thread id % rand num %d", r[0]);
     __syncthreads();
      
     if (threadIdx.x == 0){
