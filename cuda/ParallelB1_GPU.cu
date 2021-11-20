@@ -1440,8 +1440,10 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
             // this reduces is true, thus when we negate it, it has no effect when or'ed
             // else if it was false, then it didn't fail, is negated to true and includes 
             // this vertex.
+            // If this vertex was removed previously, we need to make sure it isn't added to I
+            // Hence,  && pathsAndIndependentStatus[setRemainingOffset + row];
             if (threadIdx.x == 0){
-                pathsAndIndependentStatus[setInclusionOffset + row] |= !pathsAndIndependentStatus[setReductionOffset];
+                pathsAndIndependentStatus[setInclusionOffset + row] |= !pathsAndIndependentStatus[setReductionOffset] && pathsAndIndependentStatus[setRemainingOffset + row];
             }    
             __syncthreads();
             if (threadIdx.x == 0){
