@@ -1358,7 +1358,12 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
     unsigned int counter = 0;
     double rand =  randomGPUDouble(counter, leafIndex, threadIdx.x); 
     pathsAndIndependentStatus[randNumOffset + threadIdx.x] = rand;
-
+    
+    if (threadIdx.x == 0){
+        for (int row = 0; row < blockDim.x; ++row){
+            printf("Block ID %d threadIdx.x %d rand num %d \n", blockIdx.x, threadIdx.x, pathsAndIndependentStatus[randNumOffset + row]);
+        }
+    }
     for (int row = 0; row < blockDim.x; ++row){
         rowOffset = adjMatrixOffset + row*blockDim.x;
         // Check if any of my neighbors are pendant paths.
