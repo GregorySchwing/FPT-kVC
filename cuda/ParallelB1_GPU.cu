@@ -1358,10 +1358,11 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
     unsigned int counter = 0;
     double rand =  randomGPUDouble(counter, leafIndex, threadIdx.x); 
     pathsAndIndependentStatus[randNumOffset + threadIdx.x] = rand;
-    
+    __syncthreads();
+     
     if (threadIdx.x == 0){
         for (int row = 0; row < blockDim.x; ++row){
-            printf("Block ID %d threadIdx.x %d rand num %d \n", blockIdx.x, threadIdx.x, pathsAndIndependentStatus[randNumOffset + row]);
+            printf("Block ID %d threadIdx.x %d rand num %f \n", blockIdx.x, threadIdx.x, pathsAndIndependentStatus[randNumOffset + row]);
         }
     }
     for (int row = 0; row < blockDim.x; ++row){
