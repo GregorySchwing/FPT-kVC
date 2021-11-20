@@ -1356,8 +1356,9 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
     // Corresponds to an array of random numbers between [0,1]
     // This way every thread has its own randGen, and no thread sync is neccessary.
     unsigned int counter = 0;
-    int rand =  randomGPU(counter, leafIndex, threadIdx.x); 
-    pathsAndIndependentStatus[randNumOffset + threadIdx.x] = rand;
+    RNG::ctr_type r;
+    r =  randomGPU_four(counter, leafIndex, threadIdx.x); 
+    pathsAndIndependentStatus[randNumOffset + threadIdx.x] = r[0];
     __syncthreads();
      
     if (threadIdx.x == 0){
