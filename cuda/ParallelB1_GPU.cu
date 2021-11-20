@@ -1424,7 +1424,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
                                                                         && pathsAndIndependentStatus[setRemainingOffset + threadIdx.x]
                                                                         && (pathsAndIndependentStatus[randNumOffset + threadIdx.x]
                                                                             < pathsAndIndependentStatus[randNumOffset + row]);
-            printf("Row %d thread %d included %d", row, threadIdx.x, pathsAndIndependentStatus[setReductionOffset + threadIdx.x]);
+            printf("Row %d thread %d included %d\n", row, threadIdx.x, pathsAndIndependentStatus[setReductionOffset + threadIdx.x]);
             int i = blockDim.x/2;
             __syncthreads();
             while (i != 0) {
