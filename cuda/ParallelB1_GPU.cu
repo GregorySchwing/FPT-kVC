@@ -1393,7 +1393,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
         for (int row = 0; row < blockDim.x; ++row){
             for(int colIndex = 0; colIndex < blockDim.x; ++colIndex){
                 rowOffset = adjMatrixOffset + row*blockDim.x;
-                printf("%d ", pathsAndIndependentStatus[rowOffset + colIndex];
+                printf("%d ", pathsAndIndependentStatus[rowOffset + colIndex]);
             }
             printf("\n");
         }
