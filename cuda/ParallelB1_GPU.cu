@@ -1436,10 +1436,10 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
                 pathsAndIndependentStatus[setInclusionOffset + row] |= !pathsAndIndependentStatus[setReductionOffset];
             }    
             __syncthreads();
-            //if (threadIdx.x == 0){
-            //    printf("Block ID %d row %d %s included in the I set\n", blockIdx.x, row, 
-            //        pathsAndIndependentStatus[setInclusionOffset + row] ? "is" :  "isn't");
-            //}
+            if (threadIdx.x == 0){
+                printf("Block ID %d row %d %s included in the I set\n", blockIdx.x, row, 
+                    pathsAndIndependentStatus[setInclusionOffset + row] ? "is" :  "isn't");
+            }
         }
 
         for (int row = 0; row < blockDim.x; ++row){
