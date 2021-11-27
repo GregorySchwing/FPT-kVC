@@ -51,8 +51,7 @@ CUDA_HOSTDEV long long CalculateSizeRequirement(int startingLevel,
                                                             int endingLevel);
 CUDA_HOSTDEV long long CalculateLevelOffset(int level);
 CUDA_HOSTDEV long long CalculateLevelUpperBound(int level);
-__host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int levelUpperBound,
-                                                                            int levelOffset,
+__host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerticesCount,
                                                                             int threadsPerBlock,
                                                                             int numberOfRows,
                                                                             int numberOfEdgesPerGraph,
@@ -68,8 +67,7 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int levelUpperB
 CUDA_HOSTDEV long long CalculateDeepestLevelWidth(int maxLevel);
 CUDA_HOSTDEV int CalculateNumberOfFullLevels(int leavesThatICanGenerate);
 
-__global__ void  PrintEdges(int levelOffset,
-                                    int levelUpperBound,
+__global__ void  PrintEdges(int activeVerticesCount,
                                     int numberOfRows,
                                     int numberOfEdgesPerGraph,
                                     int * global_columns_tree,
@@ -77,8 +75,7 @@ __global__ void  PrintEdges(int levelOffset,
                                     int * printAlt,
                                     int * printCurr);
 
-__global__ void  PrintVerts(int levelOffset,
-                                    int levelUpperBound,
+__global__ void  PrintVerts(int activeVerticesCount,
                                     int numberOfRows,
                                     int * global_verts_tree,
                                     int * global_vertex_buffer,
@@ -168,7 +165,7 @@ __global__ void CreateSubsetOfRemainingVerticesLevelWise(int levelOffset,
                                                 int * global_degrees_dev_ptr,
                                                 int * global_vertices_remaining,
                                                 int * global_vertices_remaining_count);
-
+/*
 __global__ void DFSLevelWise(int levelOffset,
                             int levelUpperBound,
                             int numberOfRows,
@@ -184,7 +181,7 @@ __global__ void DFSLevelWise(int levelOffset,
                             int * global_paths_length,
                             int * global_outgoing_edge_vertices,
                             int * global_outgoing_edge_vertices_count);
-
+*/
 __global__ void GetRandomVertex(int levelOffset,
                                 int levelUpperBound,
                                 int numberOfRows,
@@ -199,24 +196,24 @@ __global__ void GetRandomVertexSharedMem(int levelOffset,
                                 int * global_remaining_vertices_size_dev_ptr,
                                 int * global_paths_ptr);
 
-__global__ void ParallelDFSRandom(int levelOffset,
-                            int levelUpperBound,
-                            int numberOfRows,
+__global__ void ParallelDFSRandom(int numberOfRows,
                             int numberOfEdgesPerGraph,
+                            int * global_active_leaf_indices,
                             int * global_row_offsets_dev_ptr,
                             int * global_columns_dev_ptr,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
                             int * global_degrees_dev_ptr,
                             int * global_paths_ptr,
+                            int * global_paths_indices_ptr,
                             int * global_nonpendant_path_bool_dev_ptr,
                             int * global_nonpendant_path_reduced_bool_dev_ptr,
                             int * global_nonpendant_child_dev_ptr);
 
-__global__ void ParallelProcessPendantEdges(int levelOffset,
-                            int levelUpperBound,
+__global__ void ParallelProcessPendantEdges(
                             int numberOfRows,
                             int numberOfEdgesPerGraph,
+                            int * global_active_leaf_indices,
                             int * global_row_offsets_dev_ptr,
                             int * global_columns_dev_ptr,
                             int * global_values_dev_ptr,
@@ -225,10 +222,9 @@ __global__ void ParallelProcessPendantEdges(int levelOffset,
                             int * global_pendant_child_dev_ptr);
 
 __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
-                            int levelOffset,
-                            int levelUpperBound,
                             int numberOfRows,
                             int numberOfEdgesPerGraph,
+                            int * global_active_leaf_indices,
                             int * global_row_offsets_dev_ptr,
                             int * global_columns_dev_ptr,
                             int * global_values_dev_ptr,
@@ -237,20 +233,20 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
                             int * global_set_inclusion_bool_ptr,
                             int * global_reduced_set_inclusion_count_ptr);
 
-__global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
-                            int levelUpperBound,
+__global__ void ParallelProcessDegreeZeroVertices(
                             int numberOfRows,
+                            int * global_active_leaf_indices,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
                             int * global_degrees_dev_ptr);
 
-__global__ void ParallelCreateLevelAwareRowOffsets(int levelOffset,
-                            int levelUpperBound,
+/*
+__global__ void ParallelCreateLevelAwareRowOffsets(int activeVerticesCount,
                             int numberOfRows,
                             int numberOfEdgesPerGraph,
                             int * global_row_offsets_dev_ptr,
                             int * global_offsets_buffer);
-
+*/
 __global__ void SetVerticesRemaingSegements(int deepestLevelSize,
                                             int numberOfRows,
                                             int * global_vertex_segments);
