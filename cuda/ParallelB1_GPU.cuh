@@ -251,6 +251,9 @@ __global__ void SetVerticesRemaingSegements(int deepestLevelSize,
                                             int numberOfRows,
                                             int * global_vertex_segments);
 
+__global__ void SetPathOffsets(int sDLSPlus1,
+                               int * global_set_path_offsets);
+
 __global__ void ParallelQuicksortWithDNF(int levelOffset,
                             int levelUpperBound,
                             int numberOfRows,
