@@ -313,6 +313,8 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int levelUpperB
     int num_items = (levelUpperBound-levelOffset)*numberOfEdgesPerGraph;
     int num_segments = (levelUpperBound-levelOffset)*(numberOfRows+1);
 
+    // Since vertices in a level follow each other, we reuse gob iterator
+    // When we have active vertices from different levels, we will need 2 iterators
     cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
         num_items, num_segments, global_offsets_buffer, global_offsets_buffer + 1);
 
@@ -1544,11 +1546,8 @@ __global__ void ParallelAssignMISToNodes(int * global_active_leaf_indices,
     
     int leafIndex = global_active_leaf_indices[blockIdx.x];
 
-// Test this first then work on parallelization
-//}
-    // and the cardinality of the set.  If |I| = 0; we don't induce children
-    // Else we will induce (3*|I| children)
-    // Each path induces 3 leaves.
+    // |I| - The cardinality of the set.  If |I| = 0; we don't induce children
+    // Else we will induce (3*|I| children), Each path induces 3 leaves.
     int leavesThatICanProcess = global_reduced_set_inclusion_count_ptr[leafIndex];
     printf("Block ID %d thread  %d %s can process %d leaves\n", blockIdx.x, threadIdx.x, leavesThatICanProcess);
 
@@ -1663,6 +1662,34 @@ __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
     }
 }
 
+__global__ void ParallelActiveVertexPathOffsets(int * global_active_leaf_indices,
+                                                int global_active_leaf_indices_count,
+                                                ){
+
+    int leafIndex = levelOffset + blockIdx.x;
+    if (leafIndex >= levelUpperBound)
+        return;    
+
+    printf("LevelAware RowOffs blockIdx %d is running\n", blockIdx.x);
+    printf("LevelAware RowOffs leaf index %d is running\n", leafIndex);
+
+    int rowOffsOffset = leafIndex * (numberOfRows + 1);
+    int bufferRowOffsOffset = blockIdx.x * (numberOfRows + 1);
+
+    for (int iter = threadIdx.x; iter < numberOfRows+1; iter += blockDim.x){
+        global_offsets_buffer[bufferRowOffsOffset + iter] = (blockIdx.x * numberOfEdgesPerGraph) + global_row_offsets_dev_ptr[rowOffsOffset + iter];
+        printf("global_offsets_buffer[bufferRowOffsOffset + %d] = %d + %d\n", iter, (blockIdx.x * numberOfEdgesPerGraph), global_row_offsets_dev_ptr[rowOffsOffset + iter]);
+
+    }
+
+    if(threadIdx.x == 0){
+        printf("LevelAware RowOffs \n");
+        for (int i = 0; i < numberOfRows+1; ++i){
+            printf("global_offsets_buffer[%d] = %d  \n",i, global_offsets_buffer[bufferRowOffsOffset+i]);
+        }
+        printf("\n");
+    }
+}
 
 __global__ void ParallelCreateLevelAwareRowOffsets(int levelOffset,
                             int levelUpperBound,
@@ -1984,7 +2011,7 @@ void CallPopulateTree(int numberOfLevels,
     int * global_columns_dev_ptr;
     int * global_values_dev_ptr;
     int * global_degrees_dev_ptr; 
-    int * global_paths_ptr; 
+    int * global_paths_ptr, * global_paths_ptr_buffer; 
     int * global_remaining_vertices_dev_ptr;
     int * global_remaining_vertices_size_dev_ptr;
     int * global_pendant_path_bool_dev_ptr;
@@ -2017,7 +2044,10 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_columns_dev_ptr, (numberOfEdgesPerGraph*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_values_dev_ptr, (numberOfEdgesPerGraph*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows*treeSize) * sizeof(int) );
-    cudaMalloc( (void**)&global_paths_ptr, (max_dfs_depth*treeSize*threadsPerBlock) * sizeof(int) );
+    cudaMalloc( (void**)&global_paths_ptr, (max_dfs_depth*secondDeepestLevelSize*threadsPerBlock) * sizeof(int) );
+    
+    // For sorting the threadsPerBlock paths by set inclusion in the MIS
+    cudaMalloc( (void**)&global_paths_ptr_buffer, (max_dfs_depth*secondDeepestLevelSize*threadsPerBlock) * sizeof(int) );
 
 
     cudaMalloc( (void**)&global_remaining_vertices_dev_ptr, (numberOfRows*treeSize) * sizeof(int) );
@@ -2238,6 +2268,13 @@ void CallPopulateTree(int numberOfLevels,
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
+
+        // Determine temporary device storage requirements
+        int     *global_paths_buffer = NULL;
+        // Determine temporary device storage requirements
+        int     *global_active_leaf_indices_buffer = NULL;
+
+
     }
 /*
         cudaMemcpy(activeFlags, global_active_vertices, treeSize*sizeof(int), cudaMemcpyDeviceToHost);
