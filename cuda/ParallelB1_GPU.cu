@@ -104,6 +104,15 @@ __host__ __device__ int CalculateNumberOfFullLevels(int leavesThatICanProcess){
 }
 
 
+// This calculates the width of the deepest level possibly generated
+// based off the amount of threads per block.
+__host__ int CalculateAmountOfMemoryToAllocatePerActiveLeaf(){
+    int maximumAmountOfNewActiveLeavesPerLeaf = pow(ceil(log(threadsPerBlock)/log(3.0)), 3.0);
+    return maximumAmountOfNewActiveLeavesPerLeaf;
+}
+
+
+
 __host__ __device__ int CalculateNumberInIncompleteLevel(int leavesThatICanProcess){
     //
     // Level 0 : Size 1
@@ -1253,8 +1262,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
                             int * global_pendant_path_bool_dev_ptr,
                             int * global_paths_ptr,
                             int * global_set_inclusion_bool_ptr,
-                            int * global_reduced_set_inclusion_count_ptr,
-                            int * global_active_vertex_boolean){
+                            int * global_reduced_set_inclusion_count_ptr){
     if (threadIdx.x == 0){
         printf("Block ID %d Started ParallelIdentifyVertexDisjointNonPendantPaths\n", blockIdx.x);
         printf("\n");
@@ -1522,60 +1530,68 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
 
     printf("Block ID %d row %d %s included in the I set\n", blockIdx.x, threadIdx.x, 
         pathsAndIndependentStatus[setInclusionOffset + threadIdx.x]
-    && !pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x] ? "is" :  "isn't");           
-    
+    && !pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x] ? "is" :  "isn't"); 
 
+    // Record how many sets are in the MIS
     if (threadIdx.x == 0){
         global_reduced_set_inclusion_count_ptr[leafIndex] = pathsAndIndependentStatus[setReductionOffset];
+    }          
+}
+
+__global__ void ParallelAssignMISToNodes(int * global_active_leaf_indices,
+                                        int * global_set_inclusion_bool_ptr,
+                                        int * global_reduced_set_inclusion_count_ptr){
     
-    // Test this first then work on parallelization
-    //}
-        // and the cardinality of the set.  If |I| = 0; we don't induce children
-        // Else we will induce (3*|I| children)
-        // Each path induces 3 leaves.
-        int leavesThatICanProcess = pathsAndIndependentStatus[setReductionOffset];
-        printf("Block ID %d thread  %d %s can process %d leaves\n", blockIdx.x, threadIdx.x, leavesThatICanProcess);
+    int leafIndex = global_active_leaf_indices[blockIdx.x];
 
-        int levelDepth = CalculateNumberOfFullLevels(leavesThatICanProcess);
-        printf("Block ID %d thread  %d %s can process %d full levels\n", blockIdx.x, threadIdx.x, levelDepth);
+// Test this first then work on parallelization
+//}
+    // and the cardinality of the set.  If |I| = 0; we don't induce children
+    // Else we will induce (3*|I| children)
+    // Each path induces 3 leaves.
+    int leavesThatICanProcess = global_reduced_set_inclusion_count_ptr[leafIndex];
+    printf("Block ID %d thread  %d %s can process %d leaves\n", blockIdx.x, threadIdx.x, leavesThatICanProcess);
 
-        // int myLB = CalculateLevelOffset(levelDepth);
-        // int myUB = CalculateLevelUpperBound(levelDepth);
-        // int globalLevelOffset = CalculateLevelOffset(level + levelDepth);
+    int levelDepth = CalculateNumberOfFullLevels(leavesThatICanProcess);
+    printf("Block ID %d thread  %d %s can process %d full levels\n", blockIdx.x, threadIdx.x, levelDepth);
 
-        int lowestFullLevelSize = CalculateLevelSize(levelDepth);
-        printf("Block ID %d thread  %d %s can process %d leaves in the lowers full levely\n", blockIdx.x, threadIdx.x, lowestFullLevelSize);
+    // int myLB = CalculateLevelOffset(levelDepth);
+    // int myUB = CalculateLevelUpperBound(levelDepth);
+    // int globalLevelOffset = CalculateLevelOffset(level + levelDepth);
 
-        int leftMostLeafIndexOfFullLevel = pow(3.0, levelDepth) * leafIndex;
-        // [my LB, myUB] correspond to a subset of the level of the global tree
-        //      0
-        //    0 x 0
-        // 000 yyy 000
-        // For example consider vertex 'x'.
-        // If it wanted to induce 1 level
-        // [my LB, myUB] would correspond to the global leaf indices of the 'y's
+    int lowestFullLevelSize = CalculateLevelSize(levelDepth);
+    printf("Block ID %d thread  %d %s can process %d leaves in the lowers full levely\n", blockIdx.x, threadIdx.x, lowestFullLevelSize);
 
-        // This is for inducing the next full lowest level
-        // I need to double check the math here.
-        // for (int c = 1; c <= 3; ++c){
-        //    graphs[3*leafIndex + c]
-        int numberOfToSkipInFullLevel = CalculateNumberInIncompleteLevel(leavesThatICanProcess);
+    int leftMostLeafIndexOfFullLevel = pow(3.0, levelDepth) * leafIndex;
+    // [my LB, myUB] correspond to a subset of the level of the global tree
+    //      0
+    //    0 x 0
+    // 000 yyy 000
+    // For example consider vertex 'x'.
+    // If it wanted to induce 1 level
+    // [my LB, myUB] would correspond to the global leaf indices of the 'y's
 
-        // To skip activating a node in the full level with an active child
-        // Ceiling Divide by 3
-        int numberWithActiveChildren = (numberOfToSkipInFullLevel + 3 - 1) / 3;
-        for (int child = numberWithActiveChildren + 1; child <= lowestFullLevelSize; ++child){
-            global_active_vertex_boolean[leftMostLeafIndexOfFullLevel + child] = 1;
-        }
+    // This is for inducing the next full lowest level
+    // I need to double check the math here.
+    // for (int c = 1; c <= 3; ++c){
+    //    graphs[3*leafIndex + c]
+    /*
+    int numberOfToSkipInFullLevel = CalculateNumberInIncompleteLevel(leavesThatICanProcess);
 
-        // Deactivates the members of the lowest full level
-        // which have children lower than them
-        int leftMostLeafIndexOfIncompleteLevel = pow(3.0, levelDepth+1) * leafIndex;
-        for (int child = 1; child <= numberWithActiveChildren * 3; ++child){
-            global_active_vertex_boolean[leftMostLeafIndexOfIncompleteLevel + child] = 1;
-        }
-
+    // To skip activating a node in the full level with an active child
+    // Ceiling Divide by 3
+    int numberWithActiveChildren = (numberOfToSkipInFullLevel + 3 - 1) / 3;
+    for (int child = numberWithActiveChildren + 1; child <= lowestFullLevelSize; ++child){
+        global_active_vertices[leftMostLeafIndexOfFullLevel + child] = 1;
     }
+
+    // Deactivates the members of the lowest full level
+    // which have children lower than them
+    int leftMostLeafIndexOfIncompleteLevel = pow(3.0, levelDepth+1) * leafIndex;
+    for (int child = 1; child <= numberWithActiveChildren * 3; ++child){
+        global_active_vertices[leftMostLeafIndexOfIncompleteLevel + child] = 1;
+    }
+    */
 }
 
 __global__ void ParallelProcessDegreeZeroVertices(int levelOffset,
@@ -1931,6 +1947,7 @@ void CallPopulateTree(int numberOfLevels,
     //int treeSize = 200000;
     int counters = 2;
     numberOfLevels = 2;
+    int secondDeepestLevelSize = CalculateDeepestLevelWidth(numberOfLevels-2);;
     int deepestLevelSize = CalculateDeepestLevelWidth(numberOfLevels-1);;
     long long treeSize = CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
     long long bufferSize = deepestLevelSize;
@@ -1977,10 +1994,12 @@ void CallPopulateTree(int numberOfLevels,
     int * global_reduced_set_inclusion_count_ptr;
     int * global_paths_length;
     int * global_edges_left_to_cover_count;
-    int * global_active_vertex_boolean;
+    int * global_active_vertices;
     int * global_active_leaf_indices;
-    int global_active_leaf_indices_count;
+    int * global_memcpy_boolean;
+    int * global_last_full_parent_vertex;
 
+    int global_active_leaf_indices_count;
 
     int * global_column_buffer;
     int * global_vertex_buffer;
@@ -1992,12 +2011,14 @@ void CallPopulateTree(int numberOfLevels,
     int numberOfRows = g.GetNumberOfRows();
     int numberOfEdgesPerGraph = g.GetEdgesLeftToCover(); 
     int verticesRemainingInGraph = g.GetRemainingVertices().size(); 
+    int activeLeavesPerNode = CalculateAmountOfMemoryToAllocatePerActiveLeaf();
 
     cudaMalloc( (void**)&global_row_offsets_dev_ptr, ((numberOfRows+1)*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_columns_dev_ptr, (numberOfEdgesPerGraph*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_values_dev_ptr, (numberOfEdgesPerGraph*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows*treeSize) * sizeof(int) );
     cudaMalloc( (void**)&global_paths_ptr, (max_dfs_depth*treeSize*threadsPerBlock) * sizeof(int) );
+
 
     cudaMalloc( (void**)&global_remaining_vertices_dev_ptr, (numberOfRows*treeSize) * sizeof(int) );
     cudaMemset(global_remaining_vertices_dev_ptr, INT_MAX, (numberOfRows*treeSize) * sizeof(int));
@@ -2026,10 +2047,26 @@ void CallPopulateTree(int numberOfLevels,
     // If a vertex is not skipped and it has n > 0 paths produced, the largest number of
     // levels are induced, at least 1.
     cudaMalloc( (void**)&global_reduced_set_inclusion_count_ptr, treeSize * sizeof(int) );
-    cudaMalloc( (void**)&global_active_vertex_boolean, treeSize * sizeof(int) );
     // For now I won't anticipate the decisions of deeper levels
-    // Therefore, I can only work of at most deepest level size, (perhaps second to most deepest)
-    cudaMalloc( (void**)&global_active_leaf_indices, deepestLevelSize * sizeof(int) );
+    // Therefore, I can only work on a range
+    // 0 < x < deepest level size vertices
+    // x <= second deepest level size vertices
+    // The minimum number of active leaves which produce a full tree is floor(log(threadsPerBlock)/log(3.0))
+    // but we have to assume the worst, that is the entire second deepest level is full
+    // and the last level is filled by inducing 3 children per leaf node
+
+    cudaMalloc( (void**)&global_active_leaf_indices, activeLeavesPerNode*secondDeepestLevelSize*sizeof(int) );
+    // If we want to use a serial list creation of active vertices
+    //cudaMalloc( (void**)&global_active_leaf_indices, deepestLevelSize*sizeof(int) );
+
+    // If the cols, vals, remaining vertices, need to be memcpied
+    // When inducing a child, is true
+    // If a DFS only produced pendants and another round of DFS take place
+    // it is false 
+    cudaMalloc( (void**)&global_memcpy_boolean, secondDeepestLevelSize * sizeof(int) );
+    // Since we skip internal nodes, each active leaf needs to know the parent
+    // from which cols, vals, remaining vertices are to be copied
+    cudaMalloc( (void**)&global_last_full_parent_vertex, secondDeepestLevelSize * sizeof(int) );
 
 
     cudaDeviceSynchronize();
@@ -2197,13 +2234,13 @@ void CallPopulateTree(int numberOfLevels,
                                                         global_pendant_path_bool_dev_ptr,
                                                         global_paths_ptr,
                                                         global_set_inclusion_bool_ptr,
-                                                        global_reduced_set_inclusion_count_ptr,
-                                                        global_active_vertex_boolean);
+                                                        global_reduced_set_inclusion_count_ptr);
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
-
-        cudaMemcpy(activeFlags, global_active_vertex_boolean, treeSize*sizeof(int), cudaMemcpyDeviceToHost);
+    }
+/*
+        cudaMemcpy(activeFlags, global_active_vertices, treeSize*sizeof(int), cudaMemcpyDeviceToHost);
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -2216,6 +2253,7 @@ void CallPopulateTree(int numberOfLevels,
                 std::cout << activeFlags[i];
             std::cout << std::endl;
         }
+*/
 
         /*
         // We need the number of children for each leaf to induce.
@@ -2236,7 +2274,7 @@ void CallPopulateTree(int numberOfLevels,
 
         notFirstCall = true;
         */
-    }
+    
 
     for (const auto& inner: pendantChildren) { // auto is std::vector<int>
         for (auto e: inner) { // auto is int
