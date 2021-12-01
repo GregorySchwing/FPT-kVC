@@ -1608,8 +1608,12 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
     
     int leafIndex = blockIdx.x;
     printf("Block ID %d thread  %d %s can process leafIndex %d\n", blockIdx.x, threadIdx.x, leafIndex);
+    __syncthreads();
+
     int leafValue = global_active_leaf_indices[leafIndex];
     printf("Block ID %d thread  %d %s can process leafValue %d\n", blockIdx.x, threadIdx.x, leafValue);
+        __syncthreads();
+
     int setPathOffset = leafIndex * 32;
     int globalPathOffset = setPathOffset*4;
     int vertIncludedOffset;
