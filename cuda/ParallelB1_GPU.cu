@@ -1605,13 +1605,13 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
                                         int * global_reduced_set_inclusion_count_ptr,
                                         int * global_paths_ptr,
                                         int * global_vertices_included_dev_ptr){
-    
+    printf("Block ID %d thread %d entered ParallelAssignMISToNodesBreadthFirst\n", blockIdx.x, threadIdx.x);
     int leafIndex = blockIdx.x;
-    printf("Block ID %d thread  %d %s can process leafIndex %d\n", blockIdx.x, threadIdx.x, leafIndex);
+    printf("Block ID %d thread %d can process leafIndex %d\n", blockIdx.x, threadIdx.x, leafIndex);
     __syncthreads();
 
     int leafValue = global_active_leaf_indices[leafIndex];
-    printf("Block ID %d thread  %d %s can process leafValue %d\n", blockIdx.x, threadIdx.x, leafValue);
+    printf("Block ID %d thread %d can process leafValue %d\n", blockIdx.x, threadIdx.x, leafValue);
         __syncthreads();
 
     int setPathOffset = leafIndex * 32;
@@ -1620,7 +1620,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
     // |I| - The cardinality of the set.  If |I| = 0; we don't induce children
     // Else we will induce (3*|I| children), Each path induces 3 leaves.
     int leavesThatICanProcess = global_reduced_set_inclusion_count_ptr[leafIndex];
-    printf("Block ID %d thread  %d %s can process %d leaves\n", blockIdx.x, threadIdx.x, leavesThatICanProcess);
+    printf("Block ID %d thread %d can process %d leaves\n", blockIdx.x, threadIdx.x, leavesThatICanProcess);
     __syncthreads();
     // This pattern uses adjacent threads to write aligned memory, 
     // but thread indexing if math intensive
