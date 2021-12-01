@@ -2469,7 +2469,8 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        ParallelAssignMISToNodesBreadthFirst<<<>>>>(global_active_leaf_indices,
+        ParallelAssignMISToNodesBreadthFirst<<<activeVerticesCount,
+                                               threadsPerBlock>>>(global_active_leaf_indices,
                                         paths_indices.Current(),
                                         global_reduced_set_inclusion_count_ptr,
                                         global_paths_ptr,
