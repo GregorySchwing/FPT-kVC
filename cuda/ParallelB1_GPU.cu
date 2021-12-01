@@ -1630,22 +1630,22 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
     // Functor: (indexMod6 % 2 == 1) * (indexMod6 != 1) +
     //          (indexMod6 % 2 == 0) * (2 + (index == 4))
 
-    int indexMod6, pathChildIndex, pathIndex, pathValue, leftMostChild;
+    int indexMod6, pathChildIndex, pathIndex, pathValue, leftMostChildOfLevel, dispFromLeft, levelDepth;
     for(int index = threadIdx.x; index < leavesThatICanProcess*6; index += blockDim.x){
         pathIndex = index / 6;
         pathValue = global_set_paths_indices[setPathOffset + pathIndex];
         indexMod6 = index % 6;
         pathChildIndex = (indexMod6 % 2 == 1) * (indexMod6 != 1) +
                             (indexMod6 % 2 == 0) * (2 + (index == 4));
-        levelDepth = 1 + floor(log(index/2 + index == 0) / log(3));
+        levelDepth = 1 + floor(logf(index/2 + index == 0) / logf(3));
         leftMostChildOfLevel = pow(3.0, levelDepth) * leafValue;
         dispFromLeft = index - leftMostChildOfLevel*6;
         global_vertices_included_dev_ptr[leftMostChildOfLevel + dispFromLeft] = global_paths_ptr[globalPathOffset + pathValue*4 + pathChildIndex];
     }
     __syncthreads();
-    if (threadIdx.x == 0 && blockId.x == 0){
+    if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("VertsIncluded\n");
-        int numLvls = floor(log(leavesThatICanProcess) / log(3));
+        int numLvls = floor(logf(leavesThatICanProcess) / logf(3));
         for (int lvl = 0; lvl < numLvls; ++lvl){
             int myLB = CalculateLevelOffset(lvl);
             int myUB = CalculateLevelUpperBound(lvl);
