@@ -232,8 +232,10 @@ __global__ void  PrintVerts(int activeVerticesCount,
 }
 
 __global__ void  PrintSets(int activeVerticesCount,
-                           cub::DoubleBuffer<int> & paths_indices,
-                           cub::DoubleBuffer<int> & set_inclusion,
+                            int * curr_paths_indices,
+                            int * alt_paths_indices,
+                            int * curr_set_inclusion,
+                            int * alt_set_inclusion,
                            int * global_set_path_offsets){
     if (threadIdx.x > 0 || blockIdx.x > 0)
         return;
@@ -2372,8 +2374,10 @@ void CallPopulateTree(int numberOfLevels,
 
         SortPathIndices(activeVerticesCount,
                         threadsPerBlock,
-                        paths_indices,
-                        set_inclusion,
+                        paths_indices.Current(),
+                        paths_indices.Alternate(),
+                        set_inclusion.Current(),
+                        set_inclusion.Alternate(),
                         global_set_path_offsets);
 
         cudaDeviceSynchronize();
