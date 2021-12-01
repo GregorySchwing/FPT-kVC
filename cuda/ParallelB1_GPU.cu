@@ -1607,11 +1607,12 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
                                         int * global_vertices_included_dev_ptr){
     
     int leafIndex = blockIdx.x;
+    printf("Block ID %d thread  %d %s can process leafIndex %d\n", blockIdx.x, threadIdx.x, leafIndex);
     int leafValue = global_active_leaf_indices[leafIndex];
+    printf("Block ID %d thread  %d %s can process leafValue %d\n", blockIdx.x, threadIdx.x, leafValue);
     int setPathOffset = leafIndex * 32;
     int globalPathOffset = setPathOffset*4;
     int vertIncludedOffset;
-
     // |I| - The cardinality of the set.  If |I| = 0; we don't induce children
     // Else we will induce (3*|I| children), Each path induces 3 leaves.
     int leavesThatICanProcess = global_reduced_set_inclusion_count_ptr[leafIndex];
