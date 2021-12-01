@@ -973,6 +973,9 @@ __global__ void ParallelDFSRandom(
         printf("Set leafIndex\n");
         printf("\n");
     }
+
+    // Initialize path indices
+    global_paths_indices_ptr[leafIndex*blockDim.x + threadIdx.x] = threadIdx.x;
     // Initialized to 0, so will always perform DFS on first call
     // Subsequently, only perform DFS on pendant edges, so nonpendant false
     //if (global_pendant_path_bool_dev_ptr[leafIndex + threadIdx.x])
@@ -2336,7 +2339,7 @@ void CallPopulateTree(int numberOfLevels,
             }
         }
         */
-       
+
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
         // Each node assigned threadsPerBlock blocks,  
