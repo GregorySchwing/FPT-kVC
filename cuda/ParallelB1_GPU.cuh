@@ -254,7 +254,7 @@ __global__ void ParallelCreateLevelAwareRowOffsets(int activeVerticesCount,
                             int * global_row_offsets_dev_ptr,
                             int * global_offsets_buffer);
 */
-__global__ void SetVerticesRemaingSegements(int deepestLevelSize,
+__global__ void SetVerticesRemaingSegements(int dLSPlus1,
                                             int numberOfRows,
                                             int * global_vertex_segments);
 

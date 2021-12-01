@@ -1777,13 +1777,13 @@ __global__ void ParallelCreateLevelAwareRowOffsets(
     }
 }
 
-__global__ void SetVerticesRemaingSegements(int deepestLevelSize,
+__global__ void SetVerticesRemaingSegements(int dLSPlus1,
                                             int numberOfRows,
                                             int * global_vertex_segments){
-    int leafIndex = blockIdx.x;
-    if (leafIndex >= deepestLevelSize+1)
-        return;
     global_vertex_segments[leafIndex] = numberOfRows*leafIndex;
+    for (int entry = threadIdx.x; entry < dLSPlus1; entry += blockDim.x){
+        global_vertex_segments[entry] = entry * numberOfRows;
+    }
 }
 
 __global__ void SetPathOffsets(int sDLSPlus1,
@@ -2151,14 +2151,14 @@ void CallPopulateTree(int numberOfLevels,
 
     cudaMemset(global_remaining_vertices_dev_ptr, INT_MAX, (numberOfRows*deepestLevelSize) * sizeof(int));
 
+    // Since we statically allocate vertices remaining
+    cudaMalloc( (void**)&global_vertex_segments, (deepestLevelSize+1) * sizeof(int) );
 
 /*
     cudaMalloc( (void**)&global_column_buffer, numberOfEdgesPerGraph * deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_value_buffer, numberOfEdgesPerGraph * deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_vertex_buffer, numberOfRows * deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_offsets_buffer, (numberOfRows+1) * deepestLevelSize * sizeof(int) );
-    // Since we statically allocate vertices remaining
-    cudaMalloc( (void**)&global_vertex_segments, (deepestLevelSize+1) * sizeof(int) );
 
     cudaMalloc( (void**)&global_paths_length, treeSize * sizeof(int) );
 */
@@ -2230,10 +2230,14 @@ void CallPopulateTree(int numberOfLevels,
 
     int * activeFlags = new int[treeSize];
 
+    // One greater than secondDeepestLevelSize
+    int dLSPlus1 = (deepestLevelSize + 1);
+    int ceilOfDLSPlus1 = (dLSPlus1 + threadsPerBlock - 1) / threadsPerBlock;
+
     // Create Segment Offsets for RemainingVertices
-    SetVerticesRemaingSegements<<<deepestLevelSize+1,threadsPerBlock>>>(deepestLevelSize,
-                                                                        numberOfRows,
-                                                                        global_vertex_segments);
+    SetVerticesRemaingSegements<<<ceilOfDLSPlus1,threadsPerBlock>>>(deepestLevelSize,
+                                                                    numberOfRows,
+                                                                    global_vertex_segments);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
