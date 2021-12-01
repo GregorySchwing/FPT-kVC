@@ -1617,7 +1617,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
     // Else we will induce (3*|I| children), Each path induces 3 leaves.
     int leavesThatICanProcess = global_reduced_set_inclusion_count_ptr[leafIndex];
     printf("Block ID %d thread  %d %s can process %d leaves\n", blockIdx.x, threadIdx.x, leavesThatICanProcess);
-
+    __syncthreads();
     // This pattern uses adjacent threads to write aligned memory, 
     // but thread indexing if math intensive
     // Desired mapping:
