@@ -1780,7 +1780,6 @@ __global__ void ParallelCreateLevelAwareRowOffsets(
 __global__ void SetVerticesRemaingSegements(int dLSPlus1,
                                             int numberOfRows,
                                             int * global_vertex_segments){
-    global_vertex_segments[leafIndex] = numberOfRows*leafIndex;
     for (int entry = threadIdx.x; entry < dLSPlus1; entry += blockDim.x){
         global_vertex_segments[entry] = entry * numberOfRows;
     }
