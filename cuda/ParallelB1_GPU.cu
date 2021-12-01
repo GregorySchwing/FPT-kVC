@@ -1600,18 +1600,65 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
     }          
 }
 
-__global__ void ParallelAssignMISToNodes(int * global_active_leaf_indices,
-                                        int * global_set_inclusion_bool_ptr,
-                                        int * global_reduced_set_inclusion_count_ptr){
+__global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_indices,
+                                        int * global_set_paths_indices,
+                                        int * global_reduced_set_inclusion_count_ptr,
+                                        int * global_paths_ptr,
+                                        int * global_vertices_included_dev_ptr){
     
-    int leafIndex = global_active_leaf_indices[blockIdx.x];
-
+    int leafIndex = blockIdx.x;
+    int leafValue = global_active_leaf_indices[leafIndex];
+    int setPathOffset = leafIndex * 32;
+    int globalPathOffset = setPathOffset*4;
+    int vertIncludedOffset;
 
     // |I| - The cardinality of the set.  If |I| = 0; we don't induce children
     // Else we will induce (3*|I| children), Each path induces 3 leaves.
     int leavesThatICanProcess = global_reduced_set_inclusion_count_ptr[leafIndex];
     printf("Block ID %d thread  %d %s can process %d leaves\n", blockIdx.x, threadIdx.x, leavesThatICanProcess);
 
+    // This pattern uses adjacent threads to write aligned memory, 
+    // but thread indexing if math intensive
+    // Desired mapping:
+    // 0 -> 2 
+    // 1 -> 0
+    // 2 -> 2
+    // 3 -> 1
+    // 4 -> 3
+    // 5 -> 1
+    // indexMod6 = index % 6
+    // Functor: (indexMod6 % 2 == 1) * (indexMod6 != 1) +
+    //          (indexMod6 % 2 == 0) * (2 + (index == 4))
+
+    int indexMod6, pathChildIndex, pathIndex, pathValue, leftMostChild;
+    for(int index = threadIdx.x; index < leavesThatICanProcess*6; index += blockDim.x){
+        pathIndex = index / 6;
+        pathValue = global_set_paths_indices[setPathOffset + pathIndex];
+        indexMod6 = index % 6;
+        pathChildIndex = (indexMod6 % 2 == 1) * (indexMod6 != 1) +
+                            (indexMod6 % 2 == 0) * (2 + (index == 4));
+        levelDepth = 1 + floor(log(index/2 + index == 0) / log(3));
+        leftMostChildOfLevel = pow(3.0, levelDepth) * leafValue;
+        dispFromLeft = index - leftMostChildOfLevel*6;
+        global_vertices_included_dev_ptr[leftMostChildOfLevel + dispFromLeft] = global_paths_ptr[globalPathOffset + pathValue*4 + pathChildIndex];
+    }
+    __syncthreads();
+    if (threadIdx.x == 0 && blockId.x == 0){
+        printf("VertsIncluded\n");
+        int numLvls = floor(log(leavesThatICanProcess) / log(3));
+        for (int lvl = 0; lvl < numLvls; ++lvl){
+            int myLB = CalculateLevelOffset(lvl);
+            int myUB = CalculateLevelUpperBound(lvl);
+            for (int i = myLB; i < myUB; ++i){
+                printf("%d ", global_vertices_included_dev_ptr[i]);
+            }
+            printf("\n");
+        }
+
+    }
+}
+
+    /*
     int levelDepth = CalculateNumberOfFullLevels(leavesThatICanProcess);
     printf("Block ID %d thread  %d %s can process %d full levels\n", blockIdx.x, threadIdx.x, levelDepth);
 
@@ -1651,9 +1698,9 @@ __global__ void ParallelAssignMISToNodes(int * global_active_leaf_indices,
     for (int child = 1; child <= numberWithActiveChildren * 3; ++child){
         global_active_vertices[leftMostLeafIndexOfIncompleteLevel + child] = 1;
     }
-    */
+  
 }
-
+  */
 __global__ void ParallelProcessDegreeZeroVertices(
                             int numberOfRows,
                             int * global_remaining_vertices_dev_ptr,
@@ -2087,6 +2134,7 @@ void CallPopulateTree(int numberOfLevels,
 
     int * global_paths_ptr;
     int * global_remaining_vertices_size_dev_ptr;
+    int * global_vertices_included_dev_ptr;
     int * global_pendant_path_bool_dev_ptr;
     int * global_pendant_path_reduced_bool_dev_ptr;
     int * global_pendant_child_dev_ptr;
@@ -2164,7 +2212,7 @@ void CallPopulateTree(int numberOfLevels,
 
     cudaMalloc( (void**)&global_paths_length, treeSize * sizeof(int) );
 */
-
+    cudaMalloc( (void**)&global_vertices_included_dev_ptr, treeSize * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr, treeSize * sizeof(int) );
     // Each node can process tPB pendant edges per call
     cudaMalloc( (void**)&global_pendant_path_bool_dev_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
@@ -2420,6 +2468,12 @@ void CallPopulateTree(int numberOfLevels,
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
+
+        ParallelAssignMISToNodesBreadthFirst<<<>>>>(global_active_leaf_indices,
+                                        paths_indices.Current(),
+                                        global_reduced_set_inclusion_count_ptr,
+                                        global_paths_ptr,
+                                        global_vertices_included_dev_ptr);
 
         // Just to test a single iteration
         activeVerticesCount = 0;

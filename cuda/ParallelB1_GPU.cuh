@@ -261,6 +261,12 @@ __global__ void SetVerticesRemaingSegements(int dLSPlus1,
 __global__ void SetPathOffsets(int sDLSPlus1,
                                int * global_set_path_offsets);
 
+__global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_indices,
+                                        int * global_set_paths_indices,
+                                        int * global_reduced_set_inclusion_count_ptr,
+                                        int * global_paths_ptr,
+                                        int * global_vertices_included_dev_ptr);
+
 __global__ void ParallelQuicksortWithDNF(int levelOffset,
                             int levelUpperBound,
                             int numberOfRows,
