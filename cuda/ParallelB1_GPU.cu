@@ -2476,6 +2476,9 @@ void CallPopulateTree(int numberOfLevels,
                                         global_paths_ptr,
                                         global_vertices_included_dev_ptr);
 
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+
         // Just to test a single iteration
         activeVerticesCount = 0;
 
