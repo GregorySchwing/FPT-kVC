@@ -82,6 +82,11 @@ __global__ void  PrintVerts(int activeVerticesCount,
                                     int * printAlt,
                                     int * printCurr);
 
+__global__ void  PrintSets(int activeVerticesCount,
+                           cub::DoubleBuffer<int> & paths_indices,
+                           cub::DoubleBuffer<int> & set_inclusion,
+                           int * global_set_path_offsets);
+
 __global__ void First_Graph_GPU(int vertexCount, 
                                 int size,
                                 int numberOfRows,
