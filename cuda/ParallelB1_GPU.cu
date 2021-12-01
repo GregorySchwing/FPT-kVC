@@ -252,8 +252,6 @@ __global__ void  PrintSets(int activeVerticesCount,
         printf("\n");
     }
 
-    int * printAlt = paths_indices.Alternate()
-
     for (int v = 0; v < activeVerticesCount; ++v){
         printf("Index : %d\n", v);
         for (int i = 0; i < threadsPerBlock; ++i){
