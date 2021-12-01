@@ -2405,6 +2405,9 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
+        // Just to test a single iteration
+        activeVerticesCount = 0;
+
     }
 /*
         cudaMemcpy(activeFlags, global_active_vertices, treeSize*sizeof(int), cudaMemcpyDeviceToHost);
