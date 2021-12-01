@@ -231,6 +231,34 @@ __global__ void  PrintVerts(int activeVerticesCount,
     printf("\n");
 }
 
+__global__ void  PrintSets(int activeVerticesCount,
+                           cub::DoubleBuffer<int> & paths_indices,
+                           cub::DoubleBuffer<int> & set_inclusion,
+                           int * global_set_path_offsets){
+    if (threadIdx.x > 0 || blockIdx.x > 0)
+        return;
+    int * printCurr = paths_indices.Current()
+    printf("Tree\n");
+    for (int v = 0; v < activeVerticesCount; ++v){
+        printf("Index : %d\n", v);
+        for (int i = 0; i < threadsPerBlock; ++i){
+            printf("%d ",printCurr[v*threadsPerBlock + i]);
+        }
+        printf("\n");
+    }
+
+    int * printAlt = paths_indices.Alternate()
+
+    for (int v = 0; v < activeVerticesCount; ++v){
+        printf("Index : %d\n", v);
+        for (int i = 0; i < threadsPerBlock; ++i){
+            printf("%d ",printAlt[v*threadsPerBlock + i]);
+        }
+        printf("\n");
+    }
+    
+}
+
 __host__ __device__ long long CalculateSizeRequirement(int startingLevel,
                                                         int endingLevel){
     long long summand= 0;
@@ -2347,6 +2375,14 @@ void CallPopulateTree(int numberOfLevels,
                         paths_indices,
                         set_inclusion,
                         global_set_path_offsets);
+
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+
+        PrintSets<<<1,1>>>(activeVerticesCount,
+                paths_indices,
+                set_inclusion,
+                global_set_path_offsets);
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
