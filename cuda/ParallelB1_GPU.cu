@@ -2314,6 +2314,7 @@ void CallPopulateTree(int numberOfLevels,
         cudaMemcpy(pendantReducedBools, global_pendant_path_reduced_bool_dev_ptr, (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
         cudaMemcpy(pendantChildrenOfLevel, global_pendant_child_dev_ptr, threadsPerBlock*(activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
 
+        /*
         for (int node = levelOffset; node < levelUpperBound; ++node){
             // global_pendant_path_bool_dev_ptr was defined as an OR of 
             // 0) path[0] == path[2]
@@ -2334,6 +2335,8 @@ void CallPopulateTree(int numberOfLevels,
                 }
             }
         }
+        */
+       
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
         // Each node assigned threadsPerBlock blocks,  
