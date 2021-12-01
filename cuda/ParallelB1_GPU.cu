@@ -239,12 +239,15 @@ __global__ void  PrintSets(int activeVerticesCount,
                            int * global_set_path_offsets){
     if (threadIdx.x > 0 || blockIdx.x > 0)
         return;
-    int * printCurr = paths_indices.Current()
     printf("Tree\n");
     for (int v = 0; v < activeVerticesCount; ++v){
         printf("Index : %d\n", v);
         for (int i = 0; i < threadsPerBlock; ++i){
-            printf("%d ",printCurr[v*threadsPerBlock + i]);
+            printf("%d ",curr_paths_indices[v*threadsPerBlock + i]);
+        }
+        printf("\n");
+        for (int i = 0; i < threadsPerBlock; ++i){
+            printf("%d ",curr_set_inclusion[v*threadsPerBlock + i]);
         }
         printf("\n");
     }
@@ -254,7 +257,11 @@ __global__ void  PrintSets(int activeVerticesCount,
     for (int v = 0; v < activeVerticesCount; ++v){
         printf("Index : %d\n", v);
         for (int i = 0; i < threadsPerBlock; ++i){
-            printf("%d ",printAlt[v*threadsPerBlock + i]);
+            printf("%d ",alt_paths_indices[v*threadsPerBlock + i]);
+        }
+        printf("\n");
+        for (int i = 0; i < threadsPerBlock; ++i){
+            printf("%d ",alt_set_inclusion[v*threadsPerBlock + i]);
         }
         printf("\n");
     }
