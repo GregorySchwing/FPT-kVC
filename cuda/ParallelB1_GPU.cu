@@ -241,7 +241,7 @@ __global__ void  PrintSets(int activeVerticesCount,
         return;
     printf("Tree\n");
     for (int v = 0; v < activeVerticesCount; ++v){
-        printf("Index : %d\n", v);
+        printf("Index : %d; Offsets (%d, %d)\n", v, global_set_path_offsets[v], global_set_path_offsets[v+1]);
         for (int i = 0; i < threadsPerBlock; ++i){
             printf("%d ",curr_paths_indices[v*threadsPerBlock + i]);
         }
