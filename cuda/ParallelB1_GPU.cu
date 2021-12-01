@@ -2390,7 +2390,7 @@ void CallPopulateTree(int numberOfLevels,
                 paths_indices.Current(),
                 paths_indices.Alternate(),
                 set_inclusion.Current(),
-                set_inclusion.Alternate()
+                set_inclusion.Alternate(),
                 global_set_path_offsets);
 
         cudaDeviceSynchronize();
