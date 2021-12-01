@@ -2235,12 +2235,18 @@ void CallPopulateTree(int numberOfLevels,
                                                                         numberOfRows,
                                                                         global_vertex_segments);
 
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
     // One greater than secondDeepestLevelSize
     int sDLSPlus1 = (secondDeepestLevelSize + 1);
     int ceilOfSDLSPlus1 = (sDLSPlus1 + threadsPerBlock - 1) / threadsPerBlock;
 
     SetPathOffsets<<<ceilOfSDLSPlus1,threadsPerBlock>>>(sDLSPlus1,
                                                         global_set_path_offsets);
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
 
     bool notFirstCall = false;
     // When activeVerticesCount == 0, loop terminates
