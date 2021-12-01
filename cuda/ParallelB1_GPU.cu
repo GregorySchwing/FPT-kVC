@@ -1645,6 +1645,16 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
         levelDepth = 1 + floor(logf(index/2 + index == 0) / logf(3));
         leftMostChildOfLevel = pow(3.0, levelDepth) * leafValue;
         dispFromLeft = index - leftMostChildOfLevel*6;
+        if (threadIdx.x == 0 && blockIdx.x == 0){
+            printf("pathIndex %d\n", pathIndex);
+            printf("pathValue %d\n", pathValue);
+            printf("indexMod6 %d\n", indexMod6);
+            printf("pathChildIndex %d\n", pathChildIndex);
+            printf("levelDepth %d\n", levelDepth);
+            printf("leftMostChildOfLevel %d\n", leftMostChildOfLevel);
+            printf("dispFromLeft %d\n", dispFromLeft);
+        }
+        __syncthreads();
         global_vertices_included_dev_ptr[leftMostChildOfLevel + dispFromLeft] = global_paths_ptr[globalPathOffset + pathValue*4 + pathChildIndex];
     }
     __syncthreads();
