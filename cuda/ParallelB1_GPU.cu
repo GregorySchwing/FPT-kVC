@@ -2374,18 +2374,18 @@ void CallPopulateTree(int numberOfLevels,
 
         SortPathIndices(activeVerticesCount,
                         threadsPerBlock,
-                        paths_indices.Current(),
-                        paths_indices.Alternate(),
-                        set_inclusion.Current(),
-                        set_inclusion.Alternate(),
+                        paths_indices,
+                        set_inclusion,
                         global_set_path_offsets);
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
         PrintSets<<<1,1>>>(activeVerticesCount,
-                paths_indices,
-                set_inclusion,
+                paths_indices.Current(),
+                paths_indices.Alternate(),
+                set_inclusion.Current(),
+                set_inclusion.Alternate()
                 global_set_path_offsets);
 
         cudaDeviceSynchronize();
