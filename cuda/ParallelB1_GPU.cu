@@ -309,14 +309,14 @@ __host__ void SortPathIndices(int activeVerticesCount,
 
     // Since vertices in a level follow each other, we reuse gob iterator
     // When we have active vertices from different levels, we will need 2 iterators
-    cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, paths_indices, set_inclusion,
+    cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, set_inclusion, paths_indices, 
         num_items, num_segments, global_set_path_offsets, global_set_path_offsets + 1);
 
     // Allocate temporary storage
     cudaMalloc(&d_temp_storage, temp_storage_bytes);
 
     // Run sorting operation
-    cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, paths_indices, set_inclusion,
+    cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, set_inclusion, paths_indices, 
         num_items, num_segments, global_set_path_offsets, global_set_path_offsets + 1);
 
     cudaFree(d_temp_storage);
