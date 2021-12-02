@@ -1645,7 +1645,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
         // Have to handle 0 and 1..
         levelDepth = 1;
         indexMapper = index;
-        while((int)floor((logf((float)(indexMapper / 2 + (int)(indexMapper < 2))) / logf(pow(3.0,levelDepth))))){
+        while(indexMapper / (int)(2*pow(3.0, levelDepth)){
             indexMapper -=  (int)(2*pow(3.0, levelDepth));
             ++levelDepth;
             indexMapper = indexMapper*((int)(indexMapper >= 0));
