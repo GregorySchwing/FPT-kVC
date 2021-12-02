@@ -1651,7 +1651,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
         if (blockIdx.x == 0){
             printf("thread %d index %d",threadIdx.x, index);
             printf("thread %d logf(index/2 + index == 0 + index == 1) %d",threadIdx.x, logf(index/2 + index == 0 + index == 1));
-            printf("thread %d logf(index/2 + index == 0 + index == 1) / logf(3) %d",threadIdx.x, logf(index/2 + index == 0 + index == 1) / logf(3)));
+            printf("thread %d logf(index/2 + index == 0 + index == 1) / logf(3) %d",threadIdx.x, logf(index/2 + index == 0 + index == 1) / logf(3));
             printf("thread %d floor(logf(index/2 + index == 0 + index == 1) / logf(3)) %d",threadIdx.x, floor(logf(index/2 + index == 0 + index == 1) / logf(3)));
             printf("thread %d (int)(floor(logf(index/2 + index == 0 + index == 1) / logf(3))) %d",threadIdx.x, (int)(floor(logf(index/2 + index == 0 + index == 1) / logf(3))));
             printf("thread %d pathIndex %d\n", threadIdx.x, pathIndex);
