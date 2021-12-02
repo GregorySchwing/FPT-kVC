@@ -1643,7 +1643,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
         pathChildIndex = (indexMod6 % 2 == 1) * (indexMod6 != 1) +
                             (indexMod6 % 2 == 0) * (2 + (index == 4));
         // Have to handle 0 and 1..
-        levelDepth = 1 + (int)(floor(logf((float)(index/6 + (int)(index < 6)) / logf(3.0)));
+        levelDepth = 1 + (int)(floor(logf((float)(index/6 + (int)(index < 6))) / logf(3.0)));
         // Handles index 0
         leftMostChildOfLevel = (pow(3.0, levelDepth) * leafValue)*(leafValue != 0) + 
                                 pow(3.0, levelDepth-1)*(leafValue == 0);
