@@ -1649,11 +1649,11 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
                                 pow(3.0, levelDepth-1)*(leafValue == 0);
         dispFromLeft = index - leftMostChildOfLevel*6;
         if (blockIdx.x == 0){
-            printf("thread %d index %d",threadIdx.x, index);
-            printf("thread %d logf(index/2 + index == 0 + index == 1) %d",threadIdx.x, logf(index/2 + index == 0 + index == 1));
-            printf("thread %d logf(index/2 + index == 0 + index == 1) / logf(3) %d",threadIdx.x, logf(index/2 + index == 0 + index == 1) / logf(3));
-            printf("thread %d floor(logf(index/2 + index == 0 + index == 1) / logf(3)) %d",threadIdx.x, floor(logf(index/2 + index == 0 + index == 1) / logf(3)));
-            printf("thread %d (int)(floor(logf(index/2 + index == 0 + index == 1) / logf(3))) %d",threadIdx.x, (int)(floor(logf(index/2 + index == 0 + index == 1) / logf(3))));
+            printf("thread %d index %d\n",threadIdx.x, index);
+            printf("thread %d logf(index/2 + index == 0 + index == 1) %d\n",threadIdx.x, logf(index/2 + index == 0 + index == 1));
+            printf("thread %d logf(index/2 + index == 0 + index == 1) / logf(3) %d\n",threadIdx.x, logf(index/2 + index == 0 + index == 1) / logf(3));
+            printf("thread %d floor(logf(index/2 + index == 0 + index == 1) / logf(3)) %d\n",threadIdx.x, floor(logf(index/2 + index == 0 + index == 1) / logf(3)));
+            printf("thread %d (int)(floor(logf(index/2 + index == 0 + index == 1) / logf(3))) %d\n",threadIdx.x, (int)(floor(logf(index/2 + index == 0 + index == 1) / logf(3))));
             printf("thread %d pathIndex %d\n", threadIdx.x, pathIndex);
             printf("thread %d pathValue %d\n", threadIdx.x, pathValue);
             printf("thread %d indexMod6 %d\n", threadIdx.x, indexMod6);
