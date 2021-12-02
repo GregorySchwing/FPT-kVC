@@ -1635,7 +1635,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
     // Functor: (indexMod6 % 2 == 1) * (indexMod6 != 1) +
     //          (indexMod6 % 2 == 0) * (2 + (index == 4))
 
-    int indexMod6, pathChildIndex, pathIndex, pathValue, leftMostChildOfLevel, dispFromLeft, levelDepth, indexMapper;
+    int indexMod6, pathChildIndex, pathIndex, pathValue, leftMostChildOfLevel, dispFromLeft, levelDepth, indexMapper, levelWidth;
     for(int index = threadIdx.x; index < leavesThatICanProcess*6; index += blockDim.x){
         pathIndex = index / 6;
         pathValue = global_set_paths_indices[setPathOffset + pathIndex];
@@ -1645,9 +1645,12 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
         // Have to handle 0 and 1..
         levelDepth = 1;
         indexMapper = index;
-        while(indexMapper / (int)(2*pow(3.0, levelDepth))){
+        levelWidth = (int)(2.0*pow(3.0, levelDepth);
+        printf("thread %d levelWidth %d\n",threadIdx.x, levelWidth);
+        while(indexMapper / levelWidth){
             indexMapper -=  (int)(2*pow(3.0, levelDepth));
             ++levelDepth;
+            levelWidth = (int)(2.0*pow(3.0, levelDepth);
             indexMapper = indexMapper*((int)(indexMapper >= 0));
             printf("thread %d indexMapper %d\n",threadIdx.x, indexMapper);
         }
