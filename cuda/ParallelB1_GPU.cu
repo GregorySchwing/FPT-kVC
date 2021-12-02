@@ -1650,7 +1650,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
         while(indexMapper / levelWidth){
             indexMapper -=  (int)(2*powf(3.0, levelDepth));
             ++levelDepth;
-            leftMostChildOfLevel *= 3.0
+            leftMostChildOfLevel *= 3.0;
             levelWidth = (int)(2.0*powf(3.0, levelDepth));
             indexMapper = indexMapper*((int)(indexMapper >= 0));
         }
