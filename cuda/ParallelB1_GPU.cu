@@ -1645,7 +1645,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
         // Have to handle 0 and 1..
         levelDepth = 1 + floor(logf(index/2 + index == 0 + index == 1) / logf(3));
         // Handles index 0
-        leftMostChildOfLevel = pow(3.0, levelDepth) * leafValue)*(leafValue != 0) + 
+        leftMostChildOfLevel = (pow(3.0, levelDepth) * leafValue)*(leafValue != 0) + 
                                 pow(3.0, levelDepth-1)*(leafValue == 0);
         dispFromLeft = index - leftMostChildOfLevel*6;
         if (blockIdx.x == 0){
