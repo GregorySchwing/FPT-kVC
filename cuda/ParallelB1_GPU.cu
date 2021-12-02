@@ -2625,7 +2625,7 @@ void CopyGraphToDevice( Graph & g,
     std::cout << "Activate root of tree" << std::endl;
     cudaMemset(global_active_leaf_indices, 0, 1*sizeof(int));
     std::cout << "Activated root of tree" << std::endl;
-    int * shouldBe1;
+    int shouldBe1[1];
     cudaMemcpy(shouldBe1, global_active_leaf_indices, 1*sizeof(int), cudaMemcpyDeviceToHost);
 
 
