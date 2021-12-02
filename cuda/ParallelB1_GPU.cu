@@ -1645,21 +1645,20 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
         // Have to handle 0 and 1..
         levelDepth = 1.0;
         indexMapper = index;
-        int threepow1 = (int)powf(3.0, levelDepth);
-        printf("thread %d threepow1 %d\n",threadIdx.x, threepow1);
+        leftMostChildOfLevel = leafValue;
         levelWidth = (int)(2.0*powf(3.0, levelDepth));
-        printf("thread %d levelWidth %d\n",threadIdx.x, levelWidth);
         while(indexMapper / levelWidth){
             indexMapper -=  (int)(2*powf(3.0, levelDepth));
             ++levelDepth;
+            leftMostChildOfLevel *= 3.0
             levelWidth = (int)(2.0*powf(3.0, levelDepth));
             indexMapper = indexMapper*((int)(indexMapper >= 0));
-            printf("thread %d indexMapper %d\n",threadIdx.x, indexMapper);
         }
+        printf("thread %d levelWidth %d\n",threadIdx.x, levelWidth);
         //levelDepth = 1 + (int)(ceil(logf((float)(index/6 + (int)(index < 6))) / logf(3.0)));
         // Handles index 0
-        leftMostChildOfLevel = (pow(3.0, levelDepth) * leafValue)*(leafValue != 0) + 
-                                pow(3.0, levelDepth-1)*(leafValue == 0);
+        //leftMostChildOfLevel = (pow(3.0, levelDepth) * leafValue)*(leafValue != 0) + 
+        //                        pow(3.0, levelDepth-1)*(leafValue == 0);
         dispFromLeft = index - leftMostChildOfLevel*6;
         if (blockIdx.x == 0){
             printf("thread %d index %d\n",threadIdx.x, index);
