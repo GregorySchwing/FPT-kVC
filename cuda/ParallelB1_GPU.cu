@@ -1650,7 +1650,9 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
         dispFromLeft = index - leftMostChildOfLevel*6;
         if (blockIdx.x == 0){
             printf("thread %d index %d\n",threadIdx.x, index);
-            printf("thread %d (float)(index/2) %f", threadIdx.x, (float)(index/2));
+            printf("thread %d (float)(index/2) %f\n", threadIdx.x, (float)(index/2));
+            printf("thread %d index == 0 %d\n",threadIdx.x, index == 0);
+            printf("thread %d index == 1) %d\n",threadIdx.x, index == 1));
             printf("thread %d (float)(index/2 + index == 0 + index == 1) %f\n",threadIdx.x, (float)(index/2 + index == 0 + index == 1));
             printf("thread %d logf((float)(index/2 + index == 0 + index == 1)) %f\n",threadIdx.x, logf((float)(index/2 + index == 0 + index == 1)));
             printf("thread %d logf((float)(index/2 + index == 0 + index == 1) / logf(3)) %f\n",threadIdx.x, logf((float)(index/2 + index == 0 + index == 1)) / logf(3));
