@@ -1645,9 +1645,9 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
         // Have to handle 0 and 1..
         levelDepth = 1;
         indexMapper = index;
-        while((int)floor((logf((float)(indexMapper / 2 + (int)(indexMapper < 2))) / logf(3.0)))){
-            indexMapper -=  (int)pow(3.0, levelDepth);
+        while((int)floor((logf((float)(indexMapper / 2 + (int)(indexMapper < 2))) / logf(pow(3.0,levelDepth))))){
             ++levelDepth;
+            indexMapper -=  (int)pow(3.0, levelDepth);
             indexMapper = indexMapper*((int)(indexMapper > 0));
             printf("thread %d indexMapper %d\n",threadIdx.x, indexMapper);
         }
