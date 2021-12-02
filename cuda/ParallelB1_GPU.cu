@@ -1647,10 +1647,12 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
         indexMapper = index;
         leftMostChildOfLevel = leafValue + (leafValue == 0);
         levelWidth = (int)(2.0*powf(3.0, levelDepth));
+        leftMostChildOfLevelExpanded = 0;
         while(indexMapper / levelWidth){
             indexMapper -=  (int)(2*powf(3.0, levelDepth));
             ++levelDepth;
             leftMostChildOfLevel *= 3.0;
+            leftMostChildOfLevelExpanded += leftMostChildOfLevel*2;
             levelWidth = (int)(2.0*powf(3.0, levelDepth));
             indexMapper = indexMapper*((int)(indexMapper >= 0));
         }
@@ -1676,7 +1678,8 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
             printf("thread %d indexMod6 %d\n", threadIdx.x, indexMod6);
             printf("thread %d pathChildIndex %d\n", threadIdx.x, pathChildIndex);
             printf("thread %d levelDepth %d\n", threadIdx.x, levelDepth);
-            printf("thread %d leftMostChildOfLevel %d\n", threadIdx.x, 2*leftMostChildOfLevel);
+            printf("thread %d leftMostChildOfLevel %d\n", threadIdx.x, leftMostChildOfLevel);
+            printf("thread %d leftMostChildOfLevelExpanded %d\n", threadIdx.x, leftMostChildOfLevelExpanded);
             printf("thread %d dispFromLeft %d\n", threadIdx.x, dispFromLeft);
         }
         global_vertices_included_dev_ptr[leftMostChildOfLevel + dispFromLeft] = global_paths_ptr[globalPathOffset + pathValue*4 + pathChildIndex];
