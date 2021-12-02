@@ -1654,7 +1654,6 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
             printf("leftMostChildOfLevel %d\n", leftMostChildOfLevel);
             printf("dispFromLeft %d\n", dispFromLeft);
         }
-        __syncthreads();
         global_vertices_included_dev_ptr[leftMostChildOfLevel + dispFromLeft] = global_paths_ptr[globalPathOffset + pathValue*4 + pathChildIndex];
     }
     __syncthreads();
