@@ -1635,7 +1635,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
     // Functor: (indexMod6 % 2 == 1) * (indexMod6 != 1) +
     //          (indexMod6 % 2 == 0) * (2 + (index == 4))
 
-    int indexMod6, pathChildIndex, pathIndex, pathValue, leftMostChildOfLevel, dispFromLeft, levelDepth, indexMapper, levelWidth;
+    int indexMod6, pathChildIndex, pathIndex, pathValue, leftMostChildOfLevel, leftMostChildOfLevelExpanded, dispFromLeft, levelDepth, indexMapper, levelWidth;
     for(int index = threadIdx.x; index < leavesThatICanProcess*6; index += blockDim.x){
         pathIndex = index / 6;
         pathValue = global_set_paths_indices[setPathOffset + pathIndex];
