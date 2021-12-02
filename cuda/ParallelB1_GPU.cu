@@ -2623,11 +2623,17 @@ void CopyGraphToDevice( Graph & g,
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     std::cout << "Activate root of tree" << std::endl;
-    cudaMemset(global_active_leaf_indices, 1, 1*sizeof(int));
+    cudaMemset(global_active_leaf_indices, 0, 1*sizeof(int));
     std::cout << "Activated root of tree" << std::endl;
+    int * shouldBe1;
+    cudaMemcpy(shouldBe1, global_active_leaf_indices, 1*sizeof(int), cudaMemcpyDeviceToHost);
+
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
+
+    std::cout << "Active leaf index 0 : value : " << *shouldBe1 << std::endl;
+
 
     thrust::device_ptr<int> back2Host_ptr = thrust::device_pointer_cast(global_columns_dev_ptr);
     thrust::device_vector<int> back2Host(back2Host_ptr, back2Host_ptr + g.GetEdgesLeftToCover());
