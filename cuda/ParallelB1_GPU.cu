@@ -1695,6 +1695,8 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
                 UB = 1;
             else
                 UB = LB + (int)(powf(3.0, lvl)*2.0);
+            printf("LB : %d; UB : %d\n ", LB, UB);
+
             //for (int i = LB; LB < UB; ++i){
             //    printf("%d ", global_vertices_included_dev_ptr[i]);
             //}
@@ -1703,7 +1705,6 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
                 LB = 1;
             else
                 LB = LB + (int)(powf(3.0, lvl)*2.0);
-            printf("LB : %d; UB : %d\n ", LB, UB);
         }
 
     }
