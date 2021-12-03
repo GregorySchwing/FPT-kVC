@@ -1656,7 +1656,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
             levelWidth = (int)(2.0*powf(3.0, levelDepth));
             indexMapper = indexMapper*((int)(indexMapper >= 0));
         }
-        leftMostChildOfLevelExpanded = ((int)((leftMostChildOfLevelExpanded != 0))*leftMostChildOfLevelExpanded*2 + 1) + (int)(leftMostChildOfLevelExpanded == 0);
+        leftMostChildOfLevelExpanded = ((int)(leftMostChildOfLevelExpanded != 0))*(leftMostChildOfLevelExpanded*2 + 1) + (int)(leftMostChildOfLevelExpanded == 0);
         printf("thread %d levelWidth %d\n",threadIdx.x, levelWidth);
         //levelDepth = 1 + (int)(ceil(logf((float)(index/6 + (int)(index < 6))) / logf(3.0)));
         // Handles index 0
