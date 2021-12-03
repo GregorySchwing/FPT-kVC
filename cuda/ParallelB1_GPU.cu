@@ -1663,6 +1663,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
         //leftMostChildOfLevel = (pow(3.0, levelDepth) * leafValue)*(leafValue != 0) + 
         //                        pow(3.0, levelDepth-1)*(leafValue == 0);
         dispFromLeft = index - leftMostChildOfLevelExpanded;
+        /*
         if (blockIdx.x == 0){
             printf("thread %d index %d\n",threadIdx.x, index);
             printf("thread %d (float)(index/2) %f\n", threadIdx.x, (float)(index/2));
@@ -1683,7 +1684,8 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
             printf("thread %d leftMostChildOfLevelExpanded %d\n", threadIdx.x, leftMostChildOfLevelExpanded);
             printf("thread %d dispFromLeft %d\n", threadIdx.x, dispFromLeft + 1);
         }
-        global_vertices_included_dev_ptr[leftMostChildOfLevel + dispFromLeft + 1] = global_paths_ptr[globalPathOffset + pathValue*4 + pathChildIndex];
+        */
+        global_vertices_included_dev_ptr[leftMostChildOfLevelExpanded + dispFromLeft + 1] = global_paths_ptr[globalPathOffset + pathValue*4 + pathChildIndex];
     }
     __syncthreads();
     if (threadIdx.x == 0 && blockIdx.x == 0){
