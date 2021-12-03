@@ -1688,12 +1688,18 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
     __syncthreads();
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("VertsIncluded\n");
-        int numLvls = floor(logf(leavesThatICanProcess) / logf(3));
+        int numLvls = 4;
         for (int lvl = 0; lvl < numLvls; ++lvl){
             int myLB = CalculateLevelOffset(lvl);
             int myUB = CalculateLevelUpperBound(lvl);
-            for (int i = myLB; i < myUB; ++i){
-                printf("%d ", global_vertices_included_dev_ptr[i]);
+            if (lvl == 0){
+                for (int i = myLB; i < myUB; ++i){
+                    printf("%d ", global_vertices_included_dev_ptr[i]);
+                }
+            } else {
+                for (int i = 2*myLB; i < 2*myUB; ++i){
+                    printf("%d ", global_vertices_included_dev_ptr[i]);
+                }
             }
             printf("\n");
         }
