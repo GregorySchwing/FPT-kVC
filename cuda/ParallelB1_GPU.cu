@@ -1662,19 +1662,10 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
         // Handles index 0
         //leftMostChildOfLevel = (pow(3.0, levelDepth) * leafValue)*(leafValue != 0) + 
         //                        pow(3.0, levelDepth-1)*(leafValue == 0);
-        dispFromLeft = index - leftMostChildOfLevelExpanded;
-        /*
+        dispFromLeft = index - leftMostChildOfLevelExpanded + 1;
+        
         if (blockIdx.x == 0){
             printf("thread %d index %d\n",threadIdx.x, index);
-            printf("thread %d (float)(index/2) %f\n", threadIdx.x, (float)(index/2));
-            printf("thread %d index == 0 %d\n",threadIdx.x, index == 0);
-            printf("thread %d index == 1) %d\n",threadIdx.x, index == 1);
-            printf("thread %d (float)(index/2 + index == 0 + index == 1) %f\n",threadIdx.x, (float)(index/2 + (int)(index == 0) + (int)(index == 1)));
-            printf("thread %d (index/2 + index == 0 + index == 1) %d\n",threadIdx.x, (index/2 + (int)(index == 0) + (int)(index == 1)));
-            printf("thread %d logf((float)(index/2 + index == 0 + index == 1)) %f\n",threadIdx.x, logf((float)(index/2 + (int)(index == 0) + (int)(index == 1))));
-            printf("thread %d logf((float)(index/2 + index == 0 + index == 1) / logf(3)) %f\n",threadIdx.x, logf((float)(index/2 + index == 0 + index == 1)) / logf(3));
-            printf("thread %d floor((float)(logf(index/2 + index == 0 + index == 1) / logf(3))) %f\n",threadIdx.x, floor(logf((float)(index/2 + index == 0 + index == 1)) / logf(3)));
-            printf("thread %d (int)(floor(logf(index/2 + index == 0 + index == 1) / logf(3))) %d\n",threadIdx.x, (int)(floor(logf(index/2 + index == 0 + index == 1) / logf(3))));
             printf("thread %d pathIndex %d\n", threadIdx.x, pathIndex);
             printf("thread %d pathValue %d\n", threadIdx.x, pathValue);
             printf("thread %d indexMod6 %d\n", threadIdx.x, indexMod6);
@@ -1682,15 +1673,15 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
             printf("thread %d levelDepth %d\n", threadIdx.x, levelDepth);
             printf("thread %d leftMostChildOfLevel %d\n", threadIdx.x, leftMostChildOfLevel);
             printf("thread %d leftMostChildOfLevelExpanded %d\n", threadIdx.x, leftMostChildOfLevelExpanded);
-            printf("thread %d dispFromLeft %d\n", threadIdx.x, dispFromLeft + 1);
+            printf("thread %d dispFromLeft %d\n", threadIdx.x, dispFromLeft);
         }
-        */
-        global_vertices_included_dev_ptr[leftMostChildOfLevelExpanded + dispFromLeft + 1] = global_paths_ptr[globalPathOffset + pathValue*4 + pathChildIndex];
+        
+        global_vertices_included_dev_ptr[leftMostChildOfLevelExpanded + dispFromLeft] = global_paths_ptr[globalPathOffset + pathValue*4 + pathChildIndex];
     }
     __syncthreads();
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("VertsIncluded\n");
-        int numLvls = 3;
+        int numLvls = 4;
         int LB = 0, UB = 0;
         for (int lvl = 0; lvl < numLvls; ++lvl){
             if (LB == 0)
