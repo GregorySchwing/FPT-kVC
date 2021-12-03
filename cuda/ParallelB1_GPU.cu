@@ -1688,7 +1688,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
     __syncthreads();
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("VertsIncluded\n");
-        int numLvls = 1;
+        int numLvls = 4;
         int LB = 0, UB = 0;
         for (int lvl = 0; lvl < numLvls; ++lvl){
             if (LB == 0)
