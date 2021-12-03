@@ -1688,7 +1688,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
     __syncthreads();
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("VertsIncluded\n");
-        int numLvls = 4;
+        int numLvls = 3;
         int LB = 0, UB = 0;
         for (int lvl = 0; lvl < numLvls; ++lvl){
             if (LB == 0)
@@ -1696,10 +1696,9 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
             else
                 UB = LB + (int)(powf(3.0, lvl)*2.0);
             printf("LB : %d; UB : %d\n ", LB, UB);
-
-            //for (int i = LB; LB < UB; ++i){
-            //    printf("%d ", global_vertices_included_dev_ptr[i]);
-            //}
+            for (int i = LB; LB < UB; ++i){
+                printf("%d ", global_vertices_included_dev_ptr[i]);
+            }
             printf("\n");
             if (LB == 0)
                 LB = 1;
