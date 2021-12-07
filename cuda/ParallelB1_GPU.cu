@@ -2620,7 +2620,7 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        cudaMemset(active_leaves_count.Alternate(), 0, 1*sizeof(int));
+        cudaMemset(active_leaves_count.Alternate(), 0, size_t(1)*sizeof(int));
       
         numberOfBlocksForOneThreadPerLeaf = (activeVerticesCount + threadsPerBlock - 1) / threadsPerBlock;
 
@@ -2765,17 +2765,19 @@ void CopyGraphToDevice( Graph & g,
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     std::cout << "Activate root of tree" << std::endl;
-    cudaMemset(global_active_leaf_indices, 0, 1*sizeof(int));
-    cudaMemset(global_active_leaf_indices_count, 1, 1*sizeof(int));
+    cudaMemset(global_active_leaf_indices, 0, size_t(1)*sizeof(int));
+    cudaMemset(global_active_leaf_indices_count, 1, size_t(1)*sizeof(int));
     std::cout << "Activated root of tree" << std::endl;
+    int shouldBe0[1];
     int shouldBe1[1];
-    cudaMemcpy(shouldBe1, global_active_leaf_indices, 1*sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(shouldBe0, global_active_leaf_indices, 1*sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(shouldBe1, global_active_leaf_indices_count, 1*sizeof(int), cudaMemcpyDeviceToHost);
 
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
-
-    std::cout << "Active leaf index 0 : value : " << *shouldBe1 << std::endl;
+    std::cout << "Active leaf index 0 : value : " << *shouldBe0 << std::endl;
+    std::cout << "Active leaf count : value : " << *shouldBe1 << std::endl;
 
 
     thrust::device_ptr<int> back2Host_ptr = thrust::device_pointer_cast(global_columns_dev_ptr);
