@@ -1614,7 +1614,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
     printf("Block ID %d thread %d can process leafValue %d\n", blockIdx.x, threadIdx.x, leafValue);
         __syncthreads();
 
-    int setPathOffset = leafIndex * 32;
+    int setPathOffset = leafIndex * blockDim.x;
     int globalPathOffset = setPathOffset*4;
     int vertIncludedOffset;
     // |I| - The cardinality of the set.  If |I| = 0; we don't induce children
@@ -1623,7 +1623,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
     printf("Block ID %d thread %d can process %d leaves\n", blockIdx.x, threadIdx.x, leavesThatICanProcess);
     __syncthreads();
     // This pattern uses adjacent threads to write aligned memory, 
-    // but thread indexing if math intensive
+    // but thread indexing is math intensive
     // Desired mapping:
     // 0 -> 2 
     // 1 -> 0
@@ -1635,7 +1635,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
     // Functor: (indexMod6 % 2 == 1) * (indexMod6 != 1) +
     //          (indexMod6 % 2 == 0) * (2 + (index == 4))
 
-    int indexMod6, pathChildIndex, pathIndex, pathValue, leftMostChildOfLevel, dispFromLeft, levelDepth, indexMapper;
+    int indexMod6, pathChildIndex, pathIndex, pathValue, leftMostChildOfLevel, leftMostChildOfLevelExpanded, dispFromLeft, levelDepth, indexMapper, levelWidth;
     for(int index = threadIdx.x; index < leavesThatICanProcess*6; index += blockDim.x){
         pathIndex = index / 6;
         pathValue = global_set_paths_indices[setPathOffset + pathIndex];
@@ -1643,54 +1643,70 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
         pathChildIndex = (indexMod6 % 2 == 1) * (indexMod6 != 1) +
                             (indexMod6 % 2 == 0) * (2 + (index == 4));
         // Have to handle 0 and 1..
-        levelDepth = 1;
+        levelDepth = 1.0;
         indexMapper = index;
-        while((int)floor((logf((float)(indexMapper / 2 + (int)(indexMapper < 2))) / logf(pow(3.0,levelDepth))))){
-            indexMapper -=  (int)(3*pow(3.0, levelDepth));
+        leftMostChildOfLevel = leafValue + (leafValue == 0);
+        levelWidth = (int)(2.0*powf(3.0, levelDepth));
+        leftMostChildOfLevelExpanded = 0;
+        while(indexMapper / levelWidth){
+            indexMapper -=  (int)(2*powf(3.0, levelDepth));
             ++levelDepth;
+            leftMostChildOfLevel *= 3.0;
+            leftMostChildOfLevelExpanded += leftMostChildOfLevel;
+            levelWidth = (int)(2.0*powf(3.0, levelDepth));
             indexMapper = indexMapper*((int)(indexMapper >= 0));
-            printf("thread %d indexMapper %d\n",threadIdx.x, indexMapper);
         }
-        //levelDepth = 1 + (int)(ceil(logf((float)(index/6 + (int)(index < 6))) / logf(3.0)));
-        // Handles index 0
-        leftMostChildOfLevel = (pow(3.0, levelDepth) * leafValue)*(leafValue != 0) + 
-                                pow(3.0, levelDepth-1)*(leafValue == 0);
-        dispFromLeft = index - leftMostChildOfLevel*6;
+        // Handles index 0 : + (int)(leftMostChildOfLevelExpanded == 0)
+        leftMostChildOfLevelExpanded = ((int)(leftMostChildOfLevelExpanded != 0))*(leftMostChildOfLevelExpanded*2 + 1) + (int)(leftMostChildOfLevelExpanded == 0);
+        printf("thread %d levelWidth %d\n",threadIdx.x, levelWidth);
+        dispFromLeft = index - leftMostChildOfLevelExpanded + 1;
+        /*
         if (blockIdx.x == 0){
             printf("thread %d index %d\n",threadIdx.x, index);
-            printf("thread %d (float)(index/2) %f\n", threadIdx.x, (float)(index/2));
-            printf("thread %d index == 0 %d\n",threadIdx.x, index == 0);
-            printf("thread %d index == 1) %d\n",threadIdx.x, index == 1);
-            printf("thread %d (float)(index/2 + index == 0 + index == 1) %f\n",threadIdx.x, (float)(index/2 + (int)(index == 0) + (int)(index == 1)));
-            printf("thread %d (index/2 + index == 0 + index == 1) %d\n",threadIdx.x, (index/2 + (int)(index == 0) + (int)(index == 1)));
-            printf("thread %d logf((float)(index/2 + index == 0 + index == 1)) %f\n",threadIdx.x, logf((float)(index/2 + (int)(index == 0) + (int)(index == 1))));
-            printf("thread %d logf((float)(index/2 + index == 0 + index == 1) / logf(3)) %f\n",threadIdx.x, logf((float)(index/2 + index == 0 + index == 1)) / logf(3));
-            printf("thread %d floor((float)(logf(index/2 + index == 0 + index == 1) / logf(3))) %f\n",threadIdx.x, floor(logf((float)(index/2 + index == 0 + index == 1)) / logf(3)));
-            printf("thread %d (int)(floor(logf(index/2 + index == 0 + index == 1) / logf(3))) %d\n",threadIdx.x, (int)(floor(logf(index/2 + index == 0 + index == 1) / logf(3))));
             printf("thread %d pathIndex %d\n", threadIdx.x, pathIndex);
             printf("thread %d pathValue %d\n", threadIdx.x, pathValue);
             printf("thread %d indexMod6 %d\n", threadIdx.x, indexMod6);
             printf("thread %d pathChildIndex %d\n", threadIdx.x, pathChildIndex);
             printf("thread %d levelDepth %d\n", threadIdx.x, levelDepth);
             printf("thread %d leftMostChildOfLevel %d\n", threadIdx.x, leftMostChildOfLevel);
+            printf("thread %d leftMostChildOfLevelExpanded %d\n", threadIdx.x, leftMostChildOfLevelExpanded);
             printf("thread %d dispFromLeft %d\n", threadIdx.x, dispFromLeft);
         }
-        global_vertices_included_dev_ptr[leftMostChildOfLevel + dispFromLeft] = global_paths_ptr[globalPathOffset + pathValue*4 + pathChildIndex];
+        */
+        global_vertices_included_dev_ptr[leftMostChildOfLevelExpanded + dispFromLeft] = global_paths_ptr[globalPathOffset + pathValue*4 + pathChildIndex];
     }
     __syncthreads();
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("VertsIncluded\n");
-        int numLvls = floor(logf(leavesThatICanProcess) / logf(3));
+        int numLvls = 4;
+        int LB = 0, UB = 0;
         for (int lvl = 0; lvl < numLvls; ++lvl){
-            int myLB = CalculateLevelOffset(lvl);
-            int myUB = CalculateLevelUpperBound(lvl);
-            for (int i = myLB; i < myUB; ++i){
+            if (LB == 0)
+                UB = 1;
+            else
+                UB = LB + (int)(powf(3.0, lvl)*2.0);
+            //printf("LB : %d; UB : %d\n ", LB, UB);
+            for (int i = LB; i < UB; ++i){
                 printf("%d ", global_vertices_included_dev_ptr[i]);
             }
             printf("\n");
+            if (LB == 0)
+                LB = 1;
+            else
+                LB = LB + (int)(powf(3.0, lvl)*2.0);
         }
 
     }
+}
+
+__global__ void ParallelActivateLeafNodesBreadthFirst(int * global_active_leaf_indices,
+                                        int * global_set_paths_indices,
+                                        int * global_reduced_set_inclusion_count_ptr,
+                                        int * global_paths_ptr,
+                                        int * global_vertices_included_dev_ptr){
+
+    
+
 }
 
     /*
@@ -2181,7 +2197,7 @@ void CallPopulateTree(int numberOfLevels,
     int * global_reduced_set_inclusion_count_ptr;
     int * global_paths_length;
     int * global_edges_left_to_cover_count;
-    int * global_active_leaf_indices;
+    int * global_active_leaf_indices, global_active_leaf_indices_buffer;
     int * global_memcpy_boolean;
     int * global_last_full_parent_vertex;
 
@@ -2272,9 +2288,18 @@ void CallPopulateTree(int numberOfLevels,
     // but we have to assume the worst, that is the entire second deepest level is full
     // and the last level is filled by inducing 3 children per leaf node
 
-    cudaMalloc( (void**)&global_active_leaf_indices, activeLeavesPerNode*secondDeepestLevelSize*sizeof(int) );
-    // If we want to use a serial list creation of active vertices
-    //cudaMalloc( (void**)&global_active_leaf_indices, deepestLevelSize*sizeof(int) );
+    // This would eliminate calculating the offsets of each active node into the buffer
+    // With this much memory we can write in my section then sort globally decreasing.
+    // I will do the serial calculation for a dramatic decrease in memory usage
+    //cudaMalloc( (void**)&global_active_leaf_indices, activeLeavesPerNode*secondDeepestLevelSize*sizeof(int) );
+    //cudaMalloc( (void**)&global_active_leaf_indices_buffer, activeLeavesPerNode*secondDeepestLevelSize*sizeof(int) );
+
+    // If we want to use a compressed list creation of active vertices
+    // We will precalculate where each active node will write in this compressed array
+    cudaMalloc( (void**)&global_active_leaf_indices, deepestLevelSize*sizeof(int) );
+    cudaMalloc( (void**)&global_active_leaf_indices_buffer, deepestLevelSize*sizeof(int) );
+
+    cub::DoubleBuffer<int> active_leaves(global_active_leaf_indices, global_active_leaf_indices_buffer);
 
     // If the cols, vals, remaining vertices, need to be memcpied
     // When inducing a child, is true
@@ -2299,7 +2324,7 @@ void CallPopulateTree(int numberOfLevels,
                     remaining_vertices.Current(),
                     global_remaining_vertices_size_dev_ptr,
                     verticesRemainingInGraph,
-                    global_active_leaf_indices);
+                    active_leaves.Current());
 
     long long levelOffset = 0;
     long long levelUpperBound;
@@ -2380,7 +2405,7 @@ void CallPopulateTree(int numberOfLevels,
         ParallelDFSRandom<<<activeVerticesCount,threadsPerBlock,sharedMemorySize*sizeof(int)>>>
                             (numberOfRows,
                             numberOfEdgesPerGraph,
-                            global_active_leaf_indices,
+                            active_leaves.Current(),
                             row_offsets.Current(),
                             columns.Current(),
                             remaining_vertices.Current(),
@@ -2438,7 +2463,7 @@ void CallPopulateTree(int numberOfLevels,
                                     2*threadsPerBlock*sizeof(int)>>>
                         (numberOfRows,
                         numberOfEdgesPerGraph,
-                        global_active_leaf_indices,
+                        active_leaves.Current(),
                         row_offsets.Current(),
                         columns.Current(),
                         values.Current(),
@@ -2505,7 +2530,7 @@ void CallPopulateTree(int numberOfLevels,
         checkLastErrorCUDA(__FILE__, __LINE__);
 
         ParallelAssignMISToNodesBreadthFirst<<<activeVerticesCount,
-                                               threadsPerBlock>>>(global_active_leaf_indices,
+                                               threadsPerBlock>>>(active_leaves.Current(),
                                         paths_indices.Current(),
                                         global_reduced_set_inclusion_count_ptr,
                                         global_paths_ptr,
@@ -2643,10 +2668,10 @@ void CopyGraphToDevice( Graph & g,
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     std::cout << "Activate root of tree" << std::endl;
-    cudaMemset(global_active_leaf_indices, 0, 1*sizeof(int));
+    cudaMemset(active_leaves.Current(), 0, 1*sizeof(int));
     std::cout << "Activated root of tree" << std::endl;
     int shouldBe1[1];
-    cudaMemcpy(shouldBe1, global_active_leaf_indices, 1*sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(shouldBe1, active_leaves.Current(), 1*sizeof(int), cudaMemcpyDeviceToHost);
 
 
     cudaDeviceSynchronize();
