@@ -1656,12 +1656,9 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
             levelWidth = (int)(2.0*powf(3.0, levelDepth));
             indexMapper = indexMapper*((int)(indexMapper >= 0));
         }
+        // Handles index 0 : + (int)(leftMostChildOfLevelExpanded == 0)
         leftMostChildOfLevelExpanded = ((int)(leftMostChildOfLevelExpanded != 0))*(leftMostChildOfLevelExpanded*2 + 1) + (int)(leftMostChildOfLevelExpanded == 0);
         printf("thread %d levelWidth %d\n",threadIdx.x, levelWidth);
-        //levelDepth = 1 + (int)(ceil(logf((float)(index/6 + (int)(index < 6))) / logf(3.0)));
-        // Handles index 0
-        //leftMostChildOfLevel = (pow(3.0, levelDepth) * leafValue)*(leafValue != 0) + 
-        //                        pow(3.0, levelDepth-1)*(leafValue == 0);
         dispFromLeft = index - leftMostChildOfLevelExpanded + 1;
         /*
         if (blockIdx.x == 0){
@@ -1700,6 +1697,16 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
         }
 
     }
+}
+
+__global__ void ParallelActivateLeafNodesBreadthFirst(int * global_active_leaf_indices,
+                                        int * global_set_paths_indices,
+                                        int * global_reduced_set_inclusion_count_ptr,
+                                        int * global_paths_ptr,
+                                        int * global_vertices_included_dev_ptr){
+
+    
+
 }
 
     /*
@@ -2190,7 +2197,7 @@ void CallPopulateTree(int numberOfLevels,
     int * global_reduced_set_inclusion_count_ptr;
     int * global_paths_length;
     int * global_edges_left_to_cover_count;
-    int * global_active_leaf_indices;
+    int * global_active_leaf_indices, global_active_leaf_indices_buffer;
     int * global_memcpy_boolean;
     int * global_last_full_parent_vertex;
 
@@ -2281,9 +2288,18 @@ void CallPopulateTree(int numberOfLevels,
     // but we have to assume the worst, that is the entire second deepest level is full
     // and the last level is filled by inducing 3 children per leaf node
 
-    cudaMalloc( (void**)&global_active_leaf_indices, activeLeavesPerNode*secondDeepestLevelSize*sizeof(int) );
-    // If we want to use a serial list creation of active vertices
-    //cudaMalloc( (void**)&global_active_leaf_indices, deepestLevelSize*sizeof(int) );
+    // This would eliminate calculating the offsets of each active node into the buffer
+    // With this much memory we can write in my section then sort globally decreasing.
+    // I will do the serial calculation for a dramatic decrease in memory usage
+    //cudaMalloc( (void**)&global_active_leaf_indices, activeLeavesPerNode*secondDeepestLevelSize*sizeof(int) );
+    //cudaMalloc( (void**)&global_active_leaf_indices_buffer, activeLeavesPerNode*secondDeepestLevelSize*sizeof(int) );
+
+    // If we want to use a compressed list creation of active vertices
+    // We will precalculate where each active node will write in this compressed array
+    cudaMalloc( (void**)&global_active_leaf_indices, deepestLevelSize*sizeof(int) );
+    cudaMalloc( (void**)&global_active_leaf_indices_buffer, deepestLevelSize*sizeof(int) );
+
+    cub::DoubleBuffer<int> active_leaves(global_active_leaf_indices, global_active_leaf_indices_buffer);
 
     // If the cols, vals, remaining vertices, need to be memcpied
     // When inducing a child, is true
@@ -2308,7 +2324,7 @@ void CallPopulateTree(int numberOfLevels,
                     remaining_vertices.Current(),
                     global_remaining_vertices_size_dev_ptr,
                     verticesRemainingInGraph,
-                    global_active_leaf_indices);
+                    active_leaves.Current());
 
     long long levelOffset = 0;
     long long levelUpperBound;
@@ -2389,7 +2405,7 @@ void CallPopulateTree(int numberOfLevels,
         ParallelDFSRandom<<<activeVerticesCount,threadsPerBlock,sharedMemorySize*sizeof(int)>>>
                             (numberOfRows,
                             numberOfEdgesPerGraph,
-                            global_active_leaf_indices,
+                            active_leaves.Current(),
                             row_offsets.Current(),
                             columns.Current(),
                             remaining_vertices.Current(),
@@ -2447,7 +2463,7 @@ void CallPopulateTree(int numberOfLevels,
                                     2*threadsPerBlock*sizeof(int)>>>
                         (numberOfRows,
                         numberOfEdgesPerGraph,
-                        global_active_leaf_indices,
+                        active_leaves.Current(),
                         row_offsets.Current(),
                         columns.Current(),
                         values.Current(),
@@ -2514,7 +2530,7 @@ void CallPopulateTree(int numberOfLevels,
         checkLastErrorCUDA(__FILE__, __LINE__);
 
         ParallelAssignMISToNodesBreadthFirst<<<activeVerticesCount,
-                                               threadsPerBlock>>>(global_active_leaf_indices,
+                                               threadsPerBlock>>>(active_leaves.Current(),
                                         paths_indices.Current(),
                                         global_reduced_set_inclusion_count_ptr,
                                         global_paths_ptr,
@@ -2652,10 +2668,10 @@ void CopyGraphToDevice( Graph & g,
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     std::cout << "Activate root of tree" << std::endl;
-    cudaMemset(global_active_leaf_indices, 0, 1*sizeof(int));
+    cudaMemset(active_leaves.Current(), 0, 1*sizeof(int));
     std::cout << "Activated root of tree" << std::endl;
     int shouldBe1[1];
-    cudaMemcpy(shouldBe1, global_active_leaf_indices, 1*sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(shouldBe1, active_leaves.Current(), 1*sizeof(int), cudaMemcpyDeviceToHost);
 
 
     cudaDeviceSynchronize();
