@@ -2350,14 +2350,14 @@ void CallPopulateTree(int numberOfLevels,
     int completeLevel = ClosedFormLevelDepthComplete(x);
     int completeLevelLeaves = pow(3.0, completeLevel);
     int incompleteLevel = ClosedFormLevelDepthIncomplete(x);
-    int treeSizeComplete = TreeSize(completeLevel);
+    int treeSizeComplete = TreeSize(completeLevel-1);
     printf("Leaves %d, completeLevel Level Depth %d\n",x, completeLevel);
     printf("Leaves %d, completeLevelLeaves Level Depth %d\n",x, completeLevelLeaves);
     printf("Leaves %d, incompleteLevel Level Depth %d\n",x, incompleteLevel);
     printf("Leaves %d, treeSizeComplete Level Depth %d\n",x, treeSizeComplete);
     if(x - treeSizeComplete){
         int removeFromComplete = ((x - treeSizeComplete) + 3 - 1) / 3;;
-        printf("Leaves %d, removeFromComplete Level Depth %d\n",x, removeFromComplete);
+        printf("Leaves %d, removeFromComplete %d\n",x, removeFromComplete);
     }
                             }
     exit(0);
