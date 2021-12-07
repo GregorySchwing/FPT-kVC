@@ -150,6 +150,21 @@ __host__ __device__ int CalculateNumberInIncompleteLevel(int leavesThatICanProce
 
 }
 
+__host__ __device__ int ClosedFormLevelDepth(int leavesThatICanProcess){
+    //2*leavesThatICanProcess + 1 < 3^(n+1)
+    // log(2*leavesThatICanProcess + 1) / log(3) < n + 1
+    // log(2*leavesThatICanProcess + 1) / log(3) - 1 < n
+    return ceil(logf(2*leavesThatICanProcess + 1) / logf(3) - 1);
+}
+
+/*
+__global__ void ClosedFormLevelDepth(int leavesThatICanProcess){
+    //2*leavesThatICanProcess + 1 < 3^(n+1)
+    // log(2*leavesThatICanProcess + 1) / log(3) < n + 1
+    // log(2*leavesThatICanProcess + 1) / log(3) - 1 < n
+    return ceil(logf(2*leavesThatICanProcess + 1) / logf(3) - 1);
+}
+*/
 __global__ void  PrintEdges(int activeVerticesCount,
                                     int numberOfRows,
                                     int numberOfEdgesPerGraph,
@@ -2197,7 +2212,7 @@ void CallPopulateTree(int numberOfLevels,
     int * global_reduced_set_inclusion_count_ptr;
     int * global_paths_length;
     int * global_edges_left_to_cover_count;
-    int * global_active_leaf_indices, global_active_leaf_indices_buffer;
+    int * global_active_leaf_indices, * global_active_leaf_indices_buffer;
     int * global_memcpy_boolean;
     int * global_last_full_parent_vertex;
 
@@ -2310,6 +2325,8 @@ void CallPopulateTree(int numberOfLevels,
     // from which cols, vals, remaining vertices are to be copied
     cudaMalloc( (void**)&global_last_full_parent_vertex, secondDeepestLevelSize * sizeof(int) );
 
+    printf("\n\nLevel Depth %d\n\n",ClosedFormLevelDepth(5));
+    exit(0);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -2361,6 +2378,9 @@ void CallPopulateTree(int numberOfLevels,
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
+
+
+
 
     bool notFirstCall = false;
     // When activeVerticesCount == 0, loop terminates
@@ -2668,10 +2688,10 @@ void CopyGraphToDevice( Graph & g,
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     std::cout << "Activate root of tree" << std::endl;
-    cudaMemset(active_leaves.Current(), 0, 1*sizeof(int));
+    cudaMemset(global_active_leaf_indices, 0, 1*sizeof(int));
     std::cout << "Activated root of tree" << std::endl;
     int shouldBe1[1];
-    cudaMemcpy(shouldBe1, active_leaves.Current(), 1*sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(shouldBe1, global_active_leaf_indices, 1*sizeof(int), cudaMemcpyDeviceToHost);
 
 
     cudaDeviceSynchronize();
