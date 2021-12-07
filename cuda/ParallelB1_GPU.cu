@@ -1735,7 +1735,7 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
     int globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
     
     extern __shared__ int new_active_leaves_count_red[];
-    printf("globalIndex %d, global_active_leaves_count_current %d\n",globalIndex, global_active_leaves_count_current[0]);
+    printf("globalIndex %d, global_active_leaves_count_current %x\n",globalIndex, global_active_leaves_count_current[0]);
     if (globalIndex < global_active_leaves_count_current[0]){
         int leavesToProcess = global_reduced_set_inclusion_count_ptr[globalIndex];
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
@@ -2636,7 +2636,7 @@ void CallPopulateTree(int numberOfLevels,
         cudaMemcpy(&activeVerticesCount, active_leaves_count.Current(), 1*sizeof(int), cudaMemcpyDeviceToHost);
 
         // Just to test a single iteration
-        printf("TRUE activeVerticesCount : %d\n", activeVerticesCount);
+        printf("TRUE activeVerticesCount : %x\n", activeVerticesCount);
         activeVerticesCount = 0;
     }
 /*
