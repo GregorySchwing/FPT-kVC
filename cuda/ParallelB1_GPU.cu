@@ -1727,13 +1727,31 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
     }
 }
 
-__global__ void ParallelActivateLeafNodesBreadthFirst(int * global_active_leaf_indices,
+__global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(int * global_active_leaf_indices,
                                         int * global_set_paths_indices,
                                         int * global_reduced_set_inclusion_count_ptr,
                                         int * global_paths_ptr,
-                                        int * global_vertices_included_dev_ptr){
+                                        int * global_vertices_included_dev_ptr,
+                                        int * global_reduced_set_newly_active_leaves_count_ptr){
 
-    
+    int globalIndex = threadIdx.x * blockDim.x + threadIdx.x;
+    int leavesToProcess = global_reduced_set_inclusion_count_ptr[globalIndex];
+    int completeLevel = ClosedFormLevelDepthComplete(x);
+    int completeLevelLeaves = pow(3.0, completeLevel);
+    int incompleteLevel = ClosedFormLevelDepthIncomplete(x);
+    int treeSizeComplete = TreeSize(completeLevel-1);
+    printf("Leaves %d, completeLevel Level Depth %d\n",x, completeLevel);
+    printf("Leaves %d, completeLevelLeaves Level Depth %d\n",x, completeLevelLeaves);
+    printf("Leaves %d, incompleteLevel Level Depth %d\n",x, incompleteLevel);
+    printf("Leaves %d, treeSizeComplete Level Depth %d\n",x, treeSizeComplete);
+    int removeFromComplete = 0;
+    int leavesInIncomLvl = (x - treeSizeComplete);
+    if(leavesInIncomLvl){
+        removeFromComplete = ((x - treeSizeComplete) + 3 - 1) / 3;;
+        printf("Leaves %d, removeFromComplete %d\n",x, removeFromComplete);
+    }
+    int totalNewActive = leavesInIncomLvl + completeLevelLeaves - removeFromComplete;
+    global_reduced_set_newly_active_leaves_count_ptr[globalIndex] = ;
 
 }
 
@@ -2223,6 +2241,7 @@ void CallPopulateTree(int numberOfLevels,
     int * global_set_path_offsets;
     //
     int * global_reduced_set_inclusion_count_ptr;
+    int * global_reduced_set_newly_active_leaves_count_ptr;
     int * global_paths_length;
     int * global_edges_left_to_cover_count;
     int * global_active_leaf_indices, * global_active_leaf_indices_buffer;
@@ -2307,7 +2326,9 @@ void CallPopulateTree(int numberOfLevels,
     // If a vertex is skipped, it doesn't do anything
     // If a vertex is not skipped and it has n > 0 paths produced, the largest number of
     // levels are induced, at least 1.
-    cudaMalloc( (void**)&global_reduced_set_inclusion_count_ptr, treeSize * sizeof(int) );
+    cudaMalloc( (void**)&global_reduced_set_inclusion_count_ptr, deepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_reduced_set_newly_active_leaves_count_ptr, deepestLevelSize * sizeof(int) );
+
     // For now I won't anticipate the decisions of deeper levels
     // Therefore, I can only work on a range
     // 0 < x < deepest level size vertices
@@ -2345,21 +2366,21 @@ void CallPopulateTree(int numberOfLevels,
         for (x=0;x < 15; ++x){
     printf("Leaves %d, ClosedFormLevelDepthComplete Level Depth %d\n",x, ClosedFormLevelDepthComplete(x));
                     }
-                            for (x=0;x < 15; ++x){
-
-    int completeLevel = ClosedFormLevelDepthComplete(x);
-    int completeLevelLeaves = pow(3.0, completeLevel);
-    int incompleteLevel = ClosedFormLevelDepthIncomplete(x);
-    int treeSizeComplete = TreeSize(completeLevel-1);
-    printf("Leaves %d, completeLevel Level Depth %d\n",x, completeLevel);
-    printf("Leaves %d, completeLevelLeaves Level Depth %d\n",x, completeLevelLeaves);
-    printf("Leaves %d, incompleteLevel Level Depth %d\n",x, incompleteLevel);
-    printf("Leaves %d, treeSizeComplete Level Depth %d\n",x, treeSizeComplete);
-    if(x - treeSizeComplete){
-        int removeFromComplete = ((x - treeSizeComplete) + 3 - 1) / 3;;
-        printf("Leaves %d, removeFromComplete %d\n",x, removeFromComplete);
+    
+    for (x=0;x < 15; ++x){
+        int completeLevel = ClosedFormLevelDepthComplete(x);
+        int completeLevelLeaves = pow(3.0, completeLevel);
+        int incompleteLevel = ClosedFormLevelDepthIncomplete(x);
+        int treeSizeComplete = TreeSize(completeLevel-1);
+        printf("Leaves %d, completeLevel Level Depth %d\n",x, completeLevel);
+        printf("Leaves %d, completeLevelLeaves Level Depth %d\n",x, completeLevelLeaves);
+        printf("Leaves %d, incompleteLevel Level Depth %d\n",x, incompleteLevel);
+        printf("Leaves %d, treeSizeComplete Level Depth %d\n",x, treeSizeComplete);
+        if(x - treeSizeComplete){
+            int removeFromComplete = ((x - treeSizeComplete) + 3 - 1) / 3;;
+            printf("Leaves %d, removeFromComplete %d\n",x, removeFromComplete);
+        }
     }
-                            }
     exit(0);
 
     cudaDeviceSynchronize();
