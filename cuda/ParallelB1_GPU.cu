@@ -1735,9 +1735,8 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
     int globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
     
     extern __shared__ int new_active_leaves_count_red[];
-
+    printf("globalIndex %d, global_active_leaves_count_current %d\n",globalIndex, global_active_leaves_count_current[0]);
     if (globalIndex < global_active_leaves_count_current[0]){
-
         int leavesToProcess = global_reduced_set_inclusion_count_ptr[globalIndex];
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         // Solved for leavesToProcess < closed form
