@@ -2389,36 +2389,6 @@ void CallPopulateTree(int numberOfLevels,
 
     cub::DoubleBuffer<int> active_leaves_count(global_active_leaf_indices_count, global_active_leaf_indices_count_buffer);
 
-
-    int x = 0;
-    for (x=0;x < 15; ++x){
-    printf("Leaves %d, ClosedFormLevelDepthIncomplete Level Depth %d\n",x, ClosedFormLevelDepthIncomplete(x));
-                    }
-        for (x=0;x < 15; ++x){
-    printf("Leaves %d, ClosedFormLevelDepthComplete Level Depth %d\n",x, ClosedFormLevelDepthComplete(x));
-                    }
-    
-    for (x=0;x < 15; ++x){
-        int completeLevel = ClosedFormLevelDepthComplete(x);
-        int completeLevelLeaves = pow(3.0, completeLevel);
-        int incompleteLevel = ClosedFormLevelDepthIncomplete(x);
-        int treeSizeComplete = TreeSize(completeLevel-1);
-        printf("Leaves %d, completeLevel Level Depth %d\n",x, completeLevel);
-        printf("Leaves %d, completeLevelLeaves Level Depth %d\n",x, completeLevelLeaves);
-        printf("Leaves %d, incompleteLevel Level Depth %d\n",x, incompleteLevel);
-        printf("Leaves %d, treeSizeComplete Level Depth %d\n",x, treeSizeComplete);
-    int removeFromComplete = 0;
-    int leavesFromIncompleteLvl = (x - treeSizeComplete);
-    if(leavesFromIncompleteLvl){
-        removeFromComplete = ((x - treeSizeComplete) + 3 - 1) / 3;;
-        printf("Leaves %d, removeFromComplete %d\n",x, removeFromComplete);
-    }
-    int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
-            printf("Leaves %d, totalNewActive %d\n",x, totalNewActive);
-
-    }
-    exit(0);
-
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
