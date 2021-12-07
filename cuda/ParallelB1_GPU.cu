@@ -2382,7 +2382,7 @@ void CallPopulateTree(int numberOfLevels,
         removeFromComplete = ((x - treeSizeComplete) + 3 - 1) / 3;;
         printf("Leaves %d, removeFromComplete %d\n",x, removeFromComplete);
     }
-    int totalNewActive = leavesInIncomLvl + completeLevelLeaves - removeFromComplete;
+    int totalNewActive = 3*leavesInIncomLvl + completeLevelLeaves - removeFromComplete;
             printf("Leaves %d, totalNewActive %d\n",x, totalNewActive);
 
     }
