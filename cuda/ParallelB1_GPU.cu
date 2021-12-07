@@ -157,6 +157,12 @@ __host__ __device__ int ClosedFormLevelDepth(int leavesThatICanProcess){
     return ceil(logf(2*leavesThatICanProcess + 1) / logf(3) - 1);
 }
 
+__host__ __device__ int ClosedFormLevelDepthFloor(int leavesThatICanProcess){
+    //2*leavesThatICanProcess + 1 < 3^(n+1)
+    // log(2*leavesThatICanProcess + 1) / log(3) < n + 1
+    // log(2*leavesThatICanProcess + 1) / log(3) - 1 < n
+    return floor(logf(2*leavesThatICanProcess + 1) / logf(3) - 1);
+}
 /*
 __global__ void ClosedFormLevelDepth(int leavesThatICanProcess){
     //2*leavesThatICanProcess + 1 < 3^(n+1)
@@ -2326,8 +2332,11 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_last_full_parent_vertex, secondDeepestLevelSize * sizeof(int) );
 
     int x = 0;
-    for (;x < 15; ++x){
+    for (x=0;x < 15; ++x){
     printf("Leaves %d, Level Depth %d\n",x, ClosedFormLevelDepth(x));
+                    }
+        for (x=0;x < 15; ++x){
+    printf("Leaves %d, Level Depth %d\n",x, ClosedFormLevelDepthFloor(x));
                     }
     exit(0);
 
