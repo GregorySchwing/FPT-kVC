@@ -1775,7 +1775,7 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
         i /= 2;
     }
     if (threadIdx.x == 0)
-        atomicAdd(global_reduced_set_newly_active_leaves_count_ptr, new_active_leaves_count_red[threadIdx.x]);
+        atomicAdd(global_active_leaves_count_new, new_active_leaves_count_red[threadIdx.x]);
 }
 
     /*
@@ -2634,7 +2634,7 @@ void CallPopulateTree(int numberOfLevels,
         // Flips Current and Alternate
         active_leaves_count.selector = !active_leaves_count.selector;
 
-        cudaMemcpy(&activeVerticesCount, active_leaves_count.Alternate(), 1*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&activeVerticesCount, active_leaves_count.Current(), 1*sizeof(int), cudaMemcpyDeviceToHost);
 
         // Just to test a single iteration
         printf("TRUE activeVerticesCount : %d\n", activeVerticesCount);
