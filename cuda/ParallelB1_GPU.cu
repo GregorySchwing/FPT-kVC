@@ -156,7 +156,6 @@ __host__ __device__ int ClosedFormLevelDepthIncomplete(int leavesThatICanProcess
     // log(2*leavesThatICanProcess + 1) / log(3) - 1 < n
     //return ceil(logf(2*leavesThatICanProcess + 1) / logf(3) - 1);
     return ceil(logf(2*leavesThatICanProcess + 1) / logf(3));
-
 }
 
 __host__ __device__ int ClosedFormLevelDepthComplete(int leavesThatICanProcess){
@@ -165,8 +164,12 @@ __host__ __device__ int ClosedFormLevelDepthComplete(int leavesThatICanProcess){
     // log(2*leavesThatICanProcess + 1) / log(3) - 1 < n
     //return floor(logf(2*leavesThatICanProcess + 1) / logf(3) - 1);
     return floor(logf(2*leavesThatICanProcess + 1) / logf(3));
-
 }
+
+__host__ __device__ int TreeSize(int levels){
+    return (1.0 - pow(3.0, levels+1.0))/(1.0 - 3.0);
+}
+
 /*
 __global__ void ClosedFormLevelDepth(int leavesThatICanProcess){
     //2*leavesThatICanProcess + 1 < 3^(n+1)
@@ -2342,6 +2345,21 @@ void CallPopulateTree(int numberOfLevels,
         for (x=0;x < 15; ++x){
     printf("Leaves %d, ClosedFormLevelDepthComplete Level Depth %d\n",x, ClosedFormLevelDepthComplete(x));
                     }
+                            for (x=0;x < 15; ++x){
+
+    int completeLevel = ClosedFormLevelDepthComplete(x);
+    int completeLevelLeaves = pow(3.0, completeLevel);
+    int incompleteLevel = ClosedFormLevelDepthIncomplete(x);
+    int treeSizeComplete = TreeSize(completeLevel);
+    printf("Leaves %d, completeLevel Level Depth %d\n",x, completeLevel);
+    printf("Leaves %d, completeLevelLeaves Level Depth %d\n",x, completeLevelLeaves);
+    printf("Leaves %d, incompleteLevel Level Depth %d\n",x, incompleteLevel);
+    printf("Leaves %d, treeSizeComplete Level Depth %d\n",x, treeSizeComplete);
+    if(x - treeSizeComplete){
+        int removeFromComplete = ((x - treeSizeComplete) + 3 - 1) / 3;;
+        printf("Leaves %d, removeFromComplete Level Depth %d\n",x, removeFromComplete);
+    }
+                            }
     exit(0);
 
     cudaDeviceSynchronize();
