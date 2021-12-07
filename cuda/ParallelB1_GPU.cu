@@ -1728,30 +1728,54 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
 }
 
 __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
+                                        int * global_active_leaves_count_current,
+                                        int * global_active_leaves_count_new,
                                         int * global_reduced_set_inclusion_count_ptr,
                                         int * global_reduced_set_newly_active_leaves_count_ptr){
-
     int globalIndex = threadIdx.x * blockDim.x + threadIdx.x;
-    int leavesToProcess = global_reduced_set_inclusion_count_ptr[globalIndex];
-    // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
-    // Solved for leavesToProcess < closed form
-    int completeLevel = floor(logf(2*leavesToProcess + 1) / logf(3));
-    int completeLevelLeaves = powf(3.0, completeLevel);
-    // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
-    // Solved for closed form < leavesToProcess
-    int incompleteLevel = ceil(logf(2*leavesToProcess + 1) / logf(3));
-    // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
-    int treeSizeComplete = (1.0 - pow(3.0, completeLevel))/(1.0 - 3.0);
-    printf("Leaves %d, completeLevel Level Depth %d\n",leavesToProcess, completeLevel);
-    printf("Leaves %d, completeLevelLeaves Level Depth %d\n",leavesToProcess, completeLevelLeaves);
-    printf("Leaves %d, incompleteLevel Level Depth %d\n",leavesToProcess, incompleteLevel);
-    printf("Leaves %d, treeSizeComplete Level Depth %d\n",leavesToProcess, treeSizeComplete);
-    int removeFromComplete = ((leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
-    int leavesFromIncompleteLvl = (leavesToProcess - treeSizeComplete);
-    printf("Leaves %d, removeFromComplete %d\n",leavesToProcess, removeFromComplete);
-    int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
-    printf("Leaves %d, totalNewActive %d\n",leavesToProcess, totalNewActive);
-    global_reduced_set_newly_active_leaves_count_ptr[globalIndex] = totalNewActive;
+    
+    extern __shared__ int new_active_leaves_count_red[];
+
+    if (globalIndex < global_active_leaves_count_current[0]){
+
+        int leavesToProcess = global_reduced_set_inclusion_count_ptr[globalIndex];
+        // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
+        // Solved for leavesToProcess < closed form
+        int completeLevel = floor(logf(2*leavesToProcess + 1) / logf(3));
+        int completeLevelLeaves = powf(3.0, completeLevel);
+        // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
+        // Solved for closed form < leavesToProcess
+        int incompleteLevel = ceil(logf(2*leavesToProcess + 1) / logf(3));
+        // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
+        int treeSizeComplete = (1.0 - pow(3.0, completeLevel))/(1.0 - 3.0);
+        printf("Leaves %d, completeLevel Level Depth %d\n",leavesToProcess, completeLevel);
+        printf("Leaves %d, completeLevelLeaves Level Depth %d\n",leavesToProcess, completeLevelLeaves);
+        printf("Leaves %d, incompleteLevel Level Depth %d\n",leavesToProcess, incompleteLevel);
+        printf("Leaves %d, treeSizeComplete Level Depth %d\n",leavesToProcess, treeSizeComplete);
+        int removeFromComplete = ((leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
+        int leavesFromIncompleteLvl = (leavesToProcess - treeSizeComplete);
+        printf("Leaves %d, removeFromComplete %d\n",leavesToProcess, removeFromComplete);
+        int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
+        printf("Leaves %d, totalNewActive %d\n",leavesToProcess, totalNewActive);
+        // Write to global memory
+        global_reduced_set_newly_active_leaves_count_ptr[globalIndex] = totalNewActive;
+        // Write to shared memory for reduction
+        new_active_leaves_count_red[threadIdx.x] = totalNewActive;
+    } else {
+        new_active_leaves_count_red[threadIdx.x] = 0;
+    }
+    int i = blockDim.x/2;
+    __syncthreads();
+    while (i != 0) {
+        if (threadIdx.x < i){
+            printf("new_active_leaves_count_red[%d] = %d + %d\n", threadIdx.x, new_active_leaves_count_red[threadIdx.x], new_active_leaves_count_red[threadIdx.x + i]);
+            new_active_leaves_count_red[threadIdx.x] += new_active_leaves_count_red[threadIdx.x + i];
+        }
+        __syncthreads();
+        i /= 2;
+    }
+    if (threadIdx.x == 0)
+        atomicAdd(global_reduced_set_newly_active_leaves_count_ptr, new_active_leaves_count_red[threadIdx.x]);
 }
 
     /*
@@ -2626,6 +2650,21 @@ void CallPopulateTree(int numberOfLevels,
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
+
+        cudaMemset(active_leaves_count.Alternate(), 0, 1*sizeof(int));
+      
+        numberOfBlocksForOneThreadPerLeaf = (activeVerticesCount + threadsPerBlock - 1) / threadsPerBlock;
+
+        ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock,threadsPerBlock>>>(
+                                        active_leaves_count.Current(),
+                                        active_leaves_count.Alternate(),
+                                        global_reduced_set_inclusion_count_ptr,
+                                        global_reduced_set_newly_active_leaves_count_ptr);
+        
+        // Flips Current and Alternate
+        active_leaves_count.selector = !active_leaves_count.selector;
+
+        cudaMemset(active_leaves_count.Alternate(), 0, 1*sizeof(int));
 
         // Just to test a single iteration
         activeVerticesCount = 0;
