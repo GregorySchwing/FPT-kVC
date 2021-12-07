@@ -1746,7 +1746,7 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
     printf("Leaves %d, completeLevelLeaves Level Depth %d\n",leavesToProcess, completeLevelLeaves);
     printf("Leaves %d, incompleteLevel Level Depth %d\n",leavesToProcess, incompleteLevel);
     printf("Leaves %d, treeSizeComplete Level Depth %d\n",leavesToProcess, treeSizeComplete);
-    int removeFromComplete = = ((leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
+    int removeFromComplete = ((leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
     int leavesFromIncompleteLvl = (leavesToProcess - treeSizeComplete);
     printf("Leaves %d, removeFromComplete %d\n",leavesToProcess, removeFromComplete);
     int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
@@ -2247,7 +2247,9 @@ void CallPopulateTree(int numberOfLevels,
     int * global_memcpy_boolean;
     int * global_last_full_parent_vertex;
 
-    int global_active_leaf_indices_count;
+    int * global_active_leaf_indices_count;
+    int * global_active_leaf_indices_count_buffer;
+
 
     int * global_column_buffer;
     int * global_vertex_buffer;
@@ -2358,6 +2360,12 @@ void CallPopulateTree(int numberOfLevels,
     // from which cols, vals, remaining vertices are to be copied
     cudaMalloc( (void**)&global_last_full_parent_vertex, secondDeepestLevelSize * sizeof(int) );
 
+    cudaMalloc( (void**)&global_active_leaf_indices_count, 1 * sizeof(int) );
+    cudaMalloc( (void**)&global_active_leaf_indices_count_buffer, 1 * sizeof(int) );
+
+    cub::DoubleBuffer<int> active_leaves_count(global_active_leaf_indices_count, global_active_leaf_indices_count_buffer);
+
+
     int x = 0;
     for (x=0;x < 15; ++x){
     printf("Leaves %d, ClosedFormLevelDepthIncomplete Level Depth %d\n",x, ClosedFormLevelDepthIncomplete(x));
@@ -2400,7 +2408,8 @@ void CallPopulateTree(int numberOfLevels,
                     remaining_vertices.Current(),
                     global_remaining_vertices_size_dev_ptr,
                     verticesRemainingInGraph,
-                    active_leaves.Current());
+                    active_leaves.Current(),
+                    active_leaves_count.Current());
 
     long long levelOffset = 0;
     long long levelUpperBound;
@@ -2688,7 +2697,8 @@ void CopyGraphToDevice( Graph & g,
                         int * global_remaining_vertices_dev_ptr,
                         int * global_remaining_vertices_size_dev_ptr,
                         int verticesRemainingInGraph,
-                        int * global_active_leaf_indices){
+                        int * global_active_leaf_indices,
+                        int * global_active_leaf_indices_count){
 
     int * new_degrees_ptr = thrust::raw_pointer_cast(g.GetNewDegRef().data());
     int * vertices_remaining_ptr = thrust::raw_pointer_cast(g.GetRemainingVertices().data());
@@ -2748,6 +2758,7 @@ void CopyGraphToDevice( Graph & g,
 
     std::cout << "Activate root of tree" << std::endl;
     cudaMemset(global_active_leaf_indices, 0, 1*sizeof(int));
+    cudaMemset(global_active_leaf_indices_count, 1, 1*sizeof(int));
     std::cout << "Activated root of tree" << std::endl;
     int shouldBe1[1];
     cudaMemcpy(shouldBe1, global_active_leaf_indices, 1*sizeof(int), cudaMemcpyDeviceToHost);

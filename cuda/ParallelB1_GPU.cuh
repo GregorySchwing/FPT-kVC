@@ -40,7 +40,8 @@ void CopyGraphToDevice( Graph & g,
                         int * global_remaining_vertices_dev_ptr,
                         int * global_remaining_vertices_size_dev_ptr,
                         int verticesRemainingInGraph,
-                        int * global_active_leaf_indices);
+                        int * global_active_leaf_indices,
+                        int * global_active_leaf_indices_count);
 
 void CallPopulateTree(int numberOfLevels, 
                     Graph & gPrime);
@@ -66,6 +67,10 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
                                                                             int * global_values_dev_ptr);
 CUDA_HOSTDEV long long CalculateDeepestLevelWidth(int maxLevel);
 CUDA_HOSTDEV int CalculateNumberOfFullLevels(int leavesThatICanGenerate);
+
+CUDA_HOSTDEV int ClosedFormLevelDepth(int leavesThatICanGenerate);
+
+//__global__ int ClosedFormLevelDepth(int leavesThatICanProcess);
 
 __global__ void  PrintEdges(int activeVerticesCount,
                                     int numberOfRows,
@@ -266,6 +271,10 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
                                         int * global_reduced_set_inclusion_count_ptr,
                                         int * global_paths_ptr,
                                         int * global_vertices_included_dev_ptr);
+
+__global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
+                                        int * global_reduced_set_inclusion_count_ptr,
+                                        int * global_reduced_set_newly_active_leaves_count_ptr);
 
 __global__ void ParallelQuicksortWithDNF(int levelOffset,
                             int levelUpperBound,
