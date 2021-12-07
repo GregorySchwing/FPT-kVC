@@ -1614,7 +1614,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
     printf("Block ID %d thread %d can process leafValue %d\n", blockIdx.x, threadIdx.x, leafValue);
         __syncthreads();
 
-    int setPathOffset = leafIndex * 32;
+    int setPathOffset = leafIndex * blockDim.x;
     int globalPathOffset = setPathOffset*4;
     int vertIncludedOffset;
     // |I| - The cardinality of the set.  If |I| = 0; we don't induce children
@@ -1623,7 +1623,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
     printf("Block ID %d thread %d can process %d leaves\n", blockIdx.x, threadIdx.x, leavesThatICanProcess);
     __syncthreads();
     // This pattern uses adjacent threads to write aligned memory, 
-    // but thread indexing if math intensive
+    // but thread indexing is math intensive
     // Desired mapping:
     // 0 -> 2 
     // 1 -> 0
@@ -1663,7 +1663,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
         //leftMostChildOfLevel = (pow(3.0, levelDepth) * leafValue)*(leafValue != 0) + 
         //                        pow(3.0, levelDepth-1)*(leafValue == 0);
         dispFromLeft = index - leftMostChildOfLevelExpanded + 1;
-        
+        /*
         if (blockIdx.x == 0){
             printf("thread %d index %d\n",threadIdx.x, index);
             printf("thread %d pathIndex %d\n", threadIdx.x, pathIndex);
@@ -1675,7 +1675,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
             printf("thread %d leftMostChildOfLevelExpanded %d\n", threadIdx.x, leftMostChildOfLevelExpanded);
             printf("thread %d dispFromLeft %d\n", threadIdx.x, dispFromLeft);
         }
-        
+        */
         global_vertices_included_dev_ptr[leftMostChildOfLevelExpanded + dispFromLeft] = global_paths_ptr[globalPathOffset + pathValue*4 + pathChildIndex];
     }
     __syncthreads();
