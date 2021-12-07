@@ -150,18 +150,22 @@ __host__ __device__ int CalculateNumberInIncompleteLevel(int leavesThatICanProce
 
 }
 
-__host__ __device__ int ClosedFormLevelDepth(int leavesThatICanProcess){
+__host__ __device__ int ClosedFormLevelDepthIncomplete(int leavesThatICanProcess){
     //2*leavesThatICanProcess + 1 < 3^(n+1)
     // log(2*leavesThatICanProcess + 1) / log(3) < n + 1
     // log(2*leavesThatICanProcess + 1) / log(3) - 1 < n
-    return ceil(logf(2*leavesThatICanProcess + 1) / logf(3) - 1);
+    //return ceil(logf(2*leavesThatICanProcess + 1) / logf(3) - 1);
+    return ceil(logf(2*leavesThatICanProcess + 1) / logf(3));
+
 }
 
-__host__ __device__ int ClosedFormLevelDepthFloor(int leavesThatICanProcess){
+__host__ __device__ int ClosedFormLevelDepthComplete(int leavesThatICanProcess){
     //2*leavesThatICanProcess + 1 < 3^(n+1)
     // log(2*leavesThatICanProcess + 1) / log(3) < n + 1
     // log(2*leavesThatICanProcess + 1) / log(3) - 1 < n
-    return floor(logf(2*leavesThatICanProcess + 1) / logf(3) - 1);
+    //return floor(logf(2*leavesThatICanProcess + 1) / logf(3) - 1);
+    return floor(logf(2*leavesThatICanProcess + 1) / logf(3));
+
 }
 /*
 __global__ void ClosedFormLevelDepth(int leavesThatICanProcess){
@@ -2333,10 +2337,10 @@ void CallPopulateTree(int numberOfLevels,
 
     int x = 0;
     for (x=0;x < 15; ++x){
-    printf("Leaves %d, Level Depth %d\n",x, ClosedFormLevelDepth(x));
+    printf("Leaves %d, ClosedFormLevelDepthIncomplete Level Depth %d\n",x, ClosedFormLevelDepthIncomplete(x));
                     }
         for (x=0;x < 15; ++x){
-    printf("Leaves %d, Level Depth %d\n",x, ClosedFormLevelDepthFloor(x));
+    printf("Leaves %d, ClosedFormLevelDepthComplete Level Depth %d\n",x, ClosedFormLevelDepthComplete(x));
                     }
     exit(0);
 
