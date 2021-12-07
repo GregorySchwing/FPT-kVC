@@ -2325,7 +2325,10 @@ void CallPopulateTree(int numberOfLevels,
     // from which cols, vals, remaining vertices are to be copied
     cudaMalloc( (void**)&global_last_full_parent_vertex, secondDeepestLevelSize * sizeof(int) );
 
-    printf("\n\nLevel Depth %d\n\n",ClosedFormLevelDepth(5));
+    int x = 0;
+    for (;x < 15; ++x){
+    printf("Leaves %d, Level Depth %d\n",x, ClosedFormLevelDepth(x));
+                    }
     exit(0);
 
     cudaDeviceSynchronize();
