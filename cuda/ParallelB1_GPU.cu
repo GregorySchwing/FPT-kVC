@@ -2664,11 +2664,11 @@ void CallPopulateTree(int numberOfLevels,
         // Flips Current and Alternate
         active_leaves_count.selector = !active_leaves_count.selector;
 
-        cudaMemset(active_leaves_count.Alternate(), 0, 1*sizeof(int));
+        cudaMemCpy(&activeVerticesCount, active_leaves_count.Current(), 1*sizeof(int), cudaMemcpyDeviceToHost);
 
         // Just to test a single iteration
+        printf("TRUE activeVerticesCount : %d\n", activeVerticesCount);
         activeVerticesCount = 0;
-
     }
 /*
         cudaMemcpy(activeFlags, global_active_vertices, treeSize*sizeof(int), cudaMemcpyDeviceToHost);
