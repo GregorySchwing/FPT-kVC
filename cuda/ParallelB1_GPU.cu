@@ -1732,7 +1732,7 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
                                         int * global_active_leaves_count_new,
                                         int * global_reduced_set_inclusion_count_ptr,
                                         int * global_reduced_set_newly_active_leaves_count_ptr){
-    int globalIndex = threadIdx.x * blockDim.x + threadIdx.x;
+    int globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
     
     extern __shared__ int new_active_leaves_count_red[];
 
