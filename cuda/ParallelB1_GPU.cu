@@ -1726,35 +1726,34 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
 
     }
 }
-/*
-__global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(int * global_active_leaf_indices,
-                                        int * global_set_paths_indices,
+
+__global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
                                         int * global_reduced_set_inclusion_count_ptr,
-                                        int * global_paths_ptr,
-                                        int * global_vertices_included_dev_ptr,
                                         int * global_reduced_set_newly_active_leaves_count_ptr){
 
     int globalIndex = threadIdx.x * blockDim.x + threadIdx.x;
     int leavesToProcess = global_reduced_set_inclusion_count_ptr[globalIndex];
-    int completeLevel = ClosedFormLevelDepthComplete(leavesToProcess);
-    int completeLevelLeaves = pow(3.0, completeLevel);
-    int incompleteLevel = ClosedFormLevelDepthIncomplete(x);
-    int treeSizeComplete = TreeSize(completeLevel-1);
-    printf("Leaves %d, completeLevel Level Depth %d\n",x, completeLevel);
-    printf("Leaves %d, completeLevelLeaves Level Depth %d\n",x, completeLevelLeaves);
-    printf("Leaves %d, incompleteLevel Level Depth %d\n",x, incompleteLevel);
-    printf("Leaves %d, treeSizeComplete Level Depth %d\n",x, treeSizeComplete);
-    int removeFromComplete = 0;
-    int leavesInIncomLvl = (x - treeSizeComplete);
-    if(leavesInIncomLvl){
-        removeFromComplete = ((x - treeSizeComplete) + 3 - 1) / 3;;
-        printf("Leaves %d, removeFromComplete %d\n",x, removeFromComplete);
-    }
-    int totalNewActive = leavesInIncomLvl + completeLevelLeaves - removeFromComplete;
-    global_reduced_set_newly_active_leaves_count_ptr[globalIndex] = ;
-
+    // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
+    // Solved for leavesToProcess < closed form
+    int completeLevel = floor(logf(2*leavesToProcess + 1) / logf(3));
+    int completeLevelLeaves = powf(3.0, completeLevel);
+    // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
+    // Solved for closed form < leavesToProcess
+    int incompleteLevel = ceil(logf(2*leavesToProcess + 1) / logf(3));
+    // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
+    int treeSizeComplete = (1.0 - pow(3.0, completeLevel))/(1.0 - 3.0);
+    printf("Leaves %d, completeLevel Level Depth %d\n",leavesToProcess, completeLevel);
+    printf("Leaves %d, completeLevelLeaves Level Depth %d\n",leavesToProcess, completeLevelLeaves);
+    printf("Leaves %d, incompleteLevel Level Depth %d\n",leavesToProcess, incompleteLevel);
+    printf("Leaves %d, treeSizeComplete Level Depth %d\n",leavesToProcess, treeSizeComplete);
+    int removeFromComplete = = ((leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
+    int leavesFromIncompleteLvl = (leavesToProcess - treeSizeComplete);
+    printf("Leaves %d, removeFromComplete %d\n",leavesToProcess, removeFromComplete);
+    int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
+    printf("Leaves %d, totalNewActive %d\n",leavesToProcess, totalNewActive);
+    global_reduced_set_newly_active_leaves_count_ptr[globalIndex] = totalNewActive;
 }
-*/
+
     /*
     int levelDepth = CalculateNumberOfFullLevels(leavesThatICanProcess);
     printf("Block ID %d thread  %d %s can process %d full levels\n", blockIdx.x, threadIdx.x, levelDepth);
@@ -2377,12 +2376,12 @@ void CallPopulateTree(int numberOfLevels,
         printf("Leaves %d, incompleteLevel Level Depth %d\n",x, incompleteLevel);
         printf("Leaves %d, treeSizeComplete Level Depth %d\n",x, treeSizeComplete);
     int removeFromComplete = 0;
-    int leavesInIncomLvl = (x - treeSizeComplete);
-    if(leavesInIncomLvl){
+    int leavesFromIncompleteLvl = (x - treeSizeComplete);
+    if(leavesFromIncompleteLvl){
         removeFromComplete = ((x - treeSizeComplete) + 3 - 1) / 3;;
         printf("Leaves %d, removeFromComplete %d\n",x, removeFromComplete);
     }
-    int totalNewActive = 3*leavesInIncomLvl + completeLevelLeaves - removeFromComplete;
+    int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
             printf("Leaves %d, totalNewActive %d\n",x, totalNewActive);
 
     }
