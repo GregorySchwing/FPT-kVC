@@ -2499,6 +2499,8 @@ void CallPopulateTree(int numberOfLevels,
     bool notFirstCall = false;
     // When activeVerticesCount == 0, loop terminates
     int activeVerticesCount = 1;
+    int zero = 0;
+
     while(activeVerticesCount){
     //for (int level = 0; level < numberOfLevels; ++level){
         //levelUpperBound = CalculateLevelUpperBound(level);
@@ -2687,8 +2689,16 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
         
-        int zero = 0;
+        // Guarunteed to be both in bounds, since the maximum number of active vertices is deepest level
+        // and active_leaf_offset is length deepest level + 1
 
+        // This is necessary for the case where the number of active vertices decreased from
+        // the previous iteration, then 1 item past activeVerticesCount may be non-zero
+        // To hack the cubLibrary into turning counters -> offsets, one needs to allocate
+        // num_items + 1, see : https://github.com/NVIDIA/cub/issues/367
+
+        // Eventually we could zero out the active_leaf_offset.Alternate array nonsync,
+        // which may be faster than stopping here and explcitly setting 1 past the end to zero
         cudaMemcpy((&(active_leaf_offset.Current())[activeVerticesCount]), &zero, 1*sizeof(int), cudaMemcpyHostToDevice);
         
         cudaDeviceSynchronize();
@@ -2720,8 +2730,6 @@ void CallPopulateTree(int numberOfLevels,
 
         // Just to test a single iteration
         printf("TRUE activeVerticesCount : %d\n", activeVerticesCount);
-
-        
 
         activeVerticesCount = 0;
     }
