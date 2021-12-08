@@ -351,6 +351,27 @@ __host__ void SortPathIndices(int activeVerticesCount,
 
 }
 
+__host__ void CUBLibraryPrefixSumDevice(int * activeVerticesCount,
+                                        cub::DoubleBuffer<int> & active_leaf_offset){
+    // Declare, allocate, and initialize device-accessible pointers for input and output
+    int  num_items = activeVerticesCount[0];      // e.g., 7
+    int  *d_in = active_leaf_offset.Current();        // e.g., [8, 6, 7, 5, 3, 0, 9]
+    int  *d_out = active_leaf_offset.Alternate();         // e.g., [ ,  ,  ,  ,  ,  ,  ]
+    // Determine temporary device storage requirements
+    void     *d_temp_storage = NULL;
+    size_t   temp_storage_bytes = 0;
+    cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
+    // Allocate temporary storage
+    cudaMalloc(&d_temp_storage, temp_storage_bytes);
+    // Run exclusive prefix sum
+    cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
+
+    cudaFree(d_temp_storage);
+
+    // Flips Current and Alternate
+    active_leaf_offset.selector = !active_leaf_offset.selector;
+}
+
 /*
 __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerticesCount,
                                                                             int threadsPerBlock,
@@ -1731,7 +1752,7 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
                                         int * global_active_leaves_count_current,
                                         int * global_active_leaves_count_new,
                                         int * global_reduced_set_inclusion_count_ptr,
-                                        int * global_reduced_set_newly_active_leaves_count_ptr){
+                                        int * global_newly_active_leaves_count_ptr){
     int globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
     
     extern __shared__ int new_active_leaves_count_red[];
@@ -1757,7 +1778,7 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
         int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
         printf("Leaves %d, totalNewActive %d\n",leavesToProcess, totalNewActive);
         // Write to global memory
-        global_reduced_set_newly_active_leaves_count_ptr[globalIndex] = totalNewActive;
+        global_newly_active_leaves_count_ptr[globalIndex] = totalNewActive;
         // Write to shared memory for reduction
         new_active_leaves_count_red[threadIdx.x] = totalNewActive;
     } else {
@@ -1915,6 +1936,28 @@ __global__ void ParallelActiveVertexPathOffsets(int * global_active_leaf_indices
     }
 }
 */
+
+__global__ void ParallelCreateActiveVerticesRowOffsets(
+                            int numberOfRows,
+                            int numberOfEdgesPerGraph,
+                            int * global_row_offsets_dev_ptr,
+                            int * global_offsets_buffer,
+                            int * global_set_inclusion_bool_ptr){
+
+    int leafIndex = blockIdx.x;
+
+    printf("LevelAware RowOffs blockIdx %d is running\n", blockIdx.x);
+    printf("LevelAware RowOffs leaf index %d is running\n", leafIndex);
+
+    int rowOffsOffset = leafIndex * (numberOfRows + 1);
+    int bufferRowOffsOffset = blockIdx.x * (numberOfRows + 1);
+
+    for (int iter = threadIdx.x; iter < numberOfRows+1; iter += blockDim.x){
+        global_offsets_buffer[bufferRowOffsOffset + iter] = (blockIdx.x * numberOfEdgesPerGraph) + global_row_offsets_dev_ptr[rowOffsOffset + iter];
+        printf("global_offsets_buffer[bufferRowOffsOffset + %d] = %d + %d\n", iter, (blockIdx.x * numberOfEdgesPerGraph), global_row_offsets_dev_ptr[rowOffsOffset + iter]);
+
+    }
+}
 
 __global__ void ParallelCreateLevelAwareRowOffsets(
                             int numberOfRows,
@@ -2263,7 +2306,8 @@ void CallPopulateTree(int numberOfLevels,
     int * global_set_path_offsets;
     //
     int * global_reduced_set_inclusion_count_ptr;
-    int * global_reduced_set_newly_active_leaves_count_ptr;
+
+
     int * global_paths_length;
     int * global_edges_left_to_cover_count;
     int * global_active_leaf_indices, * global_active_leaf_indices_buffer;
@@ -2273,6 +2317,9 @@ void CallPopulateTree(int numberOfLevels,
     int * global_active_leaf_indices_count;
     int * global_active_leaf_indices_count_buffer;
 
+    int * global_newly_active_leaves_count_ptr;
+    int * global_active_leaf_offset_ptr;
+    int * global_active_leaf_offset_ptr_buffer;
 
     int * global_column_buffer;
     int * global_vertex_buffer;
@@ -2306,20 +2353,25 @@ void CallPopulateTree(int numberOfLevels,
 
     cudaMalloc( (void**)&global_paths_ptr, (max_dfs_depth*secondDeepestLevelSize*threadsPerBlock) * sizeof(int) );
     
-    // Not global to the entire tree, overwritten every level
-    // For sorting the threadsPerBlock paths by set inclusion in the MIS
-    cudaMalloc( (void**)&global_paths_indices_ptr, secondDeepestLevelSize*threadsPerBlock*sizeof(int));
-    cudaMalloc( (void**)&global_paths_indices_ptr_buffer, secondDeepestLevelSize*threadsPerBlock*sizeof(int));
-    cudaMalloc( (void**)&global_set_inclusion_bool_ptr, threadsPerBlock * secondDeepestLevelSize * sizeof(int) );
-    cudaMalloc( (void**)&global_set_inclusion_bool_ptr_buffer, threadsPerBlock * secondDeepestLevelSize * sizeof(int) );
+
     cudaMalloc( (void**)&global_set_path_offsets, (secondDeepestLevelSize+1) * sizeof(int) );
 
     
     // Not global to the entire tree, overwritten every level
 
     // Create a set of DoubleBuffers to wrap pairs of device pointers
+    // Not global to the entire tree, overwritten every level
+    // For sorting the threadsPerBlock paths by set inclusion in the MIS
+    cudaMalloc( (void**)&global_paths_indices_ptr, secondDeepestLevelSize*threadsPerBlock*sizeof(int));
+    cudaMalloc( (void**)&global_paths_indices_ptr_buffer, secondDeepestLevelSize*threadsPerBlock*sizeof(int));
     cub::DoubleBuffer<int> paths_indices(global_paths_indices_ptr, global_paths_indices_ptr_buffer);
+
+    cudaMalloc( (void**)&global_set_inclusion_bool_ptr, threadsPerBlock * secondDeepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_set_inclusion_bool_ptr_buffer, threadsPerBlock * secondDeepestLevelSize * sizeof(int) );
     cub::DoubleBuffer<int> set_inclusion(global_set_inclusion_bool_ptr, global_set_inclusion_bool_ptr_buffer);
+
+    cudaMalloc( (void**)&global_reduced_set_inclusion_count_ptr, deepestLevelSize * sizeof(int) );
+
 
     cudaMemset(global_remaining_vertices_dev_ptr, INT_MAX, (numberOfRows*deepestLevelSize) * sizeof(int));
 
@@ -2350,8 +2402,11 @@ void CallPopulateTree(int numberOfLevels,
     // If a vertex is skipped, it doesn't do anything
     // If a vertex is not skipped and it has n > 0 paths produced, the largest number of
     // levels are induced, at least 1.
-    cudaMalloc( (void**)&global_reduced_set_inclusion_count_ptr, deepestLevelSize * sizeof(int) );
-    cudaMalloc( (void**)&global_reduced_set_newly_active_leaves_count_ptr, deepestLevelSize * sizeof(int) );
+    
+    cudaMalloc( (void**)&global_active_leaf_offset_ptr, secondDeepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_active_leaf_offset_ptr_buffer, secondDeepestLevelSize * sizeof(int) );
+    cub::DoubleBuffer<int> active_leaf_offset(global_active_leaf_offset_ptr, global_active_leaf_offset_ptr_buffer);
+
 
     // For now I won't anticipate the decisions of deeper levels
     // Therefore, I can only work on a range
@@ -2386,6 +2441,7 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_active_leaf_indices_count, 1 * sizeof(int) );
     cudaMalloc( (void**)&global_active_leaf_indices_count_buffer, 1 * sizeof(int) );
 
+    // Each active vertex knows the cardinality of the MIS
     cub::DoubleBuffer<int> active_leaves_count(global_active_leaf_indices_count, global_active_leaf_indices_count_buffer);
 
     cudaDeviceSynchronize();
@@ -2439,9 +2495,6 @@ void CallPopulateTree(int numberOfLevels,
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
-
-
-
 
     bool notFirstCall = false;
     // When activeVerticesCount == 0, loop terminates
@@ -2580,17 +2633,14 @@ void CallPopulateTree(int numberOfLevels,
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
-
-        cudaDeviceSynchronize();
-        checkLastErrorCUDA(__FILE__, __LINE__);
-
+/*
         PrintSets<<<1,1>>>(activeVerticesCount,
                 paths_indices.Current(),
                 paths_indices.Alternate(),
                 set_inclusion.Current(),
                 set_inclusion.Alternate(),
                 global_set_path_offsets);
-
+*/
         SortPathIndices(activeVerticesCount,
                         threadsPerBlock,
                         paths_indices,
@@ -2599,19 +2649,20 @@ void CallPopulateTree(int numberOfLevels,
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
-
+/*
         PrintSets<<<1,1>>>(activeVerticesCount,
                 paths_indices.Current(),
                 paths_indices.Alternate(),
                 set_inclusion.Current(),
                 set_inclusion.Alternate(),
                 global_set_path_offsets);
-
+*/
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
         ParallelAssignMISToNodesBreadthFirst<<<activeVerticesCount,
-                                               threadsPerBlock>>>(active_leaves.Current(),
+                                               threadsPerBlock>>>(
+                                        active_leaves.Current(),
                                         paths_indices.Current(),
                                         global_reduced_set_inclusion_count_ptr,
                                         global_paths_ptr,
@@ -2622,21 +2673,29 @@ void CallPopulateTree(int numberOfLevels,
 
         cudaMemset(active_leaves_count.Alternate(), 0, size_t(1)*sizeof(int));
       
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+
         numberOfBlocksForOneThreadPerLeaf = (activeVerticesCount + threadsPerBlock - 1) / threadsPerBlock;
 
         ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock,threadsPerBlock>>>(
                                         active_leaves_count.Current(),
                                         active_leaves_count.Alternate(),
                                         global_reduced_set_inclusion_count_ptr,
-                                        global_reduced_set_newly_active_leaves_count_ptr);
+                                        active_leaf_offset.Current());
         
+        CUBLibraryPrefixSumDevice(&activeVerticesCount,
+                                  active_leaf_offset);
+
         // Flips Current and Alternate
         active_leaves_count.selector = !active_leaves_count.selector;
-
         cudaMemcpy(&activeVerticesCount, active_leaves_count.Current(), 1*sizeof(int), cudaMemcpyDeviceToHost);
 
         // Just to test a single iteration
         printf("TRUE activeVerticesCount : %d\n", activeVerticesCount);
+
+        
+
         activeVerticesCount = 0;
     }
 /*
