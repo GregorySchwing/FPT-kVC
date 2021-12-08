@@ -278,6 +278,14 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
                                         int * global_reduced_set_inclusion_count_ptr,
                                         int * global_reduced_set_newly_active_leaves_count_ptr);
 
+__global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
+                                        int * global_active_leaves,
+                                        int * global_newly_active_leaves,
+                                        int * global_active_leaves_count_current,
+                                        int * global_active_leaves_count_new,
+                                        int * global_reduced_set_inclusion_count_ptr,
+                                        int * global_newly_active_offset_ptr);
+
 __global__ void ParallelQuicksortWithDNF(int levelOffset,
                             int levelUpperBound,
                             int numberOfRows,

@@ -2786,17 +2786,17 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-
-        
-        // Flips Current and Alternate
-        //!active_leaves_count.selector = !active_leaves_count.selector;
         cudaMemcpy(&activeVerticesCount, active_leaves_count.Alternate(), 1*sizeof(int), cudaMemcpyDeviceToHost);
-        cudaMemcpy(&activeLeavesHost, active_leaves.Alternate(), activeVerticesCount*sizeof(int), cudaMemcpyDeviceToHost);
 
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+        
+        cudaMemcpy(&activeLeavesHost, active_leaves.Alternate(), activeVerticesCount*sizeof(int), cudaMemcpyDeviceToHost);
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
+        // Flips Current and Alternate
         active_leaves.selector ^= active_leaves.selector;
         active_leaves_count.selector ^= active_leaves_count.selector;
         active_leaf_offset.selector ^= active_leaf_offset.selector;
