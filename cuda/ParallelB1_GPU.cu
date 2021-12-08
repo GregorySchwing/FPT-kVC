@@ -2636,7 +2636,7 @@ void CallPopulateTree(int numberOfLevels,
         cudaMemcpy(&activeVerticesCount, active_leaves_count.Current(), 1*sizeof(int), cudaMemcpyDeviceToHost);
 
         // Just to test a single iteration
-        printf("TRUE activeVerticesCount : %x\n", activeVerticesCount);
+        printf("TRUE activeVerticesCount : %d\n", activeVerticesCount);
         activeVerticesCount = 0;
     }
 /*
@@ -2765,6 +2765,7 @@ void CopyGraphToDevice( Graph & g,
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     std::cout << "Activate root of tree" << std::endl;
+    // Eventually replace zero with the variable starting index of the new tree
     int zero = 0;
     int one = 1;
     cudaMemcpy(global_active_leaf_indices, &zero, 1*sizeof(int), cudaMemcpyHostToDevice);
