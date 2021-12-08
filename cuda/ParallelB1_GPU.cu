@@ -2860,13 +2860,14 @@ void CallPopulateTree(int numberOfLevels,
         notFirstCall = true;
         */
     
-
+    /*
     for (const auto& inner: pendantChildren) { // auto is std::vector<int>
         for (auto e: inner) { // auto is int
             std::cout << e << " ";
         }
         std::cout << std::endl;
     }
+    */
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
