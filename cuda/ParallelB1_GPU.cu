@@ -2704,7 +2704,7 @@ void CallPopulateTree(int numberOfLevels,
         }
         std::cout << std::endl;
 
-        cudaMemcpy(&hostOffset[0], (int*)(active_leaf_offset.Alternate()), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&hostOffset[0], (int*)(active_leaf_offset.Current()), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
         
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
