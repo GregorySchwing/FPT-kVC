@@ -2686,6 +2686,9 @@ void CallPopulateTree(int numberOfLevels,
                                         global_reduced_set_inclusion_count_ptr,
                                         active_leaf_offset.Current());
         
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+
         CUBLibraryPrefixSumDevice(&activeVerticesCount,
                                   active_leaf_offset);
 
