@@ -1807,7 +1807,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
                                         int * global_reduced_set_inclusion_count_ptr,
                                         int * global_newly_active_offset_ptr){
     int globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
-    int leafIndex;
+    int leafValue;
 
     printf("globalIndex %d, global_active_leaves_count_current %x\n",globalIndex, global_active_leaves_count_current[0]);
     if (globalIndex < global_active_leaves_count_current[0]){
@@ -1827,19 +1827,22 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
         printf("Leaves %d, treeSizeComplete Level Depth %d\n",leavesToProcess, treeSizeComplete);
         int removeFromComplete = ((leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
         int leavesFromIncompleteLvl = (leavesToProcess - treeSizeComplete);
-        leafIndex = global_active_leaves[globalIndex];
-        int leftMostLeafIndexOfFullLevel = pow(3.0, completeLevel) * leafIndex;
+        leafValue = global_active_leaves[globalIndex];
+        int leftMostLeafIndexOfFullLevel = pow(3.0, completeLevel) * leafValue;
         int newly_active_offset = global_newly_active_offset_ptr[globalIndex];
         int index = 0;
         for (; index < completeLevelLeaves - removeFromComplete; ++index){
             printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfFullLevel + index + removeFromComplete);
             global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfFullLevel + index + removeFromComplete;
         }
-        int leftMostLeafIndexOfIncompleteLevel = pow(3.0, incompleteLevel) * leafIndex;
+        int leftMostLeafIndexOfIncompleteLevel = pow(3.0, incompleteLevel) * leafValue;
         int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
         for (int incompleteIndex = 0; index < totalNewActive; ++index, ++incompleteIndex){
             printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfIncompleteLevel + incompleteIndex);
             global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfIncompleteLevel + incompleteIndex;
+        }
+        for (int testP = 0; testP < global_active_leaves_count_new[globalIndex]; ++testP){
+            printf("global_newly_active_leaves[%d] = %d\n",testP, global_newly_active_leaves[testP]);
         }
     }
 }
