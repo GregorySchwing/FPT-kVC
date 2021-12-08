@@ -354,7 +354,7 @@ __host__ void SortPathIndices(int activeVerticesCount,
 __host__ void CUBLibraryPrefixSumDevice(int * activeVerticesCount,
                                         cub::DoubleBuffer<int> & active_leaf_offset){
     // Declare, allocate, and initialize device-accessible pointers for input and output
-    int  num_items = activeVerticesCount[0];      // e.g., 7
+    int  num_items = activeVerticesCount[0]+1;      // e.g., 7
     int  *d_in = active_leaf_offset.Current();        // e.g., [8, 6, 7, 5, 3, 0, 9]
     int  *d_out = active_leaf_offset.Alternate();         // e.g., [ ,  ,  ,  ,  ,  ,  ]
     // Determine temporary device storage requirements
