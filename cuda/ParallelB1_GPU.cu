@@ -2765,22 +2765,14 @@ void CopyGraphToDevice( Graph & g,
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     std::cout << "Activate root of tree" << std::endl;
-    cudaMemset((void*)global_active_leaf_indices, 0, size_t(1)*sizeof(int));
-    cudaMemset((void*)global_active_leaf_indices_count, 1, size_t(1)*sizeof(int));
+    int zero = 0;
+    int one = 1;
+    cudaMemcpy(global_active_leaf_indices, &zero, 1*sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(global_active_leaf_indices_count, &one, 1*sizeof(int), cudaMemcpyHostToDevice);
     std::cout << "Activated root of tree" << std::endl;
-    cudaDeviceSynchronize();
-    checkLastErrorCUDA(__FILE__, __LINE__);
-    int shouldBe0[1];
-    int shouldBe1[1];
-    cudaMemcpy((void**)&shouldBe0, global_active_leaf_indices, 1*sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy((void**)&shouldBe1, global_active_leaf_indices_count, 1*sizeof(int), cudaMemcpyDeviceToHost);
-
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
-    std::cout << "Active leaf index 0 : value : " << *shouldBe0 << std::endl;
-    std::cout << "Active leaf count : value : " << *shouldBe1 << std::endl;
-
 
     thrust::device_ptr<int> back2Host_ptr = thrust::device_pointer_cast(global_columns_dev_ptr);
     thrust::device_vector<int> back2Host(back2Host_ptr, back2Host_ptr + g.GetEdgesLeftToCover());
