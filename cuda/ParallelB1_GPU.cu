@@ -2291,7 +2291,7 @@ void CallPopulateTree(int numberOfLevels,
 
     //int treeSize = 200000;
     int counters = 2;
-    numberOfLevels = 2;
+    numberOfLevels = 5;
     int secondDeepestLevelSize = CalculateDeepestLevelWidth(numberOfLevels-2);;
     int deepestLevelSize = CalculateDeepestLevelWidth(numberOfLevels-1);;
     long long treeSize = CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
