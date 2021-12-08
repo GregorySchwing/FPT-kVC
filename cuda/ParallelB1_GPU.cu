@@ -1798,14 +1798,15 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
 
 
 // Not thrilled about this.  1 thread fills in all the entries of belonging to a single active leaf
-// in the new active leaves buffer
+// in the new active leaves buffer.  To avoid this I'd likely need another
 __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
                                         int * global_active_leaves,
                                         int * global_newly_active_leaves,
                                         int * global_active_leaves_count_current,
                                         int * global_active_leaves_count_new,
                                         int * global_reduced_set_inclusion_count_ptr,
-                                        int * global_newly_active_offset_ptr){
+                                        int * global_newly_active_offset_ptr,
+                                        int * global_active_leaf_parent){
     int globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
     int leafValue;
 
@@ -1838,6 +1839,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
         for (; index < completeLevelLeaves - removeFromComplete; ++index){
             printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfFullLevel + index + removeFromComplete);
             global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfFullLevel + index + removeFromComplete;
+            global_active_leaf_parent[newly_active_offset + index] = leafValue;
         }
         int leftMostLeafIndexOfIncompleteLevel = leafValue;
         while (incompleteLevel > 0){
@@ -1848,6 +1850,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
         for (int incompleteIndex = 0; index < totalNewActive; ++index, ++incompleteIndex){
             printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfIncompleteLevel + incompleteIndex);
             global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfIncompleteLevel + incompleteIndex;
+            global_active_leaf_parent[newly_active_offset + index] = leafValue;
         }
         for (int testP = 0; testP < global_active_leaves_count_new[globalIndex]; ++testP){
             printf("global_newly_active_leaves[%d] = %d\n",testP, global_newly_active_leaves[testP]);
@@ -2367,9 +2370,8 @@ void CallPopulateTree(int numberOfLevels,
 
     int * global_paths_length;
     int * global_edges_left_to_cover_count;
-    int * global_active_leaf_indices, * global_active_leaf_indices_buffer;
+    int * global_active_leaf_indices, * global_active_leaf_indices_buffer, * global_active_leaf_parent;
     int * global_memcpy_boolean;
-    int * global_last_full_parent_vertex;
 
     int * global_active_leaf_indices_count;
     int * global_active_leaf_indices_count_buffer;
@@ -2483,17 +2485,16 @@ void CallPopulateTree(int numberOfLevels,
     // We will precalculate where each active node will write in this compressed array
     cudaMalloc( (void**)&global_active_leaf_indices, deepestLevelSize*sizeof(int) );
     cudaMalloc( (void**)&global_active_leaf_indices_buffer, deepestLevelSize*sizeof(int) );
-
     cub::DoubleBuffer<int> active_leaves(global_active_leaf_indices, global_active_leaf_indices_buffer);
 
     // If the cols, vals, remaining vertices, need to be memcpied
     // When inducing a child, is true
     // If a DFS only produced pendants and another round of DFS take place
     // it is false 
-    cudaMalloc( (void**)&global_memcpy_boolean, secondDeepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_memcpy_boolean, deepestLevelSize * sizeof(int) );
     // Since we skip internal nodes, each active leaf needs to know the parent
     // from which cols, vals, remaining vertices are to be copied
-    cudaMalloc( (void**)&global_last_full_parent_vertex, secondDeepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_active_leaf_parent, deepestLevelSize * sizeof(int) );
 
     cudaMalloc( (void**)&global_active_leaf_indices_count, 1 * sizeof(int) );
     cudaMalloc( (void**)&global_active_leaf_indices_count_buffer, 1 * sizeof(int) );
@@ -2794,7 +2795,8 @@ void CallPopulateTree(int numberOfLevels,
                                         active_leaves_count.Current(),
                                         active_leaves_count.Alternate(),
                                         global_reduced_set_inclusion_count_ptr,
-                                        active_leaf_offset.Alternate());
+                                        active_leaf_offset.Alternate(),
+                                        global_active_leaf_parent);
         
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
