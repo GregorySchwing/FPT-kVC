@@ -368,8 +368,6 @@ __host__ void CUBLibraryPrefixSumDevice(int * activeVerticesCount,
 
     cudaFree(d_temp_storage);
 
-    // Flips Current and Alternate
-    active_leaf_offset.selector = !active_leaf_offset.selector;
 }
 
 /*
@@ -2695,7 +2693,7 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
         
-        cudaMemcpy(&hostOffset[0], (int*)active_leaf_offset.Current(), ((activeVerticesCount+1)*sizeof(int)), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&hostOffset[0], (int*)active_leaf_offset.Alternate(), ((activeVerticesCount+1)*sizeof(int)), cudaMemcpyDeviceToHost);
         
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
