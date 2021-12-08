@@ -1828,7 +1828,6 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
         int removeFromComplete = ((leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
         int leavesFromIncompleteLvl = (leavesToProcess - treeSizeComplete);
         leafValue = global_active_leaves[globalIndex];
-        leafValue = leafValue*((int)(leafValue!=0)) + (int)(leafValue==0);
         int leftMostLeafIndexOfFullLevel = leafValue;
         while (completeLevel > 0){
             leftMostLeafIndexOfFullLevel = (3.0 * leftMostLeafIndexOfFullLevel + 1);
