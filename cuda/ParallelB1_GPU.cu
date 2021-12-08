@@ -354,7 +354,7 @@ __host__ void SortPathIndices(int activeVerticesCount,
 __host__ void CUBLibraryPrefixSumDevice(int * activeVerticesCount,
                                         cub::DoubleBuffer<int> & active_leaf_offset){
     // Declare, allocate, and initialize device-accessible pointers for input and output
-    int  num_items = activeVerticesCount[0];      // e.g., 7
+    int  num_items = activeVerticesCount[0]+1;      // e.g., 7
     int  *d_in = active_leaf_offset.Current();        // e.g., [8, 6, 7, 5, 3, 0, 9]
     int  *d_out = active_leaf_offset.Alternate();         // e.g., [ ,  ,  ,  ,  ,  ,  ]
     // Determine temporary device storage requirements
@@ -365,7 +365,7 @@ __host__ void CUBLibraryPrefixSumDevice(int * activeVerticesCount,
     cudaMalloc(&d_temp_storage, temp_storage_bytes);
     // Run exclusive prefix sum
     cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
-
+    // d_out s<-- [0, 8, 14, 21, 26, 29, 29]
     cudaFree(d_temp_storage);
 
 }
@@ -2401,8 +2401,8 @@ void CallPopulateTree(int numberOfLevels,
     // If a vertex is not skipped and it has n > 0 paths produced, the largest number of
     // levels are induced, at least 1.
     
-    cudaMalloc( (void**)&global_active_leaf_offset_ptr, secondDeepestLevelSize * sizeof(int) );
-    cudaMalloc( (void**)&global_active_leaf_offset_ptr_buffer, secondDeepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_active_leaf_offset_ptr, (secondDeepestLevelSize+1) * sizeof(int) );
+    cudaMalloc( (void**)&global_active_leaf_offset_ptr_buffer, (secondDeepestLevelSize+1) * sizeof(int) );
     cub::DoubleBuffer<int> active_leaf_offset(global_active_leaf_offset_ptr, global_active_leaf_offset_ptr_buffer);
 
 
@@ -2704,7 +2704,7 @@ void CallPopulateTree(int numberOfLevels,
         }
         std::cout << std::endl;
 
-        cudaMemcpy(&hostOffset[0], (int*)active_leaf_offset.Current(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&hostOffset[0], (int*)(active_leaf_offset.Alternate()), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
         
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
