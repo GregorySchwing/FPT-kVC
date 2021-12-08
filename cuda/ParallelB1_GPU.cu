@@ -2532,6 +2532,7 @@ void CallPopulateTree(int numberOfLevels,
     // For printing the result of exclusive prefix sum cub lib
     int * hostOffset = new int[deepestLevelSize+1];
     int * activeLeavesHost = new int[deepestLevelSize+1];
+    int * activeParentHost = new int[deepestLevelSize+1];
 
     int * activeFlags = new int[treeSize];
 
@@ -2808,6 +2809,8 @@ void CallPopulateTree(int numberOfLevels,
 
         std::cout << "activeVerticesCount: " << activeVerticesCount << std::endl;
         cudaMemcpy(&activeLeavesHost[0], (int*)active_leaves.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&activeParentHost[0], (int*)global_active_leaf_parent, (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
+
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -2821,6 +2824,11 @@ void CallPopulateTree(int numberOfLevels,
         std::cout << "activeLeavesHost" << std::endl;
         for (int i = 0; i < activeVerticesCount; ++i){
             std::cout << activeLeavesHost[i] << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "activeParentHost" << std::endl;
+        for (int i = 0; i < activeVerticesCount; ++i){
+            std::cout << activeParentHost[i] << " ";
         }
         std::cout << std::endl;
 
