@@ -2686,6 +2686,11 @@ void CallPopulateTree(int numberOfLevels,
         
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
+        
+        cudaMemcpy((&(active_leaf_offset.Current())[activeVerticesCount]), &zero, 1*sizeof(int), cudaMemcpyHostToDevice);
+        
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
 
         CUBLibraryPrefixSumDevice(&activeVerticesCount,
                                   active_leaf_offset);
@@ -2694,17 +2699,6 @@ void CallPopulateTree(int numberOfLevels,
         checkLastErrorCUDA(__FILE__, __LINE__);
         
         cudaMemcpy(&hostOffset[0], (int*)active_leaf_offset.Alternate(), (activeVerticesCount+1)*sizeof(int), cudaMemcpyDeviceToHost);
-        
-        cudaDeviceSynchronize();
-        checkLastErrorCUDA(__FILE__, __LINE__);
-
-        std::cout << "hostOffset" << std::endl;
-        for (int i = 0; i < activeVerticesCount+1; ++i){
-            std::cout << hostOffset[i] << " ";
-        }
-        std::cout << std::endl;
-
-        cudaMemcpy(&hostOffset[0], (int*)(active_leaf_offset.Current()), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
         
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
