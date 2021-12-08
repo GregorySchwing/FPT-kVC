@@ -1796,6 +1796,52 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
         atomicAdd(global_active_leaves_count_new, new_active_leaves_count_red[threadIdx.x]);
 }
 
+
+// Not thrilled about this.  1 thread fills in all the entries of belonging to a single active leaf
+// in the new active leaves buffer
+__global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
+                                        int * global_active_leaves,
+                                        int * global_newly_active_leaves,
+                                        int * global_active_leaves_count_current,
+                                        int * global_active_leaves_count_new,
+                                        int * global_reduced_set_inclusion_count_ptr,
+                                        int * global_newly_active_offset_ptr){
+    int globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    int leafIndex;
+
+    printf("globalIndex %d, global_active_leaves_count_current %x\n",globalIndex, global_active_leaves_count_current[0]);
+    if (globalIndex < global_active_leaves_count_current[0]){
+        int leavesToProcess = global_reduced_set_inclusion_count_ptr[globalIndex];
+        // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
+        // Solved for leavesToProcess < closed form
+        int completeLevel = floor(logf(2*leavesToProcess + 1) / logf(3));
+        int completeLevelLeaves = powf(3.0, completeLevel);
+        // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
+        // Solved for closed form < leavesToProcess
+        int incompleteLevel = ceil(logf(2*leavesToProcess + 1) / logf(3));
+        // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
+        int treeSizeComplete = (1.0 - pow(3.0, completeLevel))/(1.0 - 3.0);
+        printf("Leaves %d, completeLevel Level Depth %d\n",leavesToProcess, completeLevel);
+        printf("Leaves %d, completeLevelLeaves Level Depth %d\n",leavesToProcess, completeLevelLeaves);
+        printf("Leaves %d, incompleteLevel Level Depth %d\n",leavesToProcess, incompleteLevel);
+        printf("Leaves %d, treeSizeComplete Level Depth %d\n",leavesToProcess, treeSizeComplete);
+        int removeFromComplete = ((leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
+        int leavesFromIncompleteLvl = (leavesToProcess - treeSizeComplete);
+        leafIndex = global_active_leaves[globalIndex];
+        int leftMostLeafIndexOfFullLevel = pow(3.0, completeLevel) * leafIndex;
+        int newly_active_offset = global_newly_active_offset_ptr[globalIndex];
+        int index = 0;
+        for (; index < completeLevelLeaves - removeFromComplete; ++index){
+            global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfFullLevel + index + removeFromComplete;
+        }
+        int leftMostLeafIndexOfIncompleteLevel = pow(3.0, incompleteLevel) * leafIndex;
+        int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
+        for (int incompleteIndex = 0; index < totalNewActive; ++index, ++incompleteIndex){
+            global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfIncompleteLevel + incompleteIndex;
+        }
+    }
+}
+
     /*
     int levelDepth = CalculateNumberOfFullLevels(leavesThatICanProcess);
     printf("Block ID %d thread  %d %s can process %d full levels\n", blockIdx.x, threadIdx.x, levelDepth);
@@ -2471,6 +2517,7 @@ void CallPopulateTree(int numberOfLevels,
     int * nonpendantReducedCount = new int[deepestLevelSize];
     // For printing the result of exclusive prefix sum cub lib
     int * hostOffset = new int[deepestLevelSize+1];
+    int * activeLeavesHost = new int[deepestLevelSize+1];
 
     int * activeFlags = new int[treeSize];
 
@@ -2721,15 +2768,45 @@ void CallPopulateTree(int numberOfLevels,
         }
         std::cout << std::endl;
 
-        // Flips Current and Alternate
-        active_leaves_count.selector = !active_leaves_count.selector;
-        cudaMemcpy(&activeVerticesCount, active_leaves_count.Current(), 1*sizeof(int), cudaMemcpyDeviceToHost);
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
         // Just to test a single iteration
         printf("TRUE activeVerticesCount : %d\n", activeVerticesCount);
+      
+        ParallelPopulateNewlyActivateLeafNodesBreadthFirst<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock>>>(
+                                        active_leaves.Current(),
+                                        active_leaves.Alternate(),
+                                        active_leaves_count.Current(),
+                                        active_leaves_count.Alternate(),
+                                        global_reduced_set_inclusion_count_ptr,
+                                        active_leaf_offset.Alternate());
+        
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+
+
+        
+        // Flips Current and Alternate
+        //!active_leaves_count.selector = !active_leaves_count.selector;
+        cudaMemcpy(&activeVerticesCount, active_leaves_count.Alternate(), 1*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&activeLeavesHost, active_leaves.Alternate(), activeVerticesCount*sizeof(int), cudaMemcpyDeviceToHost);
+
+
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+
+        active_leaves.selector ^= active_leaves.selector;
+        active_leaves_count.selector ^= active_leaves_count.selector;
+        active_leaf_offset.selector ^= active_leaf_offset.selector;
+
+
+        std::cout << "activeLeavesHost" << std::endl;
+        for (int i = 0; i < activeVerticesCount+1; ++i){
+            std::cout << activeLeavesHost[i] << " ";
+        }
+        std::cout << std::endl;
 
         activeVerticesCount = 0;
     }
