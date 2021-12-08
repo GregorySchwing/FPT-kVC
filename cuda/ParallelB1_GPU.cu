@@ -1832,11 +1832,13 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
         int newly_active_offset = global_newly_active_offset_ptr[globalIndex];
         int index = 0;
         for (; index < completeLevelLeaves - removeFromComplete; ++index){
+            printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfFullLevel + index + removeFromComplete);
             global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfFullLevel + index + removeFromComplete;
         }
         int leftMostLeafIndexOfIncompleteLevel = pow(3.0, incompleteLevel) * leafIndex;
         int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
         for (int incompleteIndex = 0; index < totalNewActive; ++index, ++incompleteIndex){
+            printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfIncompleteLevel + incompleteIndex);
             global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfIncompleteLevel + incompleteIndex;
         }
     }
