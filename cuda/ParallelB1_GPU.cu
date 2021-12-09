@@ -2832,6 +2832,23 @@ void CallPopulateTree(int numberOfLevels,
         }
         std::cout << std::endl;
 
+        for (int i = 0; i < activeVerticesCount; ++i){
+            std::cout << activeParentHost[i] << " ";
+        }
+        std::cout << std::endl;
+        // Prefix sum degrees to get row offsets
+        //row_offsets,
+        // Use InduceSubgraph method to copy compress cols and vals
+        //columns,
+        //values,
+        // Prefix sum last entry in row offsets to get global offsets for cols and vals
+        // Remove all intermediate nodes from me to copy source parent
+        // Recalc degrees and remaining vertices
+        // degrees,
+        // remaining_vertices,
+        // Sort cols by val
+
+
         activeVerticesCount = 0;
     }
 /*
