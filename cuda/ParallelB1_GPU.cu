@@ -1905,7 +1905,8 @@ __global__ void ParallelProcessDegreeZeroVertices(
                             int numberOfRows,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
-                            int * global_degrees_dev_ptr){
+                            int * global_degrees_dev_ptr,
+                            int * global_degrees_reduced_ptr){
 
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("Entered ProcessDeg0\n");
@@ -1918,12 +1919,12 @@ __global__ void ParallelProcessDegreeZeroVertices(
     int degreesOffset = leafIndex * numberOfRows;
     int numVertices = global_remaining_vertices_size_dev_ptr[leafIndex];
     int numVerticesRemoved = 0;
+    int totalDegreeOfGraph = 0;
     //for (int iter = 0; iter < blockDim.x; iter += blockDim.x){
     //    degreeZeroVertex[threadIdx.x] = 0;
     //}
     //_syncthreads();
     for (int vertex = threadIdx.x; vertex < numVertices; vertex += blockDim.x){
-        numVerticesRemoved = 0;
         printf("threadIdx.x %d, blockIdx.x %d, Vertex %d loop\n", threadIdx.x, blockIdx.x, vertex);
         if (threadIdx.x == 0 && blockIdx.x == 0){
             printf("degreesOffset %d \n", degreesOffset);
@@ -1931,7 +1932,10 @@ __global__ void ParallelProcessDegreeZeroVertices(
             printf("global_remaining_vertices_dev_ptr[degreesOffset + vertex] %d \n", global_remaining_vertices_dev_ptr[degreesOffset + vertex]);
             printf("full %d \n", global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[degreesOffset + vertex]]);
         }
+        // Boolean, is deg == 0
         degreeZeroVertex[threadIdx.x] = (0 == global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[degreesOffset + vertex]]);
+        // Degree reduction
+        degreeZeroVertex[blockDim.x + threadIdx.x] = global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[degreesOffset + vertex]];
         if (blockIdx.x == 0){
             printf("Vertex %d set degreeZeroVertex %d since degree is %d\n", vertex, degreeZeroVertex[threadIdx.x], global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[degreesOffset + vertex]]);
         }
@@ -1947,15 +1951,23 @@ __global__ void ParallelProcessDegreeZeroVertices(
         while (i != 0) {
             if (threadIdx.x < i){
                 printf("degreeZeroVertex[%d] = %d + %d\n", threadIdx.x, degreeZeroVertex[threadIdx.x], degreeZeroVertex[threadIdx.x + i]);
+                // Reduces number of degrees removed
                 degreeZeroVertex[threadIdx.x] += degreeZeroVertex[threadIdx.x + i];
+                // Neccessary since last iterations may not be a full blockDim
                 degreeZeroVertex[threadIdx.x + i] = 0;
+                // Reduces total degree of graph
+                degreeZeroVertex[blockDim.x + threadIdx.x] = += degreeZeroVertex[blockDim.x + threadIdx.x + i];
+                // Neccessary since last iterations may not be a full blockDim
+                degreeZeroVertex[blockDim.x + threadIdx.x + i] = 0;
             }
             __syncthreads();
             i /= 2;
         }
         if (threadIdx.x == 0){
             numVerticesRemoved += degreeZeroVertex[threadIdx.x];
+            totalDegreeOfGraph += degreeZeroVertex[blockDim.x];
             printf("numVerticesRemoved %d\n", numVerticesRemoved);
+            printf("totalDegreeOfGraph %d\n", totalDegreeOfGraph);
 
         }
     }
@@ -1964,6 +1976,7 @@ __global__ void ParallelProcessDegreeZeroVertices(
     if (threadIdx.x == 0){
         printf("numVerticesRemoved %d\n", numVerticesRemoved);
         global_remaining_vertices_size_dev_ptr[leafIndex] -= numVerticesRemoved;
+        global_degrees_reduced_ptr[leafIndex] = totalDegreeOfGraph;
     }
 }
 /*
@@ -2380,6 +2393,10 @@ void CallPopulateTree(int numberOfLevels,
     int * global_active_leaf_offset_ptr;
     int * global_active_leaf_offset_ptr_buffer;
 
+    // For calculating the heterogeneous offsets of each active leaf
+    // This way memory usage can shrink as graphs shrink
+    int * global_degrees_reduced_ptr;
+
     int * global_column_buffer;
     int * global_vertex_buffer;
     int * global_value_buffer;
@@ -2403,6 +2420,8 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_values_dev_ptr_buffer, (numberOfEdgesPerGraph*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_degrees_dev_ptr_buffer, (numberOfRows*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_dev_ptr_buffer, (numberOfRows*deepestLevelSize) * sizeof(int) );
+
+    cudaMalloc( (void**)&global_degrees_reduced_ptr, deepestLevelSize * sizeof(int) );
 
     cub::DoubleBuffer<int> row_offsets(global_row_offsets_dev_ptr, global_row_offsets_dev_ptr_buffer);
     cub::DoubleBuffer<int> columns(global_columns_dev_ptr, global_columns_dev_ptr_buffer);
@@ -2673,7 +2692,7 @@ void CallPopulateTree(int numberOfLevels,
 
         ParallelProcessDegreeZeroVertices<<<activeVerticesCount,
                                             threadsPerBlock,
-                                            threadsPerBlock*sizeof(int)>>>
+                                            2*threadsPerBlock*sizeof(int)>>>
                         (numberOfRows,
                         remaining_vertices.Current(),
                         global_remaining_vertices_size_dev_ptr,
@@ -2837,6 +2856,7 @@ void CallPopulateTree(int numberOfLevels,
         }
         std::cout << std::endl;
         // Prefix sum degrees to get row offsets
+
         //row_offsets,
         // Use InduceSubgraph method to copy compress cols and vals
         //columns,
