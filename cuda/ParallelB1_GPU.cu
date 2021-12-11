@@ -1956,7 +1956,7 @@ __global__ void ParallelProcessDegreeZeroVertices(
                 // Neccessary since last iterations may not be a full blockDim
                 degreeZeroVertex[threadIdx.x + i] = 0;
                 // Reduces total degree of graph
-                degreeZeroVertex[blockDim.x + threadIdx.x] = += degreeZeroVertex[blockDim.x + threadIdx.x + i];
+                degreeZeroVertex[blockDim.x + threadIdx.x] += degreeZeroVertex[blockDim.x + threadIdx.x + i];
                 // Neccessary since last iterations may not be a full blockDim
                 degreeZeroVertex[blockDim.x + threadIdx.x + i] = 0;
             }
@@ -2696,7 +2696,8 @@ void CallPopulateTree(int numberOfLevels,
                         (numberOfRows,
                         remaining_vertices.Current(),
                         global_remaining_vertices_size_dev_ptr,
-                        degrees.Current());
+                        degrees.Current(),
+                        global_degrees_reduced_ptr);
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
