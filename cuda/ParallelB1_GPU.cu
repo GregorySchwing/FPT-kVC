@@ -1906,7 +1906,7 @@ __global__ void ParallelProcessDegreeZeroVertices(
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
                             int * global_degrees_dev_ptr,
-                            int * global_degrees_reduced_ptr){
+                            int * global_degrees_offsets_ptr){
 
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("Entered ProcessDeg0\n");
@@ -1976,7 +1976,7 @@ __global__ void ParallelProcessDegreeZeroVertices(
     if (threadIdx.x == 0){
         printf("numVerticesRemoved %d\n", numVerticesRemoved);
         global_remaining_vertices_size_dev_ptr[leafIndex] -= numVerticesRemoved;
-        global_degrees_reduced_ptr[leafIndex] = totalDegreeOfGraph;
+        global_degrees_offsets_ptr[leafIndex] = totalDegreeOfGraph;
     }
 }
 /*
@@ -2353,21 +2353,36 @@ void CallPopulateTree(int numberOfLevels,
 // which will switch the active set passed to the methods which
 // rely on these pointers.  This way I only keep the relevant 
 // data instead of the entire tree.
+
+// 2 CSR's
+// Vertices and Edges
     int * global_row_offsets_dev_ptr;
     int * global_columns_dev_ptr;
     int * global_values_dev_ptr;
-    int * global_degrees_dev_ptr; 
-    int * global_remaining_vertices_dev_ptr;
 
     int * global_row_offsets_dev_ptr_buffer;
     int * global_columns_dev_ptr_buffer;
     int * global_values_dev_ptr_buffer;
-    int * global_degrees_dev_ptr_buffer; 
+
+// Vertices and Degrees and Removed Flag
+    // For calculating the heterogeneous offsets of each active leaf
+    // This way memory usage can shrink as graphs shrink
+    int * global_degrees_offsets_ptr;
+    int * global_degrees_offsets_ptr_buffer;
+
+    int * global_remaining_vertices_dev_ptr;
     int * global_remaining_vertices_dev_ptr_buffer;
 
+    int * global_degrees_dev_ptr;
+    int * global_degrees_dev_ptr_buffer;
+
+    int * global_vertex_is_remaining_flag_dev_ptr;
+    int * global_vertex_is_remaining_flag_dev_ptr_buffer;
+//// Vertices and Degrees and Removed Flag
 
 
     int * global_paths_ptr;
+    // Will be able to get this from offsets
     int * global_remaining_vertices_size_dev_ptr;
     int * global_vertices_included_dev_ptr;
     int * global_pendant_path_bool_dev_ptr;
@@ -2393,10 +2408,6 @@ void CallPopulateTree(int numberOfLevels,
     int * global_active_leaf_offset_ptr;
     int * global_active_leaf_offset_ptr_buffer;
 
-    // For calculating the heterogeneous offsets of each active leaf
-    // This way memory usage can shrink as graphs shrink
-    int * global_degrees_reduced_ptr;
-
     int * global_column_buffer;
     int * global_vertex_buffer;
     int * global_value_buffer;
@@ -2409,29 +2420,37 @@ void CallPopulateTree(int numberOfLevels,
     int verticesRemainingInGraph = g.GetRemainingVertices().size(); 
     int activeLeavesPerNode = CalculateAmountOfMemoryToAllocatePerActiveLeaf();
 
+    // Vertex, Cols, Edge(on/off)
     cudaMalloc( (void**)&global_row_offsets_dev_ptr, ((numberOfRows+1)*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_columns_dev_ptr, (numberOfEdgesPerGraph*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_values_dev_ptr, (numberOfEdgesPerGraph*deepestLevelSize) * sizeof(int) );
-    cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows*deepestLevelSize) * sizeof(int) );
-    cudaMalloc( (void**)&global_remaining_vertices_dev_ptr, (numberOfRows*deepestLevelSize) * sizeof(int) );
 
     cudaMalloc( (void**)&global_row_offsets_dev_ptr_buffer, ((numberOfRows+1)*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_columns_dev_ptr_buffer, (numberOfEdgesPerGraph*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_values_dev_ptr_buffer, (numberOfEdgesPerGraph*deepestLevelSize) * sizeof(int) );
+
+    // Degrees, Vertex ID, VertexRemoved(true/false) - Binary Val of Deg == 0
+    cudaMalloc( (void**)&global_degrees_offsets_ptr, (deepestLevelSize+1) * sizeof(int) );
+    cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows*deepestLevelSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_remaining_vertices_dev_ptr, (numberOfRows*deepestLevelSize) * sizeof(int) );
+
+    cudaMalloc( (void**)&global_degrees_offsets_ptr_buffer, (deepestLevelSize+1) * sizeof(int) );
     cudaMalloc( (void**)&global_degrees_dev_ptr_buffer, (numberOfRows*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_dev_ptr_buffer, (numberOfRows*deepestLevelSize) * sizeof(int) );
 
-    cudaMalloc( (void**)&global_degrees_reduced_ptr, deepestLevelSize * sizeof(int) );
+    // For both of these, CSR's we will sort by value/remaining_flag in between leaf inductions
+    // and use Counting Sort to compress memory on leaf inductions
 
     cub::DoubleBuffer<int> row_offsets(global_row_offsets_dev_ptr, global_row_offsets_dev_ptr_buffer);
     cub::DoubleBuffer<int> columns(global_columns_dev_ptr, global_columns_dev_ptr_buffer);
     cub::DoubleBuffer<int> values(global_values_dev_ptr, global_values_dev_ptr_buffer);
+    
+    cub::DoubleBuffer<int> degrees_offsets(global_degrees_offsets_ptr, global_degrees_offsets_ptr_buffer);
     cub::DoubleBuffer<int> degrees(global_degrees_dev_ptr, global_degrees_dev_ptr_buffer);
     cub::DoubleBuffer<int> remaining_vertices(global_remaining_vertices_dev_ptr, global_remaining_vertices_dev_ptr_buffer);
+    cub::DoubleBuffer<int> vertex_is_remaining_flag(global_vertex_is_remaining_flag_dev_ptr, global_vertex_is_remaining_flag_dev_ptr_buffer);
 
     cudaMalloc( (void**)&global_paths_ptr, (max_dfs_depth*secondDeepestLevelSize*threadsPerBlock) * sizeof(int) );
-    
-
     cudaMalloc( (void**)&global_set_path_offsets, (secondDeepestLevelSize+1) * sizeof(int) );
 
     
@@ -2697,7 +2716,7 @@ void CallPopulateTree(int numberOfLevels,
                         remaining_vertices.Current(),
                         global_remaining_vertices_size_dev_ptr,
                         degrees.Current(),
-                        global_degrees_reduced_ptr);
+                        degrees_offsets.Current());
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
@@ -2791,6 +2810,13 @@ void CallPopulateTree(int numberOfLevels,
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
+
+        // Amount of space each graph needs in the next level
+        CUBLibraryPrefixSumDevice(&activeVerticesCount,
+                                  degrees_offsets);
+
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
         
         cudaMemcpy(&hostOffset[0], (int*)active_leaf_offset.Alternate(), (activeVerticesCount+1)*sizeof(int), cudaMemcpyDeviceToHost);
         
@@ -2819,6 +2845,7 @@ void CallPopulateTree(int numberOfLevels,
                                         active_leaf_offset.Alternate(),
                                         global_active_leaf_parent);
         
+
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
@@ -2856,7 +2883,6 @@ void CallPopulateTree(int numberOfLevels,
             std::cout << activeParentHost[i] << " ";
         }
         std::cout << std::endl;
-        // Prefix sum degrees to get row offsets
 
         //row_offsets,
         // Use InduceSubgraph method to copy compress cols and vals
@@ -2868,7 +2894,6 @@ void CallPopulateTree(int numberOfLevels,
         // degrees,
         // remaining_vertices,
         // Sort cols by val
-
 
         activeVerticesCount = 0;
     }

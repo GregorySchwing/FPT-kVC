@@ -253,6 +253,7 @@ __global__ void ParallelProcessDegreeZeroVertices(
                             int * global_degrees_dev_ptr,
                             int * global_degrees_reduced_ptr);
 
+
 /*
 __global__ void ParallelCreateLevelAwareRowOffsets(int activeVerticesCount,
                             int numberOfRows,
