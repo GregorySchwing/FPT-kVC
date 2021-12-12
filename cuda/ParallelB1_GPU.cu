@@ -660,7 +660,7 @@ __global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
     int rowOffsOffset = (numberOfRows + 1) * (leafIndex-1)/3;
     // my vals some of which are now 0
     int valsAndColsOffset = numberOfEdgesPerGraph * leafIndex;
-    int degreesOffset = leafIndex * numberOfRows;
+    int degreesOffset = global_degrees_offsets_dev_ptr[leafIndex];
     int LB, UB, iter, row, edge;
 
     row = threadIdx.x;
@@ -788,7 +788,7 @@ __global__ void CalculateNewRowOffsets( int numberOfRows,
     int leafIndex = levelOffset + threadID;
     if (leafIndex >= levelUpperBound) return;
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
-    int degreesOffset = leafIndex * numberOfRows;
+    int degreesOffset = global_degrees_offsets_dev_ptr[leafIndex];
 
     int i = 0;
     printf("leafIndex %d, degreesOffset = %d\n", leafIndex, degreesOffset);
@@ -843,7 +843,7 @@ __global__ void CreateSubsetOfRemainingVerticesLevelWise(int levelOffset,
     int threadID = threadIdx.x + blockDim.x * blockIdx.x;
     int leafIndex = levelOffset + threadID;
     if (leafIndex >= levelUpperBound) return;
-    int degreesOffset = leafIndex * numberOfRows;
+    int degreesOffset = global_degrees_offsets_dev_ptr[leafIndex];
 
     global_vertices_remaining_count[leafIndex] = 0;
 
@@ -878,7 +878,7 @@ __global__ void DFSLevelWise(
     int threadID = threadIdx.x + blockDim.x * blockIdx.x;
     int leafIndex = levelOffset + threadID;
     if (leafIndex >= levelUpperBound) return;
-    int degreesOffset = leafIndex * numberOfRows;
+    int degreesOffset = global_degrees_offsets_dev_ptr[leafIndex];
     int pathsOffset = leafIndex * 4;
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
     int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
@@ -1001,6 +1001,7 @@ __global__ void ParallelDFSRandom(
                             int * global_active_leaf_indices,
                             int * global_row_offsets_dev_ptr,
                             int * global_columns_dev_ptr,
+                            int * global_degrees_offsets_dev_ptr,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
                             int * global_degrees_dev_ptr,
@@ -1031,7 +1032,7 @@ __global__ void ParallelDFSRandom(
     int sharedMemPathOffset = threadIdx.x * 4;
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
     int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
-    int degreesOffset = leafIndex * numberOfRows;
+    int degreesOffset = global_degrees_offsets_dev_ptr[leafIndex];
     extern __shared__ int pathsAndPendantStatus[];
     int isInvalidPathBooleanArrayOffset = blockDim.x * 4;
     int iteration = 0;
@@ -1262,7 +1263,7 @@ __global__ void ParallelProcessPendantEdges(
     int pathsOffset = leafIndex * 4;
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
     int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
-    int degreesOffset = leafIndex * numberOfRows;
+    int degreesOffset = global_degrees_offsets_dev_ptr[leafIndex];
     int LB, UB, v, vLB, vUB;
     // Set out-edges
     LB = global_row_offsets_dev_ptr[rowOffsOffset + myChild];
@@ -1916,7 +1917,7 @@ __global__ void ParallelProcessDegreeZeroVertices(
 
     extern __shared__ int degreeZeroVertex[];
 
-    int degreesOffset = leafIndex * numberOfRows;
+    int degreesOffset = global_degrees_offsets_dev_ptr[leafIndex];
     int numVertices = global_remaining_vertices_size_dev_ptr[leafIndex];
     int numVerticesRemoved = 0;
     int totalDegreeOfGraph = 0;
@@ -2218,7 +2219,7 @@ __global__ void GenerateChildren(int leafIndex,
     int pathsOffset = leafIndex * 4;
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
     int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
-    int degreesOffset = leafIndex * numberOfRows;
+    int degreesOffset = global_degrees_offsets_dev_ptr[leafIndex];
     int outgoingEdgeOffset = leafIndex * maxDegree;
 
     printf("Thread %d, pathsOffset : %d", threadID, pathsOffset);
@@ -2647,6 +2648,7 @@ void CallPopulateTree(int numberOfLevels,
                             active_leaves.Current(),
                             row_offsets.Current(),
                             columns.Current(),
+                            degrees_offsets.Current(),
                             remaining_vertices.Current(),
                             global_remaining_vertices_size_dev_ptr,
                             degrees.Current(),
