@@ -2997,7 +2997,6 @@ void CopyGraphToDevice( Graph & g,
     // CSR pointers
     int * old_row_offsets_dev_ptr = thrust::raw_pointer_cast(old_row_offsets_dev.data());
     int * old_column_indices_dev_ptr = thrust::raw_pointer_cast(old_column_indices_dev.data());
-    
     // SparseMatrix pointers
     int * new_values_dev_ptr = thrust::raw_pointer_cast(new_values_dev.data());
 
