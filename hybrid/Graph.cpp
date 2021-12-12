@@ -241,23 +241,15 @@ void Graph::removeVertex(int vertexToRemove){
     low = std::lower_bound( std::begin(verticesRemaining), 
                             std::end(verticesRemaining), 
                             vertexToRemove);
-
-    if(!hasntBeenRemoved[vertexToRemove]){
-#ifndef NDEBUG
-        // Can occur only if the second child became degree zero after removing the first 
-        if (verticesRemaining[low - std::begin(verticesRemaining)] != vertexToRemove || 
-            low == std::end(verticesRemaining))
-            return;
-        else
-            std::cout << "Error! Disagreement between verticesRemaining and hasntBeenRemoved!"
+    // Can occur only if the second child became degree zero after removing the first 
+    if (verticesRemaining[low - std::begin(verticesRemaining)] != vertexToRemove || 
+            low == std::end(verticesRemaining)){
+            std::cout << vertexToRemove<< "already been removed"
                 << std::endl;
-#else
-        return;
-#endif
-
-    } else 
-        hasntBeenRemoved[vertexToRemove] = 0;
-
+            return;
+    }
+    
+    hasntBeenRemoved.erase(low);
 
     std::cout << "Begginning of a call" << std::endl;
     std::cout << "vertexToRemove " << vertexToRemove << std::endl;
@@ -402,10 +394,7 @@ void Graph::RemoveNewlyDegreeZeroVertices(thrust::host_vector<int> & verticesToR
         for (i = oldRowOffsets[v]; i < oldRowOffsets[v+1]; ++i){
             j = oldColumnIndices[i];
             if(new_degrees[j] == 0)
-                if (hasntBeenRemoved[j]){
-        		std::cout << "removing newly degree zero vertex" << j << std::endl;
-	    		removeVertex(j);
-                }
+                removeVertex(j);
         }
     }
 }
@@ -414,10 +403,7 @@ void Graph::RemoveNewlyDegreeZeroVertices(thrust::host_vector<int> & verticesToR
 void Graph::RemoveDegreeZeroVertices(){
     for (int vertex = 0; vertex < vertexCount; ++vertex){
         if(new_degrees[vertex] == 0)
-            if (hasntBeenRemoved[vertex]){
-                std::cout << "removing degree zero vertex" << vertex << std::endl;
-                removeVertex(vertex);
-            }
+            removeVertex(vertex);
     }
 }
 

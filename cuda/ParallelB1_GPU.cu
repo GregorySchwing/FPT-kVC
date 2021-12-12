@@ -2062,6 +2062,7 @@ __global__ void ParallelCreateLevelAwareRowOffsets(
     }
 }
 
+/*
 __global__ void SetVerticesRemaingSegements(int dLSPlus1,
                                             int numberOfRows,
                                             int * global_vertex_segments){
@@ -2069,7 +2070,7 @@ __global__ void SetVerticesRemaingSegements(int dLSPlus1,
         global_vertex_segments[entry] = entry * numberOfRows;
     }
 }
-
+*/
 __global__ void SetPathOffsets(int sDLSPlus1,
                                int * global_set_path_offsets){
     for (int entry = threadIdx.x; entry < sDLSPlus1; entry += blockDim.x){
@@ -2417,7 +2418,7 @@ void CallPopulateTree(int numberOfLevels,
     int max_dfs_depth = 4;
     int numberOfRows = g.GetNumberOfRows();
     int numberOfEdgesPerGraph = g.GetEdgesLeftToCover(); 
-    int verticesRemainingInGraph = g.GetRemainingVertices().size(); 
+    int verticesRemainingInGraphCount = g.GetRemainingVertices().size(); 
     int activeLeavesPerNode = CalculateAmountOfMemoryToAllocatePerActiveLeaf();
 
     // Vertex, Cols, Edge(on/off)
@@ -2544,15 +2545,17 @@ void CallPopulateTree(int numberOfLevels,
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     CopyGraphToDevice(g,
+                    numberOfEdgesPerGraph,
+                    global_edges_left_to_cover_count,
                     row_offsets.Current(),
                     columns.Current(),
                     values.Current(),
-                    degrees.Current(),
-                    numberOfEdgesPerGraph,
-                    global_edges_left_to_cover_count,
-                    remaining_vertices.Current(),
+                    verticesRemainingInGraphCount,
                     global_remaining_vertices_size_dev_ptr,
-                    verticesRemainingInGraph,
+                    degrees_offsets.Current(),
+                    degrees.Current(),
+                    remaining_vertices.Current(),
+                    vertex_is_remaining_flag.Current(),
                     active_leaves.Current(),
                     active_leaves_count.Current());
 
@@ -2579,9 +2582,9 @@ void CallPopulateTree(int numberOfLevels,
     int ceilOfDLSPlus1 = (dLSPlus1 + threadsPerBlock - 1) / threadsPerBlock;
 
     // Create Segment Offsets for RemainingVertices
-    SetVerticesRemaingSegements<<<ceilOfDLSPlus1,threadsPerBlock>>>(deepestLevelSize,
-                                                                    numberOfRows,
-                                                                    global_vertex_segments);
+    //SetVerticesRemaingSegements<<<ceilOfDLSPlus1,threadsPerBlock>>>(deepestLevelSize,
+    //                                                                numberOfRows,
+    //                                                                global_vertex_segments);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -2955,38 +2958,60 @@ void CallPopulateTree(int numberOfLevels,
 }
 
 void CopyGraphToDevice( Graph & g,
+                        int numberOfEdgesPerGraph,
+                        int * global_edges_left_to_cover_count,
                         int * global_row_offsets_dev_ptr,
                         int * global_columns_dev_ptr,
                         int * global_values_dev_ptr,
-                        int * global_degrees_dev_ptr,
-                        int numberOfEdgesPerGraph,
-                        int * global_edges_left_to_cover_count,
-                        int * global_remaining_vertices_dev_ptr,
+                        int   verticesRemainingInGraphCount,
                         int * global_remaining_vertices_size_dev_ptr,
-                        int verticesRemainingInGraph,
+                        int * global_degrees_offsets_ptr,
+                        int * global_degrees_dev_ptr,
+                        int * global_remaining_vertices_dev_ptr,
+                        int * global_vertex_is_remaining_flag_dev_ptr,
                         int * global_active_leaf_indices,
                         int * global_active_leaf_indices_count){
 
     int * new_degrees_ptr = thrust::raw_pointer_cast(g.GetNewDegRef().data());
-    int * vertices_remaining_ptr = thrust::raw_pointer_cast(g.GetRemainingVertices().data());
-    
+    int * vertices_remaining_ptr = thrust::raw_pointer_cast(g.GetRemainingVerticesRef().data());
+    int * hasnt_been_removed_ptr = thrust::raw_pointer_cast(g.GetHasntBeenRemovedRef().data());
+
     std::cout << "remaining verts" << std::endl;
-    for (auto & v : g.GetRemainingVertices())
+    for (auto & v : g.GetRemainingVerticesRef())
         std::cout << v << " ";
     std::cout << std::endl;
-    std::cout << "remaining verts size " << g.GetRemainingVertices().size() << std::endl;
+    std::cout << "remaining verts size " << g.GetRemainingVerticesRef().size() << std::endl;
 
     // Graph vectors
-    cudaMemcpy(global_degrees_dev_ptr, new_degrees_ptr, g.GetNumberOfRows() * sizeof(int),
-                cudaMemcpyHostToDevice);
     cudaMemcpy(global_edges_left_to_cover_count, &numberOfEdgesPerGraph, 1 * sizeof(int),
                 cudaMemcpyHostToDevice);
-    cudaMemcpy(global_remaining_vertices_dev_ptr, vertices_remaining_ptr, g.GetRemainingVertices().size() * sizeof(int),
-            cudaMemcpyHostToDevice);         
-    cudaMemcpy(global_remaining_vertices_size_dev_ptr, &verticesRemainingInGraph, 1 * sizeof(int),
-            cudaMemcpyHostToDevice);    
+    
+    // Degree CSR Data
+    cudaMemcpy(global_remaining_vertices_size_dev_ptr, &verticesRemainingInGraphCount, 1 * sizeof(int),
+            cudaMemcpyHostToDevice);   
+    cudaMemcpy(global_degrees_dev_ptr, new_degrees_ptr, g.GetNumberOfRows() * sizeof(int),
+                cudaMemcpyHostToDevice);
+    cudaMemcpy(global_remaining_vertices_dev_ptr, vertices_remaining_ptr, g.GetRemainingVerticesRef().size() * sizeof(int),
+            cudaMemcpyHostToDevice);      
+    cudaMemcpy(global_vertex_is_remaining_flag_dev_ptr, hasnt_been_removed_ptr, g.GetRemainingVerticesRef().size() * sizeof(int),
+            cudaMemcpyHostToDevice); 
+
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
+
+    // Currenly only sets the first graph in the cuda memory
+    // Might as well be host code
+    CalculateNewRowOffsets<<<1,1>>>(1,
+                                    0,
+                                    1,
+                                    global_degrees_offsets_ptr,
+                                    global_remaining_vertices_size_dev_ptr); 
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+    
+
+
     // CSR vectors
     thrust::device_vector<int> old_row_offsets_dev = *(g.GetCSR().GetOldRowOffRef());
     thrust::device_vector<int> old_column_indices_dev = *(g.GetCSR().GetOldColRef());
@@ -3003,10 +3028,10 @@ void CopyGraphToDevice( Graph & g,
     // Currenly only sets the first graph in the cuda memory
     // Might as well be host code
     CalculateNewRowOffsets<<<1,1>>>(g.GetNumberOfRows(),
-                                        0,
-                                        1,
-                                        global_row_offsets_dev_ptr,
-                                        global_degrees_dev_ptr); 
+                                    0,
+                                    1,
+                                    global_row_offsets_dev_ptr,
+                                    global_degrees_dev_ptr); 
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
