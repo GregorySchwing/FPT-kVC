@@ -1169,6 +1169,7 @@ __global__ void ParallelProcessPendantEdges(
                             int * global_columns_dev_ptr,
                             int * global_values_dev_ptr,
                             int * global_degrees_dev_ptr,
+                            int * global_edges_left_to_cover_count,
                             int * global_pendant_path_bool_dev_ptr,
                             int * global_pendant_child_dev_ptr){
 
@@ -2683,6 +2684,7 @@ void CallPopulateTree(int numberOfLevels,
                         columns.Current(),
                         values.Current(),
                         degrees.Current(),
+                        global_edges_left_to_cover_count,
                         global_pendant_path_bool_dev_ptr,
                         global_pendant_child_dev_ptr);
         cudaDeviceSynchronize();
