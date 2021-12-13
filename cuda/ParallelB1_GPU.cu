@@ -1280,6 +1280,8 @@ __global__ void ParallelProcessPendantEdges(
         global_degrees_dev_ptr[degreesOffset + 
             global_columns_dev_ptr[valsAndColsOffset + edge]] 
                 -= global_values_dev_ptr[valsAndColsOffset + edge];
+        // This avoids a reduction of the degrees array to get total edges
+        atomicAdd(&global_edges_left_to_cover_count[leafIndex], -2*global_values_dev_ptr[valsAndColsOffset + edge]);
         global_values_dev_ptr[valsAndColsOffset + edge] = 0;
     }
 
@@ -1776,9 +1778,12 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
         int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
         printf("Leaves %d, totalNewActive %d\n",leavesToProcess, totalNewActive);
         // Write to global memory
-        global_newly_active_leaves_count_ptr[globalIndex] = totalNewActive;
+        // If new leaves == 0, then either the graph is empty, which will be handled elsewhere
+        // Or every path was on a pendant node, and the current vertex should be written to the 
+        // list of new active vertices.
+        global_newly_active_leaves_count_ptr[globalIndex] = totalNewActive + (int)(totalNewActive == 0);
         // Write to shared memory for reduction
-        new_active_leaves_count_red[threadIdx.x] = totalNewActive;
+        new_active_leaves_count_red[threadIdx.x] = totalNewActive + (int)(totalNewActive == 0);
     } else {
         new_active_leaves_count_red[threadIdx.x] = 0;
     }
@@ -1806,7 +1811,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
                                         int * global_active_leaves_count_new,
                                         int * global_reduced_set_inclusion_count_ptr,
                                         int * global_newly_active_offset_ptr,
-                                        int * global_active_leaf_parent){
+                                        int * global_active_leaf_parent_leaf_index){
     int globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
     int leafValue;
 
@@ -1836,10 +1841,17 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
         }
         int newly_active_offset = global_newly_active_offset_ptr[globalIndex];
         int index = 0;
+        // These values will be overwritten in the for loops, if leavesToProcess > 0
+        // Therefore initialize the values as if there were not any non-pendant paths
+        // found in the DFS.  This way we minimize the amount of conditionals.
+        global_newly_active_leaves[newly_active_offset + index] = leafValue;
+        global_active_leaf_parent_leaf_index[newly_active_offset + index] = leafValue;
+        // If non-pendant paths were found, populate the search tree in the 
+        // complete level
         for (; index < completeLevelLeaves - removeFromComplete; ++index){
             printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfFullLevel + index + removeFromComplete);
             global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfFullLevel + index + removeFromComplete;
-            global_active_leaf_parent[newly_active_offset + index] = leafValue;
+            global_active_leaf_parent_leaf_index[newly_active_offset + index] = leafValue;
         }
         int leftMostLeafIndexOfIncompleteLevel = leafValue;
         while (incompleteLevel > 0){
@@ -1847,10 +1859,12 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
             incompleteLevel -= 1;
         }
         int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
+        // If non-pendant paths were found, populate the search tree in the 
+        // incomplete level
         for (int incompleteIndex = 0; index < totalNewActive; ++index, ++incompleteIndex){
             printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfIncompleteLevel + incompleteIndex);
             global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfIncompleteLevel + incompleteIndex;
-            global_active_leaf_parent[newly_active_offset + index] = leafValue;
+            global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
         }
         for (int testP = 0; testP < global_active_leaves_count_new[globalIndex]; ++testP){
             printf("global_newly_active_leaves[%d] = %d\n",testP, global_newly_active_leaves[testP]);
@@ -2370,7 +2384,7 @@ void CallPopulateTree(int numberOfLevels,
 
     int * global_paths_length;
     int * global_edges_left_to_cover_count;
-    int * global_active_leaf_indices, * global_active_leaf_indices_buffer, * global_active_leaf_parent;
+    int * global_active_leaf_indices, * global_active_leaf_indices_buffer, * global_active_leaf_parent_leaf_index;
     int * global_memcpy_boolean;
 
     int * global_active_leaf_indices_count;
@@ -2453,8 +2467,7 @@ void CallPopulateTree(int numberOfLevels,
     // Not global to the entire tree, overwritten every level
     cudaMalloc( (void**)&global_pendant_child_dev_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
 
-
-    cudaMalloc( (void**)&global_edges_left_to_cover_count, treeSize * sizeof(int) );
+    cudaMalloc( (void**)&global_edges_left_to_cover_count, deepestLevelSize * sizeof(int) );
 
     // These two arrays direct the flow of the graph building process
     // If a vertex is not skipped and it has 0 paths produced, it needs to enter the DFS method
@@ -2492,9 +2505,13 @@ void CallPopulateTree(int numberOfLevels,
     // If a DFS only produced pendants and another round of DFS take place
     // it is false 
     cudaMalloc( (void**)&global_memcpy_boolean, deepestLevelSize * sizeof(int) );
-    // Since we skip internal nodes, each active leaf needs to know the parent
+    // Since we skip internal nodes, each active leaf needs to know the parent index
     // from which cols, vals, remaining vertices are to be copied
-    cudaMalloc( (void**)&global_active_leaf_parent, deepestLevelSize * sizeof(int) );
+    // The parent graphs are maintained in memory, until all the new leaves are processed
+    // Once the memory of the new leaves excede available memory, the new leaves are
+    // copied back to host, and the rest of the new leaves processed, only then 
+    // can the old graph be replaced by a new graph and the process continued.
+    cudaMalloc( (void**)&global_active_leaf_parent_leaf_index, deepestLevelSize * sizeof(int) );
 
     cudaMalloc( (void**)&global_active_leaf_indices_count, 1 * sizeof(int) );
     cudaMalloc( (void**)&global_active_leaf_indices_count_buffer, 1 * sizeof(int) );
@@ -2797,7 +2814,7 @@ void CallPopulateTree(int numberOfLevels,
                                         active_leaves_count.Alternate(),
                                         global_reduced_set_inclusion_count_ptr,
                                         active_leaf_offset.Alternate(),
-                                        global_active_leaf_parent);
+                                        global_active_leaf_parent_leaf_index);
         
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -2809,7 +2826,7 @@ void CallPopulateTree(int numberOfLevels,
 
         std::cout << "activeVerticesCount: " << activeVerticesCount << std::endl;
         cudaMemcpy(&activeLeavesHost[0], (int*)active_leaves.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
-        cudaMemcpy(&activeParentHost[0], (int*)global_active_leaf_parent, (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&activeParentHost[0], (int*)global_active_leaf_parent_leaf_index, (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
 
 
         cudaDeviceSynchronize();
@@ -2836,8 +2853,16 @@ void CallPopulateTree(int numberOfLevels,
             std::cout << activeParentHost[i] << " ";
         }
         std::cout << std::endl;
+
+        // Whether we copy back the parent graph or leave it in memory
+        // depends on the BFS or DFS algorithm of tree growth
+
+        // BFS the parent stays in memory, it induces into the buffer
+
+
         // Prefix sum degrees to get row offsets
         //row_offsets,
+
         // Use InduceSubgraph method to copy compress cols and vals
         //columns,
         //values,
@@ -2847,7 +2872,6 @@ void CallPopulateTree(int numberOfLevels,
         // degrees,
         // remaining_vertices,
         // Sort cols by val
-
 
         activeVerticesCount = 0;
     }
