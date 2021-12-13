@@ -543,18 +543,14 @@ __global__ void InduceSubgraph( int numberOfRows,
 
 __global__ void SetEdges(int numberOfRows,
                         int numberOfEdgesPerGraph,
-                        int levelOffset,
-                        int levelUpperBound,
+                        int * global_active_leaf_indices,
+                        int * global_active_leaf_indices,
                         int * global_row_offsets_dev_ptr,
                         int * global_columns_dev_ptr,
                         int * global_values_dev_ptr,
-                        int * global_paths_ptr,
-                        int * global_paths_length,
                         int * global_edges_left_to_cover_count){
 
-    int leafIndex = levelOffset + blockIdx.x;
-    if (leafIndex >= levelUpperBound) return;
-
+    int leafIndex = blockIdx.x;
     int threadIndex = threadIdx.x;
 
     int rowOffsOffset = (numberOfRows + 1) * (leafIndex-1)/3;
@@ -564,35 +560,6 @@ __global__ void SetEdges(int numberOfRows,
             global_row_offsets_dev_ptr[rowOffsOffset + numberOfRows -1],
             global_edges_left_to_cover_count[(leafIndex-1)/3]);
     int children[2], LB, UB, v, vLB, vUB;
-    // Parent's DFS path
-    int pathsOffset = ((leafIndex-1)/3) * 4;
-/*
-child x (path[0]) (path[2]);
-
-        (path[1]) (path[3]);     
-
-child y         or
-
-        (path[1]) (path[0]);    
-
-child z (path[2]) (path[1]);
-
-Can't figure out a way to avoid these if conditionals without a kernel call to classify before this kernel is called.
-*/
-    int pathType = leafIndex % 3;
-    if (pathType == 0){
-        children[0] = global_paths_ptr[pathsOffset];
-        children[1] = global_paths_ptr[pathsOffset + 2];
-    } else if (pathType == 1) { 
-        children[0] = global_paths_ptr[pathsOffset + 1];
-        children[1] = global_paths_ptr[pathsOffset + 2];
-    } else {
-        children[0] = global_paths_ptr[pathsOffset + 1];
-        if (global_paths_ptr[pathsOffset] == global_paths_ptr[pathsOffset + 3])
-            children[1] = global_paths_ptr[pathsOffset];
-        else
-            children[1] = global_paths_ptr[pathsOffset + 3];
-    }
     // Set out-edges
     for (int i = 0; i < 2; ++i){
         LB = global_row_offsets_dev_ptr[rowOffsOffset + children[i]];
@@ -1812,7 +1779,8 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
                                         int * global_active_leaves_count_new,
                                         int * global_reduced_set_inclusion_count_ptr,
                                         int * global_newly_active_offset_ptr,
-                                        int * global_active_leaf_parent_leaf_index){
+                                        int * global_active_leaf_parent_leaf_index,
+                                        int * global_active_leaf_parent_leaf_value){
     int globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
     int leafValue;
 
@@ -1846,13 +1814,16 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
         // Therefore initialize the values as if there were not any non-pendant paths
         // found in the DFS.  This way we minimize the amount of conditionals.
         global_newly_active_leaves[newly_active_offset + index] = leafValue;
-        global_active_leaf_parent_leaf_index[newly_active_offset + index] = leafValue;
+        global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
+        global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
+
         // If non-pendant paths were found, populate the search tree in the 
         // complete level
         for (; index < completeLevelLeaves - removeFromComplete; ++index){
             printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfFullLevel + index + removeFromComplete);
             global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfFullLevel + index + removeFromComplete;
-            global_active_leaf_parent_leaf_index[newly_active_offset + index] = leafValue;
+            global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
+            global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
         }
         int leftMostLeafIndexOfIncompleteLevel = leafValue;
         while (incompleteLevel > 0){
@@ -1865,6 +1836,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
         for (int incompleteIndex = 0; index < totalNewActive; ++index, ++incompleteIndex){
             printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfIncompleteLevel + incompleteIndex);
             global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfIncompleteLevel + incompleteIndex;
+            global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
             global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
         }
         for (int testP = 0; testP < global_active_leaves_count_new[globalIndex]; ++testP){
@@ -2387,8 +2359,8 @@ void CallPopulateTree(int numberOfLevels,
     int * global_edges_left_to_cover_count;
     int * global_edges_left_to_cover_count_buffer;
 
-    int * global_active_leaf_indices, * global_active_leaf_indices_buffer, * global_active_leaf_parent_leaf_index;
-    int * global_memcpy_boolean;
+    int * global_active_leaf_indices, * global_active_leaf_indices_buffer;
+    int * global_active_leaf_parent_leaf_index, * global_active_leaf_parent_leaf_value;
 
     int * global_active_leaf_indices_count;
     int * global_active_leaf_indices_count_buffer;
@@ -2517,6 +2489,7 @@ void CallPopulateTree(int numberOfLevels,
     // copied back to host, and the rest of the new leaves processed, only then 
     // can the old graph be replaced by a new graph and the process continued.
     cudaMalloc( (void**)&global_active_leaf_parent_leaf_index, deepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_active_leaf_parent_leaf_value, deepestLevelSize * sizeof(int) );
 
     cudaMalloc( (void**)&global_active_leaf_indices_count, 1 * sizeof(int) );
     cudaMalloc( (void**)&global_active_leaf_indices_count_buffer, 1 * sizeof(int) );
@@ -2813,7 +2786,8 @@ void CallPopulateTree(int numberOfLevels,
                                         active_leaves_count.Alternate(),
                                         global_reduced_set_inclusion_count_ptr,
                                         active_leaf_offset.Alternate(),
-                                        global_active_leaf_parent_leaf_index);
+                                        global_active_leaf_parent_leaf_index,
+                                        global_active_leaf_parent_leaf_value);
         
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
