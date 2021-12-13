@@ -544,69 +544,113 @@ __global__ void InduceSubgraph( int numberOfRows,
 __global__ void SetEdges(int numberOfRows,
                         int numberOfEdgesPerGraph,
                         int * global_active_leaf_indices,
-                        int * global_active_leaf_indices,
+                        int * global_active_leaf_parent_leaf_index,
                         int * global_row_offsets_dev_ptr,
                         int * global_columns_dev_ptr,
                         int * global_values_dev_ptr,
-                        int * global_edges_left_to_cover_count){
+                        int * global_degrees_dev_ptr,
+                        int * global_edges_left_to_cover_count,
+                        int * global_vertices_included_dev_ptr){
 
     int leafIndex = blockIdx.x;
-    int threadIndex = threadIdx.x;
+    int leafValue = global_active_leaf_indices[leafIndex];
+    int parentLeafValue = global_active_leaf_parent_leaf_index[leafIndex];
+    int rowOffsOffset = leafIndex * (numberOfRows + 1);
+    int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
+    int degreesOffset = leafIndex * numberOfRows;
+    int searchTreeIndex = leafValue*2;
+    int LB, UB, v, vLB, vUB, myChild;
+    while(leafValue != parentLeafValue){
+        for (int childIndex = 0; childIndex < 2; ++childIndex){
+            searchTreeIndex = leafValue*2;
+            myChild = global_vertices_included_dev_ptr[searchTreeIndex + childIndex];
+            // Set out-edges
+            LB = global_row_offsets_dev_ptr[rowOffsOffset + myChild];
+            UB = global_row_offsets_dev_ptr[rowOffsOffset + myChild + 1]; 
+            if (threadIdx.x == 0 && blockIdx.x == 0){
+                printf("block ID %d Set offsets in PPP\n", blockIdx.x);
+                printf("\n");
+            }   
+            for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
+                // Since there are only 2 edges b/w each node,
+                // We can safely decrement the target node's degree
+                // If these are atomic, then duplicate myChildren isn't a problem
+                // Since we'd be decrementing by 0 the second, third, ...etc time 
+                // a duplicate myChild was processed.
+                global_degrees_dev_ptr[degreesOffset + 
+                    global_columns_dev_ptr[valsAndColsOffset + edge]] 
+                        -= global_values_dev_ptr[valsAndColsOffset + edge];
+                // This avoids a reduction of the degrees array to get total edges
+                atomicAdd(&global_edges_left_to_cover_count[leafIndex], -2*global_values_dev_ptr[valsAndColsOffset + edge]);
+                global_values_dev_ptr[valsAndColsOffset + edge] = 0;
+            }
 
-    int rowOffsOffset = (numberOfRows + 1) * (leafIndex-1)/3;
-    int valsAndColsOffset = numberOfEdgesPerGraph * leafIndex;
-    if (global_row_offsets_dev_ptr[rowOffsOffset + numberOfRows -1] != global_edges_left_to_cover_count[(leafIndex-1)/3])
-        printf("\n\n\nERROR in the row offsets (%d) and number of columns (%d)\n\n\n", 
-            global_row_offsets_dev_ptr[rowOffsOffset + numberOfRows -1],
-            global_edges_left_to_cover_count[(leafIndex-1)/3]);
-    int children[2], LB, UB, v, vLB, vUB;
-    // Set out-edges
-    for (int i = 0; i < 2; ++i){
-        LB = global_row_offsets_dev_ptr[rowOffsOffset + children[i]];
-        UB = global_row_offsets_dev_ptr[rowOffsOffset + children[i] + 1];    
-        for (int edge = LB + threadIndex; edge < UB; edge += blockDim.x){
-            global_values_dev_ptr[valsAndColsOffset + edge] = 0;
-        }
-    }
-    __syncthreads();
-    if (threadIndex == 0 && blockIdx.x == 0){
-        printf("Block %d, levelOffset %d, leafIndex %d, children removed %d %d\n", blockIdx.x, levelOffset, leafIndex, children[0], children[1]);
-        for (int i = 0; i < global_edges_left_to_cover_count[(leafIndex-1)/3]; ++i){
-            printf("(%d, %d) ",global_columns_dev_ptr[valsAndColsOffset + i], global_values_dev_ptr[valsAndColsOffset + i]);
-        }
-        printf("\n");
-    }
-    // (u,v) is the form of edge pairs.  We are traversing over v's outgoing edges, 
-    // looking for u as the destination and turning off that edge.
-    // this may be more elegantly handled by 
-    // (1) an associative data structure
-    // (2) an undirected graph 
-    // Parallel implementations of both of these need to be investigated.
-    for (int i = 0; i < 2; ++i){
-        LB = global_row_offsets_dev_ptr[rowOffsOffset + children[i]];
-        UB = global_row_offsets_dev_ptr[rowOffsOffset + children[i] + 1];    // Set out-edges
-        for (int edge = LB + threadIndex; edge < UB; edge += blockDim.x){
-            v = global_columns_dev_ptr[valsAndColsOffset + edge];
-            // guarunteed to only have one incoming and one outgoing edge connecting (x,y)
-            vLB = global_row_offsets_dev_ptr[rowOffsOffset + v];
-            vUB = global_row_offsets_dev_ptr[rowOffsOffset + v + 1];
-            for (int outgoingEdgeOfV = vLB + threadIndex; 
-                    outgoingEdgeOfV < vUB; 
-                        outgoingEdgeOfV += blockDim.x){
-                if (children[i] == global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfV]){
-                    // Set in-edge
-                    global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV] = 0;
+            if (threadIdx.x == 0){
+                    global_degrees_dev_ptr[degreesOffset + myChild] = 0;
+            }
+            __syncthreads();
+            if (threadIdx.x == 0){
+                printf("Block ID %d Finished out edges PPP\n", blockIdx.x);
+                printf("\n");
+            }  
+            if (threadIdx.x == 0){
+                printf("Block %d, leafValue %d, myChild removed %d\n", blockIdx.x, leafValue, myChild);
+                printf("\n");
+            }
+            // (u,v) is the form of edge pairs.  We are traversing over v's outgoing edges, 
+            // looking for u as the destination and turning off that edge.
+            // this may be more elegantly handled by 
+            // (1) an associative data structure
+            // (2) an undirected graph 
+            // Parallel implementations of both of these need to be investigated.
+            bool foundChild, tmp;
+            LB = global_row_offsets_dev_ptr[rowOffsOffset + myChild];
+            UB = global_row_offsets_dev_ptr[rowOffsOffset + myChild + 1];    // Set out-edges
+            // There are two possibilities for parallelization here:
+            // 1) Each thread will take an out edge, and then each thread will scan the edges leaving 
+            // that vertex for the original vertex.
+            //for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
+
+            // Basically, each thread is reading wildly different data
+            // 2) 1 out edge is traversed at a time, and then all the threads scan
+            // all the edges leaving that vertex for the original vertex.
+            // This is the more favorable data access pattern.
+            for (int edge = LB; edge < UB; ++edge){
+                v = global_columns_dev_ptr[valsAndColsOffset + edge];
+                // guarunteed to only have one incoming and one outgoing edge connecting (x,y)
+                // All outgoing edges were set and are separated from this method by a __syncthreads
+                // Thus there is no chance of decrementing the degree of the same node simulataneously
+                vLB = global_row_offsets_dev_ptr[rowOffsOffset + v];
+                vUB = global_row_offsets_dev_ptr[rowOffsOffset + v + 1];
+                for (int outgoingEdgeOfV = vLB + threadIdx.x; 
+                        outgoingEdgeOfV < vUB; 
+                            outgoingEdgeOfV += blockDim.x){
+
+                        foundChild = myChild == global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfV];
+                        // Set in-edge
+                        // store edge status
+                        tmp = global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV];
+                        //   foundChild     tmp   (foundChild & tmp)  (foundChild & tmp)^tmp
+                        //1)      0          0            0                       0
+                        //2)      1          0            0                       0
+                        //3)      0          1            0                       1
+                        //4)      1          1            1                       0
+                        //
+                        // Case 1: isnt myChild and edge is off, stay off
+                        // Case 2: is myChild and edge is off, stay off
+                        // Case 3: isn't myChild and edge is on, stay on
+                        // Case 4: is myChild and edge is on, turn off
+                        // All this logic is necessary because we aren't using degree to set upperbound
+                        // we are using row offsets, which may include some edges turned off on a previous
+                        // pendant edge processing step.
+                        global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV] ^= (foundChild & tmp);
                 }
             }
+            // Neccessary since just because the two children vertices form a bridge
+            // doesnt mean they dont also share an edge
+            __syncthreads();
         }
-    }
-    __syncthreads();
-    if (threadIndex == 0 && blockIdx.x == 0){
-        printf("Block %d, levelOffset %d, leafIndex %d, children removed %d %d\n", blockIdx.x, levelOffset, leafIndex, children[0], children[1]);
-        for (int i = 0; i < global_edges_left_to_cover_count[(leafIndex-1)/3]; ++i){
-            printf("(%d, %d) ",global_columns_dev_ptr[valsAndColsOffset + i], global_values_dev_ptr[valsAndColsOffset + i]);
-        }
-        printf("\n");
+        leafValue = (leafValue-1)/3;
     }
 }
 
@@ -2435,7 +2479,8 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_paths_length, treeSize * sizeof(int) );
 */
     cudaMalloc( (void**)&global_vertices_included_dev_ptr, treeSize * sizeof(int) );
-    cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr, treeSize * sizeof(int) );
+
+    cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr, deepestLevelSize * sizeof(int) );
     // Each node can process tPB pendant edges per call
     cudaMalloc( (void**)&global_pendant_path_bool_dev_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_pendant_path_reduced_bool_dev_ptr, deepestLevelSize * sizeof(int) );
@@ -2477,11 +2522,6 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_active_leaf_indices_buffer, deepestLevelSize*sizeof(int) );
     cub::DoubleBuffer<int> active_leaves(global_active_leaf_indices, global_active_leaf_indices_buffer);
 
-    // If the cols, vals, remaining vertices, need to be memcpied
-    // When inducing a child, is true
-    // If a DFS only produced pendants and another round of DFS take place
-    // it is false 
-    cudaMalloc( (void**)&global_memcpy_boolean, deepestLevelSize * sizeof(int) );
     // Since we skip internal nodes, each active leaf needs to know the parent index
     // from which cols, vals, remaining vertices are to be copied
     // The parent graphs are maintained in memory, until all the new leaves are processed
@@ -2560,6 +2600,18 @@ void CallPopulateTree(int numberOfLevels,
 
     while(activeVerticesCount){
         if(notFirstCall){
+            SetEdges<<<activeVerticesCount, threadsPerBlock>>>(
+                                                            numberOfRows,
+                                                            numberOfEdgesPerGraph,
+                                                            active_leaves.Current(),
+                                                            global_active_leaf_parent_leaf_index,
+                                                            row_offsets.Current(),
+                                                            columns.Current(),
+                                                            values.Current(),
+                                                            degrees.Current(),
+                                                            global_edges_left_to_cover_count,
+                                                            global_vertices_included_dev_ptr);
+                                                            /*
             RestoreDataStructuresAfterRemovingChildrenVertices(levelUpperBound,
                                                                 levelOffset,
                                                                 threadsPerBlock,
@@ -2574,8 +2626,8 @@ void CallPopulateTree(int numberOfLevels,
                                                                 global_remaining_vertices_dev_ptr,
                                                                 global_columns_dev_ptr,
                                                                 global_values_dev_ptr);
+                                                                */
         }
-    
         // 1 thread per leaf
         std::cout << "Calling DFS" << std::endl;
         // 1 block per leaf; tries tPB random paths in G
