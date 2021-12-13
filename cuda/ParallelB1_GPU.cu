@@ -2385,6 +2385,8 @@ void CallPopulateTree(int numberOfLevels,
 
     int * global_paths_length;
     int * global_edges_left_to_cover_count;
+    int * global_edges_left_to_cover_count_buffer;
+
     int * global_active_leaf_indices, * global_active_leaf_indices_buffer, * global_active_leaf_parent_leaf_index;
     int * global_memcpy_boolean;
 
@@ -2469,6 +2471,8 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_pendant_child_dev_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
 
     cudaMalloc( (void**)&global_edges_left_to_cover_count, deepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_edges_left_to_cover_count_buffer, deepestLevelSize * sizeof(int) );
+    cub::DoubleBuffer<int> edges_left(global_edges_left_to_cover_count, global_edges_left_to_cover_count_buffer);
 
     // These two arrays direct the flow of the graph building process
     // If a vertex is not skipped and it has 0 paths produced, it needs to enter the DFS method
@@ -2529,7 +2533,7 @@ void CallPopulateTree(int numberOfLevels,
                     values.Current(),
                     degrees.Current(),
                     numberOfEdgesPerGraph,
-                    global_edges_left_to_cover_count,
+                    edges_left.Current(),
                     remaining_vertices.Current(),
                     global_remaining_vertices_size_dev_ptr,
                     verticesRemainingInGraph,
@@ -2582,12 +2586,6 @@ void CallPopulateTree(int numberOfLevels,
     int zero = 0;
 
     while(activeVerticesCount){
-    //for (int level = 0; level < numberOfLevels; ++level){
-        //levelUpperBound = CalculateLevelUpperBound(level);
-        //numberOfBlocksForOneThreadPerLeaf = ((levelUpperBound - levelOffset) + threadsPerBlock - 1) / threadsPerBlock;
-        
-        // For all but the first instance I need to sort...
-        /*
         if(notFirstCall){
             RestoreDataStructuresAfterRemovingChildrenVertices(levelUpperBound,
                                                                 levelOffset,
@@ -2604,7 +2602,6 @@ void CallPopulateTree(int numberOfLevels,
                                                                 global_columns_dev_ptr,
                                                                 global_values_dev_ptr);
         }
-        */
     
         // 1 thread per leaf
         std::cout << "Calling DFS" << std::endl;
@@ -2684,7 +2681,7 @@ void CallPopulateTree(int numberOfLevels,
                         columns.Current(),
                         values.Current(),
                         degrees.Current(),
-                        global_edges_left_to_cover_count,
+                        edges_left.Current(),
                         global_pendant_path_bool_dev_ptr,
                         global_pendant_child_dev_ptr);
         cudaDeviceSynchronize();
@@ -2856,26 +2853,42 @@ void CallPopulateTree(int numberOfLevels,
         }
         std::cout << std::endl;
 
-        // Whether we copy back the parent graph or leave it in memory
-        // depends on the BFS or DFS algorithm of tree growth
+        int * old_row_offs = row_offsets.Current();
+        int * new_row_offs = row_offsets.Alternate();
+        int * old_cols = columns.Current();
+        int * new_cols = columns.Alternate();        
+        int * old_vals = values.Current();
+        int * new_vals = values.Alternate();
+        int * old_degrees = degrees.Current();
+        int * new_degrees = degrees.Alternate();
+        int * old_verts_remain = remaining_vertices.Current();
+        int * new_verts_remain = remaining_vertices.Alternate();
+        int * old_edges_left = edges_left.Current();
+        int * new_edges_left = edges_left.Alternate();
+        // Memory-Unoptimized
+        for(int newChild = 0; newChild < activeVerticesCount; ++newChild){
+            cudaMemcpy(&new_row_offs[newChild*(numberOfRows+1)], &old_row_offs[activeParentHost[newChild]*(numberOfRows+1)], (numberOfRows+1)*sizeof(int), cudaMemcpyDeviceToDevice);
+            cudaMemcpy(&new_cols[newChild*numberOfEdgesPerGraph], &old_cols[activeParentHost[newChild]*numberOfEdgesPerGraph], numberOfEdgesPerGraph*sizeof(int), cudaMemcpyDeviceToDevice);
+            cudaMemcpy(&new_vals[newChild*numberOfEdgesPerGraph], &old_vals[activeParentHost[newChild]*numberOfEdgesPerGraph], numberOfEdgesPerGraph*sizeof(int), cudaMemcpyDeviceToDevice);
+            cudaMemcpy(&new_degrees[newChild*numberOfRows], &old_degrees[activeParentHost[newChild]*numberOfRows], numberOfRows*sizeof(int), cudaMemcpyDeviceToDevice);
+            cudaMemcpy(&new_verts_remain[newChild*numberOfRows], &old_verts_remain[activeParentHost[newChild]*numberOfRows], numberOfRows*sizeof(int), cudaMemcpyDeviceToDevice);
+            cudaMemcpy(&new_edges_left[newChild], &old_edges_left[activeParentHost[newChild]], 1*sizeof(int), cudaMemcpyDeviceToDevice);
+        }
 
-        // BFS the parent stays in memory, it induces into the buffer
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
 
+        // Flips Current and Alternate
+        active_leaves.selector ^= active_leaves.selector;
+        active_leaves_count.selector ^= active_leaves_count.selector;
+        active_leaf_offset.selector ^= active_leaf_offset.selector;
+        row_offsets.selector ^= row_offsets.selector;
+        columns.selector ^= columns.selector;
+        values.selector ^= values.selector;
+        degrees.selector ^= degrees.selector;
+        remaining_vertices.selector ^= remaining_vertices.selector;
+        edges_left.selector ^= edges_left.selector;
 
-        // Prefix sum degrees to get row offsets
-        //row_offsets,
-
-        // Use InduceSubgraph method to copy compress cols and vals
-        //columns,
-        //values,
-        // Prefix sum last entry in row offsets to get global offsets for cols and vals
-        // Remove all intermediate nodes from me to copy source parent
-        // Recalc degrees and remaining vertices
-        // degrees,
-        // remaining_vertices,
-        // Sort cols by val
-
-        activeVerticesCount = 0;
     }
 /*
         cudaMemcpy(activeFlags, global_active_vertices, treeSize*sizeof(int), cudaMemcpyDeviceToHost);
