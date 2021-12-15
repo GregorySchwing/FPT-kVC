@@ -215,30 +215,11 @@ __global__ void  PrintEdges(int activeVerticesCount,
 
 __global__ void  PrintVerts(int activeVerticesCount,
                                     int numberOfRows,
-                                    int * global_verts_tree,
-                                    int * global_vertex_buffer,
                                     int * printAlt,
                                     int * printCurr){
     if (threadIdx.x > 0 || blockIdx.x > 0)
         return;
     printf("Tree\n");
-    for (int g = 0; g < (activeVerticesCount); ++g){
-        printf("\n");
-        for (int i = 0; i < numberOfRows; ++i){
-            printf("%d ",global_verts_tree[g*numberOfRows + i]);
-        }
-    }
-    printf("\n");
-
-    printf("Buffer\n");
-    for (int g = 0; g < (activeVerticesCount); ++g){
-        printf("\n");
-        for (int i = 0; i < numberOfRows; ++i){
-            printf("%d ",global_vertex_buffer[g*numberOfRows + i]);
-        }
-    }
-    printf("\n");
-
     printf("Unsorted\n");
 
     for (int g = 0; g < (activeVerticesCount); ++g){
@@ -402,15 +383,14 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
 
     cudaFree(d_temp_storage);
 
-    int * printAlt = d_keys.Alternate();
-    int * printCurr = d_keys.Current();
+    int * printAlt = values.Alternate();
+    int * printCurr = values.Current();
 
-    PrintEdges<<<1,1>>>  (levelOffset,
-                levelUpperBound,
+    PrintEdges<<<1,1>>>  (activeVerticesCount,
                 numberOfRows,
                 numberOfEdgesPerGraph,
-                global_values_tree,
-                global_value_buffer,
+                columns.Alternate(),
+                columns.Current(),
                 printAlt,
                 printCurr);
     cudaDeviceSynchronize();
@@ -431,14 +411,11 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
 
     cudaFree(d_temp_storage2);
 
-    printAlt = d_keys_verts.Alternate();
-    printCurr = d_keys_verts.Current();
+    printAlt = remaining_vertices.Alternate();
+    printCurr = remaining_vertices.Current();
 
-    PrintVerts<<<1,1>>>  (levelOffset,
-                levelUpperBound,
+    PrintVerts<<<1,1>>> (activeVerticesCount,
                 numberOfRows,
-                global_vertices_tree,
-                global_vertex_buffer,
                 printAlt,
                 printCurr);
 
