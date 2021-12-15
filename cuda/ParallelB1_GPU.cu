@@ -381,35 +381,6 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
                                                                 cub::DoubleBuffer<int> & remaining_vertices,
                                                                 int * global_cols_vals_segments,
                                                                 int * global_vertex_segments){
-    // Create pointer that starts at beginning of level
-    // Leaves are indexed from 0; so I need to add the offset
-    // of the leaf from the left of the tree * (numberOfRows+1) so the 
-    // sorting operation works on an entire level.
-    // global_cols_vals_segments = &global_row_offsets_dev_ptr[levelOffset*(numberOfRows+1)];
-    /*
-    ParallelCreateLevelAwareRowOffsets<<<activeVerticesCount,threadsPerBlock>>>
-                                        (activeVerticesCount,
-                                        numberOfRows,
-                                        numberOfEdgesPerGraph,
-                                        global_row_offsets_dev_ptr,
-                                        global_cols_vals_segments);
-
-    cudaDeviceSynchronize();
-    checkLastErrorCUDA(__FILE__, __LINE__);
-
-    // Determine temporary device storage requirements
-    int     *global_vertices_tree = NULL;
-    // Determine temporary device storage requirements
-    int     *global_columns_tree = NULL;
-    // Determine temporary device storage requirements
-    int     *global_values_tree = NULL;
-
-    global_columns_tree = &global_columns_dev_ptr[levelOffset*numberOfEdgesPerGraph];
-    global_values_tree = &global_values_dev_ptr[levelOffset*numberOfEdgesPerGraph];
-
-    // Create a set of DoubleBuffers to wrap pairs of device pointers
-    cub::DoubleBuffer<int> d_values(global_columns_tree, global_column_buffer);
-    cub::DoubleBuffer<int> d_keys(global_values_tree, global_value_buffer);
 
     // Determine temporary device storage requirements
     void     *d_temp_storage = NULL;
@@ -419,14 +390,14 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
 
     // Since vertices in a level follow each other, we reuse gob iterator
     // When we have active vertices from different levels, we will need 2 iterators
-    cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
+    cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, values, columns,
         num_items, num_segments, global_cols_vals_segments, global_cols_vals_segments + 1);
 
     // Allocate temporary storage
     cudaMalloc(&d_temp_storage, temp_storage_bytes);
 
     // Run sorting operation
-    cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
+    cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, values, columns,
         num_items, num_segments, global_cols_vals_segments, global_cols_vals_segments + 1);
 
     cudaFree(d_temp_storage);
@@ -450,15 +421,12 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
     num_items = (activeVerticesCount)*numberOfRows;
     num_segments = activeVerticesCount;
 
-    global_vertices_tree = &global_remaining_vertices_dev_ptr[levelOffset*numberOfRows];
-    cub::DoubleBuffer<int> d_keys_verts(global_vertices_tree, global_vertex_buffer);
-
-    cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage2, temp_storage_bytes, d_keys_verts,
+    cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage2, temp_storage_bytes, remaining_vertices,
         num_items, num_segments, global_vertex_segments, global_vertex_segments + 1);
     // Allocate temporary storage
     cudaMalloc(&d_temp_storage2, temp_storage_bytes);
     // Run sorting operation
-    cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage2, temp_storage_bytes, d_keys_verts,
+    cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage2, temp_storage_bytes, remaining_vertices,
         num_items, num_segments, global_vertex_segments, global_vertex_segments + 1);
 
     cudaFree(d_temp_storage2);
@@ -476,7 +444,7 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
-    */
+
 }
 
 typedef int inner_array_t[2];
