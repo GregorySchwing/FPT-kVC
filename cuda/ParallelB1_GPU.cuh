@@ -52,19 +52,6 @@ CUDA_HOSTDEV long long CalculateSizeRequirement(int startingLevel,
                                                             int endingLevel);
 CUDA_HOSTDEV long long CalculateLevelOffset(int level);
 CUDA_HOSTDEV long long CalculateLevelUpperBound(int level);
-__host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerticesCount,
-                                                                            int threadsPerBlock,
-                                                                            int numberOfRows,
-                                                                            int numberOfEdgesPerGraph,
-                                                                            int * global_row_offsets_dev_ptr,
-                                                                            int * global_offsets_buffer,
-                                                                            int * global_column_buffer,
-                                                                            int * global_value_buffer,
-                                                                            int * global_vertex_buffer,
-                                                                            int * global_vertex_segments,
-                                                                            int * global_remaining_vertices_dev_ptr,
-                                                                            int * global_columns_dev_ptr,
-                                                                            int * global_values_dev_ptr);
 CUDA_HOSTDEV long long CalculateDeepestLevelWidth(int maxLevel);
 CUDA_HOSTDEV int CalculateNumberOfFullLevels(int leavesThatICanGenerate);
 
@@ -263,6 +250,12 @@ __global__ void ParallelCreateLevelAwareRowOffsets(int activeVerticesCount,
 __global__ void SetVerticesRemaingSegements(int dLSPlus1,
                                             int numberOfRows,
                                             int * global_vertex_segments);
+
+__global__ void SetSegments(int dLSPlus1,
+                            int numberOfRows,
+                            int numberOfEdgesPerGraph,
+                            int * global_vertex_segments,
+                            int * global_col_vals_segments);
 
 __global__ void SetPathOffsets(int sDLSPlus1,
                                int * global_set_path_offsets);

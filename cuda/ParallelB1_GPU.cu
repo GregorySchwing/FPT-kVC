@@ -370,31 +370,29 @@ __host__ void CUBLibraryPrefixSumDevice(int * activeVerticesCount,
 
 }
 
-/*
+
 __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerticesCount,
-                                                                            int threadsPerBlock,
-                                                                            int numberOfRows,
-                                                                            int numberOfEdgesPerGraph,
-                                                                            int * global_row_offsets_dev_ptr,
-                                                                            int * global_offsets_buffer,
-                                                                            int * global_column_buffer,
-                                                                            int * global_value_buffer,
-                                                                            int * global_vertex_buffer,
-                                                                            int * global_vertex_segments,
-                                                                            int * global_remaining_vertices_dev_ptr,
-                                                                            int * global_columns_dev_ptr,
-                                                                            int * global_values_dev_ptr){
+                                                                int threadsPerBlock,
+                                                                int numberOfRows,
+                                                                int numberOfEdgesPerGraph,
+                                                                cub::DoubleBuffer<int> & row_offsets,
+                                                                cub::DoubleBuffer<int> & columns,
+                                                                cub::DoubleBuffer<int> & values,
+                                                                cub::DoubleBuffer<int> & remaining_vertices,
+                                                                int * global_cols_vals_segments,
+                                                                int * global_vertex_segments){
     // Create pointer that starts at beginning of level
     // Leaves are indexed from 0; so I need to add the offset
     // of the leaf from the left of the tree * (numberOfRows+1) so the 
     // sorting operation works on an entire level.
-    // global_offsets_buffer = &global_row_offsets_dev_ptr[levelOffset*(numberOfRows+1)];
+    // global_cols_vals_segments = &global_row_offsets_dev_ptr[levelOffset*(numberOfRows+1)];
+    /*
     ParallelCreateLevelAwareRowOffsets<<<activeVerticesCount,threadsPerBlock>>>
                                         (activeVerticesCount,
                                         numberOfRows,
                                         numberOfEdgesPerGraph,
                                         global_row_offsets_dev_ptr,
-                                        global_offsets_buffer);
+                                        global_cols_vals_segments);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -422,14 +420,14 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
     // Since vertices in a level follow each other, we reuse gob iterator
     // When we have active vertices from different levels, we will need 2 iterators
     cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
-        num_items, num_segments, global_offsets_buffer, global_offsets_buffer + 1);
+        num_items, num_segments, global_cols_vals_segments, global_cols_vals_segments + 1);
 
     // Allocate temporary storage
     cudaMalloc(&d_temp_storage, temp_storage_bytes);
 
     // Run sorting operation
     cub::DeviceSegmentedRadixSort::SortPairsDescending(d_temp_storage, temp_storage_bytes, d_keys, d_values,
-        num_items, num_segments, global_offsets_buffer, global_offsets_buffer + 1);
+        num_items, num_segments, global_cols_vals_segments, global_cols_vals_segments + 1);
 
     cudaFree(d_temp_storage);
 
@@ -478,8 +476,9 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
+    */
 }
-*/
+
 typedef int inner_array_t[2];
 
 __global__ void InduceSubgraph( int numberOfRows,
@@ -2013,15 +2012,15 @@ __global__ void ParallelActiveVertexPathOffsets(int * global_active_leaf_indices
     int bufferRowOffsOffset = blockIdx.x * (numberOfRows + 1);
 
     for (int iter = threadIdx.x; iter < numberOfRows+1; iter += blockDim.x){
-        global_offsets_buffer[bufferRowOffsOffset + iter] = (blockIdx.x * numberOfEdgesPerGraph) + global_row_offsets_dev_ptr[rowOffsOffset + iter];
-        printf("global_offsets_buffer[bufferRowOffsOffset + %d] = %d + %d\n", iter, (blockIdx.x * numberOfEdgesPerGraph), global_row_offsets_dev_ptr[rowOffsOffset + iter]);
+        global_cols_vals_segments[bufferRowOffsOffset + iter] = (blockIdx.x * numberOfEdgesPerGraph) + global_row_offsets_dev_ptr[rowOffsOffset + iter];
+        printf("global_cols_vals_segments[bufferRowOffsOffset + %d] = %d + %d\n", iter, (blockIdx.x * numberOfEdgesPerGraph), global_row_offsets_dev_ptr[rowOffsOffset + iter]);
 
     }
 
     if(threadIdx.x == 0){
         printf("LevelAware RowOffs \n");
         for (int i = 0; i < numberOfRows+1; ++i){
-            printf("global_offsets_buffer[%d] = %d  \n",i, global_offsets_buffer[bufferRowOffsOffset+i]);
+            printf("global_cols_vals_segments[%d] = %d  \n",i, global_cols_vals_segments[bufferRowOffsOffset+i]);
         }
         printf("\n");
     }
@@ -2032,7 +2031,7 @@ __global__ void ParallelCreateActiveVerticesRowOffsets(
                             int numberOfRows,
                             int numberOfEdgesPerGraph,
                             int * global_row_offsets_dev_ptr,
-                            int * global_offsets_buffer,
+                            int * global_cols_vals_segments,
                             int * global_set_inclusion_bool_ptr){
 
     int leafIndex = blockIdx.x;
@@ -2044,8 +2043,8 @@ __global__ void ParallelCreateActiveVerticesRowOffsets(
     int bufferRowOffsOffset = blockIdx.x * (numberOfRows + 1);
 
     for (int iter = threadIdx.x; iter < numberOfRows+1; iter += blockDim.x){
-        global_offsets_buffer[bufferRowOffsOffset + iter] = (blockIdx.x * numberOfEdgesPerGraph) + global_row_offsets_dev_ptr[rowOffsOffset + iter];
-        printf("global_offsets_buffer[bufferRowOffsOffset + %d] = %d + %d\n", iter, (blockIdx.x * numberOfEdgesPerGraph), global_row_offsets_dev_ptr[rowOffsOffset + iter]);
+        global_cols_vals_segments[bufferRowOffsOffset + iter] = (blockIdx.x * numberOfEdgesPerGraph) + global_row_offsets_dev_ptr[rowOffsOffset + iter];
+        printf("global_cols_vals_segments[bufferRowOffsOffset + %d] = %d + %d\n", iter, (blockIdx.x * numberOfEdgesPerGraph), global_row_offsets_dev_ptr[rowOffsOffset + iter]);
 
     }
 }
@@ -2054,7 +2053,7 @@ __global__ void ParallelCreateLevelAwareRowOffsets(
                             int numberOfRows,
                             int numberOfEdgesPerGraph,
                             int * global_row_offsets_dev_ptr,
-                            int * global_offsets_buffer,
+                            int * global_cols_vals_segments,
                             int * global_set_inclusion_bool_ptr){
 
     int leafIndex = blockIdx.x;
@@ -2066,15 +2065,15 @@ __global__ void ParallelCreateLevelAwareRowOffsets(
     int bufferRowOffsOffset = blockIdx.x * (numberOfRows + 1);
 
     for (int iter = threadIdx.x; iter < numberOfRows+1; iter += blockDim.x){
-        global_offsets_buffer[bufferRowOffsOffset + iter] = (blockIdx.x * numberOfEdgesPerGraph) + global_row_offsets_dev_ptr[rowOffsOffset + iter];
-        printf("global_offsets_buffer[bufferRowOffsOffset + %d] = %d + %d\n", iter, (blockIdx.x * numberOfEdgesPerGraph), global_row_offsets_dev_ptr[rowOffsOffset + iter]);
+        global_cols_vals_segments[bufferRowOffsOffset + iter] = (blockIdx.x * numberOfEdgesPerGraph) + global_row_offsets_dev_ptr[rowOffsOffset + iter];
+        printf("global_cols_vals_segments[bufferRowOffsOffset + %d] = %d + %d\n", iter, (blockIdx.x * numberOfEdgesPerGraph), global_row_offsets_dev_ptr[rowOffsOffset + iter]);
 
     }
 
     if(threadIdx.x == 0){
         printf("LevelAware RowOffs \n");
         for (int i = 0; i < numberOfRows+1; ++i){
-            printf("global_offsets_buffer[%d] = %d  \n",i, global_offsets_buffer[bufferRowOffsOffset+i]);
+            printf("global_cols_vals_segments[%d] = %d  \n",i, global_cols_vals_segments[bufferRowOffsOffset+i]);
         }
         printf("\n");
     }
@@ -2085,6 +2084,17 @@ __global__ void SetVerticesRemaingSegements(int dLSPlus1,
                                             int * global_vertex_segments){
     for (int entry = threadIdx.x; entry < dLSPlus1; entry += blockDim.x){
         global_vertex_segments[entry] = entry * numberOfRows;
+    }
+}
+
+__global__ void SetSegments(int dLSPlus1,
+                            int numberOfRows,
+                            int numberOfEdgesPerGraph,
+                            int * global_vertex_segments,
+                            int * global_col_vals_segments){
+    for (int entry = threadIdx.x; entry < dLSPlus1; entry += blockDim.x){
+        global_vertex_segments[entry] = entry * numberOfRows;
+        global_col_vals_segments[entry] = entry * numberOfEdgesPerGraph;
     }
 }
 
@@ -2413,10 +2423,7 @@ void CallPopulateTree(int numberOfLevels,
     int * global_active_leaf_offset_ptr;
     int * global_active_leaf_offset_ptr_buffer;
 
-    int * global_column_buffer;
-    int * global_vertex_buffer;
-    int * global_value_buffer;
-    int * global_offsets_buffer;
+    int * global_cols_vals_segments;
     int * global_vertex_segments;
 
     int max_dfs_depth = 4;
@@ -2467,17 +2474,11 @@ void CallPopulateTree(int numberOfLevels,
 
     cudaMemset(global_remaining_vertices_dev_ptr, INT_MAX, (numberOfRows*deepestLevelSize) * sizeof(int));
 
-    // Since we statically allocate vertices remaining
+    // Since we statically allocate vertices remaining and col/vals
     cudaMalloc( (void**)&global_vertex_segments, (deepestLevelSize+1) * sizeof(int) );
+    cudaMalloc( (void**)&global_cols_vals_segments, (numberOfRows+1) * deepestLevelSize * sizeof(int) );
 
-/*
-    cudaMalloc( (void**)&global_column_buffer, numberOfEdgesPerGraph * deepestLevelSize * sizeof(int) );
-    cudaMalloc( (void**)&global_value_buffer, numberOfEdgesPerGraph * deepestLevelSize * sizeof(int) );
-    cudaMalloc( (void**)&global_vertex_buffer, numberOfRows * deepestLevelSize * sizeof(int) );
-    cudaMalloc( (void**)&global_offsets_buffer, (numberOfRows+1) * deepestLevelSize * sizeof(int) );
 
-    cudaMalloc( (void**)&global_paths_length, treeSize * sizeof(int) );
-*/
     cudaMalloc( (void**)&global_vertices_included_dev_ptr, treeSize * sizeof(int) );
 
     cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr, deepestLevelSize * sizeof(int) );
@@ -2575,10 +2576,19 @@ void CallPopulateTree(int numberOfLevels,
     int dLSPlus1 = (deepestLevelSize + 1);
     int ceilOfDLSPlus1 = (dLSPlus1 + threadsPerBlock - 1) / threadsPerBlock;
 
-    // Create Segment Offsets for RemainingVertices
+    // It is imperative the CSR's don't shrink for these segments to remain valid
+    // That means InduceSubgraph can't be used, we have to do memcpys
+    // Create Segment Offsets for RemainingVertices and Cols/Vals
+    /*
     SetVerticesRemaingSegements<<<ceilOfDLSPlus1,threadsPerBlock>>>(deepestLevelSize,
                                                                     numberOfRows,
                                                                     global_vertex_segments);
+    */
+    SetSegments<<<ceilOfDLSPlus1,threadsPerBlock>>>(dLSPlus1,
+                                                    numberOfRows,
+                                                    numberOfEdgesPerGraph,
+                                                    global_vertex_segments,
+                                                    global_cols_vals_segments);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -2611,22 +2621,18 @@ void CallPopulateTree(int numberOfLevels,
                                                             degrees.Current(),
                                                             global_edges_left_to_cover_count,
                                                             global_vertices_included_dev_ptr);
-                                                            /*
-            RestoreDataStructuresAfterRemovingChildrenVertices(levelUpperBound,
-                                                                levelOffset,
+                                                            
+            RestoreDataStructuresAfterRemovingChildrenVertices( activeVerticesCount,
                                                                 threadsPerBlock,
                                                                 numberOfRows,
                                                                 numberOfEdgesPerGraph,
-                                                                global_row_offsets_dev_ptr,
-                                                                global_offsets_buffer,
-                                                                global_column_buffer,
-                                                                global_value_buffer,
-                                                                global_vertex_buffer,
-                                                                global_vertex_segments,
-                                                                global_remaining_vertices_dev_ptr,
-                                                                global_columns_dev_ptr,
-                                                                global_values_dev_ptr);
-                                                                */
+                                                                row_offsets,
+                                                                columns,
+                                                                values,
+                                                                remaining_vertices,
+                                                                global_cols_vals_segments,
+                                                                global_vertex_segments);
+                                                                
         }
         // 1 thread per leaf
         std::cout << "Calling DFS" << std::endl;
