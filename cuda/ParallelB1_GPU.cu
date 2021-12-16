@@ -2579,6 +2579,7 @@ void CallPopulateTree(int numberOfLevels,
                                                                 global_vertex_segments);
                                                                 
         }
+        notFirstCall = true;        
         // 1 thread per leaf
         std::cout << "Calling DFS" << std::endl;
         // 1 block per leaf; tries tPB random paths in G
@@ -2865,6 +2866,12 @@ void CallPopulateTree(int numberOfLevels,
         degrees.selector ^= degrees.selector;
         remaining_vertices.selector ^= remaining_vertices.selector;
         edges_left.selector ^= edges_left.selector;
+
+        std::cout << "You are about to start another loop " << std::endl;
+        do 
+        {
+            std::cout << '\n' << "Press enter to continue...; ctrl-c to terminate";
+        } while (std::cin.get() != '\n');
 
     }
 /*
