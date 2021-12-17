@@ -2898,8 +2898,8 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        printf("active_leaves.selector %d"\n, active_leaves.selector);
-        printf("!active_leaves.selector %d"\n, !active_leaves.selector);
+        printf("active_leaves.selector %d\n", active_leaves.selector);
+        printf("!active_leaves.selector %d\n", !active_leaves.selector);
 
         // Flips Current and Alternate
         active_leaves.selector != active_leaves.selector;
