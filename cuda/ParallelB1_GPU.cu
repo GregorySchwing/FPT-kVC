@@ -2919,6 +2919,9 @@ void CallPopulateTree(int numberOfLevels,
                             remaining_vertices.Current(),
                             edges_left.Current());
 
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+
         std::cout << "You are about to start another loop " << std::endl;
         do 
         {
