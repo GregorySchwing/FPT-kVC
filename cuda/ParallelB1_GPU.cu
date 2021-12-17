@@ -2898,8 +2898,7 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        printf("active_leaves.selector %d\n", active_leaves.selector);
-        printf("!active_leaves.selector %d\n", !active_leaves.selector);
+        printf("Before flip active_leaves.selector %d\n", active_leaves.selector);
 
         // Flips Current and Alternate
         active_leaves.selector != active_leaves.selector;
@@ -2911,6 +2910,9 @@ void CallPopulateTree(int numberOfLevels,
         degrees.selector != degrees.selector;
         remaining_vertices.selector != remaining_vertices.selector;
         edges_left.selector != edges_left.selector;
+
+        printf("After flip active_leaves.selector %d\n", active_leaves.selector);
+
 
         PrintData<<<1,1>>>(activeVerticesCount,
                             numberOfRows,
