@@ -2912,12 +2912,12 @@ void CallPopulateTree(int numberOfLevels,
         PrintData<<<1,1>>>(activeVerticesCount,
                             numberOfRows,
                             numberOfEdgesPerGraph, 
-                            row_offsets.Current(),
-                            columns.Current(),
-                            values.Current(),
-                            degrees.Current(),
-                            remaining_vertices.Current(),
-                            edges_left.Current());
+                            row_offsets.Alternate(),
+                            columns.Alternate(),
+                            values.Alternate(),
+                            degrees.Alternate(),
+                            remaining_vertices.Alternate(),
+                            edges_left.Alternate());
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
