@@ -81,6 +81,16 @@ __global__ void  PrintSets(int activeVerticesCount,
                             int * alt_set_inclusion,
                            int * global_set_path_offsets);
 
+__global__ void  PrintData(int activeVerticesCount,
+                            int numberOfRows,
+                            int numberOfEdgesPerGraph, 
+                            int * row_offs,
+                            int * cols,
+                            int * vals,
+                            int * degrees,
+                            int * verts_remain,
+                            int * edges_left);
+
 __global__ void First_Graph_GPU(int vertexCount, 
                                 int size,
                                 int numberOfRows,

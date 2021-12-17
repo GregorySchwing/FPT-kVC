@@ -275,6 +275,48 @@ __global__ void  PrintSets(int activeVerticesCount,
     
 }
 
+__global__ void  PrintData(int activeVerticesCount,
+                            int numberOfRows,
+                            int numberOfEdgesPerGraph, 
+                            int * row_offs,
+                            int * cols,
+                            int * vals,
+                            int * degrees,
+                            int * verts_remain,
+                            int * edges_left){
+    if (threadIdx.x > 0 || blockIdx.x > 0)
+        return;
+    for (int g = 0; g < (activeVerticesCount); ++g){
+        printf("Graph %d\n", g);
+        printf("Row Offs\n");
+        for (int i = 0; i < numberOfRows+1; ++i){
+            printf("%d ",row_offs[g*(numberOfRows+1) + i]);
+        }
+        printf("\n");
+        printf("Cols\n");
+        for (int i = 0; i < numberOfEdgesPerGraph; ++i){
+            printf("%d ",cols[g*numberOfEdgesPerGraph + i]);
+        }
+        printf("\n");
+        printf("Vals\n");
+        for (int i = 0; i < numberOfEdgesPerGraph; ++i){
+            printf("%d ",vals[g*numberOfEdgesPerGraph + i]);
+        }
+        printf("\n");
+        printf("Degrees\n");
+        for (int i = 0; i < numberOfRows; ++i){
+            printf("%d ",degrees[g*(numberOfRows) + i]);
+        }
+        printf("\n");
+        printf("Verts Rem\n");
+        for (int i = 0; i < numberOfRows; ++i){
+            printf("%d ",verts_remain[g*(numberOfRows) + i]);
+        }
+        printf("\n");
+        printf("Edges left: %d\n", edges_left[g]);
+    }
+}
+
 __host__ __device__ long long CalculateSizeRequirement(int startingLevel,
                                                         int endingLevel){
     long long summand= 0;
@@ -2866,6 +2908,16 @@ void CallPopulateTree(int numberOfLevels,
         degrees.selector ^= degrees.selector;
         remaining_vertices.selector ^= remaining_vertices.selector;
         edges_left.selector ^= edges_left.selector;
+
+        PrintData<<<1,1>>>(activeVerticesCount,
+                            numberOfRows,
+                            numberOfEdgesPerGraph, 
+                            row_offsets.Current(),
+                            columns.Current(),
+                            values.Current(),
+                            degrees.Current(),
+                            remaining_vertices.Current(),
+                            edges_left.Current());
 
         std::cout << "You are about to start another loop " << std::endl;
         do 
