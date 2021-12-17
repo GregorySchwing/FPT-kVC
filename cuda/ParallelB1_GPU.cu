@@ -2899,15 +2899,15 @@ void CallPopulateTree(int numberOfLevels,
         checkLastErrorCUDA(__FILE__, __LINE__);
 
         // Flips Current and Alternate
-        active_leaves.selector ^= active_leaves.selector;
-        active_leaves_count.selector ^= active_leaves_count.selector;
-        active_leaf_offset.selector ^= active_leaf_offset.selector;
-        row_offsets.selector ^= row_offsets.selector;
-        columns.selector ^= columns.selector;
-        values.selector ^= values.selector;
-        degrees.selector ^= degrees.selector;
-        remaining_vertices.selector ^= remaining_vertices.selector;
-        edges_left.selector ^= edges_left.selector;
+        active_leaves.selector != active_leaves.selector;
+        active_leaves_count.selector != active_leaves_count.selector;
+        active_leaf_offset.selector != active_leaf_offset.selector;
+        row_offsets.selector != row_offsets.selector;
+        columns.selector != columns.selector;
+        values.selector != values.selector;
+        degrees.selector != degrees.selector;
+        remaining_vertices.selector != remaining_vertices.selector;
+        edges_left.selector != edges_left.selector;
 
         PrintData<<<1,1>>>(activeVerticesCount,
                             numberOfRows,
