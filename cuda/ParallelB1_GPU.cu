@@ -283,7 +283,8 @@ __global__ void  PrintData(int activeVerticesCount,
                             int * vals,
                             int * degrees,
                             int * verts_remain,
-                            int * edges_left){
+                            int * edges_left,
+                            int * verts_remain_count){
     if (threadIdx.x > 0 || blockIdx.x > 0)
         return;
     for (int g = 0; g < (activeVerticesCount); ++g){
@@ -314,6 +315,8 @@ __global__ void  PrintData(int activeVerticesCount,
         }
         printf("\n");
         printf("Edges left: %d\n", edges_left[g]);
+        printf("\n");
+        printf("Vertices Remaining Count: %d\n", verts_remain_count[g]);
     }
 }
 
@@ -2932,7 +2935,8 @@ void CallPopulateTree(int numberOfLevels,
                             values.Current(),
                             degrees.Current(),
                             remaining_vertices.Current(),
-                            edges_left.Current());
+                            edges_left.Current()
+                            remaining_vertices_count.Current());
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
