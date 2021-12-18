@@ -2473,7 +2473,7 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_reduced_set_inclusion_count_ptr, deepestLevelSize * sizeof(int) );
 
 
-    cudaMemset(global_remaining_vertices_dev_ptr, INT_MAX, (numberOfRows*deepestLevelSize) * sizeof(int));
+    //cudaMemset(global_remaining_vertices_dev_ptr, INT_MAX, (numberOfRows*deepestLevelSize) * sizeof(int));
 
     // Since we statically allocate vertices remaining and col/vals
     cudaMalloc( (void**)&global_vertex_segments, (deepestLevelSize+1) * sizeof(int) );
