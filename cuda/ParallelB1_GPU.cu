@@ -431,7 +431,7 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
 
     int * printAlt = values.Alternate();
     int * printCurr = values.Current();
-
+/*
     PrintEdges<<<1,1>>>  (activeVerticesCount,
                 numberOfRows,
                 numberOfEdgesPerGraph,
@@ -439,6 +439,7 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
                 columns.Current(),
                 printAlt,
                 printCurr);
+*/
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
                 // Determine temporary device storage requirements
@@ -456,7 +457,7 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
         num_items, num_segments, global_vertex_segments, global_vertex_segments + 1);
 
     cudaFree(d_temp_storage2);
-
+/*
     printAlt = remaining_vertices.Alternate();
     printCurr = remaining_vertices.Current();
 
@@ -464,7 +465,7 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
                 numberOfRows,
                 printAlt,
                 printCurr);
-
+*/
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
@@ -2632,6 +2633,26 @@ void CallPopulateTree(int numberOfLevels,
                                                                 remaining_vertices,
                                                                 global_cols_vals_segments,
                                                                 global_vertex_segments);
+
+        
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+
+            PrintData<<<1,1>>>(activeVerticesCount,
+                    numberOfRows,
+                    numberOfEdgesPerGraph, 
+                    verticesRemainingInGraph,
+                    row_offsets.Current(),
+                    columns.Current(),
+                    values.Current(),
+                    degrees.Current(),
+                    remaining_vertices.Current(),
+                    edges_left.Current(),
+                    remaining_vertices_count.Current());
+
+                    
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
                                                                 
         }
         notFirstCall = true;        
