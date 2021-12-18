@@ -1940,6 +1940,7 @@ __global__ void ParallelProcessDegreeZeroVertices(
     extern __shared__ int degreeZeroVertex[];
 
     int degreesOffset = leafIndex * numberOfRows;
+    int remainingVerticesOffset = leafIndex * verticesRemainingInGraph;
     int numVertices = global_remaining_vertices_size_dev_ptr[leafIndex];
     int numVerticesRemoved = 0;
     for (int iter = threadIdx.x; iter < blockDim.x; iter += blockDim.x){
