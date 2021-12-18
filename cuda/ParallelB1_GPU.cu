@@ -2373,17 +2373,19 @@ void CallPopulateTree(int numberOfLevels,
     int * global_values_dev_ptr;
     int * global_degrees_dev_ptr; 
     int * global_remaining_vertices_dev_ptr;
+    int * global_remaining_vertices_size_dev_ptr;
 
     int * global_row_offsets_dev_ptr_buffer;
     int * global_columns_dev_ptr_buffer;
     int * global_values_dev_ptr_buffer;
     int * global_degrees_dev_ptr_buffer; 
     int * global_remaining_vertices_dev_ptr_buffer;
-
+    int * global_remaining_vertices_size_dev_ptr_buffer;
 
 
     int * global_paths_ptr;
-    int * global_remaining_vertices_size_dev_ptr;
+
+
     int * global_vertices_included_dev_ptr;
     int * global_pendant_path_bool_dev_ptr;
     int * global_pendant_path_reduced_bool_dev_ptr;
@@ -2424,18 +2426,22 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_values_dev_ptr, (numberOfEdgesPerGraph*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_dev_ptr, (numberOfRows*deepestLevelSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr, deepestLevelSize * sizeof(int) );
 
     cudaMalloc( (void**)&global_row_offsets_dev_ptr_buffer, ((numberOfRows+1)*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_columns_dev_ptr_buffer, (numberOfEdgesPerGraph*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_values_dev_ptr_buffer, (numberOfEdgesPerGraph*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_degrees_dev_ptr_buffer, (numberOfRows*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_dev_ptr_buffer, (numberOfRows*deepestLevelSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr_buffer, deepestLevelSize * sizeof(int) );
 
     cub::DoubleBuffer<int> row_offsets(global_row_offsets_dev_ptr, global_row_offsets_dev_ptr_buffer);
     cub::DoubleBuffer<int> columns(global_columns_dev_ptr, global_columns_dev_ptr_buffer);
     cub::DoubleBuffer<int> values(global_values_dev_ptr, global_values_dev_ptr_buffer);
     cub::DoubleBuffer<int> degrees(global_degrees_dev_ptr, global_degrees_dev_ptr_buffer);
     cub::DoubleBuffer<int> remaining_vertices(global_remaining_vertices_dev_ptr, global_remaining_vertices_dev_ptr_buffer);
+    cub::DoubleBuffer<int> remaining_vertices_count(global_remaining_vertices_size_dev_ptr, global_remaining_vertices_size_dev_ptr_buffer);
+
 
     cudaMalloc( (void**)&global_paths_ptr, (max_dfs_depth*secondDeepestLevelSize*threadsPerBlock) * sizeof(int) );
     
@@ -2468,7 +2474,6 @@ void CallPopulateTree(int numberOfLevels,
 
     cudaMalloc( (void**)&global_vertices_included_dev_ptr, treeSize * sizeof(int) );
 
-    cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr, deepestLevelSize * sizeof(int) );
     // Each node can process tPB pendant edges per call
     cudaMalloc( (void**)&global_pendant_path_bool_dev_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_pendant_path_reduced_bool_dev_ptr, deepestLevelSize * sizeof(int) );
@@ -2885,6 +2890,9 @@ void CallPopulateTree(int numberOfLevels,
         int * new_verts_remain = remaining_vertices.Alternate();
         int * old_edges_left = edges_left.Current();
         int * new_edges_left = edges_left.Alternate();
+        int * old_verts_remain_count = remaining_vertices_count.Current();
+        int * new_verts_remain_count = remaining_vertices_count.Alternate();
+
         // Memory-Unoptimized
         for(int newChild = 0; newChild < activeVerticesCount; ++newChild){
             cudaMemcpy(&new_row_offs[newChild*(numberOfRows+1)], &old_row_offs[activeParentHost[newChild]*(numberOfRows+1)], (numberOfRows+1)*sizeof(int), cudaMemcpyDeviceToDevice);
@@ -2893,6 +2901,7 @@ void CallPopulateTree(int numberOfLevels,
             cudaMemcpy(&new_degrees[newChild*numberOfRows], &old_degrees[activeParentHost[newChild]*numberOfRows], numberOfRows*sizeof(int), cudaMemcpyDeviceToDevice);
             cudaMemcpy(&new_verts_remain[newChild*numberOfRows], &old_verts_remain[activeParentHost[newChild]*numberOfRows], numberOfRows*sizeof(int), cudaMemcpyDeviceToDevice);
             cudaMemcpy(&new_edges_left[newChild], &old_edges_left[activeParentHost[newChild]], 1*sizeof(int), cudaMemcpyDeviceToDevice);
+            cudaMemcpy(&new_verts_remain_count[newChild], &old_verts_remain_count[activeParentHost[newChild]], 1*sizeof(int), cudaMemcpyDeviceToDevice);      
         }
 
         cudaDeviceSynchronize();
@@ -2910,6 +2919,7 @@ void CallPopulateTree(int numberOfLevels,
         degrees.selector = !degrees.selector;
         remaining_vertices.selector = !remaining_vertices.selector;
         edges_left.selector = !edges_left.selector;
+        remaining_vertices_count.selector = !remaining_vertices_count.selector;
 
         printf("After flip active_leaves.selector %d\n", active_leaves.selector);
 
