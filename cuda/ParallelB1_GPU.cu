@@ -3034,7 +3034,7 @@ void CopyGraphToDevice( Graph & g,
                 cudaMemcpyHostToDevice);
     cudaMemcpy(global_remaining_vertices_dev_ptr, vertices_remaining_ptr, g.GetRemainingVertices().size() * sizeof(int),
             cudaMemcpyHostToDevice);         
-    cudaMemcpy(global_remaining_vertices_size_dev_ptr, verticesRemainingInGraph, 1 * sizeof(int),
+    cudaMemcpy(global_remaining_vertices_size_dev_ptr, &verticesRemainingInGraph, 1 * sizeof(int),
             cudaMemcpyHostToDevice);    
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
