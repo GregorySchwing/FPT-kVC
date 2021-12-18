@@ -398,11 +398,12 @@ __host__ void CUBLibraryPrefixSumDevice(int * activeVerticesCount,
 }
 
 __host__ void RowOffsetsPrefixSumDevice(int numberOfItems,
-                                        cub::DoubleBuffer<int> & row_offsets){
+                                        cub::DoubleBuffer<int> & row_offsets,
+                                        int * global_cols_vals_segments){
     // Declare, allocate, and initialize device-accessible pointers for input and output
     int  num_items = numberOfItems;      // e.g., 7
     int  *d_in = row_offsets.Current();        // e.g., [8, 6, 7, 5, 3, 0, 9]
-    int  *d_out = row_offsets.Alternate();         // e.g., [ ,  ,  ,  ,  ,  ,  ]
+    int  *d_out = global_cols_vals_segments;         // e.g., [ ,  ,  ,  ,  ,  ,  ]
     // Determine temporary device storage requirements
     void     *d_temp_storage = NULL;
     size_t   temp_storage_bytes = 0;
@@ -2628,7 +2629,8 @@ void CallPopulateTree(int numberOfLevels,
             checkLastErrorCUDA(__FILE__, __LINE__);
             
             RowOffsetsPrefixSumDevice((numberOfRows+1)*activeVerticesCount,
-                                    row_offsets);   
+                                    row_offsets,
+                                    global_cols_vals_segments);   
 
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);                                             
@@ -2642,7 +2644,7 @@ void CallPopulateTree(int numberOfLevels,
                                                                 columns,
                                                                 values,
                                                                 remaining_vertices,
-                                                                row_offsets.Alternate(),
+                                                                global_cols_vals_segments,
                                                                 global_vertex_segments);
 
         
