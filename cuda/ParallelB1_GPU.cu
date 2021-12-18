@@ -431,16 +431,15 @@ __global__ void ParallelRowOffsetsPrefixSumDevice(int numberOfEdgesPerGraph,
 
     int leafIndex = blockIdx.x; 
 
-    printf("LevelAware RowOffs blockIdx %d is running\n", blockIdx.x);
-    printf("LevelAware RowOffs leaf index %d is running\n", leafIndex);
+    //printf("LevelAware RowOffs blockIdx %d is running\n", blockIdx.x);
+    //printf("LevelAware RowOffs leaf index %d is running\n", leafIndex);
 
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
     int bufferRowOffsOffset = leafIndex * (numberOfRows + 1);
 
     for (int iter = threadIdx.x; iter < numberOfRows+1; iter += blockDim.x){
         global_cols_vals_segments[bufferRowOffsOffset + iter] = (leafIndex * numberOfEdgesPerGraph) + global_row_offsets_dev_ptr[rowOffsOffset + iter];
-        printf("global_cols_vals_segments[bufferRowOffsOffset + %d] = %d + %d\n", iter, (leafIndex * numberOfEdgesPerGraph), global_row_offsets_dev_ptr[rowOffsOffset + iter]);
-
+        //printf("global_cols_vals_segments[bufferRowOffsOffset + %d] = %d + %d\n", iter, (leafIndex * numberOfEdgesPerGraph), global_row_offsets_dev_ptr[rowOffsOffset + iter]);
     }
 }
 
@@ -2652,6 +2651,22 @@ void CallPopulateTree(int numberOfLevels,
                                                             degrees.Current(),
                                                             edges_left.Current(),
                                                             global_vertices_included_dev_ptr);
+
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);  
+
+            PrintData<<<1,1>>>(activeVerticesCount,
+                    numberOfRows,
+                    numberOfEdgesPerGraph, 
+                    verticesRemainingInGraph,
+                    row_offsets.Current(),
+                    columns.Current(),
+                    values.Current(),
+                    degrees.Current(),
+                    remaining_vertices.Current(),
+                    edges_left.Current(),
+                    remaining_vertices_count.Current());
+
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);  
 
