@@ -74,6 +74,11 @@ __global__ void  PrintVerts(int activeVerticesCount,
                                     int * printAlt,
                                     int * printCurr);
 
+__global__ void  PrintRowOffs(int activeVerticesCount,
+                                    int numberOfRows,
+                                    int * printAlt,
+                                    int * printCurr);                                    
+
 __global__ void  PrintSets(int activeVerticesCount,
                             int * curr_paths_indices,
                             int * alt_paths_indices,

@@ -240,6 +240,33 @@ __global__ void  PrintVerts(int activeVerticesCount,
     printf("\n");
 }
 
+__global__ void  PrintRowOffs(int activeVerticesCount,
+                                    int numberOfRows,
+                                    int * printAlt,
+                                    int * printCurr){
+    if (threadIdx.x > 0 || blockIdx.x > 0)
+        return;
+    printf("Tree\n");
+    printf("Unsorted\n");
+
+    for (int g = 0; g < (activeVerticesCount); ++g){
+        printf("\n");
+        for (int i = 0; i < numberOfRows+; ++i){
+            printf("%d ",printAlt[g*numberOfRows + i]);
+        }
+    }
+    printf("\n");
+
+    printf("Sorted\n");
+    for (int g = 0; g < (activeVerticesCount); ++g){
+        printf("\n");
+        for (int i = 0; i < numberOfRows+1; ++i){
+            printf("%d ",printCurr[g*numberOfRows + i]);
+        }
+    }
+    printf("\n");
+}
+
 __global__ void  PrintSets(int activeVerticesCount,
                             int * curr_paths_indices,
                             int * alt_paths_indices,
@@ -2635,17 +2662,10 @@ void CallPopulateTree(int numberOfLevels,
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);               
 
-            PrintData<<<1,1>>>(activeVerticesCount,
+            PrintRowOffs<<<1,1>>>(activeVerticesCount,
                     numberOfRows,
-                    numberOfEdgesPerGraph, 
-                    verticesRemainingInGraph,
                     row_offsets.Current(),
-                    columns.Current(),
-                    values.Current(),
-                    degrees.Current(),
-                    remaining_vertices.Current(),
-                    edges_left.Current(),
-                    remaining_vertices_count.Current());
+                    global_cols_vals_segments);
 
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);                                             
