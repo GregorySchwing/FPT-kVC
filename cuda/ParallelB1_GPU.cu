@@ -397,6 +397,24 @@ __host__ void CUBLibraryPrefixSumDevice(int * activeVerticesCount,
 
 }
 
+__host__ void RowOffsetsPrefixSumDevice(int numberOfItems,
+                                        cub::DoubleBuffer<int> & row_offsets){
+    // Declare, allocate, and initialize device-accessible pointers for input and output
+    int  num_items = numberOfItems;      // e.g., 7
+    int  *d_in = row_offsets.Current();        // e.g., [8, 6, 7, 5, 3, 0, 9]
+    int  *d_out = row_offsets.Alternate();         // e.g., [ ,  ,  ,  ,  ,  ,  ]
+    // Determine temporary device storage requirements
+    void     *d_temp_storage = NULL;
+    size_t   temp_storage_bytes = 0;
+    cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
+    // Allocate temporary storage
+    cudaMalloc(&d_temp_storage, temp_storage_bytes);
+    // Run exclusive prefix sum
+    cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
+    // d_out s<-- [0, 8, 14, 21, 26, 29, 29]
+    cudaFree(d_temp_storage);
+
+}
 
 __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerticesCount,
                                                                 int threadsPerBlock,
@@ -2076,22 +2094,12 @@ __global__ void ParallelCreateLevelAwareRowOffsets(
     }
 }
 
-__global__ void SetVerticesRemaingSegements(int dLSPlus1,
-                                            int numberOfRows,
-                                            int * global_vertex_segments){
-    for (int entry = threadIdx.x; entry < dLSPlus1; entry += blockDim.x){
-        global_vertex_segments[entry] = entry * numberOfRows;
-    }
-}
 
-__global__ void SetSegments(int dLSPlus1,
+__global__ void SetVerticesRemaingSegements(int dLSPlus1,
                             int numberOfRows,
-                            int numberOfEdgesPerGraph,
-                            int * global_vertex_segments,
-                            int * global_col_vals_segments){
+                            int * global_vertex_segments){
     for (int entry = threadIdx.x; entry < dLSPlus1; entry += blockDim.x){
         global_vertex_segments[entry] = entry * numberOfRows;
-        global_col_vals_segments[entry] = entry * numberOfEdgesPerGraph;
     }
 }
 
@@ -2580,17 +2588,10 @@ void CallPopulateTree(int numberOfLevels,
 
     // It is imperative the CSR's don't shrink for these segments to remain valid
     // That means InduceSubgraph can't be used, we have to do memcpys
-    // Create Segment Offsets for RemainingVertices and Cols/Vals
-    /*
-    SetVerticesRemaingSegements<<<ceilOfDLSPlus1,threadsPerBlock>>>(deepestLevelSize,
-                                                                    numberOfRows,
-                                                                    global_vertex_segments);
-    */
-    SetSegments<<<ceilOfDLSPlus1,threadsPerBlock>>>(dLSPlus1,
+    // Create Segment Offsets for RemainingVertices once
+    SetVerticesRemaingSegements<<<ceilOfDLSPlus1,threadsPerBlock>>>(dLSPlus1,
                                                     verticesRemainingInGraph,
-                                                    numberOfEdgesPerGraph,
-                                                    global_vertex_segments,
-                                                    global_cols_vals_segments);
+                                                    global_vertex_segments);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -2623,6 +2624,14 @@ void CallPopulateTree(int numberOfLevels,
                                                             degrees.Current(),
                                                             edges_left.Current(),
                                                             global_vertices_included_dev_ptr);
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+            
+            RowOffsetsPrefixSumDevice((numberOfRows+1)*activeVerticesCount,
+                                    row_offsets);   
+
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);                                             
                                                             
             RestoreDataStructuresAfterRemovingChildrenVertices( activeVerticesCount,
                                                                 threadsPerBlock,
@@ -2633,7 +2642,7 @@ void CallPopulateTree(int numberOfLevels,
                                                                 columns,
                                                                 values,
                                                                 remaining_vertices,
-                                                                global_cols_vals_segments,
+                                                                row_offsets.Alternate(),
                                                                 global_vertex_segments);
 
         

@@ -266,9 +266,7 @@ __global__ void SetVerticesRemaingSegements(int dLSPlus1,
 
 __global__ void SetSegments(int dLSPlus1,
                             int numberOfRows,
-                            int numberOfEdgesPerGraph,
-                            int * global_vertex_segments,
-                            int * global_col_vals_segments);
+                            int * global_vertex_segments);
 
 __global__ void SetPathOffsets(int sDLSPlus1,
                                int * global_set_path_offsets);
