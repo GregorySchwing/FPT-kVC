@@ -2655,6 +2655,17 @@ void CallPopulateTree(int numberOfLevels,
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);  
 
+            ParallelProcessDegreeZeroVertices<<<activeVerticesCount,
+                                                threadsPerBlock,
+                                                threadsPerBlock*sizeof(int)>>>
+                            (numberOfRows,
+                            verticesRemainingInGraph,
+                            remaining_vertices.Current(),
+                            remaining_vertices_count.Current(),
+                            degrees.Current());
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+/*
             PrintData<<<1,1>>>(activeVerticesCount,
                     numberOfRows,
                     numberOfEdgesPerGraph, 
@@ -2669,7 +2680,7 @@ void CallPopulateTree(int numberOfLevels,
 
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);  
-
+*/
             ParallelRowOffsetsPrefixSumDevice<<<activeVerticesCount,threadsPerBlock>>>
                                                (numberOfEdgesPerGraph,
                                                 numberOfRows,
@@ -2678,7 +2689,7 @@ void CallPopulateTree(int numberOfLevels,
 
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);               
-
+/*
             PrintRowOffs<<<1,1>>>(activeVerticesCount,
                     numberOfRows,
                     row_offsets.Current(),
@@ -2686,7 +2697,7 @@ void CallPopulateTree(int numberOfLevels,
 
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);                                             
-                                                                                   
+*/                                                                          
                                                             
             RestoreDataStructuresAfterRemovingChildrenVertices( activeVerticesCount,
                                                                 threadsPerBlock,
