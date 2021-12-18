@@ -1938,10 +1938,10 @@ __global__ void ParallelProcessDegreeZeroVertices(
     int degreesOffset = leafIndex * numberOfRows;
     int numVertices = global_remaining_vertices_size_dev_ptr[leafIndex];
     int numVerticesRemoved = 0;
-    //for (int iter = 0; iter < blockDim.x; iter += blockDim.x){
-    //    degreeZeroVertex[threadIdx.x] = 0;
-    //}
-    //_syncthreads();
+    for (int iter = threadIdx.x; iter < blockDim.x; iter += blockDim.x){
+        degreeZeroVertex[iter] = 0;
+    }
+    _syncthreads();
     for (int vertex = threadIdx.x; vertex < numVertices; vertex += blockDim.x){
         numVerticesRemoved = 0;
         printf("threadIdx.x %d, blockIdx.x %d, Vertex %d loop\n", threadIdx.x, blockIdx.x, vertex);
@@ -3014,7 +3014,7 @@ void CopyGraphToDevice( Graph & g,
                         int * global_edges_left_to_cover_count,
                         int * global_remaining_vertices_dev_ptr,
                         int * global_remaining_vertices_size_dev_ptr,
-                        int verticesRemainingInGraph,
+                        int * verticesRemainingInGraph,
                         int * global_active_leaf_indices,
                         int * global_active_leaf_indices_count){
 
@@ -3034,7 +3034,7 @@ void CopyGraphToDevice( Graph & g,
                 cudaMemcpyHostToDevice);
     cudaMemcpy(global_remaining_vertices_dev_ptr, vertices_remaining_ptr, g.GetRemainingVertices().size() * sizeof(int),
             cudaMemcpyHostToDevice);         
-    cudaMemcpy(global_remaining_vertices_size_dev_ptr, &verticesRemainingInGraph, 1 * sizeof(int),
+    cudaMemcpy(global_remaining_vertices_size_dev_ptr, verticesRemainingInGraph, 1 * sizeof(int),
             cudaMemcpyHostToDevice);    
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
