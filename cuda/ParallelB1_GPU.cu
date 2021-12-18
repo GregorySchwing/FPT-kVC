@@ -2544,7 +2544,7 @@ void CallPopulateTree(int numberOfLevels,
                     numberOfEdgesPerGraph,
                     edges_left.Current(),
                     remaining_vertices.Current(),
-                    global_remaining_vertices_size_dev_ptr,
+                    remaining_vertices_count.Current(),
                     verticesRemainingInGraph,
                     active_leaves.Current(),
                     active_leaves_count.Current());
@@ -2649,7 +2649,7 @@ void CallPopulateTree(int numberOfLevels,
                             row_offsets.Current(),
                             columns.Current(),
                             remaining_vertices.Current(),
-                            global_remaining_vertices_size_dev_ptr,
+                            remaining_vertices_count.Current(),
                             degrees.Current(),
                             global_paths_ptr,
                             paths_indices.Current(),
@@ -2719,7 +2719,7 @@ void CallPopulateTree(int numberOfLevels,
                                             threadsPerBlock*sizeof(int)>>>
                         (numberOfRows,
                         remaining_vertices.Current(),
-                        global_remaining_vertices_size_dev_ptr,
+                        remaining_vertices_count.Current(),
                         degrees.Current());
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -2936,7 +2936,7 @@ void CallPopulateTree(int numberOfLevels,
                             degrees.Current(),
                             remaining_vertices.Current(),
                             edges_left.Current(),
-                            remaining_vertices_count.Current());
+                            remaining_vertices_count.Alternate());
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
