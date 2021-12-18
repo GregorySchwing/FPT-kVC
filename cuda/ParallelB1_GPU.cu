@@ -2953,12 +2953,6 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        // Flips Current and Alternate
-        active_leaves.selector = !active_leaves.selector;
-        active_leaves_count.selector = !active_leaves_count.selector;
-        active_leaf_offset.selector = !active_leaf_offset.selector;
-
-
         std::cout << "activeLeavesHost" << std::endl;
         for (int i = 0; i < activeVerticesCount; ++i){
             std::cout << activeLeavesHost[i] << " ";
