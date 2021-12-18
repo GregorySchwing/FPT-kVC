@@ -1941,7 +1941,7 @@ __global__ void ParallelProcessDegreeZeroVertices(
     for (int iter = threadIdx.x; iter < blockDim.x; iter += blockDim.x){
         degreeZeroVertex[iter] = 0;
     }
-    _syncthreads();
+    __syncthreads();
     for (int vertex = threadIdx.x; vertex < numVertices; vertex += blockDim.x){
         numVerticesRemoved = 0;
         printf("threadIdx.x %d, blockIdx.x %d, Vertex %d loop\n", threadIdx.x, blockIdx.x, vertex);
