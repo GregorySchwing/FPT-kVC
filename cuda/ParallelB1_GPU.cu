@@ -424,7 +424,7 @@ __host__ void CUBLibraryPrefixSumDevice(int * activeVerticesCount,
 
 }
 
-__global__ void ParallelRowOffsetsPrefixSumDevice(
+__global__ void ParallelRowOffsetsPrefixSumDevice(int numberOfEdgesPerGraph,
                                                 int numberOfRows,
                                                 int * global_row_offsets_dev_ptr,
                                                 int * global_cols_vals_segments){
@@ -2656,7 +2656,8 @@ void CallPopulateTree(int numberOfLevels,
             checkLastErrorCUDA(__FILE__, __LINE__);  
 
             ParallelRowOffsetsPrefixSumDevice<<<activeVerticesCount,threadsPerBlock>>>
-                                               (numberOfRows,
+                                               (numberOfEdgesPerGraph,
+                                                numberOfRows,
                                                 row_offsets.Current(),
                                                 global_cols_vals_segments);
 
