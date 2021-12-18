@@ -208,6 +208,7 @@ __global__ void GetRandomVertexSharedMem(int levelOffset,
 
 __global__ void ParallelDFSRandom(int numberOfRows,
                             int numberOfEdgesPerGraph,
+                            int verticesRemainingInGraph,
                             int * global_active_leaf_indices,
                             int * global_row_offsets_dev_ptr,
                             int * global_columns_dev_ptr,
@@ -246,6 +247,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
 
 __global__ void ParallelProcessDegreeZeroVertices(
                             int numberOfRows,
+                            int verticesRemainingInGraph,
                             int * global_active_leaf_indices,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,

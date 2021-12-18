@@ -278,6 +278,7 @@ __global__ void  PrintSets(int activeVerticesCount,
 __global__ void  PrintData(int activeVerticesCount,
                             int numberOfRows,
                             int numberOfEdgesPerGraph, 
+                            int verticesRemainingInGraph,
                             int * row_offs,
                             int * cols,
                             int * vals,
@@ -310,7 +311,7 @@ __global__ void  PrintData(int activeVerticesCount,
         }
         printf("\n");
         printf("Verts Rem\n");
-        for (int i = 0; i < numberOfRows; ++i){
+        for (int i = 0; i < verticesRemainingInGraph; ++i){
             printf("%d ",verts_remain[g*(numberOfRows) + i]);
         }
         printf("\n");
@@ -998,6 +999,7 @@ __global__ void GetRandomVertexSharedMem(int levelOffset,
 __global__ void ParallelDFSRandom(
                             int numberOfRows,
                             int numberOfEdgesPerGraph,
+                            int verticesRemainingInGraph,
                             int * global_active_leaf_indices,
                             int * global_row_offsets_dev_ptr,
                             int * global_columns_dev_ptr,
@@ -1032,6 +1034,7 @@ __global__ void ParallelDFSRandom(
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
     int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
     int degreesOffset = leafIndex * numberOfRows;
+    int remainingVerticesOffset = leafIndex * verticesRemainingInGraph;
     extern __shared__ int pathsAndPendantStatus[];
     int isInvalidPathBooleanArrayOffset = blockDim.x * 4;
     int iteration = 0;
@@ -1050,7 +1053,7 @@ __global__ void ParallelDFSRandom(
     int outEdgesCount;
     r = randomGPU_four(counter, leafValue, seed);
     // Random starting point
-    pathsAndPendantStatus[sharedMemPathOffset + iteration] = global_remaining_vertices_dev_ptr[degreesOffset + (r[iteration] % remainingVerticesSize)];
+    pathsAndPendantStatus[sharedMemPathOffset + iteration] = global_remaining_vertices_dev_ptr[remainingVerticesOffset + (r[iteration] % remainingVerticesSize)];
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("pathsAndPendantStatus %d\n", pathsAndPendantStatus[sharedMemPathOffset + iteration]);
         printf("\n");
@@ -1923,6 +1926,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
   */
 __global__ void ParallelProcessDegreeZeroVertices(
                             int numberOfRows,
+                            int verticesRemainingInGraph,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
                             int * global_degrees_dev_ptr){
@@ -1948,18 +1952,18 @@ __global__ void ParallelProcessDegreeZeroVertices(
         if (threadIdx.x == 0 && blockIdx.x == 0){
             printf("degreesOffset %d \n", degreesOffset);
             printf("vertex %d \n", vertex);
-            printf("global_remaining_vertices_dev_ptr[degreesOffset + vertex] %d \n", global_remaining_vertices_dev_ptr[degreesOffset + vertex]);
-            printf("full %d \n", global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[degreesOffset + vertex]]);
+            printf("global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex] %d \n", global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex]);
+            printf("full %d \n", global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex]]);
         }
-        degreeZeroVertex[threadIdx.x] = (int)(0 == (global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[degreesOffset + vertex]]));
+        degreeZeroVertex[threadIdx.x] = (int)(0 == (global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex]]));
         if (blockIdx.x == 0){
-            printf("Vertex %d set degreeZeroVertex %d since degree is %d\n", vertex, degreeZeroVertex[threadIdx.x], global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[degreesOffset + vertex]]);
+            printf("Vertex %d set degreeZeroVertex %d since degree is %d\n", vertex, degreeZeroVertex[threadIdx.x], global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex]]);
         }
         // Makes this entry INT_MAX if degree 0
         // Leaves unaltered if not degree 0
-        global_remaining_vertices_dev_ptr[degreesOffset + vertex] += (INT_MAX - global_remaining_vertices_dev_ptr[degreesOffset + vertex])*degreeZeroVertex[threadIdx.x];
+        global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex] += (INT_MAX - global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex])*degreeZeroVertex[threadIdx.x];
         if (blockIdx.x == 0){
-            printf("Vertex %d set global_remaining_vertices_dev_ptr %d\n", vertex, global_remaining_vertices_dev_ptr[degreesOffset + vertex]);
+            printf("Vertex %d set global_remaining_vertices_dev_ptr %d\n", vertex, global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex]);
         }
         
         int i = blockDim.x/2;
@@ -2428,14 +2432,14 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_columns_dev_ptr, (numberOfEdgesPerGraph*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_values_dev_ptr, (numberOfEdgesPerGraph*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows*deepestLevelSize) * sizeof(int) );
-    cudaMalloc( (void**)&global_remaining_vertices_dev_ptr, (numberOfRows*deepestLevelSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_remaining_vertices_dev_ptr, (verticesRemainingInGraph*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr, deepestLevelSize * sizeof(int) );
 
     cudaMalloc( (void**)&global_row_offsets_dev_ptr_buffer, ((numberOfRows+1)*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_columns_dev_ptr_buffer, (numberOfEdgesPerGraph*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_values_dev_ptr_buffer, (numberOfEdgesPerGraph*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_degrees_dev_ptr_buffer, (numberOfRows*deepestLevelSize) * sizeof(int) );
-    cudaMalloc( (void**)&global_remaining_vertices_dev_ptr_buffer, (numberOfRows*deepestLevelSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_remaining_vertices_dev_ptr_buffer, (verticesRemainingInGraph*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr_buffer, deepestLevelSize * sizeof(int) );
 
     cub::DoubleBuffer<int> row_offsets(global_row_offsets_dev_ptr, global_row_offsets_dev_ptr_buffer);
@@ -2645,6 +2649,7 @@ void CallPopulateTree(int numberOfLevels,
         ParallelDFSRandom<<<activeVerticesCount,threadsPerBlock,sharedMemorySize*sizeof(int)>>>
                             (numberOfRows,
                             numberOfEdgesPerGraph,
+                            verticesRemainingInGraph,
                             active_leaves.Current(),
                             row_offsets.Current(),
                             columns.Current(),
@@ -2718,6 +2723,7 @@ void CallPopulateTree(int numberOfLevels,
                                             threadsPerBlock,
                                             threadsPerBlock*sizeof(int)>>>
                         (numberOfRows,
+                        verticesRemainingInGraph,
                         remaining_vertices.Current(),
                         remaining_vertices_count.Current(),
                         degrees.Current());
@@ -2902,7 +2908,7 @@ void CallPopulateTree(int numberOfLevels,
             cudaMemcpy(&new_cols[newChild*numberOfEdgesPerGraph], &old_cols[activeParentHost[newChild]*numberOfEdgesPerGraph], numberOfEdgesPerGraph*sizeof(int), cudaMemcpyDeviceToDevice);
             cudaMemcpy(&new_vals[newChild*numberOfEdgesPerGraph], &old_vals[activeParentHost[newChild]*numberOfEdgesPerGraph], numberOfEdgesPerGraph*sizeof(int), cudaMemcpyDeviceToDevice);
             cudaMemcpy(&new_degrees[newChild*numberOfRows], &old_degrees[activeParentHost[newChild]*numberOfRows], numberOfRows*sizeof(int), cudaMemcpyDeviceToDevice);
-            cudaMemcpy(&new_verts_remain[newChild*numberOfRows], &old_verts_remain[activeParentHost[newChild]*numberOfRows], numberOfRows*sizeof(int), cudaMemcpyDeviceToDevice);
+            cudaMemcpy(&new_verts_remain[newChild*numberOfRows], &old_verts_remain[activeParentHost[newChild]*numberOfRows], verticesRemainingInGraph*sizeof(int), cudaMemcpyDeviceToDevice);
             cudaMemcpy(&new_edges_left[newChild], &old_edges_left[activeParentHost[newChild]], 1*sizeof(int), cudaMemcpyDeviceToDevice);
             cudaMemcpy(&new_verts_remain_count[newChild], &old_verts_remain_count[activeParentHost[newChild]], 1*sizeof(int), cudaMemcpyDeviceToDevice);      
         }
@@ -2930,6 +2936,7 @@ void CallPopulateTree(int numberOfLevels,
         PrintData<<<1,1>>>(activeVerticesCount,
                             numberOfRows,
                             numberOfEdgesPerGraph, 
+                            verticesRemainingInGraph,
                             row_offsets.Current(),
                             columns.Current(),
                             values.Current(),
