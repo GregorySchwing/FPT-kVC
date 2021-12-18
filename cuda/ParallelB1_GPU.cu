@@ -424,24 +424,24 @@ __host__ void CUBLibraryPrefixSumDevice(int * activeVerticesCount,
 
 }
 
-__host__ void RowOffsetsPrefixSumDevice(int numberOfItems,
-                                        cub::DoubleBuffer<int> & row_offsets,
-                                        int * global_cols_vals_segments){
-    // Declare, allocate, and initialize device-accessible pointers for input and output
-    int  num_items = numberOfItems;      // e.g., 7
-    int  *d_in = row_offsets.Current();        // e.g., [8, 6, 7, 5, 3, 0, 9]
-    int  *d_out = global_cols_vals_segments;         // e.g., [ ,  ,  ,  ,  ,  ,  ]
-    // Determine temporary device storage requirements
-    void     *d_temp_storage = NULL;
-    size_t   temp_storage_bytes = 0;
-    cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
-    // Allocate temporary storage
-    cudaMalloc(&d_temp_storage, temp_storage_bytes);
-    // Run exclusive prefix sum
-    cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
-    // d_out s<-- [0, 8, 14, 21, 26, 29, 29]
-    cudaFree(d_temp_storage);
+__global__ void ParallelRowOffsetsPrefixSumDevice(
+                                                int numberOfRows,
+                                                int * global_row_offsets_dev_ptr,
+                                                int * global_cols_vals_segments){
 
+    int leafIndex = blockIdx.x; 
+
+    printf("LevelAware RowOffs blockIdx %d is running\n", blockIdx.x);
+    printf("LevelAware RowOffs leaf index %d is running\n", leafIndex);
+
+    int rowOffsOffset = leafIndex * (numberOfRows + 1);
+    int bufferRowOffsOffset = leafIndex * (numberOfRows + 1);
+
+    for (int iter = threadIdx.x; iter < numberOfRows+1; iter += blockDim.x){
+        global_cols_vals_segments[bufferRowOffsOffset + iter] = (leafIndex * numberOfEdgesPerGraph) + global_row_offsets_dev_ptr[rowOffsOffset + iter];
+        printf("global_cols_vals_segments[bufferRowOffsOffset + %d] = %d + %d\n", iter, (leafIndex * numberOfEdgesPerGraph), global_row_offsets_dev_ptr[rowOffsOffset + iter]);
+
+    }
 }
 
 __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerticesCount,
@@ -2653,11 +2653,12 @@ void CallPopulateTree(int numberOfLevels,
                                                             edges_left.Current(),
                                                             global_vertices_included_dev_ptr);
             cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
-            
-            RowOffsetsPrefixSumDevice((numberOfRows+1)*activeVerticesCount,
-                                    row_offsets,
-                                    global_cols_vals_segments);   
+            checkLastErrorCUDA(__FILE__, __LINE__);  
+
+            ParallelRowOffsetsPrefixSumDevice<<<activeVerticesCount,threadsPerBlock>>>
+                                               (numberOfRows,
+                                                row_offsets.Current(),
+                                                global_cols_vals_segments);
 
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);               

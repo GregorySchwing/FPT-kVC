@@ -258,13 +258,12 @@ __global__ void ParallelProcessDegreeZeroVertices(
                             int * global_remaining_vertices_size_dev_ptr,
                             int * global_degrees_dev_ptr);
 
-/*
-__global__ void ParallelCreateLevelAwareRowOffsets(int activeVerticesCount,
-                            int numberOfRows,
-                            int numberOfEdgesPerGraph,
-                            int * global_row_offsets_dev_ptr,
-                            int * global_offsets_buffer);
-*/
+
+__global__ void ParallelRowOffsetsPrefixSumDevice(
+                                                int numberOfRows,
+                                                int * global_row_offsets_dev_ptr,
+                                                int * global_cols_vals_segments);
+
 __global__ void SetVerticesRemaingSegements(int dLSPlus1,
                                             int numberOfRows,
                                             int * global_vertex_segments);
