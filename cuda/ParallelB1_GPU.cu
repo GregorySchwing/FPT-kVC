@@ -312,7 +312,7 @@ __global__ void  PrintData(int activeVerticesCount,
         printf("\n");
         printf("Verts Rem\n");
         for (int i = 0; i < verticesRemainingInGraph; ++i){
-            printf("%d ",verts_remain[g*(numberOfRows) + i]);
+            printf("%d ",verts_remain[g*(verticesRemainingInGraph) + i]);
         }
         printf("\n");
         printf("Edges left: %d\n", edges_left[g]);
