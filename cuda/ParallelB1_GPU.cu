@@ -2935,7 +2935,7 @@ void CallPopulateTree(int numberOfLevels,
                             values.Current(),
                             degrees.Current(),
                             remaining_vertices.Current(),
-                            edges_left.Current()
+                            edges_left.Current(),
                             remaining_vertices_count.Current());
 
         cudaDeviceSynchronize();
