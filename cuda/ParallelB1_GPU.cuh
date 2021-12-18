@@ -89,7 +89,8 @@ __global__ void  PrintData(int activeVerticesCount,
                             int * vals,
                             int * degrees,
                             int * verts_remain,
-                            int * edges_left);
+                            int * edges_left,
+                            int * verts_remain_count);
 
 __global__ void First_Graph_GPU(int vertexCount, 
                                 int size,
