@@ -2620,7 +2620,7 @@ void CallPopulateTree(int numberOfLevels,
                                                             columns.Current(),
                                                             values.Current(),
                                                             degrees.Current(),
-                                                            global_edges_left_to_cover_count,
+                                                            edges_left.Current(),
                                                             global_vertices_included_dev_ptr);
                                                             
             RestoreDataStructuresAfterRemovingChildrenVertices( activeVerticesCount,
