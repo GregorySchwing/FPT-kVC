@@ -252,7 +252,7 @@ __global__ void  PrintRowOffs(int activeVerticesCount,
     for (int g = 0; g < (activeVerticesCount); ++g){
         printf("\n");
         for (int i = 0; i < numberOfRows+1; ++i){
-            printf("%d ",printAlt[g*numberOfRows + i]);
+            printf("%d ",printAlt[g*(numberOfRows+1) + i]);
         }
     }
     printf("\n");
@@ -261,7 +261,7 @@ __global__ void  PrintRowOffs(int activeVerticesCount,
     for (int g = 0; g < (activeVerticesCount); ++g){
         printf("\n");
         for (int i = 0; i < numberOfRows+1; ++i){
-            printf("%d ",printCurr[g*numberOfRows + i]);
+            printf("%d ",printCurr[g*(numberOfRows+1) + i]);
         }
     }
     printf("\n");
