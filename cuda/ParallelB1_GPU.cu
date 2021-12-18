@@ -402,6 +402,7 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
                                                                 int threadsPerBlock,
                                                                 int numberOfRows,
                                                                 int numberOfEdgesPerGraph,
+                                                                int verticesRemainingInGraph,
                                                                 cub::DoubleBuffer<int> & row_offsets,
                                                                 cub::DoubleBuffer<int> & columns,
                                                                 cub::DoubleBuffer<int> & values,
@@ -445,7 +446,7 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
                 // Determine temporary device storage requirements
     void     *d_temp_storage2 = NULL;
     temp_storage_bytes = 0;
-    num_items = (activeVerticesCount)*numberOfRows;
+    num_items = (activeVerticesCount)*verticesRemainingInGraph;
     num_segments = activeVerticesCount;
 
     cub::DeviceSegmentedRadixSort::SortKeys(d_temp_storage2, temp_storage_bytes, remaining_vertices,
@@ -532,16 +533,16 @@ __global__ void InduceSubgraph( int numberOfRows,
     delete[] C_ref;
 }
 
-__global__ void SetEdges(int numberOfRows,
-                        int numberOfEdgesPerGraph,
-                        int * global_active_leaf_indices,
-                        int * global_active_leaf_parent_leaf_index,
-                        int * global_row_offsets_dev_ptr,
-                        int * global_columns_dev_ptr,
+__global__ void SetEdges(const int numberOfRows,
+                        const int numberOfEdgesPerGraph,
+                        const int * global_active_leaf_indices,
+                        const int * global_active_leaf_parent_leaf_index,
+                        const int * global_row_offsets_dev_ptr,
+                        const int * global_columns_dev_ptr,
                         int * global_values_dev_ptr,
                         int * global_degrees_dev_ptr,
                         int * global_edges_left_to_cover_count,
-                        int * global_vertices_included_dev_ptr){
+                        const int * global_vertices_included_dev_ptr){
 
     int leafIndex = blockIdx.x;
     int leafValue = global_active_leaf_indices[leafIndex];
@@ -2627,6 +2628,7 @@ void CallPopulateTree(int numberOfLevels,
                                                                 threadsPerBlock,
                                                                 numberOfRows,
                                                                 numberOfEdgesPerGraph,
+                                                                verticesRemainingInGraph,
                                                                 row_offsets,
                                                                 columns,
                                                                 values,
