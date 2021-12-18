@@ -2930,7 +2930,7 @@ void CallPopulateTree(int numberOfLevels,
             cudaMemcpy(&new_cols[newChild*numberOfEdgesPerGraph], &old_cols[activeParentHost[newChild]*numberOfEdgesPerGraph], numberOfEdgesPerGraph*sizeof(int), cudaMemcpyDeviceToDevice);
             cudaMemcpy(&new_vals[newChild*numberOfEdgesPerGraph], &old_vals[activeParentHost[newChild]*numberOfEdgesPerGraph], numberOfEdgesPerGraph*sizeof(int), cudaMemcpyDeviceToDevice);
             cudaMemcpy(&new_degrees[newChild*numberOfRows], &old_degrees[activeParentHost[newChild]*numberOfRows], numberOfRows*sizeof(int), cudaMemcpyDeviceToDevice);
-            cudaMemcpy(&new_verts_remain[newChild*verticesRemainingInGraph], &old_verts_remain[activeParentHost[newChild]], verticesRemainingInGraph*sizeof(int), cudaMemcpyDeviceToDevice);
+            cudaMemcpy(&new_verts_remain[newChild*verticesRemainingInGraph], &old_verts_remain[activeParentHost[newChild]*verticesRemainingInGraph], verticesRemainingInGraph*sizeof(int), cudaMemcpyDeviceToDevice);
             cudaMemcpy(&new_edges_left[newChild], &old_edges_left[activeParentHost[newChild]], 1*sizeof(int), cudaMemcpyDeviceToDevice);
             cudaMemcpy(&new_verts_remain_count[newChild], &old_verts_remain_count[activeParentHost[newChild]], 1*sizeof(int), cudaMemcpyDeviceToDevice);      
         }
