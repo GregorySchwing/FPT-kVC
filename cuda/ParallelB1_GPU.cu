@@ -434,11 +434,11 @@ __host__ void RowOffsetsPrefixSumDevice(int numberOfItems,
     // Determine temporary device storage requirements
     void     *d_temp_storage = NULL;
     size_t   temp_storage_bytes = 0;
-    cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
+    cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
     // Allocate temporary storage
     cudaMalloc(&d_temp_storage, temp_storage_bytes);
     // Run exclusive prefix sum
-    cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
+    cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
     // d_out s<-- [0, 8, 14, 21, 26, 29, 29]
     cudaFree(d_temp_storage);
 
