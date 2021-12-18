@@ -2587,7 +2587,7 @@ void CallPopulateTree(int numberOfLevels,
                                                                     global_vertex_segments);
     */
     SetSegments<<<ceilOfDLSPlus1,threadsPerBlock>>>(dLSPlus1,
-                                                    numberOfRows,
+                                                    verticesRemainingInGraph,
                                                     numberOfEdgesPerGraph,
                                                     global_vertex_segments,
                                                     global_cols_vals_segments);
