@@ -125,16 +125,16 @@ __global__ void PopulateTreeParallelLevelWise_GPU(int numberOfLevels,
                                             int * values_dev,
                                             int * new_degrees_dev);
 
-__global__ void SetEdges(int numberOfRows,
-                        int numberOfEdgesPerGraph,
-                        int * global_active_leaf_indices,
-                        int * global_active_leaf_parent_leaf_index,
-                        int * global_row_offsets_dev_ptr,
-                        int * global_columns_dev_ptr,
+__global__ void SetEdges(const int numberOfRows,
+                        const int numberOfEdgesPerGraph,
+                        const int * global_active_leaf_indices,
+                        const int * global_active_leaf_parent_leaf_index,
+                        const int * global_row_offsets_dev_ptr,
+                        const int * global_columns_dev_ptr,
                         int * global_values_dev_ptr,
                         int * global_degrees_dev_ptr,
                         int * global_edges_left_to_cover_count,
-                        int * global_vertices_included_dev_ptr);
+                        const int * global_vertices_included_dev_ptr);
 
 __global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
                                             int numberOfEdgesPerGraph,
