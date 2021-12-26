@@ -1705,23 +1705,135 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
                                         int * global_reduced_set_inclusion_count_ptr,
                                         int * global_paths_ptr,
                                         int * global_vertices_included_dev_ptr){
-    printf("Block ID %d thread %d entered ParallelAssignMISToNodesBreadthFirst\n", blockIdx.x, threadIdx.x);
     int leafIndex = blockIdx.x;
-    printf("Block ID %d thread %d can process leafIndex %d\n", blockIdx.x, threadIdx.x, leafIndex);
+    int leafValue = global_active_leaf_indices[leafIndex];
+    int setPathOffset = leafIndex * blockDim.x;
+    int globalPathOffset = setPathOffset*4;
+    int vertIncludedOffset;
+    extern __shared__ int paths[];
+
+    // |I| - The cardinality of the set.  If |I| = 0; we don't induce children
+    // Else we will induce (3*|I| children), Each path induces 3 leaves.
+    int leavesThatICanProcess = global_reduced_set_inclusion_count_ptr[leafIndex];
+    // Note: I am sorting the indices into the paths by inclusion in the set
+    // I can achieve coalescence by actually rearranging the paths.  The problem is 
+    // the cub library doesnt seem to support soring by key, with the value being
+    // 4 ints and the key being 1 int.  I will look further into this.
+
+    // leavesThatICanProcess is necessarily < tPB
+    for (int index = threadIdx.x; index < leavesThatICanProcess; ){ // index += blockDim.x){
+        paths[index] = global_set_paths_indices[setPathOffset + index];
+    }
+    __syncthreads();
+    int pathIndex, pathValue;
+    for (int index = threadIdx.x; index < leavesThatICanProcess*4; index += blockDim.x){
+        pathIndex = index / 4;
+        pathValue = global_set_paths_indices[setPathOffset + pathIndex];
+        paths[blockDim.x + index] = global_paths_ptr[globalPathOffset + pathValue*4];
+    }    
     __syncthreads();
 
-    int leafValue = global_active_leaf_indices[leafIndex];
-    printf("Block ID %d thread %d can process leafValue %d\n", blockIdx.x, threadIdx.x, leafValue);
-        __syncthreads();
+    if (threadIdx.x == 0){
+        printf("Block ID %d thread %d entered ParallelAssignMISToNodesBreadthFirst\n", blockIdx.x, threadIdx.x);
+        printf("Block ID %d thread %d can process leafIndex %d\n", blockIdx.x, threadIdx.x, leafIndex);
+        printf("Block ID %d thread %d can process leafValue %d\n", blockIdx.x, threadIdx.x, leafValue);
+        printf("Block ID %d thread %d can process %d leaves\n", blockIdx.x, threadIdx.x, leavesThatICanProcess);
+    }
+    // This pattern uses adjacent threads to write aligned memory, 
+    // but thread indexing is math intensive
+    // Desired mapping:
+    // 0 -> 2 
+    // 1 -> 0
+    // 2 -> 2
+    // 3 -> 1
+    // 4 -> 3
+    // 5 -> 1
+    // indexMod6 = index % 6
+    // Functor: (indexMod6 % 2 == 1) * (indexMod6 != 1) +
+    //          (indexMod6 % 2 == 0) * (2 + (indexMod6 == 4))
 
+    int indexMod6, pathChildIndex, leftMostChildOfLevel, leftMostChildOfLevelExpanded, dispFromLeft, levelDepth, indexMapper, levelWidth;
+    for(int index = threadIdx.x; index < leavesThatICanProcess*6; index += blockDim.x){
+        pathIndex = index / 6;
+        indexMod6 = index % 6;
+        // Have to handle 0 and 1..
+        pathChildIndex = (indexMod6 % 2 == 1) * (indexMod6 != 1) +
+                            (indexMod6 % 2 == 0) * (2 + (indexMod6 == 4));
+        levelDepth = 1.0;
+        indexMapper = index;
+        leftMostChildOfLevel = leafValue + (leafValue == 0);
+        levelWidth = (int)(2.0*powf(3.0, levelDepth));
+        leftMostChildOfLevelExpanded = 0;
+        while(indexMapper / levelWidth){
+            indexMapper -=  (int)(2*powf(3.0, levelDepth));
+            ++levelDepth;
+            leftMostChildOfLevel *= 3.0;
+            leftMostChildOfLevelExpanded += leftMostChildOfLevel;
+            levelWidth = (int)(2.0*powf(3.0, levelDepth));
+            indexMapper = indexMapper*((int)(indexMapper >= 0));
+        }
+        // Handles index 0 : + (int)(leftMostChildOfLevelExpanded == 0)
+        leftMostChildOfLevelExpanded = ((int)(leftMostChildOfLevelExpanded != 0))*(leftMostChildOfLevelExpanded*2 + 1) + (int)(leftMostChildOfLevelExpanded == 0);
+        printf("thread %d levelWidth %d\n",threadIdx.x, levelWidth);
+        dispFromLeft = index - leftMostChildOfLevelExpanded + 1;
+        /*
+        if (blockIdx.x == 0){
+            printf("thread %d index %d\n",threadIdx.x, index);
+            printf("thread %d pathIndex %d\n", threadIdx.x, pathIndex);
+            printf("thread %d pathValue %d\n", threadIdx.x, pathValue);
+            printf("thread %d indexMod6 %d\n", threadIdx.x, indexMod6);
+            printf("thread %d pathChildIndex %d\n", threadIdx.x, pathChildIndex);
+            printf("thread %d levelDepth %d\n", threadIdx.x, levelDepth);
+            printf("thread %d leftMostChildOfLevel %d\n", threadIdx.x, leftMostChildOfLevel);
+            printf("thread %d leftMostChildOfLevelExpanded %d\n", threadIdx.x, leftMostChildOfLevelExpanded);
+            printf("thread %d dispFromLeft %d\n", threadIdx.x, dispFromLeft);
+        }
+        */
+        global_vertices_included_dev_ptr[leftMostChildOfLevelExpanded + dispFromLeft] = paths[blockDim.x + pathIndex*4 + pathChildIndex];
+    }
+    __syncthreads();
+    if (threadIdx.x == 0 && blockIdx.x == 0){
+        printf("VertsIncluded\n");
+        int numLvls = 4;
+        int LB = 0, UB = 0;
+        for (int lvl = 0; lvl < numLvls; ++lvl){
+            if (LB == 0)
+                UB = 1;
+            else
+                UB = LB + (int)(powf(3.0, lvl)*2.0);
+            //printf("LB : %d; UB : %d\n ", LB, UB);
+            for (int i = LB; i < UB; ++i){
+                printf("%d ", global_vertices_included_dev_ptr[i]);
+            }
+            printf("\n");
+            if (LB == 0)
+                LB = 1;
+            else
+                LB = LB + (int)(powf(3.0, lvl)*2.0);
+        }
+
+    }
+}
+
+__global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_indices,
+                                        int * global_set_paths_indices,
+                                        int * global_reduced_set_inclusion_count_ptr,
+                                        int * global_paths_ptr,
+                                        int * global_vertices_included_dev_ptr){
+    int leafIndex = blockIdx.x;
+    int leafValue = global_active_leaf_indices[leafIndex];
     int setPathOffset = leafIndex * blockDim.x;
     int globalPathOffset = setPathOffset*4;
     int vertIncludedOffset;
     // |I| - The cardinality of the set.  If |I| = 0; we don't induce children
     // Else we will induce (3*|I| children), Each path induces 3 leaves.
     int leavesThatICanProcess = global_reduced_set_inclusion_count_ptr[leafIndex];
-    printf("Block ID %d thread %d can process %d leaves\n", blockIdx.x, threadIdx.x, leavesThatICanProcess);
-    __syncthreads();
+    if (threadIdx.x == 0){
+        printf("Block ID %d thread %d entered ParallelAssignMISToNodesBreadthFirst\n", blockIdx.x, threadIdx.x);
+        printf("Block ID %d thread %d can process leafIndex %d\n", blockIdx.x, threadIdx.x, leafIndex);
+        printf("Block ID %d thread %d can process leafValue %d\n", blockIdx.x, threadIdx.x, leafValue);
+        printf("Block ID %d thread %d can process %d leaves\n", blockIdx.x, threadIdx.x, leavesThatICanProcess);
+    }
     // This pattern uses adjacent threads to write aligned memory, 
     // but thread indexing is math intensive
     // Desired mapping:
@@ -2845,14 +2957,7 @@ void CallPopulateTree(int numberOfLevels,
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
-/*
-        PrintSets<<<1,1>>>(activeVerticesCount,
-                paths_indices.Current(),
-                paths_indices.Alternate(),
-                set_inclusion.Current(),
-                set_inclusion.Alternate(),
-                global_set_path_offsets);
-*/
+
         SortPathIndices(activeVerticesCount,
                         threadsPerBlock,
                         paths_indices,
@@ -2872,8 +2977,12 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
+        // 2*threadsPerBlock 
+        // 0 to blockDim, the sorting index
+        // blockDim to 5*blockDim, the path values
         ParallelAssignMISToNodesBreadthFirst<<<activeVerticesCount,
-                                               threadsPerBlock>>>(
+                                               threadsPerBlock,
+                                               (threadsPerBlock + threadsPerBlock*4)*sizeof(int)>>>(
                                         active_leaves.Current(),
                                         paths_indices.Current(),
                                         global_reduced_set_inclusion_count_ptr,

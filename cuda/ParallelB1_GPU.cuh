@@ -281,6 +281,12 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
                                         int * global_paths_ptr,
                                         int * global_vertices_included_dev_ptr);
 
+__global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_leaf_indices,
+                                        int * global_set_paths_indices,
+                                        int * global_reduced_set_inclusion_count_ptr,
+                                        int * global_paths_ptr,
+                                        int * global_vertices_included_dev_ptr);
+
 __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
                                         int * global_active_leaves_count_current,
                                         int * global_active_leaves_count_new,
