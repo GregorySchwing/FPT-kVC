@@ -1700,13 +1700,25 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
     }          
 }
 
-__global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_indices,
+__global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_leaf_indices,
                                         int * global_set_paths_indices,
                                         int * global_reduced_set_inclusion_count_ptr,
                                         int * global_paths_ptr,
                                         int * global_vertices_included_dev_ptr){
     int leafIndex = blockIdx.x;
     int leafValue = global_active_leaf_indices[leafIndex];
+    // Solve recurrence relation 
+    // g(n) = (C + 6)3^(n-1) - 2
+    //      = (1/3*(C + 6)*3^n) - 2
+    // C depends on leafValue
+    // 
+    // where g(0) = left-most expanded child of depth 1
+    // where g(1) = left-most expanded child of depth 2
+    // where g(2) = left-most expanded child of depth 3
+    // ... 
+    int g_n = 6*leafValue+1;
+    int arbitraryParameter = 3*(g_n + 2)-6;
+    int leftMostChildOfLevelExpanded;
     int setPathOffset = leafIndex * blockDim.x;
     int globalPathOffset = setPathOffset*4;
     int vertIncludedOffset;
@@ -1717,7 +1729,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
     int leavesThatICanProcess = global_reduced_set_inclusion_count_ptr[leafIndex];
     // Note: I am sorting the indices into the paths by inclusion in the set
     // I can achieve coalescence by actually rearranging the paths.  The problem is 
-    // the cub library doesnt seem to support soring by key, with the value being
+    // the cub library doesnt seem to support soring by key, when the value is
     // 4 ints and the key being 1 int.  I will look further into this.
 
     // leavesThatICanProcess is necessarily < tPB
@@ -1752,43 +1764,28 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_in
     // Functor: (indexMod6 % 2 == 1) * (indexMod6 != 1) +
     //          (indexMod6 % 2 == 0) * (2 + (indexMod6 == 4))
 
-    int indexMod6, pathChildIndex, leftMostChildOfLevel, leftMostChildOfLevelExpanded, dispFromLeft, levelDepth, indexMapper, levelWidth;
+    int indexMod6, pathChildIndex, leftMostChildOfLevel, leftMostChildOfLevelExpanded, dispFromLeft, levelDepth, relativeLeafIndex;
     for(int index = threadIdx.x; index < leavesThatICanProcess*6; index += blockDim.x){
         pathIndex = index / 6;
         indexMod6 = index % 6;
+        // This can be considered a function of leafValue and index ...
         // Have to handle 0 and 1..
         pathChildIndex = (indexMod6 % 2 == 1) * (indexMod6 != 1) +
-                            (indexMod6 % 2 == 0) * (2 + (indexMod6 == 4));
-        levelDepth = 1.0;
-        indexMapper = index;
-        leftMostChildOfLevel = leafValue + (leafValue == 0);
-        levelWidth = (int)(2.0*powf(3.0, levelDepth));
-        leftMostChildOfLevelExpanded = 0;
-        while(indexMapper / levelWidth){
-            indexMapper -=  (int)(2*powf(3.0, levelDepth));
-            ++levelDepth;
-            leftMostChildOfLevel *= 3.0;
-            leftMostChildOfLevelExpanded += leftMostChildOfLevel;
-            levelWidth = (int)(2.0*powf(3.0, levelDepth));
-            indexMapper = indexMapper*((int)(indexMapper >= 0));
-        }
-        // Handles index 0 : + (int)(leftMostChildOfLevelExpanded == 0)
-        leftMostChildOfLevelExpanded = ((int)(leftMostChildOfLevelExpanded != 0))*(leftMostChildOfLevelExpanded*2 + 1) + (int)(leftMostChildOfLevelExpanded == 0);
-        printf("thread %d levelWidth %d\n",threadIdx.x, levelWidth);
+                         (indexMod6 % 2 == 0) * (2 + (indexMod6 == 4));
+        relativeLeafIndex = index/2;
+        levelDepth = 0;
+        // No closed form solution exists.
+        levelDepth += (int)(relativeLeafIndex / 1 != 0);
+        levelDepth += (int)(relativeLeafIndex / 4 != 0);
+        levelDepth += (int)(relativeLeafIndex / 13 != 0);
+        levelDepth += (int)(relativeLeafIndex / 40 != 0);
+        levelDepth += (int)(relativeLeafIndex / 121 != 0);
+        levelDepth += (int)(relativeLeafIndex / 364 != 0);
+        levelDepth += (int)(relativeLeafIndex / 1093 != 0);
+        levelDepth += (int)(relativeLeafIndex / 3280 != 0);
+        leftMostChildOfLevelExpanded = ((arbitraryParameter+6)*powf(3.0, levelDepth)/3+2)*(int)(leafValue!=0)+(int)(leafValue==0);
         dispFromLeft = index - leftMostChildOfLevelExpanded + 1;
-        /*
-        if (blockIdx.x == 0){
-            printf("thread %d index %d\n",threadIdx.x, index);
-            printf("thread %d pathIndex %d\n", threadIdx.x, pathIndex);
-            printf("thread %d pathValue %d\n", threadIdx.x, pathValue);
-            printf("thread %d indexMod6 %d\n", threadIdx.x, indexMod6);
-            printf("thread %d pathChildIndex %d\n", threadIdx.x, pathChildIndex);
-            printf("thread %d levelDepth %d\n", threadIdx.x, levelDepth);
-            printf("thread %d leftMostChildOfLevel %d\n", threadIdx.x, leftMostChildOfLevel);
-            printf("thread %d leftMostChildOfLevelExpanded %d\n", threadIdx.x, leftMostChildOfLevelExpanded);
-            printf("thread %d dispFromLeft %d\n", threadIdx.x, dispFromLeft);
-        }
-        */
+        // This can be considered a function of leafValue and index ...
         global_vertices_included_dev_ptr[leftMostChildOfLevelExpanded + dispFromLeft] = paths[blockDim.x + pathIndex*4 + pathChildIndex];
     }
     __syncthreads();
@@ -1964,6 +1961,15 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
         atomicAdd(global_active_leaves_count_new, new_active_leaves_count_red[threadIdx.x]);
 }
 
+    //int leafValue = global_active_leaf_indices[leafIndex];
+    // Solve recurrence relation 
+    // g(n) = 1/6*((2*C+3)*3^n - 3)
+    // C depends on leafValue
+    // where g(0) = left-most child of depth 1
+    // where g(1) = left-most child of depth 2
+    // where g(2) = left-most child of depth 3
+    // ...
+    //int arbitraryParameter = 3*(3*leafValue)+1);
 
 // Not thrilled about this.  1 thread fills in all the entries of belonging to a single active leaf
 // in the new active leaves buffer.  To avoid this I'd likely need another
@@ -2082,6 +2088,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
     }
   
 }
+
   */
 __global__ void ParallelProcessDegreeZeroVertices(
                             int numberOfRows,
