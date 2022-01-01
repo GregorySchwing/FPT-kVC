@@ -1799,10 +1799,13 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
         levelDepth += (int)(relativeLeafIndex / 1092 != 0);
         // 1092 + 3^7
         levelDepth += (int)(relativeLeafIndex / 3279 != 0);
+        // Closed form solution of recurrence relation shown in comment above method
         leftMostChildOfLevel = ((2*arbitraryParameter+3)*powf(3.0, levelDepth) - 3)/6;
         leftMostChildOfLevelExpanded = 2*leftMostChildOfLevel-1;
+        // Closed form sum of Geometric Series 3^k
         totalNodes = (levelDepth!=0)*(((1.0-powf(3.0, levelDepth+1))/(1.0-3.0))-1);
         dispFromLeft = index - 2*totalNodes;
+        /*
         if (blockIdx.x == 0){
             printf("thread %d index %d\n",threadIdx.x, index);
             printf("thread %d pathIndex %d\n", threadIdx.x, pathIndex);
@@ -1813,7 +1816,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
             printf("thread %d leftMostChildOfLevelExpanded %d\n", threadIdx.x, leftMostChildOfLevelExpanded);
             printf("thread %d dispFromLeft %d\n", threadIdx.x, dispFromLeft);
         }
-        
+        */
         global_vertices_included_dev_ptr[leftMostChildOfLevelExpanded + dispFromLeft] = paths[blockDim.x + pathIndex*4 + pathChildIndex];
     }
     __syncthreads();
@@ -2000,7 +2003,7 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
     //int arbitraryParameter = 3*(3*leafValue)+1);
 
 // Not thrilled about this.  1 thread fills in all the entries of belonging to a single active leaf
-// in the new active leaves buffer.  To avoid this I'd likely need another
+// in the new active leaves buffer.  To avoid this I'd likely need another buffer
 __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
                                         int * global_active_leaves,
                                         int * global_newly_active_leaves,
@@ -2037,6 +2040,81 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
             leftMostLeafIndexOfFullLevel = (3.0 * leftMostLeafIndexOfFullLevel + 1);
             completeLevel -= 1;
         }
+        int newly_active_offset = global_newly_active_offset_ptr[globalIndex];
+        int index = 0;
+        // These values will be overwritten in the for loops, if leavesToProcess > 0
+        // Therefore initialize the values as if there were not any non-pendant paths
+        // found in the DFS.  This way we minimize the amount of conditionals.
+        global_newly_active_leaves[newly_active_offset + index] = leafValue;
+        global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
+        global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
+
+        // If non-pendant paths were found, populate the search tree in the 
+        // complete level
+        for (; index < completeLevelLeaves - removeFromComplete; ++index){
+            printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfFullLevel + index + removeFromComplete);
+            global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfFullLevel + index + removeFromComplete;
+            global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
+            global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
+        }
+        int leftMostLeafIndexOfIncompleteLevel = leafValue;
+        while (incompleteLevel > 0){
+            leftMostLeafIndexOfIncompleteLevel = (3.0 * leftMostLeafIndexOfIncompleteLevel + 1);
+            incompleteLevel -= 1;
+        }
+        int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
+        // If non-pendant paths were found, populate the search tree in the 
+        // incomplete level
+        for (int incompleteIndex = 0; index < totalNewActive; ++index, ++incompleteIndex){
+            printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfIncompleteLevel + incompleteIndex);
+            global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfIncompleteLevel + incompleteIndex;
+            global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
+            global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
+        }
+        for (int testP = 0; testP < global_active_leaves_count_new[globalIndex]; ++testP){
+            printf("global_newly_active_leaves[%d] = %d\n",testP, global_newly_active_leaves[testP]);
+        }
+    }
+}
+
+__global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
+                                        int * global_active_leaves,
+                                        int * global_newly_active_leaves,
+                                        int * global_active_leaves_count_current,
+                                        int * global_active_leaves_count_new,
+                                        int * global_reduced_set_inclusion_count_ptr,
+                                        int * global_newly_active_offset_ptr,
+                                        int * global_active_leaf_parent_leaf_index,
+                                        int * global_active_leaf_parent_leaf_value){
+    int globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    int leafValue;
+    int arbitraryParameter;
+    int leftMostChildOfLevel;
+    int leftMostLeafIndexOfFullLevel;
+    printf("globalIndex %d, global_active_leaves_count_current %x\n",globalIndex, global_active_leaves_count_current[0]);
+    if (globalIndex < global_active_leaves_count_current[0]){
+        int leavesToProcess = global_reduced_set_inclusion_count_ptr[globalIndex];
+        // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
+        // Solved for leavesToProcess < closed form
+        int completeLevel = floor(logf(2*leavesToProcess + 1) / logf(3));
+        int completeLevelLeaves = powf(3.0, completeLevel);
+        // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
+        // Solved for closed form < leavesToProcess
+        int incompleteLevel = ceil(logf(2*leavesToProcess + 1) / logf(3));
+        // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
+        int treeSizeComplete = (1.0 - pow(3.0, completeLevel))/(1.0 - 3.0);
+        printf("Leaves %d, completeLevel Level Depth %d\n",leavesToProcess, completeLevel);
+        printf("Leaves %d, completeLevelLeaves Level Depth %d\n",leavesToProcess, completeLevelLeaves);
+        printf("Leaves %d, incompleteLevel Level Depth %d\n",leavesToProcess, incompleteLevel);
+        printf("Leaves %d, treeSizeComplete Level Depth %d\n",leavesToProcess, treeSizeComplete);
+        int removeFromComplete = ((leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
+        int leavesFromIncompleteLvl = (leavesToProcess - treeSizeComplete);
+        leafValue = global_active_leaves[globalIndex];
+        arbitraryParameter; = 3*((3*leafValue)+1);
+        leftMostLeafIndexOfFullLevel = leafValue;
+        // Closed form solution of recurrence relation shown in comment above method
+        leftMostChildOfLevel = ((2*arbitraryParameter+3)*powf(3.0, completeLevel) - 3)/6;
+        
         int newly_active_offset = global_newly_active_offset_ptr[globalIndex];
         int index = 0;
         // These values will be overwritten in the for loops, if leavesToProcess > 0
