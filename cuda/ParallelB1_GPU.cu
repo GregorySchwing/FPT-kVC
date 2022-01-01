@@ -1717,7 +1717,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
     // where g(2) = left-most expanded child of depth 3
     // ... 
     int g_n = 6*leafValue+1;
-    int arbitraryParameter = 3*(g_n + 2)-6;
+    int arbitraryParameter = 3*g_n-4;
     int leftMostChildOfLevelExpanded;
     int setPathOffset = leafIndex * blockDim.x;
     int globalPathOffset = setPathOffset*4;
@@ -1786,6 +1786,16 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
         leftMostChildOfLevelExpanded = ((arbitraryParameter+6)*powf(3.0, levelDepth)/3+2)*(int)(leafValue!=0)+(int)(leafValue==0);
         dispFromLeft = index - leftMostChildOfLevelExpanded + 1;
         // This can be considered a function of leafValue and index ...
+        if (blockIdx.x == 0){
+            printf("thread %d index %d\n",threadIdx.x, index);
+            printf("thread %d pathIndex %d\n", threadIdx.x, pathIndex);
+            printf("thread %d indexMod6 %d\n", threadIdx.x, indexMod6);
+            printf("thread %d pathChildIndex %d\n", threadIdx.x, pathChildIndex);
+            printf("thread %d levelDepth %d\n", threadIdx.x, levelDepth);
+            printf("thread %d leftMostChildOfLevelExpanded %d\n", threadIdx.x, leftMostChildOfLevelExpanded);
+            printf("thread %d dispFromLeft %d\n", threadIdx.x, dispFromLeft);
+        }
+        
         global_vertices_included_dev_ptr[leftMostChildOfLevelExpanded + dispFromLeft] = paths[blockDim.x + pathIndex*4 + pathChildIndex];
     }
     __syncthreads();
