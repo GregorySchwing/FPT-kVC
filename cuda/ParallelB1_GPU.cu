@@ -1784,17 +1784,23 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
         levelDepth = 0;
         // No closed form solution exists.
         //levelDepth += (int)(relativeLeafIndex / 1 != 0);
+        // 0 + 3^1
         levelDepth += (int)(relativeLeafIndex / 3 != 0);
+        // 3 + 3^2
         levelDepth += (int)(relativeLeafIndex / 12 != 0);
+        // 12 + 3^3
         levelDepth += (int)(relativeLeafIndex / 39 != 0);
+        // 39 + 3^4
         levelDepth += (int)(relativeLeafIndex / 120 != 0);
+        // 120 + 3^5
         levelDepth += (int)(relativeLeafIndex / 363 != 0);
+        // 363 + 3^6
         levelDepth += (int)(relativeLeafIndex / 1092 != 0);
+        // 1092 + 3^7
         levelDepth += (int)(relativeLeafIndex / 3279 != 0);
         leftMostChildOfLevel = ((2*arbitraryParameter+3)*powf(3.0, levelDepth) - 3)/6;
         leftMostChildOfLevelExpanded = 2*leftMostChildOfLevel-1;
-        dispFromLeft = index - leftMostChildOfLevelExpanded + 1;
-        // This can be considered a function of leafValue and index ...
+        dispFromLeft = index - powf(3.0, levelDepth)*(int)(levelDepth!=0);
         if (blockIdx.x == 0){
             printf("thread %d index %d\n",threadIdx.x, index);
             printf("thread %d pathIndex %d\n", threadIdx.x, pathIndex);
