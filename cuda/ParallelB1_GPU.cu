@@ -1783,7 +1783,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
         levelDepth += (int)(relativeLeafIndex / 364 != 0);
         levelDepth += (int)(relativeLeafIndex / 1093 != 0);
         levelDepth += (int)(relativeLeafIndex / 3280 != 0);
-        leftMostChildOfLevelExpanded = ((arbitraryParameter+6)*powf(3.0, levelDepth)/3+2);
+        leftMostChildOfLevelExpanded = ((arbitraryParameter+6)*powf(3.0, levelDepth-1)+2);
         dispFromLeft = index - leftMostChildOfLevelExpanded + 1;
         // This can be considered a function of leafValue and index ...
         if (blockIdx.x == 0){
