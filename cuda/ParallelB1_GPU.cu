@@ -1800,7 +1800,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
         levelDepth += (int)(relativeLeafIndex / 3279 != 0);
         leftMostChildOfLevel = ((2*arbitraryParameter+3)*powf(3.0, levelDepth) - 3)/6;
         leftMostChildOfLevelExpanded = 2*leftMostChildOfLevel-1;
-        totalNodes = (levelDepth!=0)*((1.0-powf(3.0, levelDepth+1))/(1.0-3.0));
+        totalNodes = (levelDepth!=0)*(((1.0-powf(3.0, levelDepth+1))/(1.0-3.0))-1);
         dispFromLeft = index - 2*totalNodes;
         if (blockIdx.x == 0){
             printf("thread %d index %d\n",threadIdx.x, index);
