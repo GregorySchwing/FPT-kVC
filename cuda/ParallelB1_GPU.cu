@@ -1700,6 +1700,16 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
     }          
 }
 
+    //int leafValue = global_active_leaf_indices[leafIndex];
+    // Solve recurrence relation 
+    // g(n) = 1/6*((2*C+3)*3^n - 3)
+    // C depends on leafValue
+    // where g(0) = left-most child of depth 1
+    // where g(1) = left-most child of depth 2
+    // where g(2) = left-most child of depth 3
+    // ...
+    //int arbitraryParameter = 3*(3*leafValue)+1);
+
 __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_leaf_indices,
                                         int * global_set_paths_indices,
                                         int * global_reduced_set_inclusion_count_ptr,
@@ -1717,7 +1727,9 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
     // where g(2) = left-most expanded child of depth 3
     // ... 
     int g_n = 6*leafValue+1;
-    int arbitraryParameter = 3*g_n-4;
+    int arbitraryParameterEx = 3*g_n-4;
+    int arbitraryParameter = 3*(3*leafValue)+1);
+    int leftMostChildOfLevel;
     int leftMostChildOfLevelExpanded;
     int setPathOffset = leafIndex * blockDim.x;
     int globalPathOffset = setPathOffset*4;
@@ -1783,6 +1795,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
         levelDepth += (int)(relativeLeafIndex / 364 != 0);
         levelDepth += (int)(relativeLeafIndex / 1093 != 0);
         levelDepth += (int)(relativeLeafIndex / 3280 != 0);
+        leftMostChildOfLevel = 1/6*((2*arbitraryParameter+3)*powf(3.0, levelDepth) - 3);
         leftMostChildOfLevelExpanded = ((arbitraryParameter+6)*powf(3.0, levelDepth-1)+2);
         dispFromLeft = index - leftMostChildOfLevelExpanded + 1;
         // This can be considered a function of leafValue and index ...
@@ -1792,6 +1805,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
             printf("thread %d indexMod6 %d\n", threadIdx.x, indexMod6);
             printf("thread %d pathChildIndex %d\n", threadIdx.x, pathChildIndex);
             printf("thread %d levelDepth %d\n", threadIdx.x, levelDepth);
+            printf("thread %d leftMostChildOfLevel %d\n", threadIdx.x, leftMostChildOfLevel);
             printf("thread %d leftMostChildOfLevelExpanded %d\n", threadIdx.x, leftMostChildOfLevelExpanded);
             printf("thread %d dispFromLeft %d\n", threadIdx.x, dispFromLeft);
         }
