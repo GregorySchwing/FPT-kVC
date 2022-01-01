@@ -2997,7 +2997,7 @@ void CallPopulateTree(int numberOfLevels,
         // 2*threadsPerBlock 
         // 0 to blockDim, the sorting index
         // blockDim to 5*blockDim, the path values
-        ParallelAssignMISToNodesBreadthFirst<<<activeVerticesCount,
+        ParallelAssignMISToNodesBreadthFirstClean<<<activeVerticesCount,
                                                threadsPerBlock,
                                                (threadsPerBlock + threadsPerBlock*4)*sizeof(int)>>>(
                                         active_leaves.Current(),
