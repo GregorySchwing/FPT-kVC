@@ -1772,7 +1772,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
     // Functor: (indexMod6 % 2 == 1) * (indexMod6 != 1) +
     //          (indexMod6 % 2 == 0) * (2 + (indexMod6 == 4))
 
-    int indexMod6, pathChildIndex, dispFromLeft, levelDepth, relativeLeafIndex;
+    int indexMod6, pathChildIndex, dispFromLeft, levelDepth, relativeLeafIndex, totalNodes;
     for(int index = threadIdx.x; index < leavesThatICanProcess*6; index += blockDim.x){
         pathIndex = index / 6;
         indexMod6 = index % 6;
@@ -1800,7 +1800,8 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
         levelDepth += (int)(relativeLeafIndex / 3279 != 0);
         leftMostChildOfLevel = ((2*arbitraryParameter+3)*powf(3.0, levelDepth) - 3)/6;
         leftMostChildOfLevelExpanded = 2*leftMostChildOfLevel-1;
-        dispFromLeft = index - (int)(levelDepth!=0)*2*pow(3.0, levelDepth);
+        totalNodes = (int)((1.0-powf(3.0, levelDepth))/(1.0-3.0));
+        dispFromLeft = index - 2*totalNodes;
         if (blockIdx.x == 0){
             printf("thread %d index %d\n",threadIdx.x, index);
             printf("thread %d pathIndex %d\n", threadIdx.x, pathIndex);
