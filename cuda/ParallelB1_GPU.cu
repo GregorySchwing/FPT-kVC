@@ -1718,16 +1718,12 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
     int leafIndex = blockIdx.x;
     int leafValue = global_active_leaf_indices[leafIndex];
     // Solve recurrence relation 
-    // g(n) = (C + 6)3^(n-1) - 2
-    //      = (1/3*(C + 6)*3^n) - 2
+    // g(n) = 1/6*((2*C+3)*3^n - 3)
     // C depends on leafValue
-    // 
-    // where g(0) = left-most expanded child of depth 1
-    // where g(1) = left-most expanded child of depth 2
-    // where g(2) = left-most expanded child of depth 3
+    // where g(0) = left-most child of depth 1
+    // where g(1) = left-most child of depth 2
+    // where g(2) = left-most child of depth 3
     // ... 
-    int g_n = 6*leafValue+1;
-    int arbitraryParameterEx = 3*g_n-4;
     int arbitraryParameter = 3*((3*leafValue)+1);
     int leftMostChildOfLevel;
     int leftMostChildOfLevelExpanded;
@@ -1796,7 +1792,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
         levelDepth += (int)(relativeLeafIndex / 1092 != 0);
         levelDepth += (int)(relativeLeafIndex / 3279 != 0);
         leftMostChildOfLevel = ((2*arbitraryParameter+3)*powf(3.0, levelDepth) - 3)/6;
-        leftMostChildOfLevelExpanded = ((arbitraryParameterEx+6)*powf(3.0, levelDepth-1)+2);
+        leftMostChildOfLevelExpanded = 2*leftMostChildOfLevel-1;
         dispFromLeft = index - leftMostChildOfLevelExpanded + 1;
         // This can be considered a function of leafValue and index ...
         if (blockIdx.x == 0){
