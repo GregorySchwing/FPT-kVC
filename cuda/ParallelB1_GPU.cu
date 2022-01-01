@@ -1708,7 +1708,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
     // where g(1) = left-most child of depth 2
     // where g(2) = left-most child of depth 3
     // ...
-    //int arbitraryParameter = 3*(3*leafValue)+1);
+    //int arbitraryParameter = 3*(3*leafValue)+1));
 
 __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_leaf_indices,
                                         int * global_set_paths_indices,
@@ -1728,7 +1728,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
     // ... 
     int g_n = 6*leafValue+1;
     int arbitraryParameterEx = 3*g_n-4;
-    int arbitraryParameter = 3*(3*leafValue)+1);
+    int arbitraryParameter = 3*((3*leafValue)+1);
     int leftMostChildOfLevel;
     int leftMostChildOfLevelExpanded;
     int setPathOffset = leafIndex * blockDim.x;
