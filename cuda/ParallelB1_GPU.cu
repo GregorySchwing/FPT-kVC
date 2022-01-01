@@ -1787,14 +1787,14 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
         relativeLeafIndex = index/2;
         levelDepth = 0;
         // No closed form solution exists.
-        levelDepth += (int)(relativeLeafIndex / 1 != 0);
-        levelDepth += (int)(relativeLeafIndex / 4 != 0);
-        levelDepth += (int)(relativeLeafIndex / 13 != 0);
-        levelDepth += (int)(relativeLeafIndex / 40 != 0);
-        levelDepth += (int)(relativeLeafIndex / 121 != 0);
-        levelDepth += (int)(relativeLeafIndex / 364 != 0);
-        levelDepth += (int)(relativeLeafIndex / 1093 != 0);
-        levelDepth += (int)(relativeLeafIndex / 3280 != 0);
+        //levelDepth += (int)(relativeLeafIndex / 1 != 0);
+        levelDepth += (int)(relativeLeafIndex / 3 != 0);
+        levelDepth += (int)(relativeLeafIndex / 12 != 0);
+        levelDepth += (int)(relativeLeafIndex / 39 != 0);
+        levelDepth += (int)(relativeLeafIndex / 120 != 0);
+        levelDepth += (int)(relativeLeafIndex / 363 != 0);
+        levelDepth += (int)(relativeLeafIndex / 1092 != 0);
+        levelDepth += (int)(relativeLeafIndex / 3279 != 0);
         leftMostChildOfLevel = ((2*arbitraryParameter+3)*powf(3.0, levelDepth) - 3)/6;
         leftMostChildOfLevelExpanded = ((arbitraryParameterEx+6)*powf(3.0, levelDepth-1)+2);
         dispFromLeft = index - leftMostChildOfLevelExpanded + 1;
