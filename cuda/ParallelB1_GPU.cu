@@ -1745,11 +1745,12 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
         paths[index] = global_set_paths_indices[setPathOffset + index];
     }
     __syncthreads();
-    int pathIndex, pathValue;
+    int pathIndex, pathValue, pathChild;
     for (int index = threadIdx.x; index < leavesThatICanProcess*4; index += blockDim.x){
         pathIndex = index / 4;
+        pathChild = index % 4;
         pathValue = global_set_paths_indices[setPathOffset + pathIndex];
-        paths[blockDim.x + index] = global_paths_ptr[globalPathOffset + pathValue*4];
+        paths[blockDim.x + index] = global_paths_ptr[globalPathOffset + pathValue*4 + pathChild];
     }    
     __syncthreads();
 
