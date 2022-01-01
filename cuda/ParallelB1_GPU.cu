@@ -1819,7 +1819,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
     __syncthreads();
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("VertsIncluded\n");
-        int numLvls = 4;
+        int numLvls = 6;
         int LB = 0, UB = 0;
         for (int lvl = 0; lvl < numLvls; ++lvl){
             if (LB == 0)
