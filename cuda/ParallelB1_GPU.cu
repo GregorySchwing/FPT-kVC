@@ -1733,7 +1733,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
     // 4 ints and the key being 1 int.  I will look further into this.
 
     // leavesThatICanProcess is necessarily < tPB
-    for (int index = threadIdx.x; index < leavesThatICanProcess; ){ // index += blockDim.x){
+    for (int index = threadIdx.x; index < leavesThatICanProcess; index += blockDim.x){
         paths[index] = global_set_paths_indices[setPathOffset + index];
     }
     __syncthreads();
