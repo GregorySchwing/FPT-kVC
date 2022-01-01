@@ -1764,7 +1764,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
     // Functor: (indexMod6 % 2 == 1) * (indexMod6 != 1) +
     //          (indexMod6 % 2 == 0) * (2 + (indexMod6 == 4))
 
-    int indexMod6, pathChildIndex, leftMostChildOfLevel, leftMostChildOfLevelExpanded, dispFromLeft, levelDepth, relativeLeafIndex;
+    int indexMod6, pathChildIndex, dispFromLeft, levelDepth, relativeLeafIndex;
     for(int index = threadIdx.x; index < leavesThatICanProcess*6; index += blockDim.x){
         pathIndex = index / 6;
         indexMod6 = index % 6;
