@@ -1309,9 +1309,8 @@ __global__ void ParallelProcessPendantEdges(
     // Set out-edges
     LB = global_row_offsets_dev_ptr[rowOffsOffset + myChild];
     UB = global_row_offsets_dev_ptr[rowOffsOffset + myChild + 1]; 
-    if (threadIdx.x == 0 && blockIdx.x == 0){
+    if (threadIdx.x == 0){
         printf("leafValue %d block index %d Set offsets in PPP\n", leafValue, myBlockIndex);
-        printf("\n");
     }   
     for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
         // Since there are only 2 edges b/w each node,
@@ -1332,10 +1331,10 @@ __global__ void ParallelProcessPendantEdges(
     }
     __syncthreads();
     if (threadIdx.x == 0){
-        printf("leafValue %d Block ID %d Finished out edges PPP\n", leafValue, blockIdx.x);
+        printf("leafValue %d Block index %d Finished out edges PPP\n", leafValue, myBlockIndex);
     }  
     if (threadIdx.x == 0){
-        printf("leafValue %d Block %d, leafValue %d, myChild removed %d\n", leafValue, myBlockIndex, myChild);
+        printf("leafValue %d Block index %d removed myChild %d\n", leafValue, myBlockIndex, myChild);
     }
     // (u,v) is the form of edge pairs.  We are traversing over v's outgoing edges, 
     // looking for u as the destination and turning off that edge.
