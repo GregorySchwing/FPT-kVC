@@ -1594,7 +1594,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
                                                                         && pathsAndIndependentStatus[setRemainingOffset + threadIdx.x]
                                                                         && (pathsAndIndependentStatus[randNumOffset + threadIdx.x]
                                                                             < pathsAndIndependentStatus[randNumOffset + row]);
-            printf("Row %d thread %d included %d\n", row, threadIdx.x, pathsAndIndependentStatus[setReductionOffset + threadIdx.x]);
+            //printf("Row %d thread %d included %d\n", row, threadIdx.x, pathsAndIndependentStatus[setReductionOffset + threadIdx.x]);
             int i = blockDim.x/2;
             __syncthreads();
             while (i != 0) {
@@ -1948,7 +1948,7 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
     
     extern __shared__ int new_active_leaves_count_red[];
     if (globalIndex < global_active_leaves_count_current[0]){
-        printf("globalIndex %d, global_active_leaves_count_current %x\n",globalIndex, global_active_leaves_count_current[0]);
+        printf("globalIndex %d, global_active_leaves_count_current %d\n",globalIndex, global_active_leaves_count_current[0]);
         printf("globalIndex %d, ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst\n",globalIndex);
 
         int leavesToProcess = global_reduced_set_inclusion_count_ptr[globalIndex];
@@ -1963,10 +1963,10 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
         int incompleteLevel = ceil(logf(2*leavesToProcess + 1) / logf(3));
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         int treeSizeComplete = (1.0 - powf(3.0, completeLevel))/(1.0 - 3.0);
-        printf("Leaves %d, completeLevel Level Depth %d\n",leavesToProcess, completeLevel);
-        printf("Leaves %d, completeLevelLeaves Level Depth %d\n",leavesToProcess, completeLevelLeaves);
-        printf("Leaves %d, incompleteLevel Level Depth %d\n",leavesToProcess, incompleteLevel);
-        printf("Leaves %d, treeSizeComplete Level Depth %d\n",leavesToProcess, treeSizeComplete);
+        printf("Leaves %d, completeLevel Depth %d\n",leavesToProcess, completeLevel);
+        printf("Leaves %d, completeLevelLeaves %d\n",leavesToProcess, completeLevelLeaves);
+        printf("Leaves %d, incompleteLevel Depth %d\n",leavesToProcess, incompleteLevel);
+        printf("Leaves %d, treeSizeComplete Leaves%d\n",leavesToProcess, treeSizeComplete);
         int removeFromComplete = ((leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
         int leavesFromIncompleteLvl = (leavesToProcess - treeSizeComplete);
         printf("Leaves %d, removeFromComplete %d\n",leavesToProcess, removeFromComplete);
