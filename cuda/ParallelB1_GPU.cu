@@ -2225,22 +2225,24 @@ __global__ void ParallelProcessDegreeZeroVertices(
     for (int vertex = threadIdx.x; vertex < numVertices; vertex += blockDim.x){
         numVerticesRemoved = 0;
         //printf("threadIdx.x %d, blockIdx.x %d, Vertex %d loop\n", threadIdx.x, blockIdx.x, vertex);
+        /*
         if (threadIdx.x == 0 && blockIdx.x == 0){
             printf("degreesOffset %d \n", degreesOffset);
             printf("vertex %d \n", vertex);
             printf("global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex] %d \n", global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex]);
             printf("full %d \n", global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex]]);
         }
+        */
         degreeZeroVertex[threadIdx.x] = (int)(0 == (global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex]]));
-        if (blockIdx.x == 0){
-            printf("Vertex %d set degreeZeroVertex %d since degree is %d\n", vertex, degreeZeroVertex[threadIdx.x], global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex]]);
-        }
+        //if (blockIdx.x == 0){
+        //    printf("Vertex %d set degreeZeroVertex %d since degree is %d\n", vertex, degreeZeroVertex[threadIdx.x], global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex]]);
+        //}
         // Makes this entry INT_MAX if degree 0
         // Leaves unaltered if not degree 0
         global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex] += (INT_MAX - global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex])*degreeZeroVertex[threadIdx.x];
-        if (blockIdx.x == 0){
-            printf("Vertex %d set global_remaining_vertices_dev_ptr %d\n", vertex, global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex]);
-        }
+        //if (blockIdx.x == 0){
+        //    printf("Vertex %d set global_remaining_vertices_dev_ptr %d\n", vertex, global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex]);
+        //}
         
         int i = blockDim.x/2;
         __syncthreads();
@@ -2255,14 +2257,14 @@ __global__ void ParallelProcessDegreeZeroVertices(
         }
         if (threadIdx.x == 0){
             numVerticesRemoved += degreeZeroVertex[threadIdx.x];
-            printf("numVerticesRemoved %d\n", numVerticesRemoved);
+            printf("leafIndex %d numVerticesRemoved %d\n", leafIndex, numVerticesRemoved);
 
         }
     }
     // Update remaining vert size
     // Now just need to sort those INT_MAX entries to the end of the array
     if (threadIdx.x == 0){
-        printf("numVerticesRemoved %d\n", numVerticesRemoved);
+        printf("leafIndex %d total numVerticesRemoved %d\n", leafIndex, numVerticesRemoved);
         global_remaining_vertices_size_dev_ptr[leafIndex] -= numVerticesRemoved;
     }
 }
