@@ -1220,8 +1220,8 @@ __global__ void ParallelProcessPendantEdges(
     int myBlockIndex = blockIdx.x % blockDim.x;
     int leafIndex = (blockIdx.x / blockDim.x);
     int leafValue = global_active_leaf_indices[leafIndex];
-    if (threadIdx.x == 0){
-        printf("Block ID %d Started ParallelProcessPendantEdges\n", blockIdx.x);
+    if (myBlockIndex == 0){
+        printf("leaf Value %d Started ParallelProcessPendantEdges\n", leafValue);
     }
     // Only process pendant edges
     // 1 block per path, up to TPB paths per node
@@ -1252,9 +1252,7 @@ __global__ void ParallelProcessPendantEdges(
     childrenAndDuplicateStatus[blockDim.x + threadIdx.x] = ((childrenAndDuplicateStatus[threadIdx.x] == myChild) 
                                                             && myBlockIndex < threadIdx.x);
     __syncthreads();
-    if (blockIdx.x == 0){
-        printf("leaf value %d Block index %d's childrenAndDuplicateStatus[%d] is %d\n", leafValue, myBlockIndex, threadIdx.x, childrenAndDuplicateStatus[blockDim.x + blockIdx.x]);
-    }
+    printf("leaf value %d Block index %d's childrenAndDuplicateStatus[%d] is %d\n", leafValue, myBlockIndex, threadIdx.x, childrenAndDuplicateStatus[blockDim.x + blockIdx.x]);
     int i = blockDim.x/2;
     // Checks for any duplicate children which have a smaller index than their other self
     // Only the smallest instance of a duplication will be false for both
