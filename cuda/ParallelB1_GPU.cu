@@ -624,7 +624,6 @@ __global__ void SetEdges(const int numberOfRows,
             __syncthreads();
             if (threadIdx.x == 0){
                 printf("Block %d, leafValue %d, myChild removed %d\n", blockIdx.x, leafValue, myChild);
-                printf("\n");
             }
             // (u,v) is the form of edge pairs.  We are traversing over v's outgoing edges, 
             // looking for u as the destination and turning off that edge.
