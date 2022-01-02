@@ -1157,7 +1157,7 @@ __global__ void ParallelDFSRandom(
     // Perhaps :
     // for (start = threadIDx.x; start < tpb*4; start += blockDimx)
     // global_paths_ptr[globalPathOffset + start] = pathsAndPendantStatus[start]
-
+    // STRIDING - NOT OPTIMAL 
     global_paths_ptr[globalPathOffset + sharedMemPathOffset + 0] = pathsAndPendantStatus[sharedMemPathOffset + 0];
     global_paths_ptr[globalPathOffset + sharedMemPathOffset + 1] = pathsAndPendantStatus[sharedMemPathOffset + 1];
     global_paths_ptr[globalPathOffset + sharedMemPathOffset + 2] = pathsAndPendantStatus[sharedMemPathOffset + 2];
@@ -1178,7 +1178,7 @@ __global__ void ParallelDFSRandom(
     // cI = (path[0] != path[2])
     // Hence, cI == 0, since false casted to int is 0
     // Therefore, v == path[cI]
-    int childIndex = pathsAndPendantStatus[sharedMemPathOffset + 0] != pathsAndPendantStatus[sharedMemPathOffset + 2];
+    int childIndex = (int)(pathsAndPendantStatus[sharedMemPathOffset + 0] != pathsAndPendantStatus[sharedMemPathOffset + 2]);
 
     // or
     // Case 2 - length 3
