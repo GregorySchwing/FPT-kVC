@@ -1188,7 +1188,7 @@ __global__ void ParallelDFSRandom(
     // Desired child is v1
     // Therefore, v1 == path[cI]
     // Set child or set -1 if nonpendant.  This is important for mixture of paths that are pen/nonpen and share common vertex
-    global_pendant_child_dev_ptr[blockIdx.x*blockDim.x + threadIdx.x] = (int)(!(pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x]))* pathsAndPendantStatus[sharedMemPathOffset + childIndex] - 1*(int)(pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x]);
+    global_pendant_child_dev_ptr[blockIdx.x*blockDim.x + threadIdx.x] = (int)((pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x]))* pathsAndPendantStatus[sharedMemPathOffset + childIndex] - 1*(int)(!pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x]);
 
     __syncthreads();
 
