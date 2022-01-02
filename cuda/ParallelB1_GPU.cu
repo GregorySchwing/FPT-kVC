@@ -1218,7 +1218,6 @@ __global__ void ParallelProcessPendantEdges(
 
     if (threadIdx.x == 0){
         printf("Block ID %d Started ParallelProcessPendantEdges\n", blockIdx.x);
-        printf("\n");
     }
     // Only process pendant edges
     // 1 block per child, up to 32 children per node
