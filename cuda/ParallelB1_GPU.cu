@@ -1952,11 +1952,13 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
         int leavesToProcess = global_reduced_set_inclusion_count_ptr[globalIndex];
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         // Solved for leavesToProcess < closed form
-        int completeLevel = floor(logf(2*leavesToProcess + 1) / logf(3));
+        // Index from 0
+        int completeLevel = floor(logf(2*leavesToProcess + 1) / logf(3))-1;
         int completeLevelLeaves = powf(3.0, completeLevel);
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         // Solved for closed form < leavesToProcess
-        int incompleteLevel = ceil(logf(2*leavesToProcess + 1) / logf(3));
+        // Index from 0
+        int incompleteLevel = ceil(logf(2*leavesToProcess + 1) / logf(3))-1;
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         int treeSizeComplete = (1.0 - pow(3.0, completeLevel))/(1.0 - 3.0);
         printf("Leaves %d, completeLevel Level Depth %d\n",leavesToProcess, completeLevel);
