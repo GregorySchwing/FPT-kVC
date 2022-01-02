@@ -3051,6 +3051,22 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
+        PrintData<<<1,1>>>(activeVerticesCount,
+                numberOfRows,
+                numberOfEdgesPerGraph, 
+                verticesRemainingInGraph,
+                row_offsets.Current(),
+                columns.Current(),
+                values.Current(),
+                degrees.Current(),
+                remaining_vertices.Current(),
+                edges_left.Current(),
+                remaining_vertices_count.Current());
+
+                
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+
         ParallelIdentifyVertexDisjointNonPendantPaths<<<activeVerticesCount,
                                                         threadsPerBlock,
                                                         (threadsPerBlock*threadsPerBlock + 
