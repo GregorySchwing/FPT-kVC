@@ -597,6 +597,7 @@ __global__ void SetEdges(const int numberOfRows,
     int degreesOffset = leafIndex * numberOfRows;
     int searchTreeIndex = leafValue*2;
     int LB, UB, v, vLB, vUB, myChild;
+    // Number of loops could explicitly calculated based on parent and leaf val
     while(leafValue != parentLeafValue){
         for (int childIndex = 0; childIndex < 2; ++childIndex){
             searchTreeIndex = leafValue*2;
@@ -2047,7 +2048,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
         // If non-pendant paths were found, populate the search tree in the 
         // complete level
         for (; index < completeLevelLeaves - removeFromComplete; ++index){
-            printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfFullLevel + index + removeFromComplete);
+            //printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfFullLevel + index + removeFromComplete);
             global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfFullLevel + index + removeFromComplete;
             global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
             global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
@@ -2062,14 +2063,14 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
         // If non-pendant paths were found, populate the search tree in the 
         // incomplete level
         for (int incompleteIndex = 0; index < totalNewActive; ++index, ++incompleteIndex){
-            printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfIncompleteLevel + incompleteIndex);
+            //printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfIncompleteLevel + incompleteIndex);
             global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfIncompleteLevel + incompleteIndex;
             global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
             global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
         }
-        for (int testP = 0; testP < global_active_leaves_count_new[0]; ++testP){
-            printf("global_newly_active_leaves[%d] = %d\n",testP, global_newly_active_leaves[testP]);
-        }
+        //for (int testP = 0; testP < global_active_leaves_count_new[0]; ++testP){
+        //    printf("global_newly_active_leaves[%d] = %d\n",testP, global_newly_active_leaves[testP]);
+        //}
     }
 }
 
@@ -2127,7 +2128,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
         // If non-pendant paths were found, populate the search tree in the 
         // complete level
         for (; index < completeLevelLeaves - removeFromComplete; ++index){
-            printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfFullLevel + index + removeFromComplete);
+            //printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfFullLevel + index + removeFromComplete);
             global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfFullLevel + index + removeFromComplete;
             global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
             global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
@@ -2144,14 +2145,14 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
         // If non-pendant paths were found, populate the search tree in the 
         // incomplete level
         for (int incompleteIndex = 0; index < totalNewActive; ++index, ++incompleteIndex){
-            printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfIncompleteLevel + incompleteIndex);
+            //printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfIncompleteLevel + incompleteIndex);
             global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfIncompleteLevel + incompleteIndex;
             global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
             global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
         }
-        for (int testP = 0; testP < global_active_leaves_count_new[0]; ++testP){
-            printf("global_newly_active_leaves[%d] = %d\n",testP, global_newly_active_leaves[testP]);
-        }
+        //for (int testP = 0; testP < global_active_leaves_count_new[0]; ++testP){
+        //    printf("global_newly_active_leaves[%d] = %d\n",testP, global_newly_active_leaves[testP]);
+        //}
     }
 }
 
@@ -2222,6 +2223,8 @@ __global__ void ParallelProcessDegreeZeroVertices(
         degreeZeroVertex[iter] = 0;
     }
     __syncthreads();
+    // Sync threads will hang for num verts > tPB...
+    // FIX THIS!!!!!!!!!!!!!!
     for (int vertex = threadIdx.x; vertex < numVertices; vertex += blockDim.x){
         //numVerticesRemoved = 0;
         //printf("threadIdx.x %d, blockIdx.x %d, Vertex %d loop\n", threadIdx.x, blockIdx.x, vertex);
