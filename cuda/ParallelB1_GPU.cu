@@ -2113,10 +2113,6 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
         int incompleteLevel = ceil(logf(2*leavesToProcess + 1) / logf(3));
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         int treeSizeComplete = (1.0 - powf(3.0, completeLevel))/(1.0 - 3.0);
-        printf("Leaves %d, completeLevel Level Depth %d\n",leavesToProcess, completeLevel);
-        printf("Leaves %d, completeLevelLeaves %d\n",leavesToProcess, completeLevelLeaves);
-        printf("Leaves %d, incompleteLevel Level Depth %d\n",leavesToProcess, incompleteLevel);
-        printf("Leaves %d, treeSizeComplete %d\n",leavesToProcess, treeSizeComplete);
         // How many internal leaves to skip in complete level
         int removeFromComplete = ((leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
         // Leaves that are used in next level
@@ -2146,6 +2142,11 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
         }
 
         int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
+        printf("globalIndex %d, ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean\n",globalIndex);
+        printf("Leaves %d, completeLevel Level Depth %d\n",leavesToProcess, completeLevel);
+        printf("Leaves %d, completeLevelLeaves %d\n",leavesToProcess, completeLevelLeaves);
+        printf("Leaves %d, incompleteLevel Level Depth %d\n",leavesToProcess, incompleteLevel);
+        printf("Leaves %d, treeSizeComplete %d\n",leavesToProcess, treeSizeComplete);
         printf("Leaves %d, totalNewActive %d\n",leavesToProcess, totalNewActive);
 
         // If non-pendant paths were found, populate the search tree in the 
