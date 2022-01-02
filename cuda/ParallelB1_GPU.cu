@@ -2065,6 +2065,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
             incompleteLevel -= 1;
         }
         int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
+        printf("Leaves %d, totalNewActive %d\n",leavesToProcess, totalNewActive);
         // If non-pendant paths were found, populate the search tree in the 
         // incomplete level
         for (int incompleteIndex = 0; index < totalNewActive; ++index, ++incompleteIndex){
