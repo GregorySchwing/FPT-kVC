@@ -3067,6 +3067,9 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
+        // Everything seems to be working till this point, need to print inside this method.
+        // The deg 0 vertices are in the middle of the remVerts list..
+
         ParallelIdentifyVertexDisjointNonPendantPaths<<<activeVerticesCount,
                                                         threadsPerBlock,
                                                         (threadsPerBlock*threadsPerBlock + 
