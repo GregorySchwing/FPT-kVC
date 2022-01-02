@@ -604,10 +604,6 @@ __global__ void SetEdges(const int numberOfRows,
             // Set out-edges
             LB = global_row_offsets_dev_ptr[rowOffsOffset + myChild];
             UB = global_row_offsets_dev_ptr[rowOffsOffset + myChild + 1]; 
-            if (threadIdx.x == 0 && blockIdx.x == 0){
-                printf("block ID %d Set offsets in PPP\n", blockIdx.x);
-                printf("\n");
-            }   
             for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
                 // Since there are only 2 edges b/w each node,
                 // We can safely decrement the target node's degree
@@ -626,10 +622,6 @@ __global__ void SetEdges(const int numberOfRows,
                     global_degrees_dev_ptr[degreesOffset + myChild] = 0;
             }
             __syncthreads();
-            if (threadIdx.x == 0){
-                printf("Block ID %d Finished out edges PPP\n", blockIdx.x);
-                printf("\n");
-            }  
             if (threadIdx.x == 0){
                 printf("Block %d, leafValue %d, myChild removed %d\n", blockIdx.x, leafValue, myChild);
                 printf("\n");
