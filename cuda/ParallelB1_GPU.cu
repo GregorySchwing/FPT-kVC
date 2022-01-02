@@ -1187,7 +1187,9 @@ __global__ void ParallelDFSRandom(
     // cI == 1, since true casted to int is 1
     // Desired child is v1
     // Therefore, v1 == path[cI]
-    global_pendant_child_dev_ptr[blockIdx.x*blockDim.x + threadIdx.x] = pathsAndPendantStatus[sharedMemPathOffset + childIndex];
+    // Set child or set -1 if nonpendant.  This is important for mixture of paths that are pen/nonpen and share common vertex
+    global_pendant_child_dev_ptr[blockIdx.x*blockDim.x + threadIdx.x] = (int)(!(pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x]))* pathsAndPendantStatus[sharedMemPathOffset + childIndex] - 1*(int)(pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x]);
+
     __syncthreads();
 
     int i = blockDim.x/2;
@@ -1201,7 +1203,7 @@ __global__ void ParallelDFSRandom(
     }
     // Only 1 bool for 32 paths
     if (threadIdx.x == 0)
-        global_pendant_path_reduced_bool_dev_ptr[blockIdx.x] = (int)(!(pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x]))*pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] - 1*(int)(pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x]);
+        global_pendant_path_reduced_bool_dev_ptr[blockIdx.x] = pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x];
 }
 
 __global__ void ParallelProcessPendantEdges(
