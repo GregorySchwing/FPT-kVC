@@ -1222,7 +1222,7 @@ __global__ void ParallelProcessPendantEdges(
     int myBlockIndex = blockIdx.x % blockDim.x;
     int leafIndex = (blockIdx.x / blockDim.x);
     int leafValue = global_active_leaf_indices[leafIndex];
-    if (myBlockIndex == 0){
+    if (myBlockIndex == 0 && threadIdx.x == 0){
         printf("leaf Value %d Started ParallelProcessPendantEdges\n", leafValue);
     }
     // Only process pendant edges
