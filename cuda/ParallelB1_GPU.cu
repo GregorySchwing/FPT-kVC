@@ -2102,14 +2102,14 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         // Solved for leavesToProcess < closed form
         // start from 0, hence subtract 1
-        int completeLevel = floor(logf(2*leavesToProcess + 1) / logf(3))-1;
+        int completeLevel = floor(logf(2*leavesToProcess + 1) / logf(3));
         int completeLevelLeaves = powf(3.0, completeLevel);
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         // Solved for closed form < leavesToProcess
         // start from 0, hence subtract 1
-        int incompleteLevel = ceil(logf(2*leavesToProcess + 1) / logf(3))-1;
+        int incompleteLevel = ceil(logf(2*leavesToProcess + 1) / logf(3));
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
-        int treeSizeComplete = (1.0 - pow(3.0, completeLevel))/(1.0 - 3.0);
+        int treeSizeComplete = (1.0 - powf(3.0, completeLevel))/(1.0 - 3.0);
         printf("Leaves %d, completeLevel Level Depth %d\n",leavesToProcess, completeLevel);
         printf("Leaves %d, completeLevelLeaves %d\n",leavesToProcess, completeLevelLeaves);
         printf("Leaves %d, incompleteLevel Level Depth %d\n",leavesToProcess, incompleteLevel);
