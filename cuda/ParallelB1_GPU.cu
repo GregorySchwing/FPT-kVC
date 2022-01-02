@@ -1215,35 +1215,34 @@ __global__ void ParallelProcessPendantEdges(
                             int * global_edges_left_to_cover_count,
                             int * global_pendant_path_bool_dev_ptr,
                             int * global_pendant_child_dev_ptr){
-
-    if (threadIdx.x == 0){
-        printf("Block ID %d Started ParallelProcessPendantEdges\n", blockIdx.x);
-    }
-    // Only process pendant edges
-    // 1 block per child, up to 32 children per node
-    if (!global_pendant_path_bool_dev_ptr[blockIdx.x])
-        return;
-    if (threadIdx.x == 0){
-        printf("Block ID %d is pendant\n", blockIdx.x);
-    }
-    // My child won't be set unless this block represents a valid pendant path
-    // Could be a shared var
-    int myChild = global_pendant_child_dev_ptr[blockIdx.x];
-    if (threadIdx.x == 0){
-        printf("Block ID %d's child is %d\n", blockIdx.x, myChild);
-    }
     // Beginning of group of TPB pendant children
     int myBlockOffset = (blockIdx.x / blockDim.x) * blockDim.x;
     int myBlockIndex = blockIdx.x % blockDim.x;
     int leafIndex = (blockIdx.x / blockDim.x);
     int leafValue = global_active_leaf_indices[leafIndex];
+    if (threadIdx.x == 0){
+        printf("Block ID %d Started ParallelProcessPendantEdges\n", blockIdx.x);
+    }
+    // Only process pendant edges
+    // 1 block per path, up to TPB paths per node
+    if (!global_pendant_path_bool_dev_ptr[blockIdx.x])
+        return;
+    if (threadIdx.x == 0){
+        printf("leafValue %d path %d is pendant\n", leafValue,myBlockIndex);
+    }
+    // My child won't be set unless this block represents a valid pendant path
+    // Could be a shared var
+    int myChild = global_pendant_child_dev_ptr[blockIdx.x];
+    if (threadIdx.x == 0){
+        printf("leafValue %d path %d's child is %d\n", leafValue, myBlockIndex, myChild);
+    }
     extern __shared__ int childrenAndDuplicateStatus[];
     // Write all 32 pendant children to shared memory
     // This offset works because it isnt treewise global, just levelwise
     childrenAndDuplicateStatus[threadIdx.x] = global_pendant_child_dev_ptr[myBlockOffset + threadIdx.x];
     __syncthreads();
-    if (blockIdx.x == 0){
-        printf("Block ID %d's pendant[%d] is %d\n", blockIdx.x, threadIdx.x, childrenAndDuplicateStatus[threadIdx.x]);
+    if (myBlockIndex == 0){
+        printf("leaf value %d path %d's pendant[%d] is %d\n", leafValue, myBlockIndex, threadIdx.x, childrenAndDuplicateStatus[threadIdx.x]);
     }
     // See if myChild is duplicated, 1 vs all comparison written to shared memory
     // Also, if it is duplicated, only process the largest index duplicate
@@ -1254,7 +1253,7 @@ __global__ void ParallelProcessPendantEdges(
                                                             && myBlockIndex < threadIdx.x);
     __syncthreads();
     if (blockIdx.x == 0){
-        printf("Block ID %d's childrenAndDuplicateStatus[%d] is %d\n", blockIdx.x, threadIdx.x, childrenAndDuplicateStatus[blockDim.x + blockIdx.x]);
+        printf("leaf value %d Block index %d's childrenAndDuplicateStatus[%d] is %d\n", leafValue, myBlockIndex, threadIdx.x, childrenAndDuplicateStatus[blockDim.x + blockIdx.x]);
     }
     int i = blockDim.x/2;
     // Checks for any duplicate children which have a smaller index than their other self
@@ -1299,7 +1298,7 @@ __global__ void ParallelProcessPendantEdges(
         return;
 
     if (threadIdx.x == 0)
-        printf("Block ID %d made it past the return\n", blockIdx.x);
+        printf("leafValue %d Block index %d made it past the return\n", leafValue, myBlockIndex);
 
 
     int pathsOffset = leafIndex * 4;
@@ -1311,7 +1310,7 @@ __global__ void ParallelProcessPendantEdges(
     LB = global_row_offsets_dev_ptr[rowOffsOffset + myChild];
     UB = global_row_offsets_dev_ptr[rowOffsOffset + myChild + 1]; 
     if (threadIdx.x == 0 && blockIdx.x == 0){
-        printf("block ID %d Set offsets in PPP\n", blockIdx.x);
+        printf("leafValue %d block index %d Set offsets in PPP\n", leafValue, myBlockIndex);
         printf("\n");
     }   
     for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
@@ -1333,12 +1332,10 @@ __global__ void ParallelProcessPendantEdges(
     }
     __syncthreads();
     if (threadIdx.x == 0){
-        printf("Block ID %d Finished out edges PPP\n", blockIdx.x);
-        printf("\n");
+        printf("leafValue %d Block ID %d Finished out edges PPP\n", leafValue, blockIdx.x);
     }  
     if (threadIdx.x == 0){
-        printf("Block %d, leafValue %d, myChild removed %d\n", blockIdx.x, leafValue, myChild);
-        printf("\n");
+        printf("leafValue %d Block %d, leafValue %d, myChild removed %d\n", leafValue, myBlockIndex, myChild);
     }
     // (u,v) is the form of edge pairs.  We are traversing over v's outgoing edges, 
     // looking for u as the destination and turning off that edge.
