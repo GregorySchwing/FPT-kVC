@@ -2091,8 +2091,10 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
     int arbitraryParameter;
     int leftMostChildOfLevel;
     int leftMostLeafIndexOfFullLevel;
-    printf("globalIndex %d, global_active_leaves_count_current %x\n",globalIndex, global_active_leaves_count_current[0]);
+    int leftMostLeafIndexOfIncompleteLevel;
+    // Since number of leaves is not necessarily a power of 2
     if (globalIndex < global_active_leaves_count_current[0]){
+        printf("globalIndex %d, global_active_leaves_count_current %x\n",globalIndex, global_active_leaves_count_current[0]);
         int leavesToProcess = global_reduced_set_inclusion_count_ptr[globalIndex];
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         // Solved for leavesToProcess < closed form
@@ -2107,14 +2109,16 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
         printf("Leaves %d, completeLevelLeaves Level Depth %d\n",leavesToProcess, completeLevelLeaves);
         printf("Leaves %d, incompleteLevel Level Depth %d\n",leavesToProcess, incompleteLevel);
         printf("Leaves %d, treeSizeComplete Level Depth %d\n",leavesToProcess, treeSizeComplete);
+        // How many internal leaves to skip in complete level
         int removeFromComplete = ((leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
+        // Leaves that are used in next level
         int leavesFromIncompleteLvl = (leavesToProcess - treeSizeComplete);
         leafValue = global_active_leaves[globalIndex];
-        arbitraryParameter; = 3*((3*leafValue)+1);
-        leftMostLeafIndexOfFullLevel = leafValue;
+        arbitraryParameter = 3*((3*leafValue)+1);
         // Closed form solution of recurrence relation shown in comment above method
-        leftMostChildOfLevel = ((2*arbitraryParameter+3)*powf(3.0, completeLevel) - 3)/6;
-        
+        leftMostLeafIndexOfFullLevel = ((2*arbitraryParameter+3)*powf(3.0, completeLevel) - 3)/6;
+        leftMostLeafIndexOfIncompleteLevel = ((2*arbitraryParameter+3)*powf(3.0, incompleteLevel) - 3)/6;
+
         int newly_active_offset = global_newly_active_offset_ptr[globalIndex];
         int index = 0;
         // These values will be overwritten in the for loops, if leavesToProcess > 0
@@ -2132,11 +2136,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
             global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
             global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
         }
-        int leftMostLeafIndexOfIncompleteLevel = leafValue;
-        while (incompleteLevel > 0){
-            leftMostLeafIndexOfIncompleteLevel = (3.0 * leftMostLeafIndexOfIncompleteLevel + 1);
-            incompleteLevel -= 1;
-        }
+
         int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
         // If non-pendant paths were found, populate the search tree in the 
         // incomplete level
@@ -2673,7 +2673,10 @@ void CallPopulateTree(int numberOfLevels,
     int * global_edges_left_to_cover_count_buffer;
 
     int * global_active_leaf_indices, * global_active_leaf_indices_buffer;
-    int * global_active_leaf_parent_leaf_index, * global_active_leaf_parent_leaf_value;
+    // Used to as the source of the copied graph
+    int * global_active_leaf_parent_leaf_index;
+    // Used for determining when to stop recursing up for set vertices
+    int * global_active_leaf_parent_leaf_value;
 
     int * global_active_leaf_indices_count;
     int * global_active_leaf_indices_count_buffer;
@@ -3160,7 +3163,7 @@ void CallPopulateTree(int numberOfLevels,
         // Just to test a single iteration
         printf("TRUE activeVerticesCount : %d\n", activeVerticesCount);
       
-        ParallelPopulateNewlyActivateLeafNodesBreadthFirst<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock>>>(
+        ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock>>>(
                                         active_leaves.Current(),
                                         active_leaves.Alternate(),
                                         active_leaves_count.Current(),
