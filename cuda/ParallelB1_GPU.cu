@@ -1251,7 +1251,7 @@ __global__ void ParallelProcessPendantEdges(
     childrenAndDuplicateStatus[blockDim.x + threadIdx.x] = ((childrenAndDuplicateStatus[threadIdx.x] == myChild) 
                                                             && myBlockIndex < threadIdx.x);
     __syncthreads();
-    printf("leaf value %d Block index %d's childrenAndDuplicateStatus[%d] is %d\n", leafValue, myBlockIndex, threadIdx.x, childrenAndDuplicateStatus[blockDim.x + blockIdx.x]);
+    printf("leaf value %d Block index %d's childrenAndDuplicateStatus[%d] is %d\n", leafValue, myBlockIndex, threadIdx.x, childrenAndDuplicateStatus[blockDim.x + threadIdx.x]);
     int i = blockDim.x/2;
     // Checks for any duplicate children which have a smaller index than their other self
     // Only the smallest instance of a duplication will be false for both
