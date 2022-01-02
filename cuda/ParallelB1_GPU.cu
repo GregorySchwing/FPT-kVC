@@ -2098,17 +2098,19 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
         int leavesToProcess = global_reduced_set_inclusion_count_ptr[globalIndex];
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         // Solved for leavesToProcess < closed form
-        int completeLevel = floor(logf(2*leavesToProcess + 1) / logf(3));
+        // start from 0, hence subtract 1
+        int completeLevel = floor(logf(2*leavesToProcess + 1) / logf(3))-1;
         int completeLevelLeaves = powf(3.0, completeLevel);
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         // Solved for closed form < leavesToProcess
-        int incompleteLevel = ceil(logf(2*leavesToProcess + 1) / logf(3));
+        // start from 0, hence subtract 1
+        int incompleteLevel = ceil(logf(2*leavesToProcess + 1) / logf(3))-1;
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         int treeSizeComplete = (1.0 - pow(3.0, completeLevel))/(1.0 - 3.0);
         printf("Leaves %d, completeLevel Level Depth %d\n",leavesToProcess, completeLevel);
-        printf("Leaves %d, completeLevelLeaves Level Depth %d\n",leavesToProcess, completeLevelLeaves);
+        printf("Leaves %d, completeLevelLeaves %d\n",leavesToProcess, completeLevelLeaves);
         printf("Leaves %d, incompleteLevel Level Depth %d\n",leavesToProcess, incompleteLevel);
-        printf("Leaves %d, treeSizeComplete Level Depth %d\n",leavesToProcess, treeSizeComplete);
+        printf("Leaves %d, treeSizeComplete %d\n",leavesToProcess, treeSizeComplete);
         // How many internal leaves to skip in complete level
         int removeFromComplete = ((leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
         // Leaves that are used in next level
