@@ -1241,7 +1241,8 @@ __global__ void ParallelProcessPendantEdges(
     // This offset works because it isnt treewise global, just levelwise
     childrenAndDuplicateStatus[threadIdx.x] = global_pendant_child_dev_ptr[myBlockOffset + threadIdx.x];
     __syncthreads();
-    if (myBlockIndex == 0){
+    if (threadIdx.x == 0){
+    //if (myBlockIndex == 0){
         printf("leaf value %d path %d's pendant[%d] is %d\n", leafValue, myBlockIndex, threadIdx.x, childrenAndDuplicateStatus[threadIdx.x]);
     }
     // See if myChild is duplicated, 1 vs all comparison written to shared memory
