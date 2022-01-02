@@ -1201,7 +1201,7 @@ __global__ void ParallelDFSRandom(
     }
     // Only 1 bool for 32 paths
     if (threadIdx.x == 0)
-        global_pendant_path_reduced_bool_dev_ptr[blockIdx.x] = pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x];
+        global_pendant_path_reduced_bool_dev_ptr[blockIdx.x] = (int)(!(pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x]))*pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] - 1*(int)(pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x]);
 }
 
 __global__ void ParallelProcessPendantEdges(
@@ -1248,6 +1248,7 @@ __global__ void ParallelProcessPendantEdges(
     // If it isn't duplicated, process the child.
 
     // By the cardinality of rational numbers, 
+    // Obviously the path should be pendant...currently failing because there are paths including 18 which aren't pendant
     childrenAndDuplicateStatus[blockDim.x + threadIdx.x] = ((childrenAndDuplicateStatus[threadIdx.x] == myChild) 
                                                             && myBlockIndex < threadIdx.x);
     __syncthreads();
