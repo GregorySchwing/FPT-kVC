@@ -2120,8 +2120,9 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
         leafValue = global_active_leaves[globalIndex];
         arbitraryParameter = 3*((3*leafValue)+1);
         // Closed form solution of recurrence relation shown in comment above method
-        leftMostLeafIndexOfFullLevel = ((2*arbitraryParameter+3)*powf(3.0, completeLevel) - 3)/6;
-        leftMostLeafIndexOfIncompleteLevel = ((2*arbitraryParameter+3)*powf(3.0, incompleteLevel) - 3)/6;
+        // Subtract 1 because reasons
+        leftMostLeafIndexOfFullLevel = ((2*arbitraryParameter+3)*powf(3.0, completeLevel-1) - 3)/6;
+        leftMostLeafIndexOfIncompleteLevel = ((2*arbitraryParameter+3)*powf(3.0, incompleteLevel-1) - 3)/6;
 
         int newly_active_offset = global_newly_active_offset_ptr[globalIndex];
         int index = 0;
