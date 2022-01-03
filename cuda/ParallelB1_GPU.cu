@@ -1414,7 +1414,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
                             int * global_set_inclusion_bool_ptr,
                             int * global_reduced_set_inclusion_count_ptr){
     //if (threadIdx.x == 0){
-        printf("Block ID %d Started ParallelIdentifyVertexDisjointNonPendantPaths\n", blockIdx.x);
+    printf("Block ID %d Started ParallelIdentifyVertexDisjointNonPendantPaths\n", blockIdx.x);
     //}
 
     int leafIndex = blockIdx.x;
@@ -1445,6 +1445,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
         printf("Block ID %d setInclusionOffset %d\n", blockIdx.x, setInclusionOffset);
         printf("Block ID %d setRemainingOffset %d\n", blockIdx.x, setRemainingOffset);
     }
+    __syncthreads();
 
     // Write all 32 nonpendant paths to shared memory
     for (int start = threadIdx.x; start < blockDim.x*4; start += blockDim.x){
