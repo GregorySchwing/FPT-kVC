@@ -3078,7 +3078,7 @@ void CallPopulateTree(int numberOfLevels,
         // Everything seems to be working till this point, need to print inside this method.
         // The deg 0 vertices are in the middle of the remVerts list..
         std::cout << "Calling ParallelIdentifyVertexDisjointNonPendantPaths" << std::endl;
-
+        // Occasionally we end up including way to many paths in the set.
         ParallelIdentifyVertexDisjointNonPendantPaths<<<activeVerticesCount,
                                                         threadsPerBlock,
                                                         (threadsPerBlock*threadsPerBlock + 
@@ -3121,6 +3121,7 @@ void CallPopulateTree(int numberOfLevels,
         // 0 to blockDim, the sorting index
         // blockDim to 5*blockDim, the path values
         std::cout << "Calling ParallelAssignMISToNodesBreadthFirstClean" << std::endl;
+        // Need to test the recurrence relation.
         ParallelAssignMISToNodesBreadthFirstClean<<<activeVerticesCount,
                                                threadsPerBlock,
                                                (threadsPerBlock + threadsPerBlock*4)*sizeof(int)>>>(
@@ -3139,7 +3140,7 @@ void CallPopulateTree(int numberOfLevels,
         checkLastErrorCUDA(__FILE__, __LINE__);
 
         numberOfBlocksForOneThreadPerLeaf = (activeVerticesCount + threadsPerBlock - 1) / threadsPerBlock;
-
+        // Need to test the recurrence relation.
         ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock,threadsPerBlock*sizeof(int)>>>(
                                         active_leaves_count.Current(),
                                         active_leaves_count.Alternate(),
@@ -3187,7 +3188,7 @@ void CallPopulateTree(int numberOfLevels,
 
         // Just to test a single iteration
         printf("TRUE activeVerticesCount : %d\n", activeVerticesCount);
-      
+        // Need to test the recurrence relation.
         ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock>>>(
                                         active_leaves.Current(),
                                         active_leaves.Alternate(),
