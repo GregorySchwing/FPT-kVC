@@ -3087,6 +3087,7 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
+        std::cout << "Calling SortPathIndices" << std::endl;
         SortPathIndices(activeVerticesCount,
                         threadsPerBlock,
                         paths_indices,
@@ -3096,6 +3097,7 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
+        std::cout << "Calling PrintSets" << std::endl;
         PrintSets<<<1,1>>>(activeVerticesCount,
                 paths_indices.Current(),
                 paths_indices.Alternate(),
@@ -3109,6 +3111,7 @@ void CallPopulateTree(int numberOfLevels,
         // 2*threadsPerBlock 
         // 0 to blockDim, the sorting index
         // blockDim to 5*blockDim, the path values
+        std::cout << "Calling ParallelAssignMISToNodesBreadthFirstClean" << std::endl;
         ParallelAssignMISToNodesBreadthFirstClean<<<activeVerticesCount,
                                                threadsPerBlock,
                                                (threadsPerBlock + threadsPerBlock*4)*sizeof(int)>>>(
