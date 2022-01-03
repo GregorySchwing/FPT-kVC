@@ -3134,7 +3134,7 @@ void CallPopulateTree(int numberOfLevels,
 
         numberOfBlocksForOneThreadPerLeaf = (activeVerticesCount + threadsPerBlock - 1) / threadsPerBlock;
 
-        ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock,threadsPerBlock>>>(
+        ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock,threadsPerBlock*sizeof(int)>>>(
                                         active_leaves_count.Current(),
                                         active_leaves_count.Alternate(),
                                         global_reduced_set_inclusion_count_ptr,
