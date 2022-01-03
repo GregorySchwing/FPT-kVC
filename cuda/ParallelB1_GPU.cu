@@ -1552,6 +1552,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
         }              
         __syncthreads();       
     }
+    /*
     if (threadIdx.x == 0){
         printf("Adj Mat\n");
         for (int row = 0; row < blockDim.x; ++row){
@@ -1562,6 +1563,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
             printf("\n");
         }
     }
+    */
     // S = {p | p is a set of length 4 of vertex indices in G}
     // An edge (u,v), where u ∈ S, v ∈ S, and u ∩ v ≠ ∅
     // At this point I = {∀p ∈ S | p is pendant}
@@ -3062,7 +3064,7 @@ void CallPopulateTree(int numberOfLevels,
                 edges_left.Current(),
                 remaining_vertices_count.Current());
 
-                
+        std::cout << "Returned from PrintData" << std::endl;
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
