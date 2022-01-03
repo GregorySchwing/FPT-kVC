@@ -1415,7 +1415,6 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
                             int * global_reduced_set_inclusion_count_ptr){
     if (threadIdx.x == 0){
         printf("Block ID %d Started ParallelIdentifyVertexDisjointNonPendantPaths\n", blockIdx.x);
-        printf("\n");
     }
 
     int leafIndex = blockIdx.x;
@@ -1485,7 +1484,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
     // vertex % 4             vertex / 4
     //int myPathIndex = blockIdx.x % blockDim.x;
     printf("Block ID %d thread %d about to start adj mat\n", blockIdx.x, threadIdx.x);
-                __syncthreads();
+    __syncthreads();
 
     int row, rowOffset, myChild, comparatorChild, vertex, myPathOffset, comparatorPathOffset;
     for (row = 0; row < blockDim.x; ++row){
@@ -3069,6 +3068,7 @@ void CallPopulateTree(int numberOfLevels,
 
         // Everything seems to be working till this point, need to print inside this method.
         // The deg 0 vertices are in the middle of the remVerts list..
+        std::cout << "Calling ParallelIdentifyVertexDisjointNonPendantPaths" << std::endl;
 
         ParallelIdentifyVertexDisjointNonPendantPaths<<<activeVerticesCount,
                                                         threadsPerBlock,
