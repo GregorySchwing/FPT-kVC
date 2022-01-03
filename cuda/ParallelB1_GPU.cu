@@ -1413,9 +1413,9 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
                             int * global_paths_ptr,
                             int * global_set_inclusion_bool_ptr,
                             int * global_reduced_set_inclusion_count_ptr){
-    if (threadIdx.x == 0){
+    //if (threadIdx.x == 0){
         printf("Block ID %d Started ParallelIdentifyVertexDisjointNonPendantPaths\n", blockIdx.x);
-    }
+    //}
 
     int leafIndex = blockIdx.x;
     int globalPathOffset = leafIndex * 4 * blockDim.x;
