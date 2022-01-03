@@ -1755,6 +1755,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
     // Desired mapping:
     // 0 -> 2 
     // 1 -> 0
+    
     // 2 -> 2
     // 3 -> 1
     // 4 -> 3
@@ -2596,13 +2597,15 @@ void CallPopulateTree(int numberOfLevels,
 
     //int treeSize = 200000;
     int counters = 2;
-    numberOfLevels = 5;
-    int secondDeepestLevelSize = CalculateDeepestLevelWidth(numberOfLevels-2);;
-    int deepestLevelSize = CalculateDeepestLevelWidth(numberOfLevels-1);;
-    long long treeSize = CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
-    long long bufferSize = deepestLevelSize;
+
     int expandedData = g.GetEdgesLeftToCover();
     int condensedData = g.GetVertexCount();
+    numberOfLevels = g.GetVertexCount()/2;
+    int secondDeepestLevelSize = CalculateDeepestLevelWidth(numberOfLevels-2);;
+    int deepestLevelSize = CalculateDeepestLevelWidth(numberOfLevels-1);;
+    long long bufferSize = deepestLevelSize;
+    long long treeSize = CalculateSpaceForDesiredNumberOfLevels(numberOfLevels);
+
     int condensedData_plus1 = condensedData + 1;
     long long sizeOfSingleGraph = expandedData*2 + 2*condensedData + condensedData_plus1 + maxDegree + counters;
     long long totalMem = sizeOfSingleGraph * treeSize * sizeof(int) + 
