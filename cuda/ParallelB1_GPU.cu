@@ -3079,6 +3079,7 @@ void CallPopulateTree(int numberOfLevels,
         // The deg 0 vertices are in the middle of the remVerts list..
         std::cout << "Calling ParallelIdentifyVertexDisjointNonPendantPaths" << std::endl;
         // Occasionally we end up including way to many paths in the set.
+        // This is still happening, but everything else is working :)
         ParallelIdentifyVertexDisjointNonPendantPaths<<<activeVerticesCount,
                                                         threadsPerBlock,
                                                         (threadsPerBlock*threadsPerBlock + 
