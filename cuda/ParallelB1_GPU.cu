@@ -591,6 +591,7 @@ __global__ void SetEdges(const int numberOfRows,
 
     int leafIndex = blockIdx.x;
     int leafValue = global_active_leaf_indices[leafIndex];
+    int originalLV = leafValue;
     int parentLeafValue = global_active_leaf_parent_leaf_index[leafIndex];
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
     int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
@@ -624,7 +625,7 @@ __global__ void SetEdges(const int numberOfRows,
             }
             __syncthreads();
             if (threadIdx.x == 0){
-                printf("Block %d, leafValue %d, parentLeafValue %d,  myChild removed %d\n", blockIdx.x, leafValue, parentLeafValue, myChild);
+                printf("Block %d, leafValue %d, originalLV %d, parentLeafValue %d,  myChild removed %d\n", blockIdx.x, leafValue, originalLV, parentLeafValue, myChild);
             }
             // (u,v) is the form of edge pairs.  We are traversing over v's outgoing edges, 
             // looking for u as the destination and turning off that edge.
