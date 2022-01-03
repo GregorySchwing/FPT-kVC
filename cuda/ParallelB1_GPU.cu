@@ -1964,7 +1964,7 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
         int removeFromComplete = ((leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
         int leavesFromIncompleteLvl = (leavesToProcess - treeSizeComplete);
         printf("Leaves %d, removeFromComplete %d\n",leavesToProcess, removeFromComplete);
-        int totalNewActive = leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
+        int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
         printf("Leaves %d, totalNewActive %d\n",leavesToProcess, totalNewActive);
         // Write to global memory
         // If new leaves == 0, then either the graph is empty, which will be handled elsewhere
@@ -2060,7 +2060,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
             leftMostLeafIndexOfIncompleteLevel = (3.0 * leftMostLeafIndexOfIncompleteLevel + 1);
             incompleteLevel -= 1;
         }
-        int totalNewActive = leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
+        int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
         printf("Leaves %d, totalNewActive %d\n",leavesToProcess, totalNewActive);
         // If non-pendant paths were found, populate the search tree in the 
         // incomplete level
@@ -2136,7 +2136,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
             global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
         }
 
-        int totalNewActive = leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
+        int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
         printf("globalIndex %d, ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean\n",globalIndex);
         printf("Leaves %d, completeLevel Level Depth %d\n",leavesToProcess, completeLevel);
         printf("Leaves %d, completeLevelLeaves %d\n",leavesToProcess, completeLevelLeaves);
