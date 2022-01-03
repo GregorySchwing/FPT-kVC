@@ -1402,6 +1402,8 @@ __global__ void ParallelProcessPendantEdges(
 + ______________________________________
     blockDim ^ 2 + 10*blockDim
 */
+
+// SIMPLIFY THIS METHOD!
 __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
                             
                             int numberOfRows,
