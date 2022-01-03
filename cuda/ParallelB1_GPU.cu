@@ -2152,9 +2152,9 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
             global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
             global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
         }
-        //for (int testP = 0; testP < global_active_leaves_count_new[0]; ++testP){
-        //    printf("global_newly_active_leaves[%d] = %d\n",testP, global_newly_active_leaves[testP]);
-        //}
+        for (int testP = 0; testP < totalNewActive; ++testP){
+            printf("leafValue %d new active %d new active's parent %d\n",leafValue, global_newly_active_leaves[newly_active_offset + testP],global_active_leaf_parent_leaf_value[newly_active_offset + testP]);
+        }
     }
 }
 
