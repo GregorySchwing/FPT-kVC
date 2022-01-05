@@ -1904,7 +1904,6 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
         cardinalityOfV = pathsAndIndependentStatus[setReductionOffset];
         ++seed;
     }
-    global_set_inclusion_bool_ptr[globalSetInclusionBoolOffset + threadIdx.x] = pathsAndIndependentStatus[setInclusionOffset + threadIdx.x];
     pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[setInclusionOffset + threadIdx.x];
     int i = blockDim.x/2;
     __syncthreads();
@@ -1918,6 +1917,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
     __syncthreads();
 
     // Record how many sets are in the MIS
+    global_set_inclusion_bool_ptr[globalSetInclusionBoolOffset + threadIdx.x] = pathsAndIndependentStatus[setInclusionOffset + threadIdx.x];
     if (threadIdx.x == 0){
         global_reduced_set_inclusion_count_ptr[leafIndex] = pathsAndIndependentStatus[setReductionOffset];
     }          
