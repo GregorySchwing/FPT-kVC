@@ -1761,6 +1761,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
     int row, myChild, pendantChild, vertex, myPathOffset, pendantBool;
     for (row = 0; row < blockDim.x; ++row){
         myPathOffset = pathsOffset + threadIdx.x * 4;
+        pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = 0;
         pendantBool = pathsAndIndependentStatus[pendPathBoolOffset + row];
         pendantChild = pathsAndIndependentStatus[pendPathChildOffset + row];
         for (vertex = 0; vertex < 4; ++vertex){
@@ -1769,7 +1770,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
             // Different comparator child for all TPB threads
             // Guarunteed to be true at least once, when i == j in adj matrix
             // We have a diagonal of ones.
-            pathsAndIndependentStatus[setReductionOffset + threadIdx.x] |= (pendantChild == myChild);
+            pathsAndIndependentStatus[setReductionOffset + threadIdx.x] |= (pendantChild == myChild) && pendantBool;
         }
         __syncthreads();
         int i = blockDim.x/2;
@@ -1781,7 +1782,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
             i /= 2;
         }
         if(threadIdx.x == 0)
-            pathsAndIndependentStatus[setRemainingOffset + row] = pathsAndIndependentStatus[setReductionOffset];
+            pathsAndIndependentStatus[setRemainingOffset + row] = !pathsAndIndependentStatus[setReductionOffset];
         __syncthreads();
     }
 
@@ -1902,8 +1903,6 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
         ++seed;
     }
 
-    // We only have use for the non-pendant members of I, 
-    // since the pendant paths have been processed already
     pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[setInclusionOffset + threadIdx.x];
     int i = blockDim.x/2;
     __syncthreads();
