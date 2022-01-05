@@ -2311,6 +2311,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
                                         int * global_active_leaves_count_current,
                                         int * global_reduced_set_inclusion_count_ptr,
                                         int * global_newly_active_offset_ptr,
+                                        int * global_active_leaf_index,
                                         int * global_active_leaf_parent_leaf_index,
                                         int * global_active_leaf_parent_leaf_value){
     int globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
@@ -2362,6 +2363,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
             global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfFullLevel + index + removeFromComplete;
             global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
             global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
+            global_active_leaf_index[newly_active_offset + index] = newly_active_offset + index;
         }
 
         int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
@@ -2379,6 +2381,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
             global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfIncompleteLevel + incompleteIndex;
             global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
             global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
+            global_active_leaf_index[newly_active_offset + index] = newly_active_offset + index;
         }
         for (int testP = 0; testP < totalNewActive; ++testP){
             printf("leafValue %d new active %d new active's parent %d\n",leafValue, global_newly_active_leaves[newly_active_offset + testP],global_active_leaf_parent_leaf_value[newly_active_offset + testP]);
@@ -2905,6 +2908,8 @@ void CallPopulateTree(int numberOfLevels,
     int * global_active_leaf_indices, * global_active_leaf_indices_buffer;
     // Used to as the source of the copied graph
     int * global_active_leaf_parent_leaf_index;
+    // Used as the destination for the graph
+    int * global_active_leaf_index;
     // Used for determining when to stop recursing up for set vertices
     int * global_active_leaf_parent_leaf_value;
 
@@ -3025,6 +3030,7 @@ void CallPopulateTree(int numberOfLevels,
     // copied back to host, and the rest of the new leaves processed, only then 
     // can the old graph be replaced by a new graph and the process continued.
     cudaMalloc( (void**)&global_active_leaf_parent_leaf_index, deepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_active_leaf_index, deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_active_leaf_parent_leaf_value, deepestLevelSize * sizeof(int) );
 
     cudaMalloc( (void**)&global_active_leaf_indices_count, 1 * sizeof(int) );
@@ -3062,8 +3068,10 @@ void CallPopulateTree(int numberOfLevels,
     int * nonpendantReducedCount = new int[deepestLevelSize];
     // For printing the result of exclusive prefix sum cub lib
     int * hostOffset = new int[deepestLevelSize+1];
-    int * activeLeavesHost = new int[deepestLevelSize+1];
-    int * activeParentHost = new int[deepestLevelSize+1];
+    int * activeLeavesHostIndex = new int[deepestLevelSize+1];
+    int * activeLeavesHostValue = new int[deepestLevelSize+1];
+    int * activeParentHostIndex = new int[deepestLevelSize+1];
+    int * activeParentHostValue = new int[deepestLevelSize+1];
 
     int * activeFlags = new int[treeSize];
 
@@ -3422,6 +3430,7 @@ void CallPopulateTree(int numberOfLevels,
                                         active_leaves_count.Current(),
                                         global_reduced_set_inclusion_count_ptr,
                                         active_leaf_offset.Alternate(),
+                                        global_active_leaf_index,
                                         global_active_leaf_parent_leaf_index,
                                         global_active_leaf_parent_leaf_value);
         
@@ -3434,8 +3443,10 @@ void CallPopulateTree(int numberOfLevels,
         checkLastErrorCUDA(__FILE__, __LINE__);
 
         std::cout << "activeVerticesCount: " << activeVerticesCount << std::endl;
-        cudaMemcpy(&activeLeavesHost[0], (int*)active_leaves.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
-        cudaMemcpy(&activeParentHost[0], (int*)global_active_leaf_parent_leaf_value, (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&activeLeavesHostIndex[0], (int*)global_active_leaf_index, (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&activeLeavesHostValue[0], (int*)active_leaves.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&activeParentHostIndex[0], (int*)global_active_leaf_parent_leaf_index, (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&activeParentHostValue[0], (int*)global_active_leaf_parent_leaf_value, (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
 
 
         cudaDeviceSynchronize();
@@ -3443,19 +3454,24 @@ void CallPopulateTree(int numberOfLevels,
 
 
         // I need the indices not the absolute vals here.
-        std::cout << "activeLeavesHost" << std::endl;
+        std::cout << "activeLeavesHostIndices" << std::endl;
         for (int i = 0; i < activeVerticesCount; ++i){
-            std::cout << activeLeavesHost[i] << " ";
+            std::cout << activeLeavesHostIndex[i] << " ";
         }
         std::cout << std::endl;
-        std::cout << "activeParentHost" << std::endl;
+        std::cout << "activeLeavesHostValue" << std::endl;
         for (int i = 0; i < activeVerticesCount; ++i){
-            std::cout << activeParentHost[i] << " ";
+            std::cout << activeLeavesHostValue[i] << " ";
         }
         std::cout << std::endl;
-
+        std::cout << "activeParentHostIndex" << std::endl;
         for (int i = 0; i < activeVerticesCount; ++i){
-            std::cout << activeParentHost[i] << " ";
+            std::cout << activeParentHostIndex[i] << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "activeParentHostValue" << std::endl;
+        for (int i = 0; i < activeVerticesCount; ++i){
+            std::cout << activeParentHostValue[i] << " ";
         }
         std::cout << std::endl;
 
@@ -3476,13 +3492,13 @@ void CallPopulateTree(int numberOfLevels,
 
         // Memory-Unoptimized
         for(int newChild = 0; newChild < activeVerticesCount; ++newChild){
-            cudaMemcpy(&new_row_offs[newChild*(numberOfRows+1)], &old_row_offs[activeParentHost[newChild]*(numberOfRows+1)], (numberOfRows+1)*sizeof(int), cudaMemcpyDeviceToDevice);
-            cudaMemcpy(&new_cols[newChild*numberOfEdgesPerGraph], &old_cols[activeParentHost[newChild]*numberOfEdgesPerGraph], numberOfEdgesPerGraph*sizeof(int), cudaMemcpyDeviceToDevice);
-            cudaMemcpy(&new_vals[newChild*numberOfEdgesPerGraph], &old_vals[activeParentHost[newChild]*numberOfEdgesPerGraph], numberOfEdgesPerGraph*sizeof(int), cudaMemcpyDeviceToDevice);
-            cudaMemcpy(&new_degrees[newChild*numberOfRows], &old_degrees[activeParentHost[newChild]*numberOfRows], numberOfRows*sizeof(int), cudaMemcpyDeviceToDevice);
-            cudaMemcpy(&new_verts_remain[newChild*verticesRemainingInGraph], &old_verts_remain[activeParentHost[newChild]*verticesRemainingInGraph], verticesRemainingInGraph*sizeof(int), cudaMemcpyDeviceToDevice);
-            cudaMemcpy(&new_edges_left[newChild], &old_edges_left[activeParentHost[newChild]], 1*sizeof(int), cudaMemcpyDeviceToDevice);
-            cudaMemcpy(&new_verts_remain_count[newChild], &old_verts_remain_count[activeParentHost[newChild]], 1*sizeof(int), cudaMemcpyDeviceToDevice);      
+            cudaMemcpy(&new_row_offs[newChild*(numberOfRows+1)], &old_row_offs[activeParentHostIndex[newChild]*(numberOfRows+1)], (numberOfRows+1)*sizeof(int), cudaMemcpyDeviceToDevice);
+            cudaMemcpy(&new_cols[newChild*numberOfEdgesPerGraph], &old_cols[activeParentHostIndex[newChild]*numberOfEdgesPerGraph], numberOfEdgesPerGraph*sizeof(int), cudaMemcpyDeviceToDevice);
+            cudaMemcpy(&new_vals[newChild*numberOfEdgesPerGraph], &old_vals[activeParentHostIndex[newChild]*numberOfEdgesPerGraph], numberOfEdgesPerGraph*sizeof(int), cudaMemcpyDeviceToDevice);
+            cudaMemcpy(&new_degrees[newChild*numberOfRows], &old_degrees[activeParentHostIndex[newChild]*numberOfRows], numberOfRows*sizeof(int), cudaMemcpyDeviceToDevice);
+            cudaMemcpy(&new_verts_remain[newChild*verticesRemainingInGraph], &old_verts_remain[activeParentHostIndex[newChild]*verticesRemainingInGraph], verticesRemainingInGraph*sizeof(int), cudaMemcpyDeviceToDevice);
+            cudaMemcpy(&new_edges_left[newChild], &old_edges_left[activeParentHostIndex[newChild]], 1*sizeof(int), cudaMemcpyDeviceToDevice);
+            cudaMemcpy(&new_verts_remain_count[newChild], &old_verts_remain_count[activeParentHostIndex[newChild]], 1*sizeof(int), cudaMemcpyDeviceToDevice);      
         }
 
         cudaDeviceSynchronize();
