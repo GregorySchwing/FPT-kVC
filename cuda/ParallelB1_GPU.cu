@@ -1693,69 +1693,98 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
     }          
 }
 
+
+/* 
+    Shared Memory Layout:
+    1) Reduction array
+    2) DFS Paths of Length 4 = blockDim.x * 4
+    3) Random Numbers = blockDim.x
+    4) Pendant Path Boolean = blockDim.x
+    5) Pendant Path Child = blockDim.x
+    6) V Set = blockDim.x
+    7) I Set = blockDim.x
++ ______________________________________
+    10*blockDim
+*/
 __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
-                            
                             int numberOfRows,
                             int numberOfEdgesPerGraph,
                             int * global_row_offsets_dev_ptr,
                             int * global_columns_dev_ptr,
                             int * global_values_dev_ptr,
                             int * global_pendant_path_bool_dev_ptr,
+                            int * global_pendant_child_dev_ptr,
                             int * global_paths_ptr,
                             int * global_set_inclusion_bool_ptr,
                             int * global_reduced_set_inclusion_count_ptr){
-    //if (threadIdx.x == 0){
-    printf("Block ID %d Started ParallelIdentifyVertexDisjointNonPendantPaths\n", blockIdx.x);
-    //}
+    if (threadIdx.x == 0){
+        printf("Block ID %d Started ParallelIdentifyVertexDisjointNonPendantPathsClean\n", blockIdx.x);
+    }
 
     int leafIndex = blockIdx.x;
     int globalPathOffset = leafIndex * 4 * blockDim.x;
     // Only allocated for one level, not tree global
     int globalPendantPathBoolOffset = blockIdx.x * blockDim.x;
-    int globalSetInclusionBoolOffset = blockIdx.x * blockDim.x;
+    int globalPendantPathChildOffset = globalPendantPathBoolOffset;
+    int globalSetInclusionBoolOffset = globalPendantPathBoolOffset;
 
     extern __shared__ int pathsAndIndependentStatus[];
 
-    int adjMatrixOffset = blockDim.x * 4;
-    int randNumOffset = adjMatrixOffset + blockDim.x * blockDim.x;
+    int setReductionOffset = 0;
+    int pathsOffset = blockDim.x;
+    int randNumOffset = pathsOffset + blockDim.x * 4;
     int pendPathBoolOffset = randNumOffset + blockDim.x;
-    int neighborsWithAPendantOffset = pendPathBoolOffset + blockDim.x;
-    int setReductionOffset = neighborsWithAPendantOffset + blockDim.x;
-    int setInclusionOffset = setReductionOffset + blockDim.x;
-    int setRemainingOffset = setInclusionOffset + blockDim.x;
-
-    if (threadIdx.x == 0){
-        printf("Block ID %d globalPathOffset %d\n", blockIdx.x, globalPathOffset);
-        printf("Block ID %d globalPendantPathBoolOffset %d\n", blockIdx.x, globalPendantPathBoolOffset);
-        printf("Block ID %d globalSetInclusionBoolOffset %d\n", blockIdx.x, globalSetInclusionBoolOffset);
-        printf("Block ID %d adjMatrixOffset %d\n", blockIdx.x, adjMatrixOffset);
-        printf("Block ID %d randNumOffset %d\n", blockIdx.x, randNumOffset);
-        printf("Block ID %d pendPathBoolOffset %d\n", blockIdx.x, pendPathBoolOffset);
-        printf("Block ID %d neighborsWithAPendantOffset %d\n", blockIdx.x, neighborsWithAPendantOffset);
-        printf("Block ID %d setReductionOffset %d\n", blockIdx.x, setReductionOffset);
-        printf("Block ID %d setInclusionOffset %d\n", blockIdx.x, setInclusionOffset);
-        printf("Block ID %d setRemainingOffset %d\n", blockIdx.x, setRemainingOffset);
-    }
-    __syncthreads();
+    int pendPathChildOffset = pendPathBoolOffset + blockDim.x;
+    int setRemainingOffset = pendPathChildOffset + blockDim.x;
+    int setInclusionOffset = setRemainingOffset + blockDim.x;
 
     // Write all 32 nonpendant paths to shared memory
     for (int start = threadIdx.x; start < blockDim.x*4; start += blockDim.x){
-        pathsAndIndependentStatus[start] = global_paths_ptr[globalPathOffset + start];
+        pathsAndIndependentStatus[pathsOffset + start] = global_paths_ptr[globalPathOffset + start];
     }
-    if (threadIdx.x == 0){
-        printf("Block ID %d threadIdx.x copied path into sm\n", blockIdx.x, threadIdx.x);
-    }
-    printf("Block ID %d path %d %s pendant\n", blockIdx.x, threadIdx.x, 
-        global_pendant_path_bool_dev_ptr[globalPendantPathBoolOffset + threadIdx.x] ? "is" : "isn't");
 
-    // Automatically include pendant  paths to set
-    pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x] = 
-        global_pendant_path_bool_dev_ptr[globalPendantPathBoolOffset + threadIdx.x];
+    // Write all 32 pendant booleans to shared memory
+    for (int start = threadIdx.x; start < blockDim.x; start += blockDim.x){
+        pathsAndIndependentStatus[pendPathBoolOffset + start] = global_pendant_path_bool_dev_ptr[globalPendantPathBoolOffset + start];
+    }
+
+    // Write all 32 pendant children to shared memory
+    for (int start = threadIdx.x; start < blockDim.x; start += blockDim.x){
+        pathsAndIndependentStatus[pendPathChildOffset + start] = global_pendant_child_dev_ptr[globalPendantPathChildOffset + start];
+    }
 
     __syncthreads();
-    if (threadIdx.x == 0){
-        printf("Block ID %d threadIdx.x copied into sm\n", blockIdx.x, threadIdx.x);
+
+    // Automatically remove paths containing the pendant child(ren)
+    // 1 path vs all pendant children comparison of each row.  Duplicate pendant children
+    // aren't a problem.
+    int row, myChild, pendantChild, vertex, myPathOffset, pendantBool;
+    for (row = 0; row < blockDim.x; ++row){
+        myPathOffset = pathsOffset + threadIdx.x * 4;
+        pendantBool = pathsAndIndependentStatus[pendPathBoolOffset + row];
+        pendantChild = pathsAndIndependentStatus[pendPathChildOffset + row];
+        for (vertex = 0; vertex < 4; ++vertex){
+            // Same path for all TPB threads
+            myChild = pathsAndIndependentStatus[myPathOffset + vertex];
+            // Different comparator child for all TPB threads
+            // Guarunteed to be true at least once, when i == j in adj matrix
+            // We have a diagonal of ones.
+            pathsAndIndependentStatus[setReductionOffset + threadIdx.x] |= (pendantChild == myChild);
+        }
+        __syncthreads();
+        int i = blockDim.x/2;
+        while (i != 0) {
+            if (threadIdx.x < i){
+                pathsAndIndependentStatus[setReductionOffset + threadIdx.x] |= pathsAndIndependentStatus[setReductionOffset + threadIdx.x + i];
+            }
+            __syncthreads();
+            i /= 2;
+        }
+        if(threadIdx.x == 0)
+            pathsAndIndependentStatus[setRemainingOffset + row] = pathsAndIndependentStatus[setReductionOffset];
+        __syncthreads();
     }
+
     // See if each vertex in my path is duplicated, 1 vs all comparison written to shared memory
     // Also, if it is duplicated, only process the largest index duplicate
     // If it isn't duplicated, process the path.
@@ -1775,164 +1804,92 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
     // ____________________________________
     // vertex % 4             vertex / 4
     //int myPathIndex = blockIdx.x % blockDim.x;
-    printf("Block ID %d thread %d about to start adj mat\n", blockIdx.x, threadIdx.x);
-    __syncthreads();
 
-    int row, rowOffset, myChild, comparatorChild, vertex, myPathOffset, comparatorPathOffset;
-    for (row = 0; row < blockDim.x; ++row){
-        // blockDim.x*4 +  -- to skip the paths
-        // the adj matrix size (32x32)
-        rowOffset = adjMatrixOffset + row * blockDim.x;
-        myPathOffset = row * 4;
-        comparatorPathOffset = threadIdx.x * 4;
-        printf("Block ID %d row %d started\n", blockIdx.x, row);
-        for (vertex = 0; vertex < 4*4; ++vertex){
-            // Same path for all TPB threads
-            myChild = pathsAndIndependentStatus[myPathOffset + vertex / 4];
-            // Different comparator child for all TPB threads
-            comparatorChild = pathsAndIndependentStatus[comparatorPathOffset + vertex % 4];
-            // Guarunteed to be true at least once, when i == j in adj matrix
-            // We have a diagonal of ones.
-            pathsAndIndependentStatus[rowOffset + threadIdx.x] |= (comparatorChild == myChild);
-        }
-        __syncthreads();
-        printf("Block ID %d row %d done\n", blockIdx.x, row);
-    }
-    __syncthreads();
-    if (threadIdx.x == 0){
-        printf("Block ID %d threadIdx.x created adj matrix\n", blockIdx.x, threadIdx.x);
-    }
-    // Corresponds to an array of random numbers between [0,1]
-    // This way every thread has its own randGen, and no thread sync is neccessary.
-    unsigned int seed = 0;
-    RNG::ctr_type r;
-    r =  randomGPU_four(threadIdx.x, leafIndex, seed); 
-    pathsAndIndependentStatus[randNumOffset + threadIdx.x] = r[0];
-    __syncthreads();
-     
-    if (threadIdx.x == 0){
-        for (int row = 0; row < blockDim.x; ++row){
-            printf("Block ID %d threadIdx.x %d rand num %d\n", blockIdx.x, row, pathsAndIndependentStatus[randNumOffset + row]);
-        }
-    }
-    for (int row = 0; row < blockDim.x; ++row){
-        rowOffset = adjMatrixOffset + row*blockDim.x;
-        // Check if any of my neighbors are pendant paths.
-        // If I have a pendant neighbor I won't ever be included in the set.
-        // Notably, the diagonal is true if the vertex is pendant
-        // At this point the set I is the pendant paths
-        pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[rowOffset + threadIdx.x]   
-                                                                    && pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x];
-        int i = blockDim.x/2;
-        __syncthreads();
-        while (i != 0) {
-            if (threadIdx.x < i){
-                pathsAndIndependentStatus[setReductionOffset + threadIdx.x] |= pathsAndIndependentStatus[setReductionOffset + threadIdx.x + i];
-            }
-            __syncthreads();
-            i /= 2;
-        }
-        __syncthreads();
-        if (threadIdx.x == 0){
-            printf("Block ID %d row %d %s neighbors with a pendant edge\n", blockIdx.x, row, 
-                pathsAndIndependentStatus[setReductionOffset] ? "is" :  "isn't");
-            pathsAndIndependentStatus[neighborsWithAPendantOffset + row] = pathsAndIndependentStatus[setReductionOffset];
-            // If it is neighbors (is) a pendant - false, it is not remaining; else - true
-            pathsAndIndependentStatus[setRemainingOffset + row] = !pathsAndIndependentStatus[neighborsWithAPendantOffset + row];
-            printf("Block ID %d row %d %s remaining in V\n", blockIdx.x, row, 
-                pathsAndIndependentStatus[setRemainingOffset + row] ? "is" :  "isn't");
-        }              
-        __syncthreads();       
-    }
-    /*
-    if (threadIdx.x == 0){
-        printf("Adj Mat\n");
-        for (int row = 0; row < blockDim.x; ++row){
-            for(int colIndex = 0; colIndex < blockDim.x; ++colIndex){
-                rowOffset = adjMatrixOffset + row*blockDim.x;
-                printf("%d ", pathsAndIndependentStatus[rowOffset + colIndex]);
-            }
-            printf("\n");
-        }
-    }
-    */
     // S = {p | p is a set of length 4 of vertex indices in G}
     // An edge (u,v), where u ∈ S, v ∈ S, and u ∩ v ≠ ∅
     // At this point I = {∀p ∈ S | p is pendant}
     // V = S / N(I)
 
     int cardinalityOfV = 1;
+    unsigned int seed = 0;
 
     // https://en.wikipedia.org/wiki/Maximal_independent_set#:~:text=Random-priority%20parallel%20algorithm%5Bedit%5D
     // Note that in every step, the node with the smallest number in each connected component always enters I, 
     // so there is always some progress. In particular, in the worst-case of the previous algorithm (n/2 connected components with 2 nodes each), a MIS will be found in a single step.
     // O(log_{4/3}(m)+1)
     while(cardinalityOfV){
-        for (int row = 0; row < blockDim.x; ++row){
-            // If a neighboring vertex has a random number less than mine and said vertex isn't
-            // neighbors with a pendant edge, it should be added to the set, not me.
-            pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[adjMatrixOffset + row*blockDim.x + threadIdx.x]
-                                                                        && pathsAndIndependentStatus[setRemainingOffset + threadIdx.x]
-                                                                        && (pathsAndIndependentStatus[randNumOffset + threadIdx.x]
-                                                                            < pathsAndIndependentStatus[randNumOffset + row]);
-            //printf("Row %d thread %d included %d\n", row, threadIdx.x, pathsAndIndependentStatus[setReductionOffset + threadIdx.x]);
-            int i = blockDim.x/2;
-            __syncthreads();
-            while (i != 0) {
-                if (threadIdx.x < i){
-                    pathsAndIndependentStatus[setReductionOffset + threadIdx.x] |= pathsAndIndependentStatus[setReductionOffset + threadIdx.x + i];
-                }
-                __syncthreads();
-                i /= 2;
-            }
-            __syncthreads();
-
-            // If there exists a remaining vertex that has a smaller number than me, 
-            // this reduces is true, thus when we negate it, it has no effect when or'ed
-            // else if it was false, then it didn't fail, is negated to true and includes 
-            // this vertex.
-            // If this vertex was removed previously, we need to make sure it isn't added to I
-            // Hence,  && pathsAndIndependentStatus[setRemainingOffset + row];
-            if (threadIdx.x == 0){
-                pathsAndIndependentStatus[setInclusionOffset + row] |= !pathsAndIndependentStatus[setReductionOffset] && pathsAndIndependentStatus[setRemainingOffset + row];
-            }    
-            __syncthreads();
-            if (threadIdx.x == 0){
-                printf("Block ID %d row %d %s included in the I set\n", blockIdx.x, row, 
-                    pathsAndIndependentStatus[setInclusionOffset + row] ? "is" :  "isn't");
-            }
-        }
-
-        for (int row = 0; row < blockDim.x; ++row){
-            // Do we share an edge and were you included
-            pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[adjMatrixOffset + row*blockDim.x + threadIdx.x]
-                                                                        && pathsAndIndependentStatus[setInclusionOffset + threadIdx.x];
-            int i = blockDim.x/2;
-            __syncthreads();
-            while (i != 0) {
-                if (threadIdx.x < i){
-                    pathsAndIndependentStatus[setReductionOffset + threadIdx.x] |= pathsAndIndependentStatus[setReductionOffset + threadIdx.x + i];
-                }
-                __syncthreads();
-                i /= 2;
-            }
-            // If, so I will turn myself off
-            // If I was included, I be included and I have an edge with myself, 
-            // therefore I will be removed from V.
-            if (threadIdx.x == 0){
-                pathsAndIndependentStatus[setRemainingOffset + row] &= !pathsAndIndependentStatus[setReductionOffset];
-            }    
-            if (threadIdx.x == 0){
-                printf("Block ID %d row %d %s remaining the V set\n", blockIdx.x, row, 
-                    pathsAndIndependentStatus[setRemainingOffset + row] ? "is" :  "isn't");
-            }
-            __syncthreads();
-        }
-
-        // Am I remaining?
-        pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[setRemainingOffset + threadIdx.x];
-        int i = blockDim.x/2;
+        // Corresponds to an array of random numbers between [0,1]
+        // This way every thread has its own randGen, and no thread sync is neccessary.
+        RNG::ctr_type r;
+        r =  randomGPU_four(threadIdx.x, leafIndex, seed); 
+        pathsAndIndependentStatus[randNumOffset + threadIdx.x] = r[0];
         __syncthreads();
+
+
+        // I can't change setRemaining within this for loop!
+        int comparatorChild, comparatorPathOffset;
+        for (row = 0; row < blockDim.x; ++row){
+            myPathOffset = pathsOffset + row * 4;
+            comparatorPathOffset = pathsOffset + threadIdx.x * 4;
+            // Does an edge exist between these paths?
+            for (vertex = 0; vertex < 4*4; ++vertex){
+                // Same path for all TPB threads
+                myChild = pathsAndIndependentStatus[myPathOffset + vertex / 4];
+                // Different comparator child for all TPB threads
+                comparatorChild = pathsAndIndependentStatus[comparatorPathOffset + vertex % 4];
+                // Guarunteed to be true at least once, when i == j in adj matrix
+                // We have a diagonal of ones.
+                pathsAndIndependentStatus[setReductionOffset + threadIdx.x] |= (comparatorChild == myChild);
+            }
+            pathsAndIndependentStatus[setReductionOffset + threadIdx.x] &= (pathsAndIndependentStatus[setRemainingOffset + threadIdx.x]
+                                                                            && pathsAndIndependentStatus[setRemainingOffset + row]);
+            // In the case I have no edges, I still share an edge with myself.  Then I am not less than myself.
+            // and I am remaining, therefore I will be included in the I set and removed from the V set.
+            pathsAndIndependentStatus[setReductionOffset + threadIdx.x] &= (pathsAndIndependentStatus[randNumOffset + threadIdx.x]
+                                                                            < pathsAndIndependentStatus[randNumOffset + row]);
+            __syncthreads();
+            int i = blockDim.x/2;
+            while (i != 0) {
+                if (threadIdx.x < i){
+                    pathsAndIndependentStatus[setReductionOffset + threadIdx.x] |= pathsAndIndependentStatus[setReductionOffset + threadIdx.x + i];
+                }
+                __syncthreads();
+                i /= 2;
+            }
+
+            // Did any of my neighbors make it into the I set?
+            // If not, am I remaining?
+            // If so, add myself to the inclusion set.
+            if(threadIdx.x == 0)
+                pathsAndIndependentStatus[setInclusionOffset + row] = !pathsAndIndependentStatus[setReductionOffset] && pathsAndIndependentStatus[setRemainingOffset + row];
+            __syncthreads();
+        }
+
+        // Remove all neighbors of Included vertices from setRemaining.
+        for (row = 0; row < blockDim.x; ++row){
+            myPathOffset = pathsOffset + row * 4;
+            comparatorPathOffset = pathsOffset + threadIdx.x * 4;
+            // Does an edge exist between these paths?
+            for (vertex = 0; vertex < 4*4; ++vertex){
+                // Same path for all TPB threads
+                myChild = pathsAndIndependentStatus[myPathOffset + vertex / 4];
+                // Different comparator child for all TPB threads
+                comparatorChild = pathsAndIndependentStatus[comparatorPathOffset + vertex % 4];
+                // Guarunteed to be true at least once, when i == j in adj matrix
+                // We have a diagonal of ones.
+                pathsAndIndependentStatus[setReductionOffset + threadIdx.x] |= (comparatorChild == myChild);
+            }
+            // Are we neightbors? Whether I or you are remaining is irrelevant.
+            // If so, was I included in the inclusion set?
+            // If so, remove you from the remaining set.
+            pathsAndIndependentStatus[setRemainingOffset + threadIdx.x] &= !(pathsAndIndependentStatus[setReductionOffset + threadIdx.x] 
+                                                                        &&  pathsAndIndependentStatus[setInclusionOffset + row]);
+            __syncthreads();
+        }
+
+        pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[setRemainingOffset + threadIdx.x];
+        __syncthreads();
+        int i = blockDim.x/2;
         while (i != 0) {
             if (threadIdx.x < i){
                 pathsAndIndependentStatus[setReductionOffset + threadIdx.x] += pathsAndIndependentStatus[setReductionOffset + threadIdx.x + i];
@@ -1940,20 +1897,14 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
             __syncthreads();
             i /= 2;
         }
-        // when V is empty the algorithm terminates
+
         cardinalityOfV = pathsAndIndependentStatus[setReductionOffset];
-        __syncthreads();
-        
-        if (threadIdx.x == 0){
-            printf("Block ID %d cardinality of the V set is %d\n", blockIdx.x, cardinalityOfV);
-        }
+        ++seed;
     }
-    // Everything works to this point :)
-    
+
     // We only have use for the non-pendant members of I, 
     // since the pendant paths have been processed already
-    pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[setInclusionOffset + threadIdx.x]
-        && !pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x];
+    pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[setInclusionOffset + threadIdx.x];
     int i = blockDim.x/2;
     __syncthreads();
     while (i != 0) {
@@ -1964,16 +1915,6 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
         i /= 2;
     }
     __syncthreads();
-
-    // Copy from shared mem to global..
-    // We only have use for the non-pendant members of I, 
-    // since the pendant paths have been processed already
-    global_set_inclusion_bool_ptr[globalSetInclusionBoolOffset + threadIdx.x] = pathsAndIndependentStatus[setInclusionOffset + threadIdx.x]
-        && !pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x];
-
-    printf("Block ID %d row %d %s included in the I set\n", blockIdx.x, threadIdx.x, 
-        pathsAndIndependentStatus[setInclusionOffset + threadIdx.x]
-    && !pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x] ? "is" :  "isn't"); 
 
     // Record how many sets are in the MIS
     if (threadIdx.x == 0){
@@ -3365,19 +3306,17 @@ void CallPopulateTree(int numberOfLevels,
 
         // Everything seems to be working till this point, need to print inside this method.
         // The deg 0 vertices are in the middle of the remVerts list..
-        std::cout << "Calling ParallelIdentifyVertexDisjointNonPendantPaths" << std::endl;
-        // Occasionally we end up including way to many paths in the set.
-        // This is still happening, but everything else is working :)
-        ParallelIdentifyVertexDisjointNonPendantPaths<<<activeVerticesCount,
+        std::cout << "Calling ParallelIdentifyVertexDisjointNonPendantPathsClean" << std::endl;
+        ParallelIdentifyVertexDisjointNonPendantPathsClean<<<activeVerticesCount,
                                                         threadsPerBlock,
-                                                        (threadsPerBlock*threadsPerBlock + 
-                                                        10*threadsPerBlock)*sizeof(int)>>>
+                                                        10*threadsPerBlock*sizeof(int)>>>
                                                         (numberOfRows,
                                                         numberOfEdgesPerGraph,
                                                         row_offsets.Current(),
                                                         columns.Current(),
                                                         values.Current(),
                                                         global_pendant_path_bool_dev_ptr,
+                                                        global_pendant_child_dev_ptr,
                                                         global_paths_ptr,
                                                         set_inclusion.Current(),
                                                         global_reduced_set_inclusion_count_ptr);
