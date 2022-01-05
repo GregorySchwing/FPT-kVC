@@ -2309,7 +2309,6 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
                                         int * global_active_leaves,
                                         int * global_newly_active_leaves,
                                         int * global_active_leaves_count_current,
-                                        int * global_active_leaves_count_new,
                                         int * global_reduced_set_inclusion_count_ptr,
                                         int * global_newly_active_offset_ptr,
                                         int * global_active_leaf_parent_leaf_index,
