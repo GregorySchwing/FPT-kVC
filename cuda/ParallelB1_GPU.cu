@@ -3441,6 +3441,8 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
+
+        // I need the indices not the absolute vals here.
         std::cout << "activeLeavesHost" << std::endl;
         for (int i = 0; i < activeVerticesCount; ++i){
             std::cout << activeLeavesHost[i] << " ";
