@@ -2236,7 +2236,6 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
                                         int * global_active_leaves,
                                         int * global_newly_active_leaves,
                                         int * global_active_leaves_count_current,
-                                        int * global_active_leaves_count_new,
                                         int * global_reduced_set_inclusion_count_ptr,
                                         int * global_newly_active_offset_ptr,
                                         int * global_active_leaf_parent_leaf_index,
@@ -3363,8 +3362,8 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        cudaMemset(active_leaves_count.Alternate(), 0, size_t(1)*sizeof(int));
-      
+        cudaMemcpy(active_leaves_count.Alternate(), &zero, 1*sizeof(int), cudaMemcpyHostToDevice);
+
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
@@ -3401,7 +3400,7 @@ void CallPopulateTree(int numberOfLevels,
         checkLastErrorCUDA(__FILE__, __LINE__);
         
         cudaMemcpy(&hostOffset[0], (int*)active_leaf_offset.Alternate(), (activeVerticesCount+1)*sizeof(int), cudaMemcpyDeviceToHost);
-        
+
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
@@ -3422,7 +3421,6 @@ void CallPopulateTree(int numberOfLevels,
                                         active_leaves.Current(),
                                         active_leaves.Alternate(),
                                         active_leaves_count.Current(),
-                                        active_leaves_count.Alternate(),
                                         global_reduced_set_inclusion_count_ptr,
                                         active_leaf_offset.Alternate(),
                                         global_active_leaf_parent_leaf_index,
