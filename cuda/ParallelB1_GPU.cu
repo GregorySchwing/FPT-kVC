@@ -302,7 +302,7 @@ __global__ void  PrintSets(int activeVerticesCount,
     
 }
 
-__global__ void  PrintData(int * activeVerticesCount,
+__global__ void  PrintData(int activeVerticesCount,
                             int numberOfRows,
                             int numberOfEdgesPerGraph, 
                             int verticesRemainingInGraph,
@@ -315,7 +315,7 @@ __global__ void  PrintData(int * activeVerticesCount,
                             int * verts_remain_count){
     if (threadIdx.x > 0 || blockIdx.x > 0)
         return;
-    for (int g = 0; g < (activeVerticesCount[0]); ++g){
+    for (int g = 0; g < (activeVerticesCount); ++g){
         printf("Graph %d\n", g);
         printf("Row Offs\n");
         for (int i = 0; i < numberOfRows+1; ++i){
@@ -3173,7 +3173,7 @@ void CallPopulateTree(int numberOfLevels,
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
 
-            PrintData<<<1,1>>>(&activeVerticesCount,
+            PrintData<<<1,1>>>(activeVerticesCount,
                     numberOfRows,
                     numberOfEdgesPerGraph, 
                     verticesRemainingInGraph,
@@ -3287,7 +3287,7 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        PrintData<<<1,1>>>(&activeVerticesCount,
+        PrintData<<<1,1>>>(activeVerticesCount,
                 numberOfRows,
                 numberOfEdgesPerGraph, 
                 verticesRemainingInGraph,
@@ -3503,7 +3503,7 @@ void CallPopulateTree(int numberOfLevels,
         printf("After flip active_leaves.selector %d\n", active_leaves.selector);
 
 
-        PrintData<<<1,1>>>(active_leaves_count.Alternate(),
+        PrintData<<<1,1>>>(activeVerticesCount,
                             numberOfRows,
                             numberOfEdgesPerGraph, 
                             verticesRemainingInGraph,
