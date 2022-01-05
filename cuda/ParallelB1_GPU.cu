@@ -1830,6 +1830,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
         // I can't change setRemaining within this for loop!
         int comparatorChild, comparatorPathOffset;
         for (row = 0; row < blockDim.x; ++row){
+            pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = 0;
             myPathOffset = pathsOffset + row * 4;
             comparatorPathOffset = pathsOffset + threadIdx.x * 4;
             // Does an edge exist between these paths?
@@ -1868,6 +1869,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
 
         // Remove all neighbors of Included vertices from setRemaining.
         for (row = 0; row < blockDim.x; ++row){
+            pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = 0;
             myPathOffset = pathsOffset + row * 4;
             comparatorPathOffset = pathsOffset + threadIdx.x * 4;
             // Does an edge exist between these paths?
