@@ -1786,6 +1786,14 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
         __syncthreads();
     }
 
+    if (threadIdx.x == 0){
+        printf("setRemainingOffset\n");
+        for (int i = 0; i < blockDim.x; ++i)
+            printf("%d ", pathsAndIndependentStatus[setRemainingOffset + i]);
+        printf("\n");
+    }
+
+
     // See if each vertex in my path is duplicated, 1 vs all comparison written to shared memory
     // Also, if it is duplicated, only process the largest index duplicate
     // If it isn't duplicated, process the path.
@@ -1863,7 +1871,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
             // If not, am I remaining?
             // If so, add myself to the inclusion set.
             if(threadIdx.x == 0)
-                pathsAndIndependentStatus[setInclusionOffset + row] = !pathsAndIndependentStatus[setReductionOffset] && pathsAndIndependentStatus[setRemainingOffset + row];
+                pathsAndIndependentStatus[setInclusionOffset + row] |= !pathsAndIndependentStatus[setReductionOffset] && pathsAndIndependentStatus[setRemainingOffset + row];
             __syncthreads();
         }
 
@@ -1903,6 +1911,16 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
 
         cardinalityOfV = pathsAndIndependentStatus[setReductionOffset];
         ++seed;
+        if (threadIdx.x == 0){
+            printf("setRemainingOffset\n");
+            for (int i = 0; i < blockDim.x; ++i)
+                printf("%d ", pathsAndIndependentStatus[setRemainingOffset + i]);
+            printf("\n");
+            printf("setInclusionOffset\n");
+            for (int i = 0; i < blockDim.x; ++i)
+                printf("%d ", pathsAndIndependentStatus[setInclusionOffset + i]);
+            printf("\n");
+        }
     }
     pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[setInclusionOffset + threadIdx.x];
     int i = blockDim.x/2;
