@@ -684,6 +684,106 @@ __global__ void SetEdges(const int numberOfRows,
     }
 }
 
+__global__ void SetPendantEdges(const int numberOfRows,
+                        const int numberOfEdgesPerGraph,
+                        const int * global_row_offsets_dev_ptr,
+                        const int * global_columns_dev_ptr,
+                        int * global_values_dev_ptr,
+                        int * global_degrees_dev_ptr,
+                        int * global_edges_left_to_cover_count,
+                        const int * global_pendant_path_bool_dev_ptr,
+                        const int * global_pendant_child_dev_ptr){
+
+    int leafIndex = blockIdx.x;
+    int rowOffsOffset = leafIndex * (numberOfRows + 1);
+    int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
+    int degreesOffset = leafIndex * numberOfRows;
+    // Only allocated for one level, not tree global
+    int globalPendantPathBoolOffset = blockIdx.x * blockDim.x;
+    int globalPendantPathChildOffset = globalPendantPathBoolOffset;
+    int globalSetInclusionBoolOffset = globalPendantPathBoolOffset;
+    int LB, UB, v, vLB, vUB, pendantChild, pendantBool;
+    for (int row = 0; row < blockDim.x; ++row) {
+        pendantChild = global_pendant_child_dev_ptr[globalPendantPathChildOffset + row];
+        pendantBool = global_pendant_path_bool_dev_ptr[globalPendantPathChildOffset + row];
+        if(!pendantBool)
+            continue;
+        __syncthreads();
+        // Set out-edges
+        LB = global_row_offsets_dev_ptr[rowOffsOffset + pendantChild];
+        UB = global_row_offsets_dev_ptr[rowOffsOffset + pendantChild + 1]; 
+        for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
+            // Since there are only 2 edges b/w each node,
+            // We can safely decrement the target node's degree
+            // If these are atomic, then duplicate pendantChild isn't a problem
+            // Since we'd be decrementing by 0 the second, third, ...etc time 
+            // a duplicate pendantChild was processed.
+            global_degrees_dev_ptr[degreesOffset + 
+                global_columns_dev_ptr[valsAndColsOffset + edge]] 
+                    -= global_values_dev_ptr[valsAndColsOffset + edge];
+            // This avoids a reduction of the degrees array to get total edges
+            atomicAdd(&global_edges_left_to_cover_count[leafIndex], -2*global_values_dev_ptr[valsAndColsOffset + edge]);
+            global_values_dev_ptr[valsAndColsOffset + edge] = 0;
+        }
+
+        if (threadIdx.x == 0){
+                global_degrees_dev_ptr[degreesOffset + pendantChild] = 0;
+        }
+        __syncthreads();
+        // (u,v) is the form of edge pairs.  We are traversing over v's outgoing edges, 
+        // looking for u as the destination and turning off that edge.
+        // this may be more elegantly handled by 
+        // (1) an associative data structure
+        // (2) an undirected graph 
+        // Parallel implementations of both of these need to be investigated.
+        bool foundChild, tmp;
+        LB = global_row_offsets_dev_ptr[rowOffsOffset + pendantChild];
+        UB = global_row_offsets_dev_ptr[rowOffsOffset + pendantChild + 1];    // Set out-edges
+        // There are two possibilities for parallelization here:
+        // 1) Each thread will take an out edge, and then each thread will scan the edges leaving 
+        // that vertex for the original vertex.
+        //for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
+
+        // Basically, each thread is reading wildly different data
+        // 2) 1 out edge is traversed at a time, and then all the threads scan
+        // all the edges leaving that vertex for the original vertex.
+        // This is the more favorable data access pattern.
+        for (int edge = LB; edge < UB; ++edge){
+            v = global_columns_dev_ptr[valsAndColsOffset + edge];
+            // guarunteed to only have one incoming and one outgoing edge connecting (x,y)
+            // All outgoing edges were set and are separated from this method by a __syncthreads
+            // Thus there is no chance of decrementing the degree of the same node simulataneously
+            vLB = global_row_offsets_dev_ptr[rowOffsOffset + v];
+            vUB = global_row_offsets_dev_ptr[rowOffsOffset + v + 1];
+            for (int outgoingEdgeOfV = vLB + threadIdx.x; 
+                    outgoingEdgeOfV < vUB; 
+                        outgoingEdgeOfV += blockDim.x){
+
+                    foundChild = pendantChild == global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfV];
+                    // Set in-edge
+                    // store edge status
+                    tmp = global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV];
+                    //   foundChild     tmp   (foundChild & tmp)  (foundChild & tmp)^tmp
+                    //1)      0          0            0                       0
+                    //2)      1          0            0                       0
+                    //3)      0          1            0                       1
+                    //4)      1          1            1                       0
+                    //
+                    // Case 1: isnt pendantChild and edge is off, stay off
+                    // Case 2: is pendantChild and edge is off, stay off
+                    // Case 3: isn't pendantChild and edge is on, stay on
+                    // Case 4: is pendantChild and edge is on, turn off
+                    // All this logic is necessary because we aren't using degree to set upperbound
+                    // we are using row offsets, which may include some edges turned off on a previous
+                    // pendant edge processing step.
+                    global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV] ^= (foundChild & tmp);
+            }
+        }
+        __syncthreads();
+    }
+}
+
+
 // Sets the new degrees without the edges and the edges left to cover
 __global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
                             int numberOfEdgesPerGraph,
@@ -1103,18 +1203,8 @@ __global__ void ParallelDFSRandom(
     // Set random out at depth 1
     int randomVertRowOff = global_row_offsets_dev_ptr[rowOffsOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]];
     // Using degrees allow us to ignore the edges which have been turned off
-    /*
-        printf("randomVertRowOff %d\n", randomVertRowOff);
-        printf("degreesOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1] %d\n",degreesOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]);
-        printf("degreesOffset  %d\n",degreesOffset);
-        printf("pathsAndPendantStatus[sharedMemPathOffset + iteration - 1] %d\n",pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]);
-    */
-        outEdgesCount = global_degrees_dev_ptr[degreesOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]];
-    //    printf("outEdgesCount %d\n", outEdgesCount);    
-    //outEdgesCount = global_row_offsets_dev_ptr[rowOffsOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1] + 1]
-    //                - randomVertRowOff;
-    //    printf("valsAndColsOffset + randomVertRowOff + (r[iteration] mod outEdgesCount) %d\n", valsAndColsOffset + randomVertRowOff + (r[iteration] % outEdgesCount));
-    
+    outEdgesCount = global_degrees_dev_ptr[degreesOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]];
+
     // Assumes the starting point isn't degree 0
     pathsAndPendantStatus[sharedMemPathOffset + iteration] =  global_columns_dev_ptr[valsAndColsOffset + randomVertRowOff + (r[iteration] % outEdgesCount)];
     ++iteration;
@@ -1207,6 +1297,14 @@ __global__ void ParallelDFSRandom(
         global_pendant_path_reduced_bool_dev_ptr[blockIdx.x] = pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x];
 }
 
+// Each node assigned threadsPerBlock blocks,  
+// Up to threadsPerBlock pendant children are processed
+// 1 pendant child per block
+// outgoing and incoming edges of the pendant child 
+// are processed at thread level
+// Block immediately returns if nonpendant child 
+// or duplicate pendant child and not the largest
+// indexed instance of that child
 __global__ void ParallelProcessPendantEdges(
                             int numberOfRows,
                             int numberOfEdgesPerGraph,
@@ -3237,6 +3335,21 @@ void CallPopulateTree(int numberOfLevels,
         
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
+
+            PrintData<<<1,1>>>(activeVerticesCount,
+                numberOfRows,
+                numberOfEdgesPerGraph, 
+                verticesRemainingInGraph,
+                row_offsets.Current(),
+                columns.Current(),
+                values.Current(),
+                degrees.Current(),
+                remaining_vertices.Current(),
+                edges_left.Current(),
+                remaining_vertices_count.Current());
+
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
                                                     
         }
         notFirstCall = true;        
@@ -3270,27 +3383,17 @@ void CallPopulateTree(int numberOfLevels,
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
-        // Each node assigned threadsPerBlock blocks,  
-        // Up to threadsPerBlock pendant children are processed
-        // 1 pendant child per block
-        // outgoing and incoming edges of the pendant child 
-        // are processed at thread level
-        // Block immediately returns if nonpendant child 
-        // or duplicate pendant child and not the largest
-        // indexed instance of that child
-        ParallelProcessPendantEdges<<<(activeVerticesCount)*threadsPerBlock,
-                                    threadsPerBlock,
-                                    2*threadsPerBlock*sizeof(int)>>>
-                        (numberOfRows,
-                        numberOfEdgesPerGraph,
-                        active_leaves.Current(),
-                        row_offsets.Current(),
-                        columns.Current(),
-                        values.Current(),
-                        degrees.Current(),
-                        edges_left.Current(),
-                        global_pendant_path_bool_dev_ptr,
-                        global_pendant_child_dev_ptr);
+
+        SetPendantEdges<<<activeVerticesCount, threadsPerBlock>>>(
+                                                            numberOfRows,
+                                                            numberOfEdgesPerGraph,
+                                                            row_offsets.Current(),
+                                                            columns.Current(),
+                                                            values.Current(),
+                                                            degrees.Current(),
+                                                            edges_left.Current(),
+                                                            global_pendant_path_bool_dev_ptr,
+                                                            global_pendant_child_dev_ptr);
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 

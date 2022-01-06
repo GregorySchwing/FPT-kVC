@@ -141,6 +141,16 @@ __global__ void SetEdges(const int numberOfRows,
                         int * global_edges_left_to_cover_count,
                         const int * global_vertices_included_dev_ptr);
 
+__global__ void SetPendantEdges(const int numberOfRows,
+                        const int numberOfEdgesPerGraph,
+                        const int * global_row_offsets_dev_ptr,
+                        const int * global_columns_dev_ptr,
+                        int * global_values_dev_ptr,
+                        int * global_degrees_dev_ptr,
+                        int * global_edges_left_to_cover_count,
+                        const int * global_pendant_path_bool_dev_ptr,
+                        const int * global_pendant_child_dev_ptr);
+
 __global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
                                             int numberOfEdgesPerGraph,
                                             int levelOffset,
