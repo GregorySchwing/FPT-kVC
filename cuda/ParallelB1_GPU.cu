@@ -2533,7 +2533,7 @@ __global__ void ParallelProcessDegreeZeroVerticesClean(
     for (int iter = 0; iter < numIters; ++iter, vertex += blockDim.x){
         boundedVertex = vertex*(int)(vertex < numVertices) + 0;
         vertexValue = global_remaining_vertices_dev_ptr[remainingVerticesOffset + boundedVertex];
-        degree = global_degrees_dev_ptr[degreesOffset + vertexValue]
+        degree = global_degrees_dev_ptr[degreesOffset + vertexValue];
         // Prevent out of bound memory access by setting vertex to 0 for vertex > numVertices
         degreeZeroVertex[threadIdx.x] = (int)(0 == (degree));
         // Set the garbage values to 0.  Since there is a sync threads in this for loop, we need
