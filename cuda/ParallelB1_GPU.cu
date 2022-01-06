@@ -3136,6 +3136,7 @@ void CallPopulateTree(int numberOfLevels,
                             degrees.Current());
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
+            
 /*
             PrintData<<<1,1>>>(activeVerticesCount,
                     numberOfRows,
