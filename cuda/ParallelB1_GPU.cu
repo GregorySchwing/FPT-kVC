@@ -3197,36 +3197,22 @@ void CallPopulateTree(int numberOfLevels,
                                                             edges_left.Current(),
                                                             global_vertices_included_dev_ptr);
 
+
             cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);  
+            checkLastErrorCUDA(__FILE__, __LINE__);                                                                 
 
             ParallelProcessDegreeZeroVerticesClean<<<activeVerticesCount,
-                                                threadsPerBlock,
-                                                threadsPerBlock*sizeof(int)>>>
-                            (numberOfRows,
-                            verticesRemainingInGraph,
-                            remaining_vertices.Current(),
-                            remaining_vertices_count.Current(),
-                            degrees.Current());
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
-
-/*
-            PrintData<<<1,1>>>(activeVerticesCount,
-                    numberOfRows,
-                    numberOfEdgesPerGraph, 
-                    verticesRemainingInGraph,
-                    row_offsets.Current(),
-                    columns.Current(),
-                    values.Current(),
-                    degrees.Current(),
-                    remaining_vertices.Current(),
-                    edges_left.Current(),
-                    remaining_vertices_count.Current());
+                                    threadsPerBlock,
+                                    threadsPerBlock*sizeof(int)>>>
+                (numberOfRows,
+                verticesRemainingInGraph,
+                remaining_vertices.Current(),
+                remaining_vertices_count.Current(),
+                degrees.Current());
 
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);  
-*/
+
             ParallelRowOffsetsPrefixSumDevice<<<activeVerticesCount,threadsPerBlock>>>
                                                (numberOfEdgesPerGraph,
                                                 numberOfRows,
@@ -3234,16 +3220,7 @@ void CallPopulateTree(int numberOfLevels,
                                                 global_cols_vals_segments);
 
             cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);               
-/*
-            PrintRowOffs<<<1,1>>>(activeVerticesCount,
-                    numberOfRows,
-                    row_offsets.Current(),
-                    global_cols_vals_segments);
-
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);                                             
-*/                                                                          
+            checkLastErrorCUDA(__FILE__, __LINE__);                                                                 
                                                             
             RestoreDataStructuresAfterRemovingChildrenVertices( activeVerticesCount,
                                                                 threadsPerBlock,
@@ -3260,23 +3237,7 @@ void CallPopulateTree(int numberOfLevels,
         
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
-
-            PrintData<<<1,1>>>(activeVerticesCount,
-                    numberOfRows,
-                    numberOfEdgesPerGraph, 
-                    verticesRemainingInGraph,
-                    row_offsets.Current(),
-                    columns.Current(),
-                    values.Current(),
-                    degrees.Current(),
-                    remaining_vertices.Current(),
-                    edges_left.Current(),
-                    remaining_vertices_count.Current());
-
-                    
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
-                                                                
+                                                    
         }
         notFirstCall = true;        
         // 1 thread per leaf
@@ -3306,37 +3267,6 @@ void CallPopulateTree(int numberOfLevels,
                             global_pendant_path_bool_dev_ptr,
                             global_pendant_path_reduced_bool_dev_ptr,
                             global_pendant_child_dev_ptr);
-        
-        cudaDeviceSynchronize();
-        checkLastErrorCUDA(__FILE__, __LINE__);
-
-        pendantNodeExists = false;
-        cudaMemcpy(pendantBools, global_pendant_path_bool_dev_ptr, threadsPerBlock*(activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
-        cudaMemcpy(pendantReducedBools, global_pendant_path_reduced_bool_dev_ptr, (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
-        cudaMemcpy(pendantChildrenOfLevel, global_pendant_child_dev_ptr, threadsPerBlock*(activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
-
-        /*
-        for (int node = levelOffset; node < levelUpperBound; ++node){
-            // global_pendant_path_bool_dev_ptr was defined as an OR of 
-            // 0) path[0] == path[2]
-            // 1) path[1] == path[3]
-            std::cout << "node " << node << std::endl;
-            std::cout << "global_pendant_path_bool_dev_ptr[node] " << pendantBools[node] << std::endl;
-
-            std::cout << "!global_pendant_path_bool_dev_ptr[node] " << !pendantBools[node] << std::endl;
-
-            if (pendantReducedBools[node]){
-                std::cout << "node " << node << " contains a pendant edge" << std::endl;
-                for (int pendantPathIndex = 0; pendantPathIndex < threadsPerBlock; ++pendantPathIndex){
-                    if(pendantBools[pendantPathIndex]){
-                        pendantChild = pendantChildrenOfLevel[(node - levelOffset)*threadsPerBlock + pendantPathIndex];
-                        pendantChildren[node].insert(pendantChild);
-                        std::cout << "node " << node << "'s pendantChild " << pendantChild << " was pushed" << std::endl;
-                    }
-                }
-            }
-        }
-        */
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -3361,33 +3291,6 @@ void CallPopulateTree(int numberOfLevels,
                         edges_left.Current(),
                         global_pendant_path_bool_dev_ptr,
                         global_pendant_child_dev_ptr);
-        cudaDeviceSynchronize();
-        checkLastErrorCUDA(__FILE__, __LINE__);
-
-        ParallelProcessDegreeZeroVerticesClean<<<activeVerticesCount,
-                                            threadsPerBlock,
-                                            threadsPerBlock*sizeof(int)>>>
-                        (numberOfRows,
-                        verticesRemainingInGraph,
-                        remaining_vertices.Current(),
-                        remaining_vertices_count.Current(),
-                        degrees.Current());
-        cudaDeviceSynchronize();
-        checkLastErrorCUDA(__FILE__, __LINE__);
-
-        PrintData<<<1,1>>>(activeVerticesCount,
-                numberOfRows,
-                numberOfEdgesPerGraph, 
-                verticesRemainingInGraph,
-                row_offsets.Current(),
-                columns.Current(),
-                values.Current(),
-                degrees.Current(),
-                remaining_vertices.Current(),
-                edges_left.Current(),
-                remaining_vertices_count.Current());
-
-        std::cout << "Returned from PrintData" << std::endl;
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
