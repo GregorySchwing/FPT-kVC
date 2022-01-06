@@ -1753,6 +1753,10 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
         pathsAndIndependentStatus[pendPathChildOffset + start] = global_pendant_child_dev_ptr[globalPendantPathChildOffset + start];
     }
 
+    // Initialize I set to 0
+    for (int start = threadIdx.x; start < blockDim.x; start += blockDim.x){
+        pathsAndIndependentStatus[setInclusionOffset + start] = 0;
+    }
     __syncthreads();
 
     // Automatically remove paths containing the pendant child(ren)
@@ -1785,14 +1789,6 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
             pathsAndIndependentStatus[setRemainingOffset + row] = !pathsAndIndependentStatus[setReductionOffset];
         __syncthreads();
     }
-
-    if (threadIdx.x == 0){
-        printf("setRemainingOffset\n");
-        for (int i = 0; i < blockDim.x; ++i)
-            printf("%d ", pathsAndIndependentStatus[setRemainingOffset + i]);
-        printf("\n");
-    }
-
 
     // See if each vertex in my path is duplicated, 1 vs all comparison written to shared memory
     // Also, if it is duplicated, only process the largest index duplicate
@@ -1858,6 +1854,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
             pathsAndIndependentStatus[setReductionOffset + threadIdx.x] &= (pathsAndIndependentStatus[randNumOffset + threadIdx.x]
                                                                             < pathsAndIndependentStatus[randNumOffset + row]);
             __syncthreads();
+
             int i = blockDim.x/2;
             while (i != 0) {
                 if (threadIdx.x < i){
@@ -1911,16 +1908,6 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
 
         cardinalityOfV = pathsAndIndependentStatus[setReductionOffset];
         ++seed;
-        if (threadIdx.x == 0){
-            printf("setRemainingOffset\n");
-            for (int i = 0; i < blockDim.x; ++i)
-                printf("%d ", pathsAndIndependentStatus[setRemainingOffset + i]);
-            printf("\n");
-            printf("setInclusionOffset\n");
-            for (int i = 0; i < blockDim.x; ++i)
-                printf("%d ", pathsAndIndependentStatus[setInclusionOffset + i]);
-            printf("\n");
-        }
     }
     pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[setInclusionOffset + threadIdx.x];
     int i = blockDim.x/2;
@@ -3559,7 +3546,6 @@ void CallPopulateTree(int numberOfLevels,
         {
             std::cout << '\n' << "Press enter to continue...; ctrl-c to terminate";
         } while (std::cin.get() != '\n');
-
     }
 /*
         cudaMemcpy(activeFlags, global_active_vertices, treeSize*sizeof(int), cudaMemcpyDeviceToHost);
