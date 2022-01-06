@@ -270,6 +270,13 @@ __global__ void ParallelProcessDegreeZeroVertices(
                             int * global_remaining_vertices_size_dev_ptr,
                             int * global_degrees_dev_ptr);
 
+__global__ void ParallelProcessDegreeZeroVerticesClean(
+                            int numberOfRows,
+                            int verticesRemainingInGraph,
+                            int * global_active_leaf_indices,
+                            int * global_remaining_vertices_dev_ptr,
+                            int * global_remaining_vertices_size_dev_ptr,
+                            int * global_degrees_dev_ptr);
 
 __global__ void ParallelRowOffsetsPrefixSumDevice(int numberOfEdgesPerGraph,
                                                 int numberOfRows,

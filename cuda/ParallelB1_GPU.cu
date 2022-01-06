@@ -2499,6 +2499,76 @@ __global__ void ParallelProcessDegreeZeroVertices(
         global_remaining_vertices_size_dev_ptr[leafIndex] -= numVerticesRemoved;
     }
 }
+
+__global__ void ParallelProcessDegreeZeroVerticesClean(
+                            int numberOfRows,
+                            int verticesRemainingInGraph,
+                            int * global_remaining_vertices_dev_ptr,
+                            int * global_remaining_vertices_size_dev_ptr,
+                            int * global_degrees_dev_ptr){
+
+
+    int leafIndex = blockIdx.x;
+    if (threadIdx.x == 0){
+        printf("Leaf index %d Entered ProcessDeg0\n", leafIndex);
+    }
+    extern __shared__ int degreeZeroVertex[];
+
+    int degreesOffset = leafIndex * numberOfRows;
+    int remainingVerticesOffset = leafIndex * verticesRemainingInGraph;
+    int numVertices = global_remaining_vertices_size_dev_ptr[leafIndex];
+    int numVerticesRemoved = 0;
+    int numIters = (numVertices + blockDim.x + 1 )/blockDim.x;
+    //for (int iter = threadIdx.x; iter < numVertices; iter += blockDim.x){
+    //    
+    //}
+    //__syncthreads();
+    // Sync threads will hang for num verts > tPB...
+    
+    int vertex = threadIdx.x;
+    int boundedVertex = threadIdx.x;
+    int addend = 0;
+    for (int iter = 0; iter < numIters; ++iter, vertex += blockDim.x){
+        boundedVertex = vertex*(int)(vertex < numVertices) + 0;
+        // Prevent out of bound memory access by setting vertex to 0 for vertex > numVertices
+        degreeZeroVertex[threadIdx.x] = (int)(0 == (global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[remainingVerticesOffset + boundedVertex]]));
+        // Set the garbage values to 0.  Since there is a sync threads in this for loop, we need
+        // to round up the iters, and some threads won't correspond to actual remaining vertices.
+        // Set these to 0.
+        degreeZeroVertex[threadIdx.x] *= (int)(vertex < numVertices);
+
+        // Makes this entry INT_MAX if degree 0
+        // Leaves unaltered if not degree 0
+        // Prevent out of bound memory access by setting vertex to 0 for vertex > numVertices
+        addend = 
+        (INT_MAX - global_remaining_vertices_dev_ptr[remainingVerticesOffset 
+        + boundedVertex])*degreeZeroVertex[threadIdx.x];
+
+        global_remaining_vertices_dev_ptr[remainingVerticesOffset 
+        + boundedVertex] += addend;        
+
+        int i = blockDim.x/2;
+        __syncthreads();
+        while (i != 0) {
+            if (threadIdx.x < i){
+                //printf("degreeZeroVertex[%d] = %d + %d\n", threadIdx.x, degreeZeroVertex[threadIdx.x], degreeZeroVertex[threadIdx.x + i]);
+                degreeZeroVertex[threadIdx.x] += degreeZeroVertex[threadIdx.x + i];
+            }
+            __syncthreads();
+            i /= 2;
+        }
+        if (threadIdx.x == 0){
+            numVerticesRemoved += degreeZeroVertex[threadIdx.x];
+            printf("leafIndex %d numVerticesRemoved %d\n", leafIndex, numVerticesRemoved);
+        }
+    }
+    // Update remaining vert size
+    // Now just need to sort those INT_MAX entries to the end of the array
+    if (threadIdx.x == 0){
+        printf("leafIndex %d total numVerticesRemoved %d\n", leafIndex, numVerticesRemoved);
+        global_remaining_vertices_size_dev_ptr[leafIndex] -= numVerticesRemoved;
+    }
+}
 /*
 __global__ void ParallelActiveVertexPathOffsets(int * global_active_leaf_indices,
                                                 int global_active_leaf_indices_count,
@@ -3126,7 +3196,7 @@ void CallPopulateTree(int numberOfLevels,
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);  
 
-            ParallelProcessDegreeZeroVertices<<<activeVerticesCount,
+            ParallelProcessDegreeZeroVerticesClean<<<activeVerticesCount,
                                                 threadsPerBlock,
                                                 threadsPerBlock*sizeof(int)>>>
                             (numberOfRows,
@@ -3136,7 +3206,7 @@ void CallPopulateTree(int numberOfLevels,
                             degrees.Current());
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
-            
+
 /*
             PrintData<<<1,1>>>(activeVerticesCount,
                     numberOfRows,
@@ -3290,7 +3360,7 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        ParallelProcessDegreeZeroVertices<<<activeVerticesCount,
+        ParallelProcessDegreeZeroVerticesClean<<<activeVerticesCount,
                                             threadsPerBlock,
                                             threadsPerBlock*sizeof(int)>>>
                         (numberOfRows,
