@@ -297,7 +297,7 @@ void Graph::SetEdgesOfSSymParallel(thrust::host_vector<int> & S,
     for (int sI = 0; sI < S.size(); ++sI)
     {
         int u = S[sI];
-        for (int i = row_offsets_ref[S[u]]; i < row_offsets_ref[u+1]; ++i){
+        for (int i = row_offsets_ref[u]; i < row_offsets_ref[u+1]; ++i){
             v = column_indices_ref[i];
             values[i] = 0;
         }
