@@ -3011,7 +3011,7 @@ void CallPopulateTree(int numberOfLevels,
 
     int expandedData = g.GetEdgesLeftToCover();
     int condensedData = g.GetVertexCount();
-    numberOfLevels = g.GetVertexCount()/2;
+    numberOfLevels = g.GetVertexCount()/2 + 1;
     int secondDeepestLevelSize = CalculateDeepestLevelWidth(numberOfLevels-2);;
     int deepestLevelSize = CalculateDeepestLevelWidth(numberOfLevels-1);;
     long long bufferSize = deepestLevelSize;
