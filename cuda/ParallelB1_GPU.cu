@@ -3114,7 +3114,7 @@ void CallPopulateTree(int numberOfLevels,
     int * global_set_path_offsets;
     //
     int * global_reduced_set_inclusion_count_ptr;
-
+    int * global_reduced_set_inclusion_count_ptr_buffer;
 
     int * global_paths_length;
     int * global_edges_left_to_cover_count;
@@ -3122,11 +3122,11 @@ void CallPopulateTree(int numberOfLevels,
 
     int * global_active_leaf_indices, * global_active_leaf_indices_buffer;
     // Used to as the source of the copied graph
-    int * global_active_leaf_parent_leaf_index;
+    int * global_active_leaf_parent_leaf_index, * global_active_leaf_parent_leaf_index_buffer;
     // Used as the destination for the graph
-    int * global_active_leaf_index;
+    int * global_active_leaf_index, * global_active_leaf_index_buffer;
     // Used for determining when to stop recursing up for set vertices
-    int * global_active_leaf_parent_leaf_value;
+    int * global_active_leaf_parent_leaf_value, * global_active_leaf_parent_leaf_value_buffer;
 
     int * global_active_leaf_indices_count;
     int * global_active_leaf_indices_count_buffer;
@@ -3186,7 +3186,8 @@ void CallPopulateTree(int numberOfLevels,
     cub::DoubleBuffer<int> set_inclusion(global_set_inclusion_bool_ptr, global_set_inclusion_bool_ptr_buffer);
 
     cudaMalloc( (void**)&global_reduced_set_inclusion_count_ptr, deepestLevelSize * sizeof(int) );
-
+    cudaMalloc( (void**)&global_reduced_set_inclusion_count_ptr_buffer, deepestLevelSize * sizeof(int) );
+    cub::DoubleBuffer<int> set_inclusion_count(global_reduced_set_inclusion_count_ptr, global_reduced_set_inclusion_count_ptr_buffer);
 
     //cudaMemset(global_remaining_vertices_dev_ptr, INT_MAX, (numberOfRows*deepestLevelSize) * sizeof(int));
 
@@ -3244,15 +3245,21 @@ void CallPopulateTree(int numberOfLevels,
     // Once the memory of the new leaves excede available memory, the new leaves are
     // copied back to host, and the rest of the new leaves processed, only then 
     // can the old graph be replaced by a new graph and the process continued.
-    cudaMalloc( (void**)&global_active_leaf_parent_leaf_index, deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_active_leaf_index, deepestLevelSize * sizeof(int) );
-    cudaMalloc( (void**)&global_active_leaf_parent_leaf_value, deepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_active_leaf_index_buffer, deepestLevelSize * sizeof(int) );
+    cub::DoubleBuffer<int> active_leaves_index(global_active_leaf_index, global_active_leaf_index_buffer);
 
     cudaMalloc( (void**)&global_active_leaf_indices_count, 1 * sizeof(int) );
     cudaMalloc( (void**)&global_active_leaf_indices_count_buffer, 1 * sizeof(int) );
-
-    // Each active vertex knows the cardinality of the MIS
     cub::DoubleBuffer<int> active_leaves_count(global_active_leaf_indices_count, global_active_leaf_indices_count_buffer);
+
+    cudaMalloc( (void**)&global_active_leaf_parent_leaf_index, deepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_active_leaf_parent_leaf_index_buffer, deepestLevelSize * sizeof(int) );
+    cub::DoubleBuffer<int> parent_leaf_index(global_active_leaf_parent_leaf_index, global_active_leaf_parent_leaf_index_buffer);
+
+    cudaMalloc( (void**)&global_active_leaf_parent_leaf_value, deepestLevelSize * sizeof(int) );
+    cudaMalloc( (void**)&global_active_leaf_parent_leaf_value_buffer, deepestLevelSize * sizeof(int) );
+    cub::DoubleBuffer<int> parent_leaf_value(global_active_leaf_parent_leaf_value, global_active_leaf_parent_leaf_value_buffer);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -3326,7 +3333,7 @@ void CallPopulateTree(int numberOfLevels,
                                                             numberOfRows,
                                                             numberOfEdgesPerGraph,
                                                             active_leaves.Current(),
-                                                            global_active_leaf_parent_leaf_value,
+                                                            parent_leaf_value.Current(),
                                                             row_offsets.Current(),
                                                             columns.Current(),
                                                             values.Current(),
@@ -3456,7 +3463,7 @@ void CallPopulateTree(int numberOfLevels,
                                                         global_pendant_child_dev_ptr,
                                                         global_paths_ptr,
                                                         set_inclusion.Current(),
-                                                        global_reduced_set_inclusion_count_ptr,
+                                                        set_inclusion_count.Current(),
                                                         edges_left.Current(),
                                                         remaining_vertices_count.Current());
 
@@ -3494,7 +3501,7 @@ void CallPopulateTree(int numberOfLevels,
                                                (threadsPerBlock + threadsPerBlock*4)*sizeof(int)>>>(
                                         active_leaves.Current(),
                                         paths_indices.Current(),
-                                        global_reduced_set_inclusion_count_ptr,
+                                        set_inclusion_count.Current(),
                                         global_paths_ptr,
                                         global_vertices_included_dev_ptr,
                                         edges_left.Current(),
@@ -3513,7 +3520,7 @@ void CallPopulateTree(int numberOfLevels,
         ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock,threadsPerBlock*sizeof(int)>>>(
                                         active_leaves_count.Current(),
                                         active_leaves_count.Alternate(),
-                                        global_reduced_set_inclusion_count_ptr,
+                                        set_inclusion_count.Current(),
                                         active_leaf_offset.Current(),
                                         edges_left.Current(),
                                         remaining_vertices_count.Current());
@@ -3564,11 +3571,11 @@ void CallPopulateTree(int numberOfLevels,
                                         active_leaves.Current(),
                                         active_leaves.Alternate(),
                                         active_leaves_count.Current(),
-                                        global_reduced_set_inclusion_count_ptr,
+                                        set_inclusion_count.Current(),
                                         active_leaf_offset.Alternate(),
-                                        global_active_leaf_index,
-                                        global_active_leaf_parent_leaf_index,
-                                        global_active_leaf_parent_leaf_value,
+                                        active_leaves_index.Alternate(),
+                                        parent_leaf_index.Alternate(),
+                                        parent_leaf_value.Alternate(),
                                         edges_left.Current(),
                                         remaining_vertices_count.Current());
         
@@ -3582,10 +3589,10 @@ void CallPopulateTree(int numberOfLevels,
         checkLastErrorCUDA(__FILE__, __LINE__);
 
         std::cout << "activeVerticesCount: " << activeVerticesCount << std::endl;
-        cudaMemcpy(&activeLeavesHostIndex[0], (int*)global_active_leaf_index, (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&activeLeavesHostIndex[0], (int*)active_leaf_index.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
         cudaMemcpy(&activeLeavesHostValue[0], (int*)active_leaves.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
-        cudaMemcpy(&activeParentHostIndex[0], (int*)global_active_leaf_parent_leaf_index, (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
-        cudaMemcpy(&activeParentHostValue[0], (int*)global_active_leaf_parent_leaf_value, (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&activeParentHostIndex[0], (int*)parent_leaf_index.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&activeParentHostValue[0], (int*)parent_leaf_value.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
 
 
         cudaDeviceSynchronize();
@@ -3629,6 +3636,11 @@ void CallPopulateTree(int numberOfLevels,
         int * old_verts_remain_count = remaining_vertices_count.Current();
         int * new_verts_remain_count = remaining_vertices_count.Alternate();
 
+        int * old_active_leaf_offset = active_leaf_offset.Current();
+        int * old_active_leaves_index = active_leaves_index.Current();
+        int * old_parent_leaf_index = parent_leaf_index.Current();
+        int * old_parent_leaf_value = parent_leaf_value.Current();
+
         // Memory-Unoptimized
         for(int newChild = 0; newChild < activeVerticesCount; ++newChild){
             cudaMemcpy(&new_row_offs[newChild*(numberOfRows+1)], &old_row_offs[activeParentHostIndex[newChild]*(numberOfRows+1)], (numberOfRows+1)*sizeof(int), cudaMemcpyDeviceToDevice);
@@ -3657,7 +3669,12 @@ void CallPopulateTree(int numberOfLevels,
         cudaMemsetAsync(old_verts_remain, 0, verts_remain_sz);
         cudaMemsetAsync(old_edges_left, 0, remain_count_edges_left_sz);
         cudaMemsetAsync(old_verts_remain_count, 0, remain_count_edges_left_sz);
-        
+
+        // Need to clean the offsets
+        cudaMemsetAsync(old_active_leaves_index, 0, remain_count_edges_left_sz);
+        cudaMemsetAsync(old_parent_leaf_index, 0, remain_count_edges_left_sz);
+        cudaMemsetAsync(old_parent_leaf_value, 0, remain_count_edges_left_sz);
+
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
