@@ -1832,8 +1832,10 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
         printf("Block ID %d Started ParallelIdentifyVertexDisjointNonPendantPathsClean\n", blockIdx.x);
     }
     int leafIndex = blockIdx.x;
-    if (0 == global_edges_left_to_cover_count[leafIndex] || 0 == global_verts_remain_count[leafIndex])
+    if (0 == global_edges_left_to_cover_count[leafIndex] || 0 == global_verts_remain_count[leafIndex]){
+        global_reduced_set_inclusion_count_ptr[leafIndex] = 0;
         return;
+    }
 
     int globalPathOffset = leafIndex * 4 * blockDim.x;
     // Only allocated for one level, not tree global
@@ -2295,9 +2297,9 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
     int globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
     
     extern __shared__ int new_active_leaves_count_red[];
-    // We need to populate the leaves with empty graphs to process the deg 0 verts
-    if (globalIndex < global_active_leaves_count_current[0] 
-        && 0 < global_verts_remain_count[globalIndex]){
+    // We need to enter this loop to set leavesToProcess to 0
+    // for terminating condition.
+    if (globalIndex < global_active_leaves_count_current[0]){
 
         printf("globalIndex %d, global_active_leaves_count_current %d\n",globalIndex, global_active_leaves_count_current[0]);
         printf("globalIndex %d, ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst\n",globalIndex);
@@ -2330,6 +2332,9 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
         global_newly_active_leaves_count_ptr[globalIndex] = totalNewActive + (int)(totalNewActive == 0);
         // Write to shared memory for reduction
         new_active_leaves_count_red[threadIdx.x] = totalNewActive + (int)(totalNewActive == 0);
+        // If no edges are left or no vertices are remaining, then deactivate this leaf.
+        new_active_leaves_count_red[threadIdx.x] *= (int)(global_edges_left_to_cover_count[globalIndex] != 0);
+        new_active_leaves_count_red[threadIdx.x] *= (int)(global_verts_remain_count[globalIndex] != 0);
     } else {
         new_active_leaves_count_red[threadIdx.x] = 0;
     }
@@ -2450,9 +2455,10 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
     int leftMostLeafIndexOfFullLevel;
     int leftMostLeafIndexOfIncompleteLevel;
     // Since number of leaves is not necessarily a power of 2
-    // We need to populate the leaves of the empty graphs so we can process the deg 0 vertices
+    // Dont populate inactivated leaves.
     if (globalIndex < global_active_leaves_count_current[0] 
-        && 0 < global_verts_remain_count[globalIndex]){
+        && 0 < global_verts_remain_count[globalIndex]
+        && 0 < global_edges_left_to_cover_count[globalIndex]){
 
         printf("globalIndex %d, ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean\n",globalIndex);
         printf("globalIndex %d, global_active_leaves_count_current %x\n",globalIndex, global_active_leaves_count_current[0]);
@@ -3311,6 +3317,7 @@ void CallPopulateTree(int numberOfLevels,
     bool notFirstCall = false;
     // When activeVerticesCount == 0, loop terminates
     int activeVerticesCount = 1;
+    int oldActiveVerticesCount;
     int zero = 0;
 
     while(activeVerticesCount){
@@ -3568,6 +3575,7 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
+        oldActiveVerticesCount = activeVerticesCount;
         cudaMemcpy(&activeVerticesCount, active_leaves_count.Alternate(), 1*sizeof(int), cudaMemcpyDeviceToHost);
 
         cudaDeviceSynchronize();
@@ -3632,6 +3640,24 @@ void CallPopulateTree(int numberOfLevels,
             cudaMemcpy(&new_verts_remain_count[newChild], &old_verts_remain_count[activeParentHostIndex[newChild]], 1*sizeof(int), cudaMemcpyDeviceToDevice);      
         }
 
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+
+        // Memory-Unoptimized
+        const size_t row_offs_sz = size_t(oldActiveVerticesCount*(numberOfRows+1)) * sizeof(int);
+        const size_t cols_vals_sz = size_t(oldActiveVerticesCount*numberOfEdgesPerGraph) * sizeof(int);
+        const size_t degrees_sz = size_t(oldActiveVerticesCount*numberOfRows) * sizeof(int);
+        const size_t verts_remain_sz = size_t(oldActiveVerticesCount*verticesRemainingInGraph) * sizeof(int);
+        const size_t remain_count_edges_left_sz = size_t(oldActiveVerticesCount) * sizeof(int);
+
+        cudaMemsetAsync(old_row_offs, 0, row_offs_sz);
+        cudaMemsetAsync(old_cols, 0, cols_vals_sz);
+        cudaMemsetAsync(old_vals, 0, cols_vals_sz);
+        cudaMemsetAsync(old_degrees, 0, degrees_sz);
+        cudaMemsetAsync(old_verts_remain, 0, verts_remain_sz);
+        cudaMemsetAsync(old_edges_left, 0, remain_count_edges_left_sz);
+        cudaMemsetAsync(old_verts_remain_count, 0, remain_count_edges_left_sz);
+        
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
