@@ -3692,6 +3692,11 @@ void CallPopulateTree(int numberOfLevels,
         edges_left.selector = !edges_left.selector;
         remaining_vertices_count.selector = !remaining_vertices_count.selector;
 
+        active_leaf_offset.selector = !active_leaf_offset.selector;
+        active_leaves_index.selector = !active_leaves_index.selector;
+        parent_leaf_index.selector = !parent_leaf_index.selector;
+        parent_leaf_value.selector = !parent_leaf_value.selector;     
+
         printf("After flip active_leaves.selector %d\n", active_leaves.selector);
 
 
