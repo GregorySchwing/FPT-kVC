@@ -311,7 +311,7 @@ __global__ void  PrintData(int activeVerticesCount,
                             int * vals,
                             int * degrees,
                             int * verts_remain,
-                            int * edges_left,
+                            int * global_edges_left_to_cover_count,
                             int * verts_remain_count){
     if (threadIdx.x > 0 || blockIdx.x > 0)
         return;
@@ -342,7 +342,7 @@ __global__ void  PrintData(int activeVerticesCount,
             printf("%d ",verts_remain[g*(verticesRemainingInGraph) + i]);
         }
         printf("\n");
-        printf("Edges left: %d\n", edges_left[g]);
+        printf("Edges left: %d\n", global_edges_left_to_cover_count[g]);
         printf("\n");
         printf("Vertices Remaining Count: %d\n", verts_remain_count[g]);
     }
@@ -587,9 +587,12 @@ __global__ void SetEdges(const int numberOfRows,
                         int * global_values_dev_ptr,
                         int * global_degrees_dev_ptr,
                         int * global_edges_left_to_cover_count,
+                        int * global_verts_remain_count,
                         const int * global_vertices_included_dev_ptr){
 
     int leafIndex = blockIdx.x;
+    if (0 == global_edges_left_to_cover_count[leafIndex] || 0 == global_verts_remain_count[leafIndex])
+        return;
     int leafValue = global_active_leaf_indices[leafIndex];
     int originalLV = leafValue;
     int parentLeafValue = global_active_leaf_parent_leaf_index[leafIndex];
@@ -692,9 +695,13 @@ __global__ void SetPendantEdges(const int numberOfRows,
                         int * global_degrees_dev_ptr,
                         int * global_edges_left_to_cover_count,
                         const int * global_pendant_path_bool_dev_ptr,
-                        const int * global_pendant_child_dev_ptr){
+                        const int * global_pendant_child_dev_ptr,
+                        int * global_verts_remain_count){
 
     int leafIndex = blockIdx.x;
+    if (0 == global_edges_left_to_cover_count[leafIndex] || 0 == global_verts_remain_count[leafIndex])
+        return;
+
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
     int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
     int degreesOffset = leafIndex * numberOfRows;
@@ -1150,12 +1157,16 @@ __global__ void ParallelDFSRandom(
                             int * global_paths_indices_ptr,
                             int * global_pendant_path_bool_dev_ptr,
                             int * global_pendant_path_reduced_bool_dev_ptr,
-                            int * global_pendant_child_dev_ptr){
+                            int * global_pendant_child_dev_ptr,
+                            int * global_edges_left_to_cover_count,
+                            int * global_verts_remain_count){
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("Entered DFS\n");
         printf("\n");
     }
     int leafIndex = blockIdx.x;
+    if (0 == global_edges_left_to_cover_count[leafIndex] || 0 == global_verts_remain_count[leafIndex])
+        return;
     int leafValue = global_active_leaf_indices[leafIndex];
 
     if (threadIdx.x == 0 && blockIdx.x == 0){
@@ -1814,12 +1825,16 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
                             int * global_pendant_child_dev_ptr,
                             int * global_paths_ptr,
                             int * global_set_inclusion_bool_ptr,
-                            int * global_reduced_set_inclusion_count_ptr){
+                            int * global_reduced_set_inclusion_count_ptr,
+                            int * global_edges_left_to_cover_count,
+                            int * global_verts_remain_count){
     if (threadIdx.x == 0){
         printf("Block ID %d Started ParallelIdentifyVertexDisjointNonPendantPathsClean\n", blockIdx.x);
     }
-
     int leafIndex = blockIdx.x;
+    if (0 == global_edges_left_to_cover_count[leafIndex] || 0 == global_verts_remain_count[leafIndex])
+        return;
+
     int globalPathOffset = leafIndex * 4 * blockDim.x;
     // Only allocated for one level, not tree global
     int globalPendantPathBoolOffset = blockIdx.x * blockDim.x;
@@ -2040,8 +2055,12 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
                                         int * global_set_paths_indices,
                                         int * global_reduced_set_inclusion_count_ptr,
                                         int * global_paths_ptr,
-                                        int * global_vertices_included_dev_ptr){
+                                        int * global_vertices_included_dev_ptr,
+                                        int * global_edges_left_to_cover_count,
+                                        int * global_verts_remain_count){
     int leafIndex = blockIdx.x;
+    if (0 == global_edges_left_to_cover_count[leafIndex] || 0 == global_verts_remain_count[leafIndex])
+        return;
     int leafValue = global_active_leaf_indices[leafIndex];
     // Solve recurrence relation 
     // g(n) = 1/6*((2*C+3)*3^n - 3)
@@ -2270,11 +2289,16 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
                                         int * global_active_leaves_count_current,
                                         int * global_active_leaves_count_new,
                                         int * global_reduced_set_inclusion_count_ptr,
-                                        int * global_newly_active_leaves_count_ptr){
+                                        int * global_newly_active_leaves_count_ptr,
+                                        int * global_edges_left_to_cover_count,
+                                        int * global_verts_remain_count){
     int globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
     
     extern __shared__ int new_active_leaves_count_red[];
-    if (globalIndex < global_active_leaves_count_current[0]){
+    // We need to populate the leaves with empty graphs to process the deg 0 verts
+    if (globalIndex < global_active_leaves_count_current[0] 
+        && 0 < global_verts_remain_count[globalIndex]){
+
         printf("globalIndex %d, global_active_leaves_count_current %d\n",globalIndex, global_active_leaves_count_current[0]);
         printf("globalIndex %d, ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst\n",globalIndex);
 
@@ -2416,7 +2440,9 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
                                         int * global_newly_active_offset_ptr,
                                         int * global_active_leaf_index,
                                         int * global_active_leaf_parent_leaf_index,
-                                        int * global_active_leaf_parent_leaf_value){
+                                        int * global_active_leaf_parent_leaf_value,
+                                        int * global_edges_left_to_cover_count,
+                                        int * global_verts_remain_count){
     int globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
     int leafValue;
     int arbitraryParameter;
@@ -2424,7 +2450,10 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
     int leftMostLeafIndexOfFullLevel;
     int leftMostLeafIndexOfIncompleteLevel;
     // Since number of leaves is not necessarily a power of 2
-    if (globalIndex < global_active_leaves_count_current[0]){
+    // We need to populate the leaves of the empty graphs so we can process the deg 0 vertices
+    if (globalIndex < global_active_leaves_count_current[0] 
+        && 0 < global_verts_remain_count[globalIndex]){
+
         printf("globalIndex %d, ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean\n",globalIndex);
         printf("globalIndex %d, global_active_leaves_count_current %x\n",globalIndex, global_active_leaves_count_current[0]);
         int leavesToProcess = global_reduced_set_inclusion_count_ptr[globalIndex];
@@ -2603,10 +2632,13 @@ __global__ void ParallelProcessDegreeZeroVerticesClean(
                             int verticesRemainingInGraph,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
+                            int * global_edges_left_to_cover_count,
                             int * global_degrees_dev_ptr){
 
 
     int leafIndex = blockIdx.x;
+    if (0 == global_remaining_vertices_size_dev_ptr[leafIndex])
+        return;
     if (threadIdx.x == 0){
         printf("Leaf index %d Entered ProcessDeg0\n", leafIndex);
     }
@@ -3293,6 +3325,7 @@ void CallPopulateTree(int numberOfLevels,
                                                             values.Current(),
                                                             degrees.Current(),
                                                             edges_left.Current(),
+                                                            remaining_vertices_count.Current(),
                                                             global_vertices_included_dev_ptr);
 
 
@@ -3306,6 +3339,7 @@ void CallPopulateTree(int numberOfLevels,
                 verticesRemainingInGraph,
                 remaining_vertices.Current(),
                 remaining_vertices_count.Current(),
+                edges_left.Current(),
                 degrees.Current());
 
             cudaDeviceSynchronize();
@@ -3379,7 +3413,9 @@ void CallPopulateTree(int numberOfLevels,
                             paths_indices.Current(),
                             global_pendant_path_bool_dev_ptr,
                             global_pendant_path_reduced_bool_dev_ptr,
-                            global_pendant_child_dev_ptr);
+                            global_pendant_child_dev_ptr,
+                            edges_left.Current(),
+                            remaining_vertices_count.Current());
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -3393,7 +3429,8 @@ void CallPopulateTree(int numberOfLevels,
                                                             degrees.Current(),
                                                             edges_left.Current(),
                                                             global_pendant_path_bool_dev_ptr,
-                                                            global_pendant_child_dev_ptr);
+                                                            global_pendant_child_dev_ptr,
+                                                            remaining_vertices_count.Current());
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
@@ -3412,7 +3449,9 @@ void CallPopulateTree(int numberOfLevels,
                                                         global_pendant_child_dev_ptr,
                                                         global_paths_ptr,
                                                         set_inclusion.Current(),
-                                                        global_reduced_set_inclusion_count_ptr);
+                                                        global_reduced_set_inclusion_count_ptr,
+                                                        edges_left.Current(),
+                                                        remaining_vertices_count.Current());
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -3450,7 +3489,9 @@ void CallPopulateTree(int numberOfLevels,
                                         paths_indices.Current(),
                                         global_reduced_set_inclusion_count_ptr,
                                         global_paths_ptr,
-                                        global_vertices_included_dev_ptr);
+                                        global_vertices_included_dev_ptr,
+                                        edges_left.Current(),
+                                        remaining_vertices_count.Current());
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -3466,7 +3507,9 @@ void CallPopulateTree(int numberOfLevels,
                                         active_leaves_count.Current(),
                                         active_leaves_count.Alternate(),
                                         global_reduced_set_inclusion_count_ptr,
-                                        active_leaf_offset.Current());
+                                        active_leaf_offset.Current(),
+                                        edges_left.Current(),
+                                        remaining_vertices_count.Current());
         
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -3518,7 +3561,9 @@ void CallPopulateTree(int numberOfLevels,
                                         active_leaf_offset.Alternate(),
                                         global_active_leaf_index,
                                         global_active_leaf_parent_leaf_index,
-                                        global_active_leaf_parent_leaf_value);
+                                        global_active_leaf_parent_leaf_value,
+                                        edges_left.Current(),
+                                        remaining_vertices_count.Current());
         
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);

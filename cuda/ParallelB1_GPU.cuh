@@ -139,6 +139,7 @@ __global__ void SetEdges(const int numberOfRows,
                         int * global_values_dev_ptr,
                         int * global_degrees_dev_ptr,
                         int * global_edges_left_to_cover_count,
+                        int * verts_remain_count,
                         const int * global_vertices_included_dev_ptr);
 
 __global__ void SetPendantEdges(const int numberOfRows,
@@ -149,7 +150,8 @@ __global__ void SetPendantEdges(const int numberOfRows,
                         int * global_degrees_dev_ptr,
                         int * global_edges_left_to_cover_count,
                         const int * global_pendant_path_bool_dev_ptr,
-                        const int * global_pendant_child_dev_ptr);
+                        const int * global_pendant_child_dev_ptr,
+                        int * verts_remain_count);
 
 __global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
                                             int numberOfEdgesPerGraph,
@@ -234,7 +236,9 @@ __global__ void ParallelDFSRandom(int numberOfRows,
                             int * global_paths_indices_ptr,
                             int * global_nonpendant_path_bool_dev_ptr,
                             int * global_nonpendant_path_reduced_bool_dev_ptr,
-                            int * global_nonpendant_child_dev_ptr);
+                            int * global_nonpendant_child_dev_ptr,
+                            int * global_edges_left_to_cover_count,
+                            int * global_verts_remain_count);
 
 __global__ void ParallelProcessPendantEdges(
                             int numberOfRows,
@@ -270,7 +274,9 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
                             int * global_pendant_path_bool_dev_ptr,
                             int * global_pendant_child_dev_ptr,
                             int * global_set_inclusion_bool_ptr,
-                            int * global_reduced_set_inclusion_count_ptr);
+                            int * global_reduced_set_inclusion_count_ptr,
+                            int * edges_left,
+                            int * verts_remain_count);
 
 __global__ void ParallelProcessDegreeZeroVertices(
                             int numberOfRows,
@@ -286,6 +292,7 @@ __global__ void ParallelProcessDegreeZeroVerticesClean(
                             int * global_active_leaf_indices,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
+                            int * global_edges_left_to_cover_count,
                             int * global_degrees_dev_ptr);
 
 __global__ void ParallelRowOffsetsPrefixSumDevice(int numberOfEdgesPerGraph,
@@ -314,13 +321,17 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
                                         int * global_set_paths_indices,
                                         int * global_reduced_set_inclusion_count_ptr,
                                         int * global_paths_ptr,
-                                        int * global_vertices_included_dev_ptr);
+                                        int * global_vertices_included_dev_ptr,
+                                        int * edges_left,
+                                        int * verts_remain_count);
 
 __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
                                         int * global_active_leaves_count_current,
                                         int * global_active_leaves_count_new,
                                         int * global_reduced_set_inclusion_count_ptr,
-                                        int * global_reduced_set_newly_active_leaves_count_ptr);
+                                        int * global_reduced_set_newly_active_leaves_count_ptr,
+                                        int * edges_left,
+                                        int * verts_remain_count);
 
 __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
                                         int * global_active_leaves,
@@ -339,7 +350,9 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
                                         int * global_newly_active_offset_ptr,
                                         int * global_active_leaf_index,
                                         int * global_active_leaf_parent_leaf_index,
-                                        int * global_active_leaf_parent_leaf_value);
+                                        int * global_active_leaf_parent_leaf_value,
+                                        int * edges_left,
+                                        int * verts_remain_count);
 
 __global__ void ParallelQuicksortWithDNF(int levelOffset,
                             int levelUpperBound,
