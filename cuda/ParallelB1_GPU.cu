@@ -3589,7 +3589,7 @@ void CallPopulateTree(int numberOfLevels,
         checkLastErrorCUDA(__FILE__, __LINE__);
 
         std::cout << "activeVerticesCount: " << activeVerticesCount << std::endl;
-        cudaMemcpy(&activeLeavesHostIndex[0], (int*)active_leaf_index.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&activeLeavesHostIndex[0], (int*)active_leaves_index.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
         cudaMemcpy(&activeLeavesHostValue[0], (int*)active_leaves.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
         cudaMemcpy(&activeParentHostIndex[0], (int*)parent_leaf_index.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
         cudaMemcpy(&activeParentHostValue[0], (int*)parent_leaf_value.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
@@ -3739,34 +3739,7 @@ void CallPopulateTree(int numberOfLevels,
         }
 */
 
-        /*
-        // We need the number of children for each leaf to induce.
-        cudaMemcpy(nonpendantReducedCount, global_reduced_set_inclusion_count_ptr, (levelUpperBound - levelOffset)*sizeof(int), cudaMemcpyDeviceToHost);
-
-        // For now I just copy the entire graph to all children
-        // My custom written induce subgraph method uses dynamically
-        // allocated arrays which are unpredictable.  The memory is already 
-        // allocated for the entire tree, and copying the entire graph likely
-        // doesnt effect runtime since d2d bandwith is very high.
-        for (int leafIndex = levelOffset; leafIndex <  levelUpperBound; ++leafIndex){
-            cudaMemcpy(global_row_offsets_dev_ptr, global_row_offsets_dev_ptr, (numberOfRows+1)*sizeof(int), cudaMemcpyDeviceToDevice);
-            cudaMemcpy(global_columns_dev_ptr, global_columns_dev_ptr, numberOfEdgesPerGraph*sizeof(int), cudaMemcpyDeviceToDevice);
-            cudaMemcpy(global_values_dev_ptr, global_values_dev_ptr, numberOfEdgesPerGraph*sizeof(int), cudaMemcpyDeviceToDevice);
-            cudaMemcpy(global_degrees_dev_ptr, global_degrees_dev_ptr, numberOfRows*sizeof(int), cudaMemcpyDeviceToDevice);
-            cudaMemcpy(global_remaining_vertices_dev_ptr, global_remaining_vertices_dev_ptr, numberOfRows*sizeof(int), cudaMemcpyDeviceToDevice);
-        }
-
-        notFirstCall = true;
-        */
-    
-    /*
-    for (const auto& inner: pendantChildren) { // auto is std::vector<int>
-        for (auto e: inner) { // auto is int
-            std::cout << e << " ";
-        }
-        std::cout << std::endl;
-    }
-    */
+       
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
