@@ -3280,14 +3280,8 @@ void CallPopulateTree(int numberOfLevels,
     long long levelOffset = 0;
     long long levelUpperBound;
     int numberOfBlocksForOneThreadPerLeaf;
-    numberOfLevels = 2;
-    bool pendantNodeExists = true;
-
-    int * pendantBools = new int[deepestLevelSize*threadsPerBlock];
-    int * pendantReducedBools = new int[deepestLevelSize];
-    int * pendantChildrenOfLevel = new int[deepestLevelSize*threadsPerBlock];
-
-    int * nonpendantReducedCount = new int[deepestLevelSize];
+    numberOfLevels = g.GetVertexCount()/2 + 1;
+    
     // For printing the result of exclusive prefix sum cub lib
     int * hostOffset = new int[deepestLevelSize+1];
     int * activeLeavesHostIndex = new int[deepestLevelSize+1];
@@ -3295,6 +3289,7 @@ void CallPopulateTree(int numberOfLevels,
     int * activeParentHostIndex = new int[deepestLevelSize+1];
     int * activeParentHostValue = new int[deepestLevelSize+1];
 
+    // For visualization
     int * activeFlags = new int[treeSize];
 
     // One greater than secondDeepestLevelSize
