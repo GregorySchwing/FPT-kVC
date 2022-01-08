@@ -3661,6 +3661,7 @@ void CallPopulateTree(int numberOfLevels,
         const size_t degrees_sz = size_t(oldActiveVerticesCount*numberOfRows) * sizeof(int);
         const size_t verts_remain_sz = size_t(oldActiveVerticesCount*verticesRemainingInGraph) * sizeof(int);
         const size_t remain_count_edges_left_sz = size_t(oldActiveVerticesCount) * sizeof(int);
+        const size_t active_vert_off_sz = size_t(oldActiveVerticesCount+1) * sizeof(int);
 
         cudaMemsetAsync(old_row_offs, 0, row_offs_sz);
         cudaMemsetAsync(old_cols, 0, cols_vals_sz);
@@ -3671,6 +3672,7 @@ void CallPopulateTree(int numberOfLevels,
         cudaMemsetAsync(old_verts_remain_count, 0, remain_count_edges_left_sz);
 
         // Need to clean the offsets
+        cudaMemsetAsync(old_active_leaf_offset, 0, active_vert_off_sz);
         cudaMemsetAsync(old_active_leaves_index, 0, remain_count_edges_left_sz);
         cudaMemsetAsync(old_parent_leaf_index, 0, remain_count_edges_left_sz);
         cudaMemsetAsync(old_parent_leaf_value, 0, remain_count_edges_left_sz);
