@@ -3783,7 +3783,7 @@ void CallPopulateTree(int numberOfLevels,
             }  
             actLeaves->AddEdge(nodeMap[node1Name], nodeMap[node2Name]); 
         }
-
+        ++cycle;
         /*
                     if (currentParent == activeParentHostValue[i])
                 node2 = actLeaves->AddNode(std::to_string(activeLeavesHostValue[i]));
