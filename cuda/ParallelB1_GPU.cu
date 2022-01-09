@@ -4,7 +4,9 @@
 #include <math.h>       /* pow */
 #include "cub/cub.cuh"
 #include "Random123/boxmuller.hpp"
+// For viz
 #include "../lib/DotWriter/lib/DotWriter.h"
+#include <map>
 // Sum of i = 0 to n/2
 // 3^i
 
@@ -3323,7 +3325,8 @@ void CallPopulateTree(int numberOfLevels,
     std::string subgraph2 = "searchTree";
 
     DotWriter::Subgraph * actLeaves = gVizWriter.AddSubgraph(subgraph1);
-    DotWriter::Subgraph * searchTree = gVizWriter.AddSubgraph(subgraph2);    
+    DotWriter::Subgraph * searchTree = gVizWriter.AddSubgraph(subgraph2);
+    std::map<std::string, DotWriter::Node *> nodeMap;    
     // For visualization
 
     
@@ -3765,18 +3768,20 @@ void CallPopulateTree(int numberOfLevels,
         checkLastErrorCUDA(__FILE__, __LINE__);
 */
         // Since the graph doesnt grow uniformly, it is too difficult to only copy the new parts..
-        int currentParent = -1;
         DotWriter::Node * node1;
         DotWriter::Node * node2;
         for (int i = 0; i < activeVerticesCount; ++i){
-            if (currentParent == activeParentHostValue[i]){
-                node2 = actLeaves->AddNode(std::to_string(activeLeavesHostValue[i]));
-            } else {
-                currentParent = activeParentHostValue[i];
-                node1 = actLeaves->AddNode(std::to_string(activeParentHostValue[i]));
-                node2 = actLeaves->AddNode(std::to_string(activeLeavesHostValue[i]));
+            std::string node1Name = std::to_string(activeParentHostValue[i]);
+            std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMap.find(node1Name);
+            if(nodeIt1 == nodeMap.end()) {
+                nodeMap[node1Name] = actLeaves->AddNode(std::to_string(activeParentHostValue[i]));
             }
-            actLeaves->AddEdge(node1, node2);            
+            std::string node2Name = std::to_string(activeLeavesHostValue[i]);
+            std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMap.find(node2Name);
+            if(nodeIt2 == nodeMap.end()) {
+                nodeMap[node2Name] = actLeaves->AddNode(std::to_string(activeLeavesHostValue[i]));
+            }  
+            actLeaves->AddEdge(nodeMap[node1Name], nodeMap[node2Name]); 
         }
 
         /*
