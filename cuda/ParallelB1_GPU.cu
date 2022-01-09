@@ -4,7 +4,7 @@
 #include <math.h>       /* pow */
 #include "cub/cub.cuh"
 #include "Random123/boxmuller.hpp"
-
+#include "../lib/DotWriter/lib/DotWriter.h"
 // Sum of i = 0 to n/2
 // 3^i
 
@@ -3313,7 +3313,18 @@ void CallPopulateTree(int numberOfLevels,
     int * active_leaves_host = new int[deepestLevelSize];
     int * active_parents_host = new int[deepestLevelSize];
     int * coverTree = new int[2 * treeSize];
+    bool isDirected = false;
+    std::string name = "main";
+    DotWriter::RootGraph gVizWriter(isDirected, name);
 
+    std::string subgraph1 = "activationOfLeaves";
+    std::string subgraph2 = "searchTree";
+
+    DotWriter::Subgraph * actLeaves = gVizWriter.AddSubgraph(subgraph1);
+    DotWriter::Subgraph * searchTree = gVizWriter.AddSubgraph(subgraph2);    
+    // For visualization
+
+    
     // One greater than secondDeepestLevelSize
     int dLSPlus1 = (deepestLevelSize + 1);
     int ceilOfDLSPlus1 = (dLSPlus1 + threadsPerBlock - 1) / threadsPerBlock;
@@ -3752,8 +3763,12 @@ void CallPopulateTree(int numberOfLevels,
         checkLastErrorCUDA(__FILE__, __LINE__);
 */
         // Since the graph doesnt grow uniformly, it is too difficult to only copy the new parts..
-        cudaMemcpy(active_leaves_host, active_leaves.Current(), activeVerticesCount*sizeof(int), cudaMemcpyDeviceToHost);
-        cudaMemcpy(active_parents_host, parent_leaf_value.Current(), activeVerticesCount*sizeof(int), cudaMemcpyDeviceToHost);
+        for (int i = 0; i < activeVerticesCount; ++i){
+            DotWriter::Node * node1 = actLeaves->AddNode(std::to_string(activeParentHostValue[i]));
+            DotWriter::Node * node2 = actLeaves->AddNode(std::to_string(activeLeavesHostValue[i]));
+            actLeaves->AddEdge(node1, node2);
+        }
+
         cudaMemcpy(coverTree, global_vertices_included_dev_ptr, largestActiveLeafEver*sizeof(int), cudaMemcpyDeviceToHost);
 
         cudaDeviceSynchronize();
