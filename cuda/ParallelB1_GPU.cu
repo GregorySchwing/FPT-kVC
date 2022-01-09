@@ -3313,7 +3313,7 @@ void CallPopulateTree(int numberOfLevels,
     int * active_leaves_host = new int[deepestLevelSize];
     int * active_parents_host = new int[deepestLevelSize];
     int * coverTree = new int[2 * treeSize];
-    bool isDirected = false;
+    bool isDirected = true;
     int cycle = 0;
     std::string name = "main";
     std::string filename = "";
