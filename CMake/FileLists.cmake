@@ -100,7 +100,6 @@ set(sources_lib
     lib/CSVIterator.cpp
     lib/CSVRange.cpp
     lib/CSVRow.cpp
-    lib/DotWriter/lib/Attribute.cpp
     lib/DotWriter/lib/AttributeSet.cpp
     lib/DotWriter/lib/Cluster.cpp
     lib/DotWriter/lib/DotWriter.h
