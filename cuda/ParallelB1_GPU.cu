@@ -517,6 +517,26 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
 
 }
 
+__host__ void GetMaxLeafValue(int activeVerticesCount,
+                              cub::DoubleBuffer<int> & active_leaves,
+                              int * max){
+
+    // Declare, allocate, and initialize device-accessible pointers for input and output
+    int  num_items = activeVerticesCount;      // e.g., 7
+    int  *d_in = active_leaves.Current();          // e.g., [8, 6, 7, 5, 3, 0, 9]
+    // Determine temporary device storage requirements
+    void     *d_temp_storage = NULL;
+    size_t   temp_storage_bytes = 0;
+    cub::DeviceReduce::Max(d_temp_storage, temp_storage_bytes, d_in, max, num_items);
+    // Allocate temporary storage
+    cudaMalloc(&d_temp_storage, temp_storage_bytes);
+    // Run max-reduction
+    cub::DeviceReduce::Max(d_temp_storage, temp_storage_bytes, d_in, max, num_items);
+    // d_out <-- [9]
+    cudaFree(d_temp_storage);
+
+}
+
 typedef int inner_array_t[2];
 
 __global__ void InduceSubgraph( int numberOfRows,
@@ -3196,7 +3216,7 @@ void CallPopulateTree(int numberOfLevels,
     cudaMalloc( (void**)&global_cols_vals_segments, (numberOfRows+1) * deepestLevelSize * sizeof(int) );
 
 
-    cudaMalloc( (void**)&global_vertices_included_dev_ptr, treeSize * sizeof(int) );
+    cudaMalloc( (void**)&global_vertices_included_dev_ptr, 2 * treeSize * sizeof(int) );
 
     // Each node can process tPB pendant edges per call
     cudaMalloc( (void**)&global_pendant_path_bool_dev_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
@@ -3290,7 +3310,9 @@ void CallPopulateTree(int numberOfLevels,
     int * activeParentHostValue = new int[deepestLevelSize+1];
 
     // For visualization
-    int * activeFlags = new int[treeSize];
+    int * active_leaves_host = new int[deepestLevelSize];
+    int * active_parents_host = new int[deepestLevelSize];
+    int * coverTree = new int[2 * treeSize];
 
     // One greater than secondDeepestLevelSize
     int dLSPlus1 = (deepestLevelSize + 1);
@@ -3321,6 +3343,8 @@ void CallPopulateTree(int numberOfLevels,
     int activeVerticesCount = 1;
     int oldActiveVerticesCount;
     int zero = 0;
+    int largestActiveLeafEver = 0;
+    int maxLeafVal = 0;;
 
     while(activeVerticesCount){
         if(notFirstCall){
@@ -3712,6 +3736,29 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
+        // This tells me how much of the cover tree I need to copy
+        /*
+        if (activeVerticesCount > 0){
+            GetMaxLeafValue(activeVerticesCount,
+                            active_leaves,
+                            &maxLeafVal);
+            // Shouldn't be necessary but just in case
+            if (maxLeafVal > largestActiveLeafEver)
+                largestActiveLeafEver = maxLeafVal;
+        } else
+            largestActiveLeafEver = treeSize-1;
+
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+*/
+        // Since the graph doesnt grow uniformly, it is too difficult to only copy the new parts..
+        cudaMemcpy(active_leaves_host, active_leaves.Current(), activeVerticesCount*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(active_parents_host, parent_leaf_value.Current(), activeVerticesCount*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(coverTree, global_vertices_included_dev_ptr, largestActiveLeafEver*sizeof(int), cudaMemcpyDeviceToHost);
+
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+
         std::cout << "You are about to start another loop " << std::endl;
         do 
         {
@@ -3719,8 +3766,6 @@ void CallPopulateTree(int numberOfLevels,
         } while (std::cin.get() != '\n');
     }
 
-
-    cudaMemcpy(activeFlags, global_vertices_included_dev_ptr, treeSize*sizeof(int), cudaMemcpyDeviceToHost);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -3730,7 +3775,7 @@ void CallPopulateTree(int numberOfLevels,
         int levelOffsetForPrinting = CalculateLevelOffset(level);
         int levelUpperBoundForPrinting = CalculateLevelUpperBound(level);
         for (int i = levelOffsetForPrinting; i < levelUpperBoundForPrinting; ++i)
-            std::cout << activeFlags[i];
+            std::cout << active_leaves_host[i];
         std::cout << std::endl;
     }
 
