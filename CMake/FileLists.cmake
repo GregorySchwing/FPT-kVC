@@ -106,7 +106,6 @@ set(sources_lib
     lib/DotWriter/lib/Edge.cpp
     lib/DotWriter/lib/Enums.cpp
     lib/DotWriter/lib/Graph.cpp
-    lib/DotWriter/lib/Idable.cpp
     lib/DotWriter/lib/IdManager.cpp
     lib/DotWriter/lib/Node.cpp
     lib/DotWriter/lib/RootGraph.cpp
