@@ -3314,7 +3314,9 @@ void CallPopulateTree(int numberOfLevels,
     int * active_parents_host = new int[deepestLevelSize];
     int * coverTree = new int[2 * treeSize];
     bool isDirected = false;
+    int cycle = 0;
     std::string name = "main";
+    std::string filename = "";
     DotWriter::RootGraph gVizWriter(isDirected, name);
 
     std::string subgraph1 = "activationOfLeaves";
@@ -3768,8 +3770,9 @@ void CallPopulateTree(int numberOfLevels,
             DotWriter::Node * node2 = actLeaves->AddNode(std::to_string(activeLeavesHostValue[i]));
             actLeaves->AddEdge(node1, node2);
         }
-
-        cudaMemcpy(coverTree, global_vertices_included_dev_ptr, largestActiveLeafEver*sizeof(int), cudaMemcpyDeviceToHost);
+        filename = "Active_leaves_cycle_" + std::to_string(cycle) + ".dot";
+        gVizWriter.WriteToFile(filename);
+        //cudaMemcpy(coverTree, global_vertices_included_dev_ptr, largestActiveLeafEver*sizeof(int), cudaMemcpyDeviceToHost);
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
