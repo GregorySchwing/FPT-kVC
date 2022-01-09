@@ -3313,7 +3313,7 @@ void CallPopulateTree(int numberOfLevels,
     int * active_leaves_host = new int[deepestLevelSize];
     int * active_parents_host = new int[deepestLevelSize];
     int * coverTree = new int[2 * treeSize];
-    bool isDirected = true;
+    bool isDirected = false;
     int cycle = 0;
     std::string name = "main";
     std::string filename = "";
@@ -3765,11 +3765,28 @@ void CallPopulateTree(int numberOfLevels,
         checkLastErrorCUDA(__FILE__, __LINE__);
 */
         // Since the graph doesnt grow uniformly, it is too difficult to only copy the new parts..
+        int currentParent = -1;
+        DotWriter::Node * node1;
+        DotWriter::Node * node2;
         for (int i = 0; i < activeVerticesCount; ++i){
-            DotWriter::Node * node1 = actLeaves->AddNode(std::to_string(activeParentHostValue[i]));
+            if (currentParent == activeParentHostValue[i]){
+                node2 = actLeaves->AddNode(std::to_string(activeLeavesHostValue[i]));
+            } else {
+                currentParent = activeParentHostValue[i];
+                node1 = actLeaves->AddNode(std::to_string(activeParentHostValue[i]));
+                node2 = actLeaves->AddNode(std::to_string(activeLeavesHostValue[i]));
+            }
+            actLeaves->AddEdge(node1, node2);            
+        }
+
+        /*
+                    if (currentParent == activeParentHostValue[i])
+                node2 = actLeaves->AddNode(std::to_string(activeLeavesHostValue[i]));
+            }
+             = actLeaves->AddNode(std::to_string(activeParentHostValue[i]));
             DotWriter::Node * node2 = actLeaves->AddNode(std::to_string(activeLeavesHostValue[i]));
             actLeaves->AddEdge(node1, node2);
-        }
+        */
         filename = "Active_leaves_cycle_" + std::to_string(cycle) + ".dot";
         gVizWriter.WriteToFile(filename);
         //cudaMemcpy(coverTree, global_vertices_included_dev_ptr, largestActiveLeafEver*sizeof(int), cudaMemcpyDeviceToHost);
