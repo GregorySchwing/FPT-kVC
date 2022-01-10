@@ -558,8 +558,7 @@ __host__ void GetMinLeafValue(int activeVerticesCount,
     // Determine temporary device storage requirements
     void     *d_temp_storage = NULL;
     size_t   temp_storage_bytes = 0;
-        cudaMalloc(&maxTmp, 1 * sizeof(int));
-
+    
     cub::DeviceReduce::Min(d_temp_storage, temp_storage_bytes, d_in, minTmp, num_items);
     // Allocate temporary storage
     cudaMalloc(&d_temp_storage, temp_storage_bytes);
