@@ -520,12 +520,12 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
 }
 
 __host__ void GetMaxLeafValue(int activeVerticesCount,
-                              cub::DoubleBuffer<int> & active_leaves,
+                              cub::DoubleBuffer<int> & active_leaves_value,
                               int * max){
 
     // Declare, allocate, and initialize device-accessible pointers for input and output
     int  num_items = activeVerticesCount;      // e.g., 7
-    int  *d_in = active_leaves.Current();          // e.g., [8, 6, 7, 5, 3, 0, 9]
+    int  *d_in = active_leaves_value.Current();          // e.g., [8, 6, 7, 5, 3, 0, 9]
     // Determine temporary device storage requirements
     void     *d_temp_storage = NULL;
     size_t   temp_storage_bytes = 0;
@@ -542,12 +542,12 @@ __host__ void GetMaxLeafValue(int activeVerticesCount,
 }
 
 __host__ void GetMinLeafValue(int activeVerticesCount,
-                                cub::DoubleBuffer<int> & active_leaves,
+                                cub::DoubleBuffer<int> & active_leaves_value,
                                 int * min){
 
     // Declare, allocate, and initialize device-accessible pointers for input and output
     int  num_items = activeVerticesCount;      // e.g., 7
-    int  *d_in = active_leaves.Current();          // e.g., [8, 6, 7, 5, 3, 0, 9]
+    int  *d_in = active_leaves_value.Current();          // e.g., [8, 6, 7, 5, 3, 0, 9]
     // Determine temporary device storage requirements
     void     *d_temp_storage = NULL;
     size_t   temp_storage_bytes = 0;
@@ -627,7 +627,7 @@ __global__ void InduceSubgraph( int numberOfRows,
 
 __global__ void SetEdges(const int numberOfRows,
                         const int numberOfEdgesPerGraph,
-                        const int * global_active_leaf_indices,
+                        const int * global_active_leaf_value,
                         const int * global_active_leaf_parent_leaf_index,
                         const int * global_row_offsets_dev_ptr,
                         const int * global_columns_dev_ptr,
@@ -640,7 +640,7 @@ __global__ void SetEdges(const int numberOfRows,
     int leafIndex = blockIdx.x;
     if (0 == global_edges_left_to_cover_count[leafIndex] || 0 == global_verts_remain_count[leafIndex])
         return;
-    int leafValue = global_active_leaf_indices[leafIndex];
+    int leafValue = global_active_leaf_value[leafIndex];
     int originalLV = leafValue;
     int parentLeafValue = global_active_leaf_parent_leaf_index[leafIndex];
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
@@ -1194,7 +1194,7 @@ __global__ void ParallelDFSRandom(
                             int numberOfRows,
                             int numberOfEdgesPerGraph,
                             int verticesRemainingInGraph,
-                            int * global_active_leaf_indices,
+                            int * global_active_leaf_value,
                             int * global_row_offsets_dev_ptr,
                             int * global_columns_dev_ptr,
                             int * global_remaining_vertices_dev_ptr,
@@ -1214,7 +1214,7 @@ __global__ void ParallelDFSRandom(
     int leafIndex = blockIdx.x;
     if (0 == global_edges_left_to_cover_count[leafIndex] || 0 == global_verts_remain_count[leafIndex])
         return;
-    int leafValue = global_active_leaf_indices[leafIndex];
+    int leafValue = global_active_leaf_value[leafIndex];
 
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("Set leafIndex\n");
@@ -1366,7 +1366,7 @@ __global__ void ParallelDFSRandom(
 __global__ void ParallelProcessPendantEdges(
                             int numberOfRows,
                             int numberOfEdgesPerGraph,
-                            int * global_active_leaf_indices,
+                            int * global_active_leaf_value,
                             int * global_row_offsets_dev_ptr,
                             int * global_columns_dev_ptr,
                             int * global_values_dev_ptr,
@@ -1378,7 +1378,7 @@ __global__ void ParallelProcessPendantEdges(
     int myBlockOffset = (blockIdx.x / blockDim.x) * blockDim.x;
     int myBlockIndex = blockIdx.x % blockDim.x;
     int leafIndex = (blockIdx.x / blockDim.x);
-    int leafValue = global_active_leaf_indices[leafIndex];
+    int leafValue = global_active_leaf_value[leafIndex];
     if (myBlockIndex == 0 && threadIdx.x == 0){
         printf("leaf Value %d Started ParallelProcessPendantEdges\n", leafValue);
     }
@@ -2090,7 +2090,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
     }          
 }
 
-    //int leafValue = global_active_leaf_indices[leafIndex];
+    //int leafValue = global_active_leaf_value[leafIndex];
     // Solve recurrence relation 
     // g(n) = 1/6*((2*C+3)*3^n - 3)
     // C depends on leafValue
@@ -2100,7 +2100,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
     // ...
     //int arbitraryParameter = 3*(3*leafValue)+1));
 
-__global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_leaf_indices,
+__global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_leaf_value,
                                         int * global_set_paths_indices,
                                         int * global_reduced_set_inclusion_count_ptr,
                                         int * global_paths_ptr,
@@ -2110,7 +2110,7 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
     int leafIndex = blockIdx.x;
     if (0 == global_edges_left_to_cover_count[leafIndex] || 0 == global_verts_remain_count[leafIndex])
         return;
-    int leafValue = global_active_leaf_indices[leafIndex];
+    int leafValue = global_active_leaf_value[leafIndex];
     // Solve recurrence relation 
     // g(n) = 1/6*((2*C+3)*3^n - 3)
     // C depends on leafValue
@@ -2238,13 +2238,13 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
     }
 }
 
-__global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_indices,
+__global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_value,
                                         int * global_set_paths_indices,
                                         int * global_reduced_set_inclusion_count_ptr,
                                         int * global_paths_ptr,
                                         int * global_vertices_included_dev_ptr){
     int leafIndex = blockIdx.x;
-    int leafValue = global_active_leaf_indices[leafIndex];
+    int leafValue = global_active_leaf_value[leafIndex];
     int setPathOffset = leafIndex * blockDim.x;
     int globalPathOffset = setPathOffset*4;
     int vertIncludedOffset;
@@ -2399,7 +2399,7 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
         atomicAdd(global_active_leaves_count_new, new_active_leaves_count_red[threadIdx.x]);
 }
 
-    //int leafValue = global_active_leaf_indices[leafIndex];
+    //int leafValue = global_active_leaf_value[leafIndex];
     // Solve recurrence relation 
     // g(n) = 1/6*((2*C+3)*3^n - 3)
     // C depends on leafValue
@@ -2757,7 +2757,7 @@ __global__ void ParallelProcessDegreeZeroVerticesClean(
     }
 }
 /*
-__global__ void ParallelActiveVertexPathOffsets(int * global_active_leaf_indices,
+__global__ void ParallelActiveVertexPathOffsets(int * global_active_leaf_value,
                                                 int global_active_leaf_indices_count,
                                                 ){
 
@@ -3164,7 +3164,7 @@ void CallPopulateTree(int numberOfLevels,
     int * global_edges_left_to_cover_count;
     int * global_edges_left_to_cover_count_buffer;
 
-    int * global_active_leaf_indices, * global_active_leaf_indices_buffer;
+    int * global_active_leaf_value, * global_active_leaf_value_buffer;
     // Used to as the source of the copied graph
     int * global_active_leaf_parent_leaf_index, * global_active_leaf_parent_leaf_index_buffer;
     // Used as the destination for the graph
@@ -3276,14 +3276,14 @@ void CallPopulateTree(int numberOfLevels,
     // This would eliminate calculating the offsets of each active node into the buffer
     // With this much memory we can write in my section then sort globally decreasing.
     // I will do the serial calculation for a dramatic decrease in memory usage
-    //cudaMalloc( (void**)&global_active_leaf_indices, activeLeavesPerNode*secondDeepestLevelSize*sizeof(int) );
-    //cudaMalloc( (void**)&global_active_leaf_indices_buffer, activeLeavesPerNode*secondDeepestLevelSize*sizeof(int) );
+    //cudaMalloc( (void**)&global_active_leaf_value, activeLeavesPerNode*secondDeepestLevelSize*sizeof(int) );
+    //cudaMalloc( (void**)&global_active_leaf_value_buffer, activeLeavesPerNode*secondDeepestLevelSize*sizeof(int) );
 
     // If we want to use a compressed list creation of active vertices
     // We will precalculate where each active node will write in this compressed array
-    cudaMalloc( (void**)&global_active_leaf_indices, deepestLevelSize*sizeof(int) );
-    cudaMalloc( (void**)&global_active_leaf_indices_buffer, deepestLevelSize*sizeof(int) );
-    cub::DoubleBuffer<int> active_leaves(global_active_leaf_indices, global_active_leaf_indices_buffer);
+    cudaMalloc( (void**)&global_active_leaf_value, deepestLevelSize*sizeof(int) );
+    cudaMalloc( (void**)&global_active_leaf_value_buffer, deepestLevelSize*sizeof(int) );
+    cub::DoubleBuffer<int> active_leaves_value(global_active_leaf_value, global_active_leaf_value_buffer);
 
     // Since we skip internal nodes, each active leaf needs to know the parent index
     // from which cols, vals, remaining vertices are to be copied
@@ -3320,7 +3320,7 @@ void CallPopulateTree(int numberOfLevels,
                     remaining_vertices.Current(),
                     remaining_vertices_count.Current(),
                     verticesRemainingInGraph,
-                    active_leaves.Current(),
+                    active_leaves_value.Current(),
                     active_leaves_count.Current());
 
     long long levelOffset = 0;
@@ -3340,6 +3340,8 @@ void CallPopulateTree(int numberOfLevels,
     int * active_parents_host = new int[deepestLevelSize];
     int * coverTree = new int[2 * treeSize];
     bool isDirected = false;
+    int v1 = -1;
+    int v2 = -1;
     int cycle = 0;
     std::string name = "main";
     std::string filename = "";
@@ -3350,7 +3352,9 @@ void CallPopulateTree(int numberOfLevels,
 
     DotWriter::Subgraph * actLeaves = gVizWriter.AddSubgraph(subgraph1);
     DotWriter::Subgraph * searchTree = gVizWriter.AddSubgraph(subgraph2);
-    std::map<std::string, DotWriter::Node *> nodeMap;    
+    std::map<std::string, DotWriter::Node *> nodeMapActLeaves;    
+    std::map<std::string, DotWriter::Node *> nodeMapSearchTree;    
+
     // For visualization
 
     
@@ -3383,16 +3387,15 @@ void CallPopulateTree(int numberOfLevels,
     int activeVerticesCount = 1;
     int oldActiveVerticesCount;
     int zero = 0;
-    int largestActiveLeafEver = 0;
-    int maxLeafVal = INT_MIN;
-    int minLeafVal = INT_MAX;
+    int maxActiveLeafVal = INT_MIN;
+    int minParentLeafVal = INT_MAX;
 
     while(activeVerticesCount){
         if(notFirstCall){
             SetEdges<<<activeVerticesCount, threadsPerBlock>>>(
                                                             numberOfRows,
                                                             numberOfEdgesPerGraph,
-                                                            active_leaves.Current(),
+                                                            active_leaves_value.Current(),
                                                             parent_leaf_value.Current(),
                                                             row_offsets.Current(),
                                                             columns.Current(),
@@ -3477,7 +3480,7 @@ void CallPopulateTree(int numberOfLevels,
                             (numberOfRows,
                             numberOfEdgesPerGraph,
                             verticesRemainingInGraph,
-                            active_leaves.Current(),
+                            active_leaves_value.Current(),
                             row_offsets.Current(),
                             columns.Current(),
                             remaining_vertices.Current(),
@@ -3559,7 +3562,7 @@ void CallPopulateTree(int numberOfLevels,
         ParallelAssignMISToNodesBreadthFirstClean<<<activeVerticesCount,
                                                threadsPerBlock,
                                                (threadsPerBlock + threadsPerBlock*4)*sizeof(int)>>>(
-                                        active_leaves.Current(),
+                                        active_leaves_value.Current(),
                                         paths_indices.Current(),
                                         set_inclusion_count.Current(),
                                         global_paths_ptr,
@@ -3628,8 +3631,8 @@ void CallPopulateTree(int numberOfLevels,
         printf("TRUE activeVerticesCount : %d\n", activeVerticesCount);
         // Need to test the recurrence relation.
         ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock>>>(
-                                        active_leaves.Current(),
-                                        active_leaves.Alternate(),
+                                        active_leaves_value.Current(),
+                                        active_leaves_value.Alternate(),
                                         active_leaves_count.Current(),
                                         set_inclusion_count.Current(),
                                         active_leaf_offset.Alternate(),
@@ -3650,7 +3653,7 @@ void CallPopulateTree(int numberOfLevels,
 
         std::cout << "activeVerticesCount: " << activeVerticesCount << std::endl;
         cudaMemcpy(&activeLeavesHostIndex[0], (int*)active_leaves_index.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
-        cudaMemcpy(&activeLeavesHostValue[0], (int*)active_leaves.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&activeLeavesHostValue[0], (int*)active_leaves_value.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
         cudaMemcpy(&activeParentHostIndex[0], (int*)parent_leaf_index.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
         cudaMemcpy(&activeParentHostValue[0], (int*)parent_leaf_value.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
 
@@ -3740,10 +3743,10 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        printf("Before flip active_leaves.selector %d\n", active_leaves.selector);
+        printf("Before flip active_leaves_value.selector %d\n", active_leaves_value.selector);
 
         // Flips Current and Alternate
-        active_leaves.selector = !active_leaves.selector;
+        active_leaves_value.selector = !active_leaves_value.selector;
         active_leaves_count.selector = !active_leaves_count.selector;
         active_leaf_offset.selector = !active_leaf_offset.selector;
         row_offsets.selector = !row_offsets.selector;
@@ -3759,7 +3762,7 @@ void CallPopulateTree(int numberOfLevels,
         parent_leaf_index.selector = !parent_leaf_index.selector;
         parent_leaf_value.selector = !parent_leaf_value.selector;     
 
-        printf("After flip active_leaves.selector %d\n", active_leaves.selector);
+        printf("After flip active_leaves_value.selector %d\n", active_leaves_value.selector);
 
 
         PrintData<<<1,1>>>(activeVerticesCount,
@@ -3781,18 +3784,18 @@ void CallPopulateTree(int numberOfLevels,
         
         if (activeVerticesCount > 0){
             GetMaxLeafValue(activeVerticesCount,
-                            active_leaves,
-                            &maxLeafVal);
+                            active_leaves_value,
+                            &maxActiveLeafVal);
             GetMinLeafValue(activeVerticesCount,
-                active_leaves,
-                &minLeafVal);
+                parent_leaf_value,
+                &minParentLeafVal);
         } else {
-            largestActiveLeafEver = treeSize-1;
+            maxActiveLeafVal = treeSize-1;
         }
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        cudaMemcpy(coverTree, global_vertices_included_dev_ptr, 2 * largestActiveLeafEver * sizeof(int) , cudaMemcpyDeviceToHost);
+        cudaMemcpy(coverTree, &global_vertices_included_dev_ptr[2*minParentLeafVal], 2*maxActiveLeafVal * sizeof(int) , cudaMemcpyDeviceToHost);
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -3802,31 +3805,49 @@ void CallPopulateTree(int numberOfLevels,
         DotWriter::Node * node2;
         for (int i = 0; i < activeVerticesCount; ++i){
             std::string node1Name = std::to_string(activeParentHostValue[i]);
-            std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMap.find(node1Name);
-            if(nodeIt1 == nodeMap.end()) {
-                nodeMap[node1Name] = actLeaves->AddNode(std::to_string(activeParentHostValue[i]));
+            std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMapActLeaves.find(node1Name);
+            if(nodeIt1 == nodeMapActLeaves.end()) {
+                nodeMapActLeaves[node1Name] = actLeaves->AddNode(std::to_string(activeParentHostValue[i]));
             }
             std::string node2Name = std::to_string(activeLeavesHostValue[i]);
-            std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMap.find(node2Name);
-            if(nodeIt2 == nodeMap.end()) {
-                nodeMap[node2Name] = actLeaves->AddNode(std::to_string(activeLeavesHostValue[i]));
+            std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMapActLeaves.find(node2Name);
+            if(nodeIt2 == nodeMapActLeaves.end()) {
+                nodeMapActLeaves[node2Name] = actLeaves->AddNode(std::to_string(activeLeavesHostValue[i]));
             }  
-            actLeaves->AddEdge(nodeMap[node1Name], nodeMap[node2Name]); 
+            actLeaves->AddEdge(nodeMapActLeaves[node1Name], nodeMapActLeaves[node2Name]); 
         }
 
-        for (int level = 0; level < numberOfLevels; ++level){
-            int levelOffsetForPrinting = CalculateLevelOffset(level);
-            int levelUpperBoundForPrinting = CalculateLevelUpperBound(level);
-            for (int i = levelOffsetForPrinting; i < levelUpperBoundForPrinting; ++i)
-                std::cout << active_leaves_host[i];
-            std::cout << std::endl;
+        for (int lowestLeaf = minParentLeafVal; lowestLeaf <= maxActiveLeafVal; ++lowestLeaf){
+            v1 = coverTree[lowestLeaf*2];
+            v2 = coverTree[lowestLeaf*2 + 1];
+            if (v1 == -1 && v2 == -1){
+
+            } else if (v1 != -1 && v2 != -1){
+                std::string node1Name = std::to_string(lowestLeaf);
+                std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMapSearchTree.find(node1Name);
+                // New node
+                if(nodeIt1 == nodeMapSearchTree.end()) {
+                    nodeMapSearchTree[node1Name] = searchTree->AddNode(std::to_string(lowestLeaf));
+                    std::string node2Name = std::to_string(lowestLeaf/3 - 1);
+                    std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMapSearchTree.find(node2Name);
+                    if(nodeIt2 == nodeMapSearchTree.end()) {
+                        std::cout << "Error in search tree creation! " << std::endl;
+                        std::cout << "Cant create child before parent! " << std::endl;
+                        exit(1);                    
+                    } 
+                    searchTree->AddEdge(nodeMapActLeaves[node1Name], nodeMapActLeaves[node2Name]); 
+                }
+
+            } else {
+                std::cout << "Error in search tree creation! " << std::endl;
+                exit(1);
+            }
         }
 
         // Should always overwrite the whole tree.  Simple but slow
         ++cycle;
         filename = "Active_leaves_cycle_" + std::to_string(cycle) + ".dot";
         gVizWriter.WriteToFile(filename);
-        //cudaMemcpy(coverTree, global_vertices_included_dev_ptr, largestActiveLeafEver*sizeof(int), cudaMemcpyDeviceToHost);
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -3862,7 +3883,7 @@ void CopyGraphToDevice( Graph & g,
                         int * global_remaining_vertices_dev_ptr,
                         int * global_remaining_vertices_size_dev_ptr,
                         int verticesRemainingInGraph,
-                        int * global_active_leaf_indices,
+                        int * global_active_leaf_value,
                         int * global_active_leaf_indices_count){
 
     int * new_degrees_ptr = thrust::raw_pointer_cast(g.GetNewDegRef().data());
@@ -3925,7 +3946,7 @@ void CopyGraphToDevice( Graph & g,
     // Eventually replace zero with the variable starting index of the new tree
     int zero = 0;
     int one = 1;
-    cudaMemcpy(global_active_leaf_indices, &zero, 1*sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(global_active_leaf_value, &zero, 1*sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(global_active_leaf_indices_count, &one, 1*sizeof(int), cudaMemcpyHostToDevice);
     std::cout << "Activated root of tree" << std::endl;
 
