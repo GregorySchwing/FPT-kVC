@@ -527,6 +527,7 @@ __host__ void GetMaxLeafValue(int activeVerticesCount,
     int  num_items = activeVerticesCount;      // e.g., 7
     int  *d_in = active_leaves_value.Current();          // e.g., [8, 6, 7, 5, 3, 0, 9]
     int * maxTmp;
+    cudaMalloc(&maxTmp, 1 * sizeof(int));
     // Determine temporary device storage requirements
     void     *d_temp_storage = NULL;
     size_t   temp_storage_bytes = 0;
@@ -552,9 +553,13 @@ __host__ void GetMinLeafValue(int activeVerticesCount,
     int  num_items = activeVerticesCount;      // e.g., 7
     int  *d_in = active_leaves_value.Current();          // e.g., [8, 6, 7, 5, 3, 0, 9]
     int * minTmp;
+    cudaMalloc(&minTmp, 1 * sizeof(int));
+
     // Determine temporary device storage requirements
     void     *d_temp_storage = NULL;
     size_t   temp_storage_bytes = 0;
+        cudaMalloc(&maxTmp, 1 * sizeof(int));
+
     cub::DeviceReduce::Min(d_temp_storage, temp_storage_bytes, d_in, minTmp, num_items);
     // Allocate temporary storage
     cudaMalloc(&d_temp_storage, temp_storage_bytes);
