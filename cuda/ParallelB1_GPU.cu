@@ -2362,25 +2362,35 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
         printf("globalIndex %d, ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst\n",globalIndex);
 
         int leavesToProcess = global_reduced_set_inclusion_count_ptr[globalIndex];
-        // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
-        // Solved for leavesToProcess < closed form
-        // Index from 0
-        int completeLevel = floor(logf(2*leavesToProcess + 1) / logf(3));
-        int completeLevelLeaves = powf(3.0, completeLevel);
+        int completeLevel = floor(logf(leavesToProcess+(int)(leavesToProcess == 0)) / logf(3)) + (int)(leavesToProcess != 0);
+        // If LTP == 0, we dont want to create any new leaves
+        // Therefore, we dont want to enter the for loops.
+        // The active leaf writes itself as it's parent before the for loops
+        // This is overwritten within the for loops if LTP > 0
+        // CLL = 3
+        int leavesFromCompleteLvl = powf(3.0, completeLevel) - (int)(leavesToProcess == 0);
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         // Solved for closed form < leavesToProcess
-        // Index from 0
-        int incompleteLevel = ceil(logf(2*leavesToProcess + 1) / logf(3));
+        // start from level 1, hence add a level if LTP > 0, 1 complete level 
+        // Add 1 if LTP == 0 to prevent runtime error
+        // IL = 1
+        int incompleteLevel = ceil(logf(leavesToProcess+(int)(leavesToProcess == 0)) / logf(3)) + (int)(leavesToProcess != 0);
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
-        int treeSizeComplete = (1.0 - powf(3.0, completeLevel))/(1.0 - 3.0);
+        // Add 1 to always 
+        // TSC = 3
+        int treeSizeComplete = (1.0 - powf(3.0, completeLevel+(int)(leavesToProcess != 0)))/(1.0 - 3.0) - (int)(leavesToProcess != 0);
+        // How many internal leaves to skip in complete level
+        // RFC = 1
+        int removeFromComplete = ((3*leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
+        // Leaves that are used in next level
+        int leavesFromIncompleteLvl = 3*removeFromComplete;
         printf("Leaves %d, completeLevel Depth %d\n",leavesToProcess, completeLevel);
-        printf("Leaves %d, completeLevelLeaves %d\n",leavesToProcess, completeLevelLeaves);
+        printf("Leaves %d, leavesFromCompleteLvl %d\n",leavesToProcess, leavesFromCompleteLvl);
         printf("Leaves %d, incompleteLevel Depth %d\n",leavesToProcess, incompleteLevel);
         printf("Leaves %d, treeSizeComplete Leaves%d\n",leavesToProcess, treeSizeComplete);
-        int removeFromComplete = ((leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
-        int leavesFromIncompleteLvl = (leavesToProcess - treeSizeComplete);
+     
         printf("Leaves %d, removeFromComplete %d\n",leavesToProcess, removeFromComplete);
-        int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
+        int totalNewActive = (leavesFromCompleteLvl - removeFromComplete) + leavesFromIncompleteLvl;
         printf("Leaves %d, totalNewActive %d\n",leavesToProcess, totalNewActive);
         // Write to global memory
         // If new leaves == 0, then either the graph is empty, which will be handled elsewhere
@@ -2438,14 +2448,14 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         // Solved for leavesToProcess < closed form
         int completeLevel = floor(logf(2*leavesToProcess + 1) / logf(3));
-        int completeLevelLeaves = powf(3.0, completeLevel);
+        int leavesFromCompleteLvl = powf(3.0, completeLevel);
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         // Solved for closed form < leavesToProcess
         int incompleteLevel = ceil(logf(2*leavesToProcess + 1) / logf(3));
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         int treeSizeComplete = (1.0 - powf(3.0, completeLevel))/(1.0 - 3.0);
         printf("Leaves %d, completeLevel Level Depth %d\n",leavesToProcess, completeLevel);
-        printf("Leaves %d, completeLevelLeaves Level Depth %d\n",leavesToProcess, completeLevelLeaves);
+        printf("Leaves %d, leavesFromCompleteLvl Level Depth %d\n",leavesToProcess, leavesFromCompleteLvl);
         printf("Leaves %d, incompleteLevel Level Depth %d\n",leavesToProcess, incompleteLevel);
         printf("Leaves %d, treeSizeComplete Level Depth %d\n",leavesToProcess, treeSizeComplete);
         int removeFromComplete = ((leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
@@ -2467,7 +2477,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
 
         // If non-pendant paths were found, populate the search tree in the 
         // complete level
-        for (; index < completeLevelLeaves - removeFromComplete; ++index){
+        for (; index < leavesFromCompleteLvl - removeFromComplete; ++index){
             //printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfFullLevel + index + removeFromComplete);
             global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfFullLevel + index + removeFromComplete;
             global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
@@ -2478,7 +2488,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
             leftMostLeafIndexOfIncompleteLevel = (3.0 * leftMostLeafIndexOfIncompleteLevel + 1);
             incompleteLevel -= 1;
         }
-        int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
+        int totalNewActive = 3*leavesFromIncompleteLvl + leavesFromCompleteLvl - removeFromComplete;
         printf("Leaves %d, totalNewActive %d\n",leavesToProcess, totalNewActive);
         // If non-pendant paths were found, populate the search tree in the 
         // incomplete level
@@ -2522,19 +2532,32 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
         int leavesToProcess = global_reduced_set_inclusion_count_ptr[globalIndex];
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         // Solved for leavesToProcess < closed form
-        // start from 0, hence subtract 1
-        int completeLevel = floor(logf(2*leavesToProcess + 1) / logf(3));
-        int completeLevelLeaves = powf(3.0, completeLevel);
+        // start from level 1, hence add a level if LTP > 0, 1 complete level 
+        // Add 1 if LTP == 0 to prevent runtime error
+        // LTP = 2
+        // CL = 1
+        int completeLevel = floor(logf(leavesToProcess+(int)(leavesToProcess == 0)) / logf(3)) + (int)(leavesToProcess != 0);
+        // If LTP == 0, we dont want to create any new leaves
+        // Therefore, we dont want to enter the for loops.
+        // The active leaf writes itself as it's parent before the for loops
+        // This is overwritten within the for loops if LTP > 0
+        // CLL = 3
+        int leavesFromCompleteLvl = powf(3.0, completeLevel) - (int)(leavesToProcess == 0);
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         // Solved for closed form < leavesToProcess
-        // start from 0, hence subtract 1
-        int incompleteLevel = ceil(logf(2*leavesToProcess + 1) / logf(3));
+        // start from level 1, hence add a level if LTP > 0, 1 complete level 
+        // Add 1 if LTP == 0 to prevent runtime error
+        // IL = 1
+        int incompleteLevel = ceil(logf(leavesToProcess+(int)(leavesToProcess == 0)) / logf(3)) + (int)(leavesToProcess != 0);
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
-        int treeSizeComplete = (1.0 - powf(3.0, completeLevel))/(1.0 - 3.0);
+        // Add 1 to always 
+        // TSC = 3
+        int treeSizeComplete = (1.0 - powf(3.0, completeLevel+(int)(leavesToProcess != 0)))/(1.0 - 3.0) - (int)(leavesToProcess != 0);
         // How many internal leaves to skip in complete level
-        int removeFromComplete = ((leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
+        // RFC = 1
+        int removeFromComplete = ((3*leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
         // Leaves that are used in next level
-        int leavesFromIncompleteLvl = (leavesToProcess - treeSizeComplete);
+        int leavesFromIncompleteLvl = 3*removeFromComplete;
         leafValue = global_active_leaves[globalIndex];
         arbitraryParameter = 3*((3*leafValue)+1);
         // Closed form solution of recurrence relation shown in comment above method
@@ -2553,18 +2576,18 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
 
         // If non-pendant paths were found, populate the search tree in the 
         // complete level
-        for (; index < completeLevelLeaves - removeFromComplete; ++index){
+        for (int startingCLL = removeFromComplete; index < leavesFromCompleteLvl - removeFromComplete; ++index){
             //printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfFullLevel + index + removeFromComplete);
-            global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfFullLevel + index + removeFromComplete;
+            global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfFullLevel + index + startingCLL;
             global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
             global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
             global_active_leaf_index[newly_active_offset + index] = newly_active_offset + index;
         }
 
-        int totalNewActive = 3*leavesFromIncompleteLvl + completeLevelLeaves - removeFromComplete;
+        int totalNewActive = (leavesFromCompleteLvl - removeFromComplete) + leavesFromIncompleteLvl;
         printf("globalIndex %d, ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean\n",globalIndex);
         printf("Leaves %d, completeLevel Level Depth %d\n",leavesToProcess, completeLevel);
-        printf("Leaves %d, completeLevelLeaves %d\n",leavesToProcess, completeLevelLeaves);
+        printf("Leaves %d, leavesFromCompleteLvl %d\n",leavesToProcess, leavesFromCompleteLvl);
         printf("Leaves %d, incompleteLevel Level Depth %d\n",leavesToProcess, incompleteLevel);
         printf("Leaves %d, treeSizeComplete %d\n",leavesToProcess, treeSizeComplete);
         printf("Leaves %d, totalNewActive %d\n",leavesToProcess, totalNewActive);
