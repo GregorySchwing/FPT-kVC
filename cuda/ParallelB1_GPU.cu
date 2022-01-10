@@ -537,6 +537,31 @@ __host__ void GetMaxLeafValue(int activeVerticesCount,
     // d_out <-- [9]
     cudaFree(d_temp_storage);
 
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+}
+
+__host__ void GetMinLeafValue(int activeVerticesCount,
+                                cub::DoubleBuffer<int> & active_leaves,
+                                int * min){
+
+    // Declare, allocate, and initialize device-accessible pointers for input and output
+    int  num_items = activeVerticesCount;      // e.g., 7
+    int  *d_in = active_leaves.Current();          // e.g., [8, 6, 7, 5, 3, 0, 9]
+    // Determine temporary device storage requirements
+    void     *d_temp_storage = NULL;
+    size_t   temp_storage_bytes = 0;
+    cub::DeviceReduce::Min(d_temp_storage, temp_storage_bytes, d_in, min, num_items);
+    // Allocate temporary storage
+    cudaMalloc(&d_temp_storage, temp_storage_bytes);
+    // Run max-reduction
+    cub::DeviceReduce::Min(d_temp_storage, temp_storage_bytes, d_in, min, num_items);
+    // d_out <-- [9]
+    cudaFree(d_temp_storage);
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
 }
 
 typedef int inner_array_t[2];
@@ -3083,9 +3108,6 @@ void CallPopulateTree(int numberOfLevels,
         condensedData * bufferSize * sizeof(int) +
             2 * expandedData * bufferSize * sizeof(int);
 
-    std::vector<std::set<int>> pendantChildren(treeSize);
-    int pendantChild;
-
     int num_gpus;
     size_t free, total;
     cudaGetDeviceCount( &num_gpus );
@@ -3220,6 +3242,8 @@ void CallPopulateTree(int numberOfLevels,
 
     cudaMalloc( (void**)&global_vertices_included_dev_ptr, 2 * treeSize * sizeof(int) );
 
+    // Hopefully using a negative int isn't a problem.
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_vertices_included_dev_ptr),  -1, size_t(2 * treeSize));
     // Each node can process tPB pendant edges per call
     cudaMalloc( (void**)&global_pendant_path_bool_dev_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_pendant_path_reduced_bool_dev_ptr, deepestLevelSize * sizeof(int) );
@@ -3360,7 +3384,8 @@ void CallPopulateTree(int numberOfLevels,
     int oldActiveVerticesCount;
     int zero = 0;
     int largestActiveLeafEver = 0;
-    int maxLeafVal = 0;;
+    int maxLeafVal = INT_MIN;
+    int minLeafVal = INT_MAX;
 
     while(activeVerticesCount){
         if(notFirstCall){
@@ -3753,20 +3778,25 @@ void CallPopulateTree(int numberOfLevels,
         checkLastErrorCUDA(__FILE__, __LINE__);
 
         // This tells me how much of the cover tree I need to copy
-        /*
+        
         if (activeVerticesCount > 0){
             GetMaxLeafValue(activeVerticesCount,
                             active_leaves,
                             &maxLeafVal);
-            // Shouldn't be necessary but just in case
-            if (maxLeafVal > largestActiveLeafEver)
-                largestActiveLeafEver = maxLeafVal;
-        } else
+            GetMinLeafValue(activeVerticesCount,
+                active_leaves,
+                &minLeafVal);
+        } else {
             largestActiveLeafEver = treeSize-1;
+        }
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+
+        cudaMemcpy(coverTree, global_vertices_included_dev_ptr, 2 * largestActiveLeafEver * sizeof(int) , cudaMemcpyDeviceToHost);
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
-*/
+
         // Since the graph doesnt grow uniformly, it is too difficult to only copy the new parts..
         DotWriter::Node * node1;
         DotWriter::Node * node2;
@@ -3783,15 +3813,17 @@ void CallPopulateTree(int numberOfLevels,
             }  
             actLeaves->AddEdge(nodeMap[node1Name], nodeMap[node2Name]); 
         }
+
+        for (int level = 0; level < numberOfLevels; ++level){
+            int levelOffsetForPrinting = CalculateLevelOffset(level);
+            int levelUpperBoundForPrinting = CalculateLevelUpperBound(level);
+            for (int i = levelOffsetForPrinting; i < levelUpperBoundForPrinting; ++i)
+                std::cout << active_leaves_host[i];
+            std::cout << std::endl;
+        }
+
+        // Should always overwrite the whole tree.  Simple but slow
         ++cycle;
-        /*
-                    if (currentParent == activeParentHostValue[i])
-                node2 = actLeaves->AddNode(std::to_string(activeLeavesHostValue[i]));
-            }
-             = actLeaves->AddNode(std::to_string(activeParentHostValue[i]));
-            DotWriter::Node * node2 = actLeaves->AddNode(std::to_string(activeLeavesHostValue[i]));
-            actLeaves->AddEdge(node1, node2);
-        */
         filename = "Active_leaves_cycle_" + std::to_string(cycle) + ".dot";
         gVizWriter.WriteToFile(filename);
         //cudaMemcpy(coverTree, global_vertices_included_dev_ptr, largestActiveLeafEver*sizeof(int), cudaMemcpyDeviceToHost);
@@ -3807,19 +3839,6 @@ void CallPopulateTree(int numberOfLevels,
     }
 
 
-    cudaDeviceSynchronize();
-    checkLastErrorCUDA(__FILE__, __LINE__);
-
-    std::cout << "TREE" << std::endl;
-    for (int level = 0; level < numberOfLevels; ++level){
-        int levelOffsetForPrinting = CalculateLevelOffset(level);
-        int levelUpperBoundForPrinting = CalculateLevelUpperBound(level);
-        for (int i = levelOffsetForPrinting; i < levelUpperBoundForPrinting; ++i)
-            std::cout << active_leaves_host[i];
-        std::cout << std::endl;
-    }
-
-       
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
