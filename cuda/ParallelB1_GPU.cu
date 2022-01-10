@@ -2360,9 +2360,14 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
 
         printf("globalIndex %d, global_active_leaves_count_current %d\n",globalIndex, global_active_leaves_count_current[0]);
         printf("globalIndex %d, ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst\n",globalIndex);
-
         int leavesToProcess = global_reduced_set_inclusion_count_ptr[globalIndex];
-        // Always add 2 to prevent run time error, also to start counting at level 1 not level 0
+        // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
+        // Solved for leavesToProcess < closed form
+        // start from level 1, hence add a level if LTP > 0, 1 complete level 
+        // Add 1 if LTP == 0 to prevent runtime error
+        // LTP = 2
+        // CL = 1
+                // Always add 2 to prevent run time error, also to start counting at level 1 not level 0
         int completeLevel = floor(logf(leavesToProcess+2) / logf(3));
         // If LTP == 0, we dont want to create any new leaves
         // Therefore, we dont want to enter the for loops.
@@ -2579,9 +2584,9 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
 
         // If non-pendant paths were found, populate the search tree in the 
         // complete level
-        for (int startingCLL = removeFromComplete; index < leavesFromCompleteLvl - removeFromComplete; ++index){
+        for (int startingCLL = removeFromComplete; index < leavesFromCompleteLvl - removeFromComplete; ++index, ++startingCLL){
             //printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfFullLevel + index + removeFromComplete);
-            global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfFullLevel + index + startingCLL;
+            global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfFullLevel + startingCLL;
             global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
             global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
             global_active_leaf_index[newly_active_offset + index] = newly_active_offset + index;
