@@ -538,7 +538,7 @@ __host__ void GetMaxLeafValue(int activeVerticesCount,
     // d_out <-- [9]
     cudaFree(d_temp_storage);
 
-    cudaMemcpy(max, maxTmp, 1 * sizeof(int), cudaMemcpyDeviceToHost)
+    cudaMemcpy(max, maxTmp, 1 * sizeof(int), cudaMemcpyDeviceToHost);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -563,7 +563,7 @@ __host__ void GetMinLeafValue(int activeVerticesCount,
     // d_out <-- [9]
     cudaFree(d_temp_storage);
 
-    cudaMemcpy(min, minTmp, 1 * sizeof(int), cudaMemcpyDeviceToHost)
+    cudaMemcpy(min, minTmp, 1 * sizeof(int), cudaMemcpyDeviceToHost);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
