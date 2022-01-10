@@ -3852,8 +3852,8 @@ void CallPopulateTree(int numberOfLevels,
                 // New node
                 if(nodeIt1 == nodeMapSearchTree.end()) {
                     nodeMapSearchTree[node1Name] = searchTree->AddNode(std::to_string(lowestLeaf));
-                    if ((lowestLeaf/3 - 1) > 0)
-                        parent = (lowestLeaf/3 - 1);
+                    if (((lowestLeaf-1)/3) > 0)
+                        parent = (lowestLeaf-1)/3;
                     else
                         parent = 0;
                     std::string node2Name = std::to_string(parent);
