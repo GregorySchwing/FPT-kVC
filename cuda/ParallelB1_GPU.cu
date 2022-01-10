@@ -558,7 +558,7 @@ __host__ void GetMinLeafValue(int activeVerticesCount,
     // Determine temporary device storage requirements
     void     *d_temp_storage = NULL;
     size_t   temp_storage_bytes = 0;
-    
+
     cub::DeviceReduce::Min(d_temp_storage, temp_storage_bytes, d_in, minTmp, num_items);
     // Allocate temporary storage
     cudaMalloc(&d_temp_storage, temp_storage_bytes);
@@ -3251,9 +3251,10 @@ void CallPopulateTree(int numberOfLevels,
 
 
     cudaMalloc( (void**)&global_vertices_included_dev_ptr, 2 * treeSize * sizeof(int) );
-
-    // Hopefully using a negative int isn't a problem.
+    //cudaMemsetAsync(global_vertices_included_dev_ptr, 0, size_t(2 * treeSize) * sizeof(int));
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_vertices_included_dev_ptr),  -1, size_t(2 * treeSize));
+    // Hopefully using a negative int isn't a problem.
+    //cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_vertices_included_dev_ptr),  -1, size_t(2 * treeSize));
     // Each node can process tPB pendant edges per call
     cudaMalloc( (void**)&global_pendant_path_bool_dev_ptr, threadsPerBlock * deepestLevelSize * sizeof(int) );
     cudaMalloc( (void**)&global_pendant_path_reduced_bool_dev_ptr, deepestLevelSize * sizeof(int) );
@@ -3348,10 +3349,12 @@ void CallPopulateTree(int numberOfLevels,
     // For visualization
     int * active_leaves_host = new int[deepestLevelSize];
     int * active_parents_host = new int[deepestLevelSize];
-    int * coverTree = new int[2 * treeSize];
+    int * coverTree = new int[2 * treeSize]; // "zero-length" placeholder
+    std::fill_n (coverTree, 2 * treeSize, -1);
     bool isDirected = false;
-    int v1 = -1;
-    int v2 = -1;
+    int parent;
+    int v1 = 0;
+    int v2 = 0;
     int cycle = 0;
     std::string name = "main";
     std::string filename = "";
@@ -3805,7 +3808,7 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        cudaMemcpy(coverTree, &global_vertices_included_dev_ptr[2*minParentLeafVal], 2*maxActiveLeafVal * sizeof(int) , cudaMemcpyDeviceToHost);
+        cudaMemcpy(&coverTree[2*minParentLeafVal], &global_vertices_included_dev_ptr[2*minParentLeafVal], (2*maxActiveLeafVal + 1) * sizeof(int) , cudaMemcpyDeviceToHost);
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -3827,9 +3830,20 @@ void CallPopulateTree(int numberOfLevels,
             actLeaves->AddEdge(nodeMapActLeaves[node1Name], nodeMapActLeaves[node2Name]); 
         }
 
+        std::cout << "TREE" << std::endl;
+        for (int i = minParentLeafVal*2; i < maxActiveLeafVal*2; ++i){
+            v1 = coverTree[i*2 + 1];
+            v2 = coverTree[i*2 + 2];
+            std::cout << "(" << v1 << ", " << v2 << ")";
+        }
+        std::cout << std::endl;
+        
+
         for (int lowestLeaf = minParentLeafVal; lowestLeaf <= maxActiveLeafVal; ++lowestLeaf){
-            v1 = coverTree[lowestLeaf*2];
-            v2 = coverTree[lowestLeaf*2 + 1];
+            if (lowestLeaf == 0)
+            std::cout << "root" << std::endl;
+            v1 = coverTree[lowestLeaf*2 + 1];
+            v2 = coverTree[lowestLeaf*2 + 2];
             if (v1 == -1 && v2 == -1){
 
             } else if (v1 != -1 && v2 != -1){
@@ -3838,25 +3852,30 @@ void CallPopulateTree(int numberOfLevels,
                 // New node
                 if(nodeIt1 == nodeMapSearchTree.end()) {
                     nodeMapSearchTree[node1Name] = searchTree->AddNode(std::to_string(lowestLeaf));
-                    std::string node2Name = std::to_string(lowestLeaf/3 - 1);
+                    if ((lowestLeaf/3 - 1) > 0)
+                        parent = (lowestLeaf/3 - 1);
+                    else
+                        parent = 0;
+                    std::string node2Name = std::to_string(parent);
                     std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMapSearchTree.find(node2Name);
                     if(nodeIt2 == nodeMapSearchTree.end()) {
                         std::cout << "Error in search tree creation! " << std::endl;
                         std::cout << "Cant create child before parent! " << std::endl;
                         exit(1);                    
                     } 
-                    searchTree->AddEdge(nodeMapActLeaves[node1Name], nodeMapActLeaves[node2Name]); 
+                    searchTree->AddEdge(nodeMapSearchTree[node1Name], nodeMapSearchTree[node2Name]); 
                 }
 
             } else {
                 std::cout << "Error in search tree creation! " << std::endl;
+                std::cout << "Should populate even and odd value together! " << std::endl;
                 exit(1);
             }
         }
 
         // Should always overwrite the whole tree.  Simple but slow
-        ++cycle;
         filename = "Active_leaves_cycle_" + std::to_string(cycle) + ".dot";
+        ++cycle;
         gVizWriter.WriteToFile(filename);
 
         cudaDeviceSynchronize();
