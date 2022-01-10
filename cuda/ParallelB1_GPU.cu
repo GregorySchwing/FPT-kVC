@@ -3796,10 +3796,10 @@ void CallPopulateTree(int numberOfLevels,
         // This tells me how much of the cover tree I need to copy
         
         if (activeVerticesCount > 0){
-            GetMaxLeafValue(activeVerticesCount,
+            GetMaxLeafValue(activeVerticesCount+1,
                             active_leaves_value,
                             &maxActiveLeafVal);
-            GetMinLeafValue(activeVerticesCount,
+            GetMinLeafValue(activeVerticesCount+1,
                 parent_leaf_value,
                 &minParentLeafVal);
         } else {
@@ -3808,7 +3808,7 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        cudaMemcpy(&coverTree[2*minParentLeafVal], &global_vertices_included_dev_ptr[2*minParentLeafVal], (2*maxActiveLeafVal + 1) * sizeof(int) , cudaMemcpyDeviceToHost);
+        cudaMemcpy(&coverTree[2*minParentLeafVal], &global_vertices_included_dev_ptr[2*minParentLeafVal], (2*maxActiveLeafVal + 2) * sizeof(int) , cudaMemcpyDeviceToHost);
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -3831,45 +3831,60 @@ void CallPopulateTree(int numberOfLevels,
         }
 
         std::cout << "TREE" << std::endl;
-        for (int i = minParentLeafVal*2; i < maxActiveLeafVal*2; ++i){
-            v1 = coverTree[i*2 + 1];
-            v2 = coverTree[i*2 + 2];
-            std::cout << "(" << v1 << ", " << v2 << ")";
+        for (int i = minParentLeafVal; i <= maxActiveLeafVal; ++i){
+            if (i == 0){
+                std::cout << "root" << std::endl;
+            } else {
+                v1 = coverTree[i*2 - 1];
+                v2 = coverTree[i*2];
+                std::cout << "(" << v1 << ", " << v2 << ")";
+            }
+        }
+        std::cout << std::endl;
+        for (int i = minParentLeafVal; i <= maxActiveLeafVal; ++i){
+            std::cout << "( " << i << " )";
         }
         std::cout << std::endl;
         
 
         for (int lowestLeaf = minParentLeafVal; lowestLeaf <= maxActiveLeafVal; ++lowestLeaf){
-            if (lowestLeaf == 0)
-            std::cout << "root" << std::endl;
-            v1 = coverTree[lowestLeaf*2 + 1];
-            v2 = coverTree[lowestLeaf*2 + 2];
-            if (v1 == -1 && v2 == -1){
-
-            } else if (v1 != -1 && v2 != -1){
+            if (lowestLeaf == 0){
+                std::cout << "root" << std::endl;
                 std::string node1Name = std::to_string(lowestLeaf);
                 std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMapSearchTree.find(node1Name);
                 // New node
-                if(nodeIt1 == nodeMapSearchTree.end()) {
+                if(nodeIt1 == nodeMapSearchTree.end()){
                     nodeMapSearchTree[node1Name] = searchTree->AddNode(std::to_string(lowestLeaf));
-                    if (((lowestLeaf-1)/3) > 0)
-                        parent = (lowestLeaf-1)/3;
-                    else
-                        parent = 0;
-                    std::string node2Name = std::to_string(parent);
-                    std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMapSearchTree.find(node2Name);
-                    if(nodeIt2 == nodeMapSearchTree.end()) {
-                        std::cout << "Error in search tree creation! " << std::endl;
-                        std::cout << "Cant create child before parent! " << std::endl;
-                        exit(1);                    
-                    } 
-                    searchTree->AddEdge(nodeMapSearchTree[node1Name], nodeMapSearchTree[node2Name]); 
                 }
-
             } else {
-                std::cout << "Error in search tree creation! " << std::endl;
-                std::cout << "Should populate even and odd value together! " << std::endl;
-                exit(1);
+                v1 = coverTree[lowestLeaf*2 - 1];
+                v2 = coverTree[lowestLeaf*2];
+                if (v1 == -1 && v2 == -1){
+
+                } else if (v1 != -1 && v2 != -1){
+                    std::string node1Name = std::to_string(lowestLeaf);
+                    std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMapSearchTree.find(node1Name);
+                    // New node
+                    if(nodeIt1 == nodeMapSearchTree.end()) {
+                        nodeMapSearchTree[node1Name] = searchTree->AddNode(std::to_string(lowestLeaf));
+                        if (((lowestLeaf-1)/3) > 0)
+                            parent = (lowestLeaf-1)/3;
+                        else
+                            parent = 0;
+                        std::string node2Name = std::to_string(parent);
+                        std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMapSearchTree.find(node2Name);
+                        if(nodeIt2 == nodeMapSearchTree.end()) {
+                            std::cout << "Error in search tree creation! " << std::endl;
+                            std::cout << "Cant create child before parent! " << std::endl;
+                            exit(1);                    
+                        } 
+                        searchTree->AddEdge(nodeMapSearchTree[node1Name], nodeMapSearchTree[node2Name]); 
+                    }
+                } else {
+                    std::cout << "Error in search tree creation! " << std::endl;
+                    std::cout << "Should populate even and odd value together! " << std::endl;
+                    exit(1);
+                }
             }
         }
 
