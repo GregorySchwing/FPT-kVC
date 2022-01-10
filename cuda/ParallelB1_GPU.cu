@@ -526,16 +526,19 @@ __host__ void GetMaxLeafValue(int activeVerticesCount,
     // Declare, allocate, and initialize device-accessible pointers for input and output
     int  num_items = activeVerticesCount;      // e.g., 7
     int  *d_in = active_leaves_value.Current();          // e.g., [8, 6, 7, 5, 3, 0, 9]
+    int * maxTmp;
     // Determine temporary device storage requirements
     void     *d_temp_storage = NULL;
     size_t   temp_storage_bytes = 0;
-    cub::DeviceReduce::Max(d_temp_storage, temp_storage_bytes, d_in, max, num_items);
+    cub::DeviceReduce::Max(d_temp_storage, temp_storage_bytes, d_in, maxTmp, num_items);
     // Allocate temporary storage
     cudaMalloc(&d_temp_storage, temp_storage_bytes);
     // Run max-reduction
-    cub::DeviceReduce::Max(d_temp_storage, temp_storage_bytes, d_in, max, num_items);
+    cub::DeviceReduce::Max(d_temp_storage, temp_storage_bytes, d_in, maxTmp, num_items);
     // d_out <-- [9]
     cudaFree(d_temp_storage);
+
+    cudaMemcpy(max, maxTmp, 1 * sizeof(int), cudaMemcpyDeviceToHost)
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -548,16 +551,19 @@ __host__ void GetMinLeafValue(int activeVerticesCount,
     // Declare, allocate, and initialize device-accessible pointers for input and output
     int  num_items = activeVerticesCount;      // e.g., 7
     int  *d_in = active_leaves_value.Current();          // e.g., [8, 6, 7, 5, 3, 0, 9]
+    int * minTmp;
     // Determine temporary device storage requirements
     void     *d_temp_storage = NULL;
     size_t   temp_storage_bytes = 0;
-    cub::DeviceReduce::Min(d_temp_storage, temp_storage_bytes, d_in, min, num_items);
+    cub::DeviceReduce::Min(d_temp_storage, temp_storage_bytes, d_in, minTmp, num_items);
     // Allocate temporary storage
     cudaMalloc(&d_temp_storage, temp_storage_bytes);
     // Run max-reduction
-    cub::DeviceReduce::Min(d_temp_storage, temp_storage_bytes, d_in, min, num_items);
+    cub::DeviceReduce::Min(d_temp_storage, temp_storage_bytes, d_in, minTmp, num_items);
     // d_out <-- [9]
     cudaFree(d_temp_storage);
+
+    cudaMemcpy(min, minTmp, 1 * sizeof(int), cudaMemcpyDeviceToHost)
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
