@@ -1080,8 +1080,6 @@ __global__ void ParallelDFSRandom(
     int randomVertRowOff = global_row_offsets_dev_ptr[rowOffsOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]];
     // Using degrees allow us to ignore the edges which have been turned off
     outEdgesCount = global_degrees_dev_ptr[degreesOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]];
-    int printVert = pathsAndPendantStatus[sharedMemPathOffset + iteration - 1];
-    int badVal = r[iteration] % outEdgesCount;
     // Assumes the starting point isn't degree 0
     pathsAndPendantStatus[sharedMemPathOffset + iteration] =  global_columns_dev_ptr[valsAndColsOffset + randomVertRowOff + (r[iteration] % outEdgesCount)];
     ++iteration;
