@@ -678,6 +678,10 @@ __global__ void SetEdges(const int numberOfRows,
                 atomicAdd(&global_degrees_dev_ptr[degreesOffset + 
                     global_columns_dev_ptr[valsAndColsOffset + edge]],
                     -1*global_values_dev_ptr[valsAndColsOffset + edge]);
+                    if (global_degrees_dev_ptr[degreesOffset + 
+                        global_columns_dev_ptr[valsAndColsOffset + edge]] < 0){
+                            printf("BAD WENT BELOW 0%d", myChild);
+                        }
                 // This avoids a reduction of the degrees array to get total edges
                 atomicAdd(&global_edges_left_to_cover_count[leafIndex], -2*global_values_dev_ptr[valsAndColsOffset + edge]);
                 global_values_dev_ptr[valsAndColsOffset + edge] = 0;
@@ -787,6 +791,10 @@ __global__ void SetPendantEdges(const int numberOfRows,
             atomicAdd(&global_degrees_dev_ptr[degreesOffset + 
                 global_columns_dev_ptr[valsAndColsOffset + edge]],
                 -1*global_values_dev_ptr[valsAndColsOffset + edge]);
+            if (global_degrees_dev_ptr[degreesOffset + 
+                global_columns_dev_ptr[valsAndColsOffset + edge]] < 0){
+                    printf("BAD WENT BELOW 0%d", pendantChild);
+                }
             // If I can guaruntee there is no duplicate pendant
             // the atomic can be removed
             //global_degrees_dev_ptr[degreesOffset + 
@@ -1017,116 +1025,6 @@ __global__ void CalculateNewRowOffsets( int numberOfRows,
     }
 }
 
-__global__ void First_Graph_GPU(int vertexCount, 
-                                int size,
-                                int numberOfRows,
-                                int * old_row_offsets_dev,
-                                int * old_columns_dev,
-                                int * old_values_dev,
-                                int * new_row_offsets_dev,
-                                int * new_columns_dev,
-                                int * new_values_dev,
-                                int * old_degrees_dev,
-                                int * new_degrees_dev,
-                                int * global_row_offsets_dev_ptr,
-                                int * global_columns_dev_ptr,
-                                int * global_values_dev_ptr,
-                                int * global_degrees_dev_ptr
-                                ) {
-/*
-        InduceSubgraph(
-        numberOfRows,
-        old_row_offsets_dev,
-        old_columns_dev,
-        old_values_dev,
-        global_row_offsets_dev_ptr,
-        global_columns_dev_ptr); */
-
-     return;
-}
-
-// Single thread per leaf
-__global__ void CreateSubsetOfRemainingVerticesLevelWise(int levelOffset,
-                                                int levelUpperBound,
-                                                int numberOfRows,
-                                                int * global_degrees_dev_ptr,
-                                                int * global_vertices_remaining,
-                                                int * global_vertices_remaining_count){
-    int threadID = threadIdx.x + blockDim.x * blockIdx.x;
-    int leafIndex = levelOffset + threadID;
-    if (leafIndex >= levelUpperBound) return;
-    int degreesOffset = leafIndex * numberOfRows;
-
-    global_vertices_remaining_count[leafIndex] = 0;
-
-    for (int i = 0; i < numberOfRows; ++i){
-        printf("Thread %d, global_degrees_dev_ptr[degreesOffset+%d] : %d\n", threadID, i, global_degrees_dev_ptr[degreesOffset+i]);
-        if (global_degrees_dev_ptr[degreesOffset+i] == 0){
-            continue;
-        } else {
-            global_vertices_remaining[degreesOffset+global_vertices_remaining_count[leafIndex]] = i;
-            printf("Thread %d, global_vertices_remaining[degreesOffset+%d] : %d\n", threadID, global_vertices_remaining_count[leafIndex], global_vertices_remaining[degreesOffset+global_vertices_remaining_count[leafIndex]]);
-            ++global_vertices_remaining_count[leafIndex];
-        }
-    }
-}
-
-__global__ void GetRandomVertex(int levelOffset,
-                                int levelUpperBound,
-                                int numberOfRows,
-                                int * global_remaining_vertices_dev_ptr,
-                                int * global_remaining_vertices_size_dev_ptr,
-                                int * global_paths_ptr){
-
-    int threadID = threadIdx.x + blockDim.x * blockIdx.x;
-    // Since each thread calculates four random numbers
-    int leafIndex = levelOffset + threadID * 4;
-    if (leafIndex >= levelUpperBound) return;
-
-    RNG::ctr_type r;
-    unsigned int counter = 0;
-    ulong seed = 0;
-    int remainingVertsOffset, pathsOffset, iteration, remainingVerticesSize; 
-    remainingVertsOffset = leafIndex * numberOfRows;
-    pathsOffset = leafIndex * 4;
-    // r contains 4 random ints
-    r = randomGPU_four(counter, leafIndex, seed);
-    for(iteration = 0; iteration < 4 && (leafIndex + iteration) < levelUpperBound; ++iteration){
-        remainingVerticesSize = global_remaining_vertices_size_dev_ptr[leafIndex];
-        global_paths_ptr[pathsOffset] = r[iteration] % remainingVerticesSize;
-        printf("Thread %d, leafIndex %d, random vertex %d", threadID, leafIndex, global_paths_ptr[pathsOffset]);
-        remainingVertsOffset += numberOfRows;
-        pathsOffset += 4;
-    }
-}
-
-__global__ void GetRandomVertexSharedMem(int levelOffset,
-                                int levelUpperBound,
-                                int numberOfRows,
-                                int * global_remaining_vertices_dev_ptr,
-                                int * global_remaining_vertices_size_dev_ptr,
-                                int * global_paths_ptr){
-
-    int threadID = threadIdx.x + blockDim.x * blockIdx.x;
-    // Since each thread calculates four random numbers
-    int leafIndex = levelOffset + threadID * 4;
-    extern __shared__ RNG::ctr_type random123Objects[];
-    unsigned int counter = 0;
-    ulong seed = 0;
-    int r123Index = threadIdx.x / 4;
-    
-    if (threadIdx.x % 4 == 0)
-       random123Objects[r123Index] = randomGPU_four(counter, leafIndex, seed);
-    __syncthreads();
-
-    if(leafIndex < levelUpperBound){
-        int remainingVertsOffset = leafIndex * numberOfRows;
-        int pathsOffset = leafIndex * 4;
-        int randomNumIndex = threadIdx.x % 4;
-        int remainingVerticesSize = global_remaining_vertices_size_dev_ptr[remainingVertsOffset];
-        global_paths_ptr[pathsOffset] = (random123Objects[r123Index])[randomNumIndex] % remainingVerticesSize;
-    }
-}
 
 // It is very important to only use the value in global_pendant_child_dev_ptr[]
 // if global_pendant_path_bool_dev_ptr[] is true.  Otherwhise this path shouldnt
@@ -1211,19 +1109,10 @@ __global__ void ParallelDFSRandom(
         printf("failed to get nonzero deg %d\n", pathsAndPendantStatus[sharedMemPathOffset + iteration]);
         printf("randomVertRowOff %d\n",randomVertRowOff);
         printf("outEdgesCount %d\n",outEdgesCount);
-
+        printf("printVert %d\n",printVert);
     }
     if (randomVertRowOff > 1000){
-        printf("pointing to a removed vertex %d\n", randomVertRowOff);
-    }
-    if (blockIdx.x == 51 || blockIdx.x == 83){
-        printf("printVert %d\n",printVert);
-        printf("badVal %d\n",badVal);
-
-        printf("pointing to a removed vertex %d\n", randomVertRowOff);
-        printf("failed to get nonzero deg %d\n", pathsAndPendantStatus[sharedMemPathOffset + iteration]);
-        printf("randomVertRowOff %d\n",randomVertRowOff);
-        printf("outEdgesCount %d\n",outEdgesCount);
+        printf("pointing to a removed vertex %d\n", pathsAndPendantStatus[sharedMemPathOffset + iteration]);
     }
     pathsAndPendantStatus[sharedMemPathOffset + iteration] =  global_columns_dev_ptr[valsAndColsOffset + randomVertRowOff + (r[iteration] % outEdgesCount)];
     ++iteration;
@@ -2797,37 +2686,6 @@ __global__ void ParallelCreateActiveVerticesRowOffsets(
     }
 }
 
-__global__ void ParallelCreateLevelAwareRowOffsets(
-                            int numberOfRows,
-                            int numberOfEdgesPerGraph,
-                            int * global_row_offsets_dev_ptr,
-                            int * global_cols_vals_segments,
-                            int * global_set_inclusion_bool_ptr){
-
-    int leafIndex = blockIdx.x;
-
-    printf("LevelAware RowOffs blockIdx %d is running\n", blockIdx.x);
-    printf("LevelAware RowOffs leaf index %d is running\n", leafIndex);
-
-    int rowOffsOffset = leafIndex * (numberOfRows + 1);
-    int bufferRowOffsOffset = blockIdx.x * (numberOfRows + 1);
-
-    for (int iter = threadIdx.x; iter < numberOfRows+1; iter += blockDim.x){
-        global_cols_vals_segments[bufferRowOffsOffset + iter] = (blockIdx.x * numberOfEdgesPerGraph) + global_row_offsets_dev_ptr[rowOffsOffset + iter];
-        printf("global_cols_vals_segments[bufferRowOffsOffset + %d] = %d + %d\n", iter, (blockIdx.x * numberOfEdgesPerGraph), global_row_offsets_dev_ptr[rowOffsOffset + iter]);
-
-    }
-
-    if(threadIdx.x == 0){
-        printf("LevelAware RowOffs \n");
-        for (int i = 0; i < numberOfRows+1; ++i){
-            printf("global_cols_vals_segments[%d] = %d  \n",i, global_cols_vals_segments[bufferRowOffsOffset+i]);
-        }
-        printf("\n");
-    }
-}
-
-
 __global__ void SetVerticesRemaingSegements(int dLSPlus1,
                             int numberOfRows,
                             int * global_vertex_segments){
@@ -2842,77 +2700,6 @@ __global__ void SetPathOffsets(int sDLSPlus1,
         global_set_path_offsets[entry] = entry * threadsPerBlock;
     }
 }
-__global__ void ParallelQuicksortWithDNF(
-                            int numberOfRows,
-                            int numberOfEdgesPerGraph,
-                            int * global_row_offsets_dev_ptr,
-                            int * global_columns_dev_ptr,
-                            int * global_values_dev_ptr,
-                            int * global_degrees_dev_ptr){
-
-    int row = threadIdx.x;
-
-
-
-    for (int iter = row; iter < numberOfRows; iter += blockDim.x){
-
-    }
-
-}
-
-/*
-__global__ void SerialProcessPendantEdge(
-                            int numberOfRows,
-                            int numberOfEdgesPerGraph,
-                            int * global_row_offsets_dev_ptr,
-                            int * global_columns_dev_ptr,
-                            int * global_remaining_vertices_dev_ptr,
-                            int * global_remaining_vertices_size_dev_ptr,
-                            int * global_paths_ptr,
-                            int * global_pendant_path_bool_dev_ptr){
-    // Set out-edges
-    for (int i = 0; i < 2; ++i){
-        LB = global_row_offsets_dev_ptr[rowOffsOffset + children[i]];
-        UB = global_row_offsets_dev_ptr[rowOffsOffset + children[i] + 1];    
-        for (int edge = LB + threadIndex; edge < UB; edge += blockDim.x){
-            global_values_dev_ptr[valsAndColsOffset + edge] = 0;
-        }
-    }
-    __syncthreads();
-    if (threadIndex == 0 && blockIdx.x == 0){
-        printf("Block %d, levelOffset %d, leafIndex %d, children removed %d %d\n", blockIdx.x, levelOffset, leafIndex, children[0], children[1]);
-        for (int i = 0; i < global_edges_left_to_cover_count[(leafIndex-1)/3]; ++i){
-            printf("(%d, %d) ",global_columns_dev_ptr[valsAndColsOffset + i], global_values_dev_ptr[valsAndColsOffset + i]);
-        }
-        printf("\n");
-    }
-    // (u,v) is the form of edge pairs.  We are traversing over v's outgoing edges, 
-    // looking for u as the destination and turning off that edge.
-    // this may be more elegantly handled by 
-    // (1) an associative data structure
-    // (2) an undirected graph 
-    // Parallel implementations of both of these need to be investigated.
-    for (int i = 0; i < 2; ++i){
-        LB = global_row_offsets_dev_ptr[rowOffsOffset + children[i]];
-        UB = global_row_offsets_dev_ptr[rowOffsOffset + children[i] + 1];    // Set out-edges
-        for (int edge = LB + threadIndex; edge < UB; edge += blockDim.x){
-            v = global_columns_dev_ptr[valsAndColsOffset + edge];
-            // guarunteed to only have one incoming and one outgoing edge connecting (x,y)
-            vLB = global_row_offsets_dev_ptr[rowOffsOffset + v];
-            vUB = global_row_offsets_dev_ptr[rowOffsOffset + v + 1];
-            for (int outgoingEdgeOfV = vLB + threadIndex; 
-                    outgoingEdgeOfV < vUB; 
-                        outgoingEdgeOfV += blockDim.x){
-                if (children[i] == global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfV]){
-                    // Set in-edge
-                    global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV] = 0;
-                }
-            }
-        }
-    }
-    __syncthreads();
-}
-*/
 __device__ void SetOutgoingEdges(int rowOffsOffset,
                                 int valsAndColsOffset,
                                 int degreesOffset,
@@ -2955,84 +2742,6 @@ __device__ void SetIncomingEdges(int rowOffsOffset,
                 global_values_dev_ptr[valsAndColsOffset + j] = 0;
                 --global_degrees_dev_ptr[degreesOffset + v];
                 break;
-            }
-        }
-    }
-}
-
-// Single threaded version
-// DFS is implicitly single threaded
-__global__ void GenerateChildren(int leafIndex,
-                                int numberOfRows,
-                                int maxDegree,
-                                int numberOfEdgesPerGraph,
-                                int * global_row_offsets_dev_ptr,
-                                int * global_columns_dev_ptr,
-                                int * global_values_dev_ptr,
-                                int * global_degrees_dev_ptr,
-                                int * global_vertices_remaining,
-                                int * global_paths_ptr,
-                                int * global_vertices_remaining_count,
-                                int * global_outgoing_edge_vertices,
-                                int * global_outgoing_edge_vertices_count){
-                             
-    int threadID = threadIdx.x + blockDim.x * blockIdx.x;
-    if(threadID > 0) return;
-    printf("Thread %d starting", threadID);
-
-    int pathsOffset = leafIndex * 4;
-    int rowOffsOffset = leafIndex * (numberOfRows + 1);
-    int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
-    int degreesOffset = leafIndex * numberOfRows;
-    int outgoingEdgeOffset = leafIndex * maxDegree;
-
-    printf("Thread %d, pathsOffset : %d", threadID, pathsOffset);
-    printf("Thread %d, rowOffsOffset : %d", threadID, rowOffsOffset);
-    printf("Thread %d, valsAndColsOffset %d: ", threadID, valsAndColsOffset);
-    printf("Thread %d, degreesOffset : %d", threadID, degreesOffset);
-
-// Get random vertex
-
-    unsigned int counter = 0;
-    ulong seed = 0;
-    int randomNumber = randomGPU(counter, leafIndex, seed);
-    int randomIndex = randomNumber % global_vertices_remaining_count[leafIndex];
-    int randomVertex = global_vertices_remaining[degreesOffset+randomIndex];
-    printf("Thread %d, randomVertex : %d", threadID, randomVertex);
-// dfs 
-    for (int i = 0; i < 4; ++i){
-        global_paths_ptr[pathsOffset + i] = randomVertex;
-        printf("Thread %d, global_paths_ptr[pathsOffset + %d] : %d", threadID, i, global_paths_ptr[pathsOffset + i]);
-
-        if (randomVertex == -1)
-            break;
-        global_outgoing_edge_vertices_count[leafIndex] = 0;
-        for (int j = global_row_offsets_dev_ptr[rowOffsOffset + randomVertex]; 
-                j < global_row_offsets_dev_ptr[rowOffsOffset + randomVertex + 1]; ++j){
-            printf("Thread %d, global_values_dev_ptr[valsAndColsOffset + %d] : %d\n", threadID, j, global_values_dev_ptr[valsAndColsOffset + j]);
-            if (global_values_dev_ptr[valsAndColsOffset + j] == 0)
-                continue;
-            else {
-                global_outgoing_edge_vertices[outgoingEdgeOffset+global_outgoing_edge_vertices_count[leafIndex]] = j;
-                printf("Thread %d, global_outgoing_edge_vertices[outgoingEdgeOffset+%d] : %d\n", threadID, global_outgoing_edge_vertices_count[leafIndex], global_outgoing_edge_vertices[outgoingEdgeOffset+global_outgoing_edge_vertices_count[leafIndex]]);
-                ++global_outgoing_edge_vertices_count[leafIndex];
-            }
-        }
-        ++counter;
-        randomNumber = randomGPU(counter, leafIndex, seed);
-        randomIndex = randomNumber % global_outgoing_edge_vertices_count[leafIndex];
-        randomVertex = global_outgoing_edge_vertices[outgoingEdgeOffset+randomIndex];
-        
-        if (i > 0 && randomVertex == global_paths_ptr[pathsOffset + i - 1]){
-            if (global_degrees_dev_ptr[degreesOffset+randomVertex] > 1){
-                while(randomVertex == global_paths_ptr[pathsOffset + i - 1]){
-                    ++counter;
-                    randomNumber = randomGPU(counter, leafIndex, seed);
-                    randomIndex = randomNumber % global_outgoing_edge_vertices_count[leafIndex];
-                    randomVertex = global_outgoing_edge_vertices[outgoingEdgeOffset+randomIndex];
-                }
-            } else {
-                randomVertex = -1;
             }
         }
     }
