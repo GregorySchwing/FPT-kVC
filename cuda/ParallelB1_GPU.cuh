@@ -122,14 +122,6 @@ __device__ void AssignPointers(long long globalIndex,
                                 int * values_dev,
                                 int * new_degrees_dev);
 
-__global__ void PopulateTreeParallelLevelWise_GPU(int numberOfLevels, 
-                                            long long edgesPerNode,
-                                            long long numberOfVertices,
-                                            int * new_row_offsets_dev,
-                                            int * new_columns_dev,
-                                            int * values_dev,
-                                            int * new_degrees_dev);
-
 __global__ void SetEdges(const int numberOfRows,
                         const int numberOfEdgesPerGraph,
                         const int * global_active_leaf_indices,

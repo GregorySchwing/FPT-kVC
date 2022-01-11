@@ -672,16 +672,19 @@ __global__ void SetEdges(const int numberOfRows,
                 // If these are atomic, then duplicate myChildren isn't a problem
                 // Since we'd be decrementing by 0 the second, third, ...etc time 
                 // a duplicate myChild was processed.
-                global_degrees_dev_ptr[degreesOffset + 
-                    global_columns_dev_ptr[valsAndColsOffset + edge]] 
-                        -= global_values_dev_ptr[valsAndColsOffset + edge];
+                //global_degrees_dev_ptr[degreesOffset + 
+                //    global_columns_dev_ptr[valsAndColsOffset + edge]] 
+                //        -= global_values_dev_ptr[valsAndColsOffset + edge];
+                atomicAdd(&global_degrees_dev_ptr[degreesOffset + 
+                    global_columns_dev_ptr[valsAndColsOffset + edge]],
+                    -1*global_values_dev_ptr[valsAndColsOffset + edge]);
                 // This avoids a reduction of the degrees array to get total edges
                 atomicAdd(&global_edges_left_to_cover_count[leafIndex], -2*global_values_dev_ptr[valsAndColsOffset + edge]);
                 global_values_dev_ptr[valsAndColsOffset + edge] = 0;
             }
-
+            __syncthreads();
             if (threadIdx.x == 0){
-                    global_degrees_dev_ptr[degreesOffset + myChild] = 0;
+                global_degrees_dev_ptr[degreesOffset + myChild] = 0;
             }
             __syncthreads();
             if (threadIdx.x == 0){
@@ -765,7 +768,6 @@ __global__ void SetPendantEdges(const int numberOfRows,
     // Only allocated for one level, not tree global
     int globalPendantPathBoolOffset = blockIdx.x * blockDim.x;
     int globalPendantPathChildOffset = globalPendantPathBoolOffset;
-    int globalSetInclusionBoolOffset = globalPendantPathBoolOffset;
     int LB, UB, v, vLB, vUB, pendantChild, pendantBool;
     for (int row = 0; row < blockDim.x; ++row) {
         pendantChild = global_pendant_child_dev_ptr[globalPendantPathChildOffset + row];
@@ -782,16 +784,21 @@ __global__ void SetPendantEdges(const int numberOfRows,
             // If these are atomic, then duplicate pendantChild isn't a problem
             // Since we'd be decrementing by 0 the second, third, ...etc time 
             // a duplicate pendantChild was processed.
-            global_degrees_dev_ptr[degreesOffset + 
-                global_columns_dev_ptr[valsAndColsOffset + edge]] 
-                    -= global_values_dev_ptr[valsAndColsOffset + edge];
+            atomicAdd(&global_degrees_dev_ptr[degreesOffset + 
+                global_columns_dev_ptr[valsAndColsOffset + edge]],
+                -1*global_values_dev_ptr[valsAndColsOffset + edge]);
+            // If I can guaruntee there is no duplicate pendant
+            // the atomic can be removed
+            //global_degrees_dev_ptr[degreesOffset + 
+            //    global_columns_dev_ptr[valsAndColsOffset + edge]] 
+            //        -= global_values_dev_ptr[valsAndColsOffset + edge];
             // This avoids a reduction of the degrees array to get total edges
             atomicAdd(&global_edges_left_to_cover_count[leafIndex], -2*global_values_dev_ptr[valsAndColsOffset + edge]);
             global_values_dev_ptr[valsAndColsOffset + edge] = 0;
         }
-
+        __syncthreads();
         if (threadIdx.x == 0){
-                global_degrees_dev_ptr[degreesOffset + pendantChild] = 0;
+            global_degrees_dev_ptr[degreesOffset + pendantChild] = 0;
         }
         __syncthreads();
         // (u,v) is the form of edge pairs.  We are traversing over v's outgoing edges, 
@@ -1178,7 +1185,7 @@ __global__ void ParallelDFSRandom(
         printf("Setup offsets\n");
         printf("\n");
     }
-    int remainingVerticesSize = global_remaining_vertices_size_dev_ptr[leafIndex];
+    unsigned int remainingVerticesSize = global_remaining_vertices_size_dev_ptr[leafIndex];
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("remainingVerticesSize %d\n", remainingVerticesSize);
         printf("\n");
@@ -1197,8 +1204,27 @@ __global__ void ParallelDFSRandom(
     int randomVertRowOff = global_row_offsets_dev_ptr[rowOffsOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]];
     // Using degrees allow us to ignore the edges which have been turned off
     outEdgesCount = global_degrees_dev_ptr[degreesOffset + pathsAndPendantStatus[sharedMemPathOffset + iteration - 1]];
-
+    int printVert = pathsAndPendantStatus[sharedMemPathOffset + iteration - 1];
+    int badVal = r[iteration] % outEdgesCount;
     // Assumes the starting point isn't degree 0
+    if (outEdgesCount <= 0){
+        printf("failed to get nonzero deg %d\n", pathsAndPendantStatus[sharedMemPathOffset + iteration]);
+        printf("randomVertRowOff %d\n",randomVertRowOff);
+        printf("outEdgesCount %d\n",outEdgesCount);
+
+    }
+    if (randomVertRowOff > 1000){
+        printf("pointing to a removed vertex %d\n", randomVertRowOff);
+    }
+    if (blockIdx.x == 51 || blockIdx.x == 83){
+        printf("printVert %d\n",printVert);
+        printf("badVal %d\n",badVal);
+
+        printf("pointing to a removed vertex %d\n", randomVertRowOff);
+        printf("failed to get nonzero deg %d\n", pathsAndPendantStatus[sharedMemPathOffset + iteration]);
+        printf("randomVertRowOff %d\n",randomVertRowOff);
+        printf("outEdgesCount %d\n",outEdgesCount);
+    }
     pathsAndPendantStatus[sharedMemPathOffset + iteration] =  global_columns_dev_ptr[valsAndColsOffset + randomVertRowOff + (r[iteration] % outEdgesCount)];
     ++iteration;
     //    printf("(r[iteration] mod outEdgesCount) %d\n", (r[iteration] % outEdgesCount));
@@ -1393,7 +1419,6 @@ __global__ void ParallelProcessPendantEdges(
         printf("leafValue %d Block index %d made it past the return\n", leafValue, myBlockIndex);
 
 
-    int pathsOffset = leafIndex * 4;
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
     int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
     int degreesOffset = leafIndex * numberOfRows;
@@ -1546,7 +1571,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
         pathsAndIndependentStatus[start] = global_paths_ptr[globalPathOffset + start];
     }
     if (threadIdx.x == 0){
-        printf("Block ID %d threadIdx.x copied path into sm\n", blockIdx.x, threadIdx.x);
+        printf("Block ID %d threadIdx.x %d copied path into sm\n", blockIdx.x, threadIdx.x);
     }
     printf("Block ID %d path %d %s pendant\n", blockIdx.x, threadIdx.x, 
         global_pendant_path_bool_dev_ptr[globalPendantPathBoolOffset + threadIdx.x] ? "is" : "isn't");
@@ -1557,7 +1582,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
 
     __syncthreads();
     if (threadIdx.x == 0){
-        printf("Block ID %d threadIdx.x copied into sm\n", blockIdx.x, threadIdx.x);
+        printf("Block ID %d threadIdx.x %d copied into sm\n", blockIdx.x, threadIdx.x);
     }
     // See if each vertex in my path is duplicated, 1 vs all comparison written to shared memory
     // Also, if it is duplicated, only process the largest index duplicate
@@ -1603,7 +1628,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
     }
     __syncthreads();
     if (threadIdx.x == 0){
-        printf("Block ID %d threadIdx.x created adj matrix\n", blockIdx.x, threadIdx.x);
+        printf("Block ID %d threadIdx.x %d created adj matrix\n", blockIdx.x, threadIdx.x);
     }
     // Corresponds to an array of random numbers between [0,1]
     // This way every thread has its own randGen, and no thread sync is neccessary.
@@ -2058,7 +2083,6 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
     int leftMostChildOfLevelExpanded;
     int setPathOffset = leafIndex * blockDim.x;
     int globalPathOffset = setPathOffset*4;
-    int vertIncludedOffset;
     extern __shared__ int paths[];
 
     // |I| - The cardinality of the set.  If |I| = 0; we don't induce children
@@ -2182,7 +2206,6 @@ __global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_va
     int leafValue = global_active_leaf_value[leafIndex];
     int setPathOffset = leafIndex * blockDim.x;
     int globalPathOffset = setPathOffset*4;
-    int vertIncludedOffset;
     // |I| - The cardinality of the set.  If |I| = 0; we don't induce children
     // Else we will induce (3*|I| children), Each path induces 3 leaves.
     int leavesThatICanProcess = global_reduced_set_inclusion_count_ptr[leafIndex];
@@ -2449,7 +2472,6 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
     int globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
     int leafValue;
     int arbitraryParameter;
-    int leftMostChildOfLevel;
     int leftMostLeafIndexOfFullLevel;
     int leftMostLeafIndexOfIncompleteLevel;
     // Since number of leaves is not necessarily a power of 2
@@ -3016,41 +3038,6 @@ __global__ void GenerateChildren(int leafIndex,
     }
 }
 
-// Fill a perfect 3-ary tree to a given depth
-__global__ void PopulateTreeParallelLevelWise_GPU(int numberOfLevels, 
-                                                long long edgesPerNode,
-                                                long long numberOfVertices,
-                                                int * new_row_offsets_dev,
-                                                int * new_columns_dev,
-                                                int * values_dev,
-                                                int * new_degrees_dev){
-
-    long long myLevel = blockIdx.x;
-
-    if (myLevel >= numberOfLevels)
-        return;
-
-    long long myLevelSize;
-    long long levelOffset;
-    if (myLevel != 0){
-        myLevelSize = pow(3.0, myLevel-1);
-        levelOffset = CalculateLevelOffset(myLevel);
-    } else {
-        myLevelSize = 1;
-        levelOffset = 0;
-    }
-
-    long long leafIndex = threadIdx.x;
-
-    for (int node = leafIndex; node < myLevelSize; node += blockDim.x){
-        //graphs[levelOffset + node] = new Graph_GPU(g);
-        printf("Thread %lu, block %lu", leafIndex, myLevel);
-
-    }
-}
-
-
-
 void CallPopulateTree(int numberOfLevels, 
                     Graph & g){
 
@@ -3087,11 +3074,12 @@ void CallPopulateTree(int numberOfLevels,
 
     std::cout << "You are about to allocate " << double(totalMem)/1024/1024/1024 << " GB" << std::endl;
     std::cout << "Your GPU RAM has " << double(free)/1024/1024/1024 << " GB available" << std::endl;
+    /*
     do 
     {
         std::cout << '\n' << "Press enter to continue...; ctrl-c to terminate";
     } while (std::cin.get() != '\n');
-
+    */
 // Each of these will be wrapped in a cub double buffer
 // which will switch the active set passed to the methods which
 // rely on these pointers.  This way I only keep the relevant 
@@ -3126,7 +3114,6 @@ void CallPopulateTree(int numberOfLevels,
     int * global_reduced_set_inclusion_count_ptr;
     int * global_reduced_set_inclusion_count_ptr_buffer;
 
-    int * global_paths_length;
     int * global_edges_left_to_cover_count;
     int * global_edges_left_to_cover_count_buffer;
 
@@ -3141,7 +3128,6 @@ void CallPopulateTree(int numberOfLevels,
     int * global_active_leaf_indices_count;
     int * global_active_leaf_indices_count_buffer;
 
-    int * global_newly_active_leaves_count_ptr;
     int * global_active_leaf_offset_ptr;
     int * global_active_leaf_offset_ptr_buffer;
 
@@ -3290,8 +3276,6 @@ void CallPopulateTree(int numberOfLevels,
                     active_leaves_value.Current(),
                     active_leaves_count.Current());
 
-    long long levelOffset = 0;
-    long long levelUpperBound;
     int numberOfBlocksForOneThreadPerLeaf;
     numberOfLevels = g.GetVertexCount()/2 + 1;
     
@@ -3668,6 +3652,7 @@ void CallPopulateTree(int numberOfLevels,
         int * old_verts_remain_count = remaining_vertices_count.Current();
         int * new_verts_remain_count = remaining_vertices_count.Alternate();
 
+        int * old_active_leaves_count = active_leaves_count.Current();
         int * old_active_leaf_offset = active_leaf_offset.Current();
         int * old_active_leaves_index = active_leaves_index.Current();
         int * old_active_leaves_value = active_leaves_value.Current();
@@ -3695,6 +3680,7 @@ void CallPopulateTree(int numberOfLevels,
         const size_t verts_remain_sz = size_t(oldActiveVerticesCount*verticesRemainingInGraph) * sizeof(int);
         const size_t remain_count_edges_left_sz = size_t(oldActiveVerticesCount) * sizeof(int);
         const size_t active_vert_off_sz = size_t(oldActiveVerticesCount+1) * sizeof(int);
+        const size_t active_leaves_count_sz = size_t(1) * sizeof(int);
 
         cudaMemsetAsync(old_row_offs, 0, row_offs_sz);
         cudaMemsetAsync(old_cols, 0, cols_vals_sz);
@@ -3705,6 +3691,7 @@ void CallPopulateTree(int numberOfLevels,
         cudaMemsetAsync(old_verts_remain_count, 0, remain_count_edges_left_sz);
 
         // Need to clean the offsets
+        cudaMemsetAsync(old_active_leaves_count, 0, active_leaves_count_sz);
         cudaMemsetAsync(old_active_leaf_offset, 0, active_vert_off_sz);
         cudaMemsetAsync(old_active_leaves_index, 0, remain_count_edges_left_sz);
         cudaMemsetAsync(old_active_leaves_value, 0, remain_count_edges_left_sz);
@@ -3717,9 +3704,7 @@ void CallPopulateTree(int numberOfLevels,
         printf("Before flip active_leaves_value.selector %d\n", active_leaves_value.selector);
 
         // Flips Current and Alternate
-        active_leaves_value.selector = !active_leaves_value.selector;
-        active_leaves_count.selector = !active_leaves_count.selector;
-        active_leaf_offset.selector = !active_leaf_offset.selector;
+
         row_offsets.selector = !row_offsets.selector;
         columns.selector = !columns.selector;
         values.selector = !values.selector;
@@ -3729,6 +3714,9 @@ void CallPopulateTree(int numberOfLevels,
         remaining_vertices_count.selector = !remaining_vertices_count.selector;
 
         active_leaf_offset.selector = !active_leaf_offset.selector;
+        active_leaves_count.selector = !active_leaves_count.selector;
+        active_leaf_offset.selector = !active_leaf_offset.selector;
+        active_leaves_value.selector = !active_leaves_value.selector;
         active_leaves_index.selector = !active_leaves_index.selector;
         parent_leaf_index.selector = !parent_leaf_index.selector;
         parent_leaf_value.selector = !parent_leaf_value.selector;     
@@ -3772,8 +3760,6 @@ void CallPopulateTree(int numberOfLevels,
         checkLastErrorCUDA(__FILE__, __LINE__);
 
         // Since the graph doesnt grow uniformly, it is too difficult to only copy the new parts..
-        DotWriter::Node * node1;
-        DotWriter::Node * node2;
         for (int i = 0; i < activeVerticesCount; ++i){
             std::string node1Name = std::to_string(activeParentHostValue[i]);
             std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMapActLeaves.find(node1Name);
@@ -3855,10 +3841,12 @@ void CallPopulateTree(int numberOfLevels,
         checkLastErrorCUDA(__FILE__, __LINE__);
 
         std::cout << "You are about to start another loop " << std::endl;
+        /*
         do 
         {
             std::cout << '\n' << "Press enter to continue...; ctrl-c to terminate";
         } while (std::cin.get() != '\n');
+        */
     }
 
 
@@ -3870,7 +3858,6 @@ void CallPopulateTree(int numberOfLevels,
     cudaFree( global_values_dev_ptr );
     cudaFree( global_degrees_dev_ptr );
     cudaFree( global_paths_ptr );
-    cudaFree( global_paths_length );
     cudaFree( global_edges_left_to_cover_count );
     cudaDeviceSynchronize();
 }
