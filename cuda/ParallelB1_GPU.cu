@@ -1064,81 +1064,6 @@ __global__ void CreateSubsetOfRemainingVerticesLevelWise(int levelOffset,
     }
 }
 
-// Single thread per leaf
-/*
-__global__ void DFSLevelWise(
-                            int numberOfRows,
-                            int maxDegree,
-                            int numberOfEdgesPerGraph,
-                            int * global_degrees_dev_ptr,
-                            int * global_row_offsets_dev_ptr,
-                            int * global_columns_dev_ptr,
-                            int * global_values_dev_ptr,
-                            int * global_vertices_remaining,
-                            int * global_vertices_remaining_count,
-                            int * global_paths_ptr,
-                            int * global_paths_length,
-                            int * global_outgoing_edge_vertices,
-                            int * global_outgoing_edge_vertices_count){
-    int threadID = threadIdx.x + blockDim.x * blockIdx.x;
-    int leafIndex = levelOffset + threadID;
-    if (leafIndex >= levelUpperBound) return;
-    int degreesOffset = leafIndex * numberOfRows;
-    int pathsOffset = leafIndex * 4;
-    int rowOffsOffset = leafIndex * (numberOfRows + 1);
-    int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
-    int outgoingEdgeOffset = leafIndex * maxDegree;
-
-    unsigned int counter = 0;
-    ulong seed = 0;
-    int randomNumber = randomGPU(counter, leafIndex, seed);
-    int randomIndex = randomNumber % global_vertices_remaining_count[leafIndex];
-    int randomVertex = global_vertices_remaining[degreesOffset+randomIndex];
-    global_paths_ptr[pathsOffset + 0] = randomVertex;
-    global_paths_length[leafIndex]++;
-    printf("Thread %d, randomVertex : %d, path position : %d\n\n", threadID, randomVertex, 0);
-// dfs 
-    for (int i = 1; i < 4; ++i){
-        global_outgoing_edge_vertices_count[leafIndex] = 0;
-        for (int j = global_row_offsets_dev_ptr[rowOffsOffset + randomVertex]; 
-                j < global_row_offsets_dev_ptr[rowOffsOffset + randomVertex + 1]; ++j){
-            printf("Thread %d, global_values_dev_ptr[valsAndColsOffset + %d] : %d\n", threadID, j, global_values_dev_ptr[valsAndColsOffset + j]);
-            if (global_values_dev_ptr[valsAndColsOffset + j] == 0)
-                continue;
-            else {
-                global_outgoing_edge_vertices[outgoingEdgeOffset+global_outgoing_edge_vertices_count[leafIndex]] = global_columns_dev_ptr[valsAndColsOffset + j];
-                printf("Thread %d, global_outgoing_edge_vertices[outgoingEdgeOffset+%d] : %d\n", threadID, global_outgoing_edge_vertices_count[leafIndex], global_outgoing_edge_vertices[outgoingEdgeOffset+global_outgoing_edge_vertices_count[leafIndex]]);
-                ++global_outgoing_edge_vertices_count[leafIndex];
-            }
-        }
-        ++counter;
-        randomNumber = randomGPU(counter, leafIndex, seed);
-        randomIndex = randomNumber % global_outgoing_edge_vertices_count[leafIndex];
-        randomVertex = global_columns_dev_ptr[valsAndColsOffset + global_outgoing_edge_vertices[outgoingEdgeOffset+randomIndex]];
-        
-        if (randomVertex == global_paths_ptr[pathsOffset + i - 1]){
-            // if degree is greater than 1 there exists an alternative path 
-            // which doesnt form a simple cycle
-            if (global_degrees_dev_ptr[degreesOffset+randomVertex] > 1){
-                // Non-deterministic time until suitable edge which 
-                // doesn't form a simple cycle is found.
-                while(randomVertex == global_paths_ptr[pathsOffset + i - 1]){
-                    ++counter;
-                    randomNumber = randomGPU(counter, leafIndex, seed);
-                    randomIndex = randomNumber % global_outgoing_edge_vertices_count[leafIndex];
-                    randomVertex = global_columns_dev_ptr[valsAndColsOffset + global_outgoing_edge_vertices[outgoingEdgeOffset+randomIndex]];
-                }
-            } else {
-                break;
-            }
-        }
-        global_paths_ptr[pathsOffset + i] = randomVertex;
-        ++global_paths_length[leafIndex];
-        printf("Thread %d, randomVertex : %d, path position : %d\n\n", threadID, randomVertex, i);
-        printf("Thread %d, global_paths_ptr[pathsOffset + %d] : %d", threadID, i, global_paths_ptr[pathsOffset + i]);
-    }
-}
-*/
 __global__ void GetRandomVertex(int levelOffset,
                                 int levelUpperBound,
                                 int numberOfRows,
@@ -2368,7 +2293,7 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
         // LTP = 2
         // CL = 1
                 // Always add 2 to prevent run time error, also to start counting at level 1 not level 0
-        int completeLevel = floor(logf(leavesToProcess+2) / logf(3));
+        int completeLevel = floor(logf(2*leavesToProcess + 1) / logf(3)) - (int)(leavesToProcess==0);
         // If LTP == 0, we dont want to create any new leaves
         // Therefore, we dont want to enter the for loops.
         // The active leaf writes itself as it's parent before the for loops
@@ -2379,7 +2304,7 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
         // Solved for closed form < leavesToProcess
         // Always add 2 to prevent run time error, also to start counting at level 1 not level 0
         // IL = 1
-        int incompleteLevel = ceil(logf(leavesToProcess+2) / logf(3));
+        int incompleteLevel = ceil(logf(2*leavesToProcess + 1) / logf(3)) - (int)(leavesToProcess==0);
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         // Add 1 when leavesToProcess isn't 0, so we start counting from level 1
         // Also subtract the root, so we start counting from level 1
@@ -2542,8 +2467,8 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
         // Add 1 if LTP == 0 to prevent runtime error
         // LTP = 2
         // CL = 1
-                // Always add 2 to prevent run time error, also to start counting at level 1 not level 0
-        int completeLevel = floor(logf(leavesToProcess+2) / logf(3));
+        // Always add 2 to prevent run time error, also to start counting at level 1 not level 0
+        int completeLevel = floor(logf(2*leavesToProcess + 1) / logf(3)) - (int)(leavesToProcess==0);
         // If LTP == 0, we dont want to create any new leaves
         // Therefore, we dont want to enter the for loops.
         // The active leaf writes itself as it's parent before the for loops
@@ -2554,7 +2479,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
         // Solved for closed form < leavesToProcess
         // Always add 2 to prevent run time error, also to start counting at level 1 not level 0
         // IL = 1
-        int incompleteLevel = ceil(logf(leavesToProcess+2) / logf(3));
+        int incompleteLevel = ceil(logf(2*leavesToProcess + 1) / logf(3)) - (int)(leavesToProcess==0);
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         // Add 1 when leavesToProcess isn't 0, so we start counting from level 1
         // Also subtract the root, so we start counting from level 1
@@ -3745,6 +3670,7 @@ void CallPopulateTree(int numberOfLevels,
 
         int * old_active_leaf_offset = active_leaf_offset.Current();
         int * old_active_leaves_index = active_leaves_index.Current();
+        int * old_active_leaves_value = active_leaves_value.Current();
         int * old_parent_leaf_index = parent_leaf_index.Current();
         int * old_parent_leaf_value = parent_leaf_value.Current();
 
@@ -3781,6 +3707,7 @@ void CallPopulateTree(int numberOfLevels,
         // Need to clean the offsets
         cudaMemsetAsync(old_active_leaf_offset, 0, active_vert_off_sz);
         cudaMemsetAsync(old_active_leaves_index, 0, remain_count_edges_left_sz);
+        cudaMemsetAsync(old_active_leaves_value, 0, remain_count_edges_left_sz);
         cudaMemsetAsync(old_parent_leaf_index, 0, remain_count_edges_left_sz);
         cudaMemsetAsync(old_parent_leaf_value, 0, remain_count_edges_left_sz);
 
@@ -3858,7 +3785,7 @@ void CallPopulateTree(int numberOfLevels,
             if(nodeIt2 == nodeMapActLeaves.end()) {
                 nodeMapActLeaves[node2Name] = actLeaves->AddNode(std::to_string(activeLeavesHostValue[i]));
             }  
-            actLeaves->AddEdge(nodeMapActLeaves[node1Name], nodeMapActLeaves[node2Name]); 
+            actLeaves->AddEdge(nodeMapActLeaves[node1Name], nodeMapActLeaves[node2Name], nodeMapActLeaves[node1Name]->GetLabel() +" to "+ nodeMapActLeaves[node2Name]->GetLabel()); 
         }
 
         std::cout << "TREE" << std::endl;

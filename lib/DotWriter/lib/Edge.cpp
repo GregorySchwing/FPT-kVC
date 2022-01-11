@@ -13,6 +13,11 @@ Edge::Edge(Node * src, Node * dst, std::string label) : _src(src),
 void Edge::Print(bool isDirected, std::ostream& out) {
   out << _src->GetId() << (isDirected ? "->" : "--") << _dst->GetId();
 
+  //Label
+  if (GetLabel() != "") {
+      _attributes.AddCustomAttribute("label", GetLabel());
+  }
+
   if (!_attributes.Empty()) {
     out << " [";
     _attributes.Print(out);
