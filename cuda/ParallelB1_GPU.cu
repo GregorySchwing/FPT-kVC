@@ -3075,21 +3075,22 @@ void CallPopulateTree(int numberOfLevels,
         
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
+            #ifndef NDEBUG
+                PrintData<<<1,1>>>(activeVerticesCount,
+                    numberOfRows,
+                    numberOfEdgesPerGraph, 
+                    verticesRemainingInGraph,
+                    row_offsets.Current(),
+                    columns.Current(),
+                    values.Current(),
+                    degrees.Current(),
+                    remaining_vertices.Current(),
+                    edges_left.Current(),
+                    remaining_vertices_count.Current());
 
-            PrintData<<<1,1>>>(activeVerticesCount,
-                numberOfRows,
-                numberOfEdgesPerGraph, 
-                verticesRemainingInGraph,
-                row_offsets.Current(),
-                columns.Current(),
-                values.Current(),
-                degrees.Current(),
-                remaining_vertices.Current(),
-                edges_left.Current(),
-                remaining_vertices_count.Current());
-
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
+                cudaDeviceSynchronize();
+                checkLastErrorCUDA(__FILE__, __LINE__);
+            #endif
                                                     
         }
         notFirstCall = true;        
@@ -3399,21 +3400,22 @@ void CallPopulateTree(int numberOfLevels,
 
         printf("After flip active_leaves_value.selector %d\n", active_leaves_value.selector);
 
+        #ifndef NDEBUG
+            PrintData<<<1,1>>>(activeVerticesCount,
+                                numberOfRows,
+                                numberOfEdgesPerGraph, 
+                                verticesRemainingInGraph,
+                                row_offsets.Current(),
+                                columns.Current(),
+                                values.Current(),
+                                degrees.Current(),
+                                remaining_vertices.Current(),
+                                edges_left.Current(),
+                                remaining_vertices_count.Current());
 
-        PrintData<<<1,1>>>(activeVerticesCount,
-                            numberOfRows,
-                            numberOfEdgesPerGraph, 
-                            verticesRemainingInGraph,
-                            row_offsets.Current(),
-                            columns.Current(),
-                            values.Current(),
-                            degrees.Current(),
-                            remaining_vertices.Current(),
-                            edges_left.Current(),
-                            remaining_vertices_count.Current());
-
-        cudaDeviceSynchronize();
-        checkLastErrorCUDA(__FILE__, __LINE__);
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+        #endif
 
         // This tells me how much of the cover tree I need to copy
         
@@ -3449,23 +3451,7 @@ void CallPopulateTree(int numberOfLevels,
             }  
             actLeaves->AddEdge(nodeMapActLeaves[node1Name], nodeMapActLeaves[node2Name], nodeMapActLeaves[node1Name]->GetLabel() +" to "+ nodeMapActLeaves[node2Name]->GetLabel()); 
         }
-
-        std::cout << "TREE" << std::endl;
-        for (int i = minParentLeafVal; i <= maxActiveLeafVal; ++i){
-            if (i == 0){
-                std::cout << "root" << std::endl;
-            } else {
-                v1 = coverTree[i*2 - 1];
-                v2 = coverTree[i*2];
-                std::cout << "(" << v1 << ", " << v2 << ")";
-            }
-        }
-        std::cout << std::endl;
-        for (int i = minParentLeafVal; i <= maxActiveLeafVal; ++i){
-            std::cout << "( " << i << " )";
-        }
-        std::cout << std::endl;
-        
+       
 
         for (int lowestLeaf = minParentLeafVal; lowestLeaf <= maxActiveLeafVal; ++lowestLeaf){
             if (lowestLeaf == 0){
