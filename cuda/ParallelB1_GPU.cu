@@ -661,34 +661,25 @@ __global__ void SetEdges(const int numberOfRows,
     // Number of loops could explicitly calculated based on parent and leaf val
     while(leafValue != parentLeafValue){
         for (int childIndex = 0; childIndex < 2; ++childIndex){
-            searchTreeIndex = leafValue*2;
-            myChild = global_vertices_included_dev_ptr[searchTreeIndex + childIndex];
+            searchTreeIndex = leafValue*2 - childIndex;
+            myChild = global_vertices_included_dev_ptr[searchTreeIndex];
             // Set out-edges
             LB = global_row_offsets_dev_ptr[rowOffsOffset + myChild];
             UB = global_row_offsets_dev_ptr[rowOffsOffset + myChild + 1]; 
             for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
                 // Since there are only 2 edges b/w each node,
                 // We can safely decrement the target node's degree
-                // If these are atomic, then duplicate myChildren isn't a problem
-                // Since we'd be decrementing by 0 the second, third, ...etc time 
+                // Since there are no self edges or double edges to the same vertex 
                 // a duplicate myChild was processed.
-                //global_degrees_dev_ptr[degreesOffset + 
-                //    global_columns_dev_ptr[valsAndColsOffset + edge]] 
-                //        -= global_values_dev_ptr[valsAndColsOffset + edge];
-                atomicAdd(&global_degrees_dev_ptr[degreesOffset + 
-                    global_columns_dev_ptr[valsAndColsOffset + edge]],
-                    -1*global_values_dev_ptr[valsAndColsOffset + edge]);
-                    if (global_degrees_dev_ptr[degreesOffset + 
-                        global_columns_dev_ptr[valsAndColsOffset + edge]] < 0){
-                            printf("BAD WENT BELOW 0%d", myChild);
-                        }
+                global_degrees_dev_ptr[degreesOffset + 
+                    global_columns_dev_ptr[valsAndColsOffset + edge]] 
+                        -= global_values_dev_ptr[valsAndColsOffset + edge];
                 // This avoids a reduction of the degrees array to get total edges
                 atomicAdd(&global_edges_left_to_cover_count[leafIndex], -2*global_values_dev_ptr[valsAndColsOffset + edge]);
                 global_values_dev_ptr[valsAndColsOffset + edge] = 0;
-            }
-            __syncthreads();
-            if (threadIdx.x == 0){
-                global_degrees_dev_ptr[degreesOffset + myChild] = 0;
+                if (threadIdx.x == 0){
+                    global_degrees_dev_ptr[degreesOffset + myChild] = 0;
+                }
             }
             __syncthreads();
             if (threadIdx.x == 0){
@@ -783,30 +774,17 @@ __global__ void SetPendantEdges(const int numberOfRows,
         LB = global_row_offsets_dev_ptr[rowOffsOffset + pendantChild];
         UB = global_row_offsets_dev_ptr[rowOffsOffset + pendantChild + 1]; 
         for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
-            // Since there are only 2 edges b/w each node,
             // We can safely decrement the target node's degree
-            // If these are atomic, then duplicate pendantChild isn't a problem
-            // Since we'd be decrementing by 0 the second, third, ...etc time 
-            // a duplicate pendantChild was processed.
-            atomicAdd(&global_degrees_dev_ptr[degreesOffset + 
-                global_columns_dev_ptr[valsAndColsOffset + edge]],
-                -1*global_values_dev_ptr[valsAndColsOffset + edge]);
-            if (global_degrees_dev_ptr[degreesOffset + 
-                global_columns_dev_ptr[valsAndColsOffset + edge]] < 0){
-                    printf("BAD WENT BELOW 0%d", pendantChild);
-                }
-            // If I can guaruntee there is no duplicate pendant
-            // the atomic can be removed
-            //global_degrees_dev_ptr[degreesOffset + 
-            //    global_columns_dev_ptr[valsAndColsOffset + edge]] 
-            //        -= global_values_dev_ptr[valsAndColsOffset + edge];
+            // since all threads process one pendant child at a time.
+            global_degrees_dev_ptr[degreesOffset + 
+                global_columns_dev_ptr[valsAndColsOffset + edge]] 
+                    -= global_values_dev_ptr[valsAndColsOffset + edge];
             // This avoids a reduction of the degrees array to get total edges
             atomicAdd(&global_edges_left_to_cover_count[leafIndex], -2*global_values_dev_ptr[valsAndColsOffset + edge]);
             global_values_dev_ptr[valsAndColsOffset + edge] = 0;
-        }
-        __syncthreads();
-        if (threadIdx.x == 0){
-            global_degrees_dev_ptr[degreesOffset + pendantChild] = 0;
+            if (threadIdx.x == 0){
+                global_degrees_dev_ptr[degreesOffset + pendantChild] = 0;
+            }
         }
         __syncthreads();
         // (u,v) is the form of edge pairs.  We are traversing over v's outgoing edges, 
@@ -1105,15 +1083,6 @@ __global__ void ParallelDFSRandom(
     int printVert = pathsAndPendantStatus[sharedMemPathOffset + iteration - 1];
     int badVal = r[iteration] % outEdgesCount;
     // Assumes the starting point isn't degree 0
-    if (outEdgesCount <= 0){
-        printf("failed to get nonzero deg %d\n", pathsAndPendantStatus[sharedMemPathOffset + iteration]);
-        printf("randomVertRowOff %d\n",randomVertRowOff);
-        printf("outEdgesCount %d\n",outEdgesCount);
-        printf("printVert %d\n",printVert);
-    }
-    if (randomVertRowOff > 1000){
-        printf("pointing to a removed vertex %d\n", pathsAndPendantStatus[sharedMemPathOffset + iteration]);
-    }
     pathsAndPendantStatus[sharedMemPathOffset + iteration] =  global_columns_dev_ptr[valsAndColsOffset + randomVertRowOff + (r[iteration] % outEdgesCount)];
     ++iteration;
     //    printf("(r[iteration] mod outEdgesCount) %d\n", (r[iteration] % outEdgesCount));
@@ -3531,7 +3500,7 @@ void CallPopulateTree(int numberOfLevels,
                             std::cout << "Cant create child before parent! " << std::endl;
                             exit(1);                    
                         } 
-                        searchTree->AddEdge(nodeMapSearchTree[node1Name], nodeMapSearchTree[node2Name]); 
+                        searchTree->AddEdge(nodeMapSearchTree[node1Name], nodeMapSearchTree[node2Name],  std::to_string(v1) + ", " + std::to_string(v2)); 
                     }
                 } else {
                     std::cout << "Error in search tree creation! " << std::endl;
