@@ -432,16 +432,12 @@ __global__ void ParallelRowOffsetsPrefixSumDevice(int numberOfEdgesPerGraph,
                                                 int * global_cols_vals_segments){
 
     int leafIndex = blockIdx.x; 
-
-    //printf("LevelAware RowOffs blockIdx %d is running\n", blockIdx.x);
-    //printf("LevelAware RowOffs leaf index %d is running\n", leafIndex);
-
+    
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
     int bufferRowOffsOffset = leafIndex * (numberOfRows + 1);
 
     for (int iter = threadIdx.x; iter < numberOfRows+1; iter += blockDim.x){
         global_cols_vals_segments[bufferRowOffsOffset + iter] = (leafIndex * numberOfEdgesPerGraph) + global_row_offsets_dev_ptr[rowOffsOffset + iter];
-        //printf("global_cols_vals_segments[bufferRowOffsOffset + %d] = %d + %d\n", iter, (leafIndex * numberOfEdgesPerGraph), global_row_offsets_dev_ptr[rowOffsOffset + iter]);
     }
 }
 
@@ -479,7 +475,7 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
 
     int * printAlt = values.Alternate();
     int * printCurr = values.Current();
-/*
+    #ifndef NDEBUG
     PrintEdges<<<1,1>>>  (activeVerticesCount,
                 numberOfRows,
                 numberOfEdgesPerGraph,
@@ -487,7 +483,7 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
                 columns.Current(),
                 printAlt,
                 printCurr);
-*/
+    #endif
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
                 // Determine temporary device storage requirements
@@ -505,7 +501,7 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
         num_items, num_segments, global_vertex_segments, global_vertex_segments + 1);
 
     cudaFree(d_temp_storage2);
-/*
+    #ifndef NDEBUG
     printAlt = remaining_vertices.Alternate();
     printCurr = remaining_vertices.Current();
 
@@ -513,7 +509,7 @@ __host__ void RestoreDataStructuresAfterRemovingChildrenVertices(int activeVerti
                 numberOfRows,
                 printAlt,
                 printCurr);
-*/
+    #endif
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
@@ -592,12 +588,8 @@ __global__ void InduceSubgraph( int numberOfRows,
 
     for (int iter = row; iter < numberOfRows; iter += blockDim.x){
 
-        //printf("Thread %d, row %d", threadIdx.x, iter);
         C_ref[iter][0] = 0;
         C_ref[iter][1] = 0;
-        //printf("Thread %d, row %d, old_row_offsets_dev[iter] = %d", threadIdx.x, iter, old_row_offsets_dev[iter]);
-        //printf("Thread %d, row %d, old_row_offsets_dev[iter+1] = %d", threadIdx.x, iter, old_row_offsets_dev[iter+1]);
-        //printf("Thread %d, row %d, old_values_dev[endOffset] = %d", threadIdx.x, iter, old_values_dev[old_row_offsets_dev[iter+1]]);
 
         int beginIndex = old_row_offsets_dev[iter];
         int endIndex = old_row_offsets_dev[iter+1];
@@ -610,7 +602,6 @@ __global__ void InduceSubgraph( int numberOfRows,
         for (int i = 1; i < 2; ++i){
             C_ref[iter][i] = C_ref[iter][i] + C_ref[iter][i-1];
         }
-        //printf("Thread %d, row %d, almost done", threadIdx.x, iter);
 
         /* C_ref[A_row_indices[i]]]-1 , because the values of C_ref are from [1, n] -> [0,n) */
         for (int i = endIndex-1; i >= beginIndex; --i){
@@ -620,6 +611,7 @@ __global__ void InduceSubgraph( int numberOfRows,
                 --C_ref[iter][old_values_dev[i]];
             }
         }
+        #ifndef NDEBUG
         if (row == 0){
             printf("Block %d induced root of graph", blockIdx.x);
             for (int i = 0; i < edgesLeftToCover; ++i){
@@ -631,6 +623,7 @@ __global__ void InduceSubgraph( int numberOfRows,
             }
             printf("\n");
         }
+        #endif
     }
     delete[] C_ref;
 }
@@ -651,7 +644,9 @@ __global__ void SetEdges(const int numberOfRows,
     if (0 == global_edges_left_to_cover_count[leafIndex] || 0 == global_verts_remain_count[leafIndex])
         return;
     int leafValue = global_active_leaf_value[leafIndex];
+    #ifndef NDEBUG
     int originalLV = leafValue;
+    #endif
     int parentLeafValue = global_active_leaf_parent_leaf_index[leafIndex];
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
     int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
@@ -682,9 +677,11 @@ __global__ void SetEdges(const int numberOfRows,
                 }
             }
             __syncthreads();
+            #ifndef NDEBUG
             if (threadIdx.x == 0){
                 printf("Block %d, leafValue %d, originalLV %d, parentLeafValue %d,  myChild removed %d\n", blockIdx.x, leafValue, originalLV, parentLeafValue, myChild);
             }
+            #endif
             // (u,v) is the form of edge pairs.  We are traversing over v's outgoing edges, 
             // looking for u as the destination and turning off that edge.
             // this may be more elegantly handled by 
@@ -874,11 +871,13 @@ __global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
         global_degrees_dev_ptr[degreesOffset + iter] = degrees[iter];
     }
     __syncthreads();
+    #ifndef NDEBUG
     if (threadIdx.x == 0){
         for (int i = 0; i < numberOfRows; ++i)
             printf("leafIndex %d, blockID %d vertex %d, degree %d\n", leafIndex, blockIdx.x, i, degrees[i]);
         printf("\n");
     }
+    #endif
     int halvedArray = numberOfRows/2;
     while (halvedArray != 0) {
         // Neccessary since numberOfRows is likely greater than blockSize
@@ -931,12 +930,8 @@ __global__ void InduceRowOfSubgraphs( int numberOfRows,
         int * new_values_dev = &(global_values_dev_ptr[newValsAndColsOffset]);
         for (int iter = row; iter < numberOfRows; iter += blockDim.x){
 
-            //printf("Thread %d, row %d", threadIdx.x, iter);
             C_ref[iter][0] = 0;
             C_ref[iter][1] = 0;
-            //printf("Thread %d, row %d, old_row_offsets_dev[iter] = %d", threadIdx.x, iter, old_row_offsets_dev[iter]);
-            //printf("Thread %d, row %d, old_row_offsets_dev[iter+1] = %d", threadIdx.x, iter, old_row_offsets_dev[iter+1]);
-            //printf("Thread %d, row %d, old_values_dev[endOffset] = %d", threadIdx.x, iter, old_values_dev[old_row_offsets_dev[iter+1]]);
 
             int beginIndex = old_row_offsets_dev[iter];
             int endIndex = old_row_offsets_dev[iter+1];
@@ -949,7 +944,6 @@ __global__ void InduceRowOfSubgraphs( int numberOfRows,
             for (int i = 1; i < 2; ++i){
                 C_ref[iter][i] = C_ref[iter][i] + C_ref[iter][i-1];
             }
-           // printf("Thread %d, row %d, almost done", threadIdx.x, iter);
 
             /* C_ref[A_row_indices[i]]]-1 , because the values of C_ref are from [1, n] -> [0,n) */
             for (int i = endIndex-1; i >= beginIndex; --i){
@@ -959,9 +953,9 @@ __global__ void InduceRowOfSubgraphs( int numberOfRows,
                     --C_ref[iter][old_values_dev[i]];
                 }
             }
-            //printf("Thread %d, row %d, finished", threadIdx.x, iter);
         }
         __syncthreads();
+        #ifndef NDEBUG
         if (threadIdx.x == 0){
             printf("Block %d, levelOffset %d, leafIndex %d, induced child %d\n", blockIdx.x, levelOffset, leafIndex, 3*leafIndex + child);
             for (int i = 0; i < global_edges_left_to_cover_count[leafIndex]; ++i){
@@ -973,6 +967,7 @@ __global__ void InduceRowOfSubgraphs( int numberOfRows,
             }
             printf("\n");
         }
+        #endif
     }
     delete[] C_ref;
 }
@@ -989,20 +984,22 @@ __global__ void CalculateNewRowOffsets( int numberOfRows,
     int degreesOffset = leafIndex * numberOfRows;
 
     int i = 0;
+    #ifndef NDEBUG
     printf("leafIndex %d, degreesOffset = %d\n", leafIndex, degreesOffset);
     printf("leafIndex %d, rowOffsOffset = %d\n", leafIndex, rowOffsOffset);
     printf("leafIndex %d, new_row_offsets_dev[%d] = %d\n", leafIndex, i, global_row_offsets_dev_ptr[rowOffsOffset]);
-
+    #endif
     global_row_offsets_dev_ptr[rowOffsOffset] = i;
     for (i = 1; i <= numberOfRows; ++i)
     {
         global_row_offsets_dev_ptr[rowOffsOffset + i] = global_degrees_dev_ptr[degreesOffset + i - 1] + global_row_offsets_dev_ptr[rowOffsOffset + i - 1];
+        #ifndef NDEBUG
         printf("leafIndex %d, new_row_offsets_dev[%d] = %d\n", leafIndex, i, global_row_offsets_dev_ptr[rowOffsOffset + i]);
         printf("leafIndex %d, global_row_offsets_dev_ptr[rowOffsOffset + %d - 1] = %d\n", leafIndex, i, global_row_offsets_dev_ptr[rowOffsOffset + i - 1]);
         printf("leafIndex %d, global_degrees_dev_ptr[degreesOffset + %d - 1] = %d\n", leafIndex, i, global_degrees_dev_ptr[degreesOffset + i - 1]);
+        #endif
     }
 }
-
 
 // It is very important to only use the value in global_pendant_child_dev_ptr[]
 // if global_pendant_path_bool_dev_ptr[] is true.  Otherwhise this path shouldnt
@@ -1025,19 +1022,24 @@ __global__ void ParallelDFSRandom(
                             int * global_pendant_child_dev_ptr,
                             int * global_edges_left_to_cover_count,
                             int * global_verts_remain_count){
+    #ifndef NDEBUG
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("Entered DFS\n");
         printf("\n");
     }
+    #endif
+
     int leafIndex = blockIdx.x;
     if (0 == global_edges_left_to_cover_count[leafIndex] || 0 == global_verts_remain_count[leafIndex])
         return;
     int leafValue = global_active_leaf_value[leafIndex];
 
+    #ifndef NDEBUG
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("Set leafIndex\n");
         printf("\n");
     }
+    #endif
 
     // Initialize path indices
     global_paths_indices_ptr[leafIndex*blockDim.x + threadIdx.x] = threadIdx.x;
@@ -1057,23 +1059,34 @@ __global__ void ParallelDFSRandom(
     RNG::ctr_type r;
     unsigned int counter = 0;
     ulong seed = threadIdx.x;
+    #ifndef NDEBUG
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("Setup offsets\n");
         printf("\n");
     }
+    #endif
+
     unsigned int remainingVerticesSize = global_remaining_vertices_size_dev_ptr[leafIndex];
+
+    #ifndef NDEBUG
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("remainingVerticesSize %d\n", remainingVerticesSize);
         printf("\n");
     }
+    #endif
+
     int outEdgesCount;
     r = randomGPU_four(counter, leafValue, seed);
     // Random starting point
     pathsAndPendantStatus[sharedMemPathOffset + iteration] = global_remaining_vertices_dev_ptr[remainingVerticesOffset + (r[iteration] % remainingVerticesSize)];
+
+    #ifndef NDEBUG
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("pathsAndPendantStatus %d\n", pathsAndPendantStatus[sharedMemPathOffset + iteration]);
         printf("\n");
     }
+    #endif
+
     ++iteration;
 
     // Set random out at depth 1
@@ -1110,13 +1123,14 @@ __global__ void ParallelDFSRandom(
     //    printf("Block %d, leafValue %d, got through last 2 iterations\n", blockIdx.x, leafValue);
     //    printf("\n");
     //}
+    #ifndef NDEBUG
     printf("leafValue %d Thread %d (path %d -> %d -> %d -> %d) is %s\n", leafValue,threadIdx.x, 
                                                             pathsAndPendantStatus[sharedMemPathOffset + 0],
                                                             pathsAndPendantStatus[sharedMemPathOffset + 1],
                                                             pathsAndPendantStatus[sharedMemPathOffset + 2],
                                                             pathsAndPendantStatus[sharedMemPathOffset + 3],
                                                             pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x] ? "pendant" : "nonpendant");
-
+    #endif
     // Each thread has a different - sharedMemPathOffset
     // Copy each thread's path to global memory
     // There may be a better way to do this to avoid threads skipping 4.
@@ -1172,499 +1186,6 @@ __global__ void ParallelDFSRandom(
         global_pendant_path_reduced_bool_dev_ptr[blockIdx.x] = pathsAndPendantStatus[isInvalidPathBooleanArrayOffset + threadIdx.x];
 }
 
-// Each node assigned threadsPerBlock blocks,  
-// Up to threadsPerBlock pendant children are processed
-// 1 pendant child per block
-// outgoing and incoming edges of the pendant child 
-// are processed at thread level
-// Block immediately returns if nonpendant child 
-// or duplicate pendant child and not the largest
-// indexed instance of that child
-__global__ void ParallelProcessPendantEdges(
-                            int numberOfRows,
-                            int numberOfEdgesPerGraph,
-                            int * global_active_leaf_value,
-                            int * global_row_offsets_dev_ptr,
-                            int * global_columns_dev_ptr,
-                            int * global_values_dev_ptr,
-                            int * global_degrees_dev_ptr,
-                            int * global_edges_left_to_cover_count,
-                            int * global_pendant_path_bool_dev_ptr,
-                            int * global_pendant_child_dev_ptr){
-    // Beginning of group of TPB pendant children
-    int myBlockOffset = (blockIdx.x / blockDim.x) * blockDim.x;
-    int myBlockIndex = blockIdx.x % blockDim.x;
-    int leafIndex = (blockIdx.x / blockDim.x);
-    int leafValue = global_active_leaf_value[leafIndex];
-    if (myBlockIndex == 0 && threadIdx.x == 0){
-        printf("leaf Value %d Started ParallelProcessPendantEdges\n", leafValue);
-    }
-    // Only process pendant edges
-    // 1 block per path, up to TPB paths per node
-    if (!global_pendant_path_bool_dev_ptr[blockIdx.x])
-        return;
-    if (threadIdx.x == 0){
-        printf("leafValue %d path %d is pendant\n", leafValue,myBlockIndex);
-    }
-    // My child won't be set unless this block represents a valid pendant path
-    // Could be a shared var
-    int myChild = global_pendant_child_dev_ptr[blockIdx.x];
-    if (threadIdx.x == 0){
-        printf("leafValue %d path %d's child is %d\n", leafValue, myBlockIndex, myChild);
-    }
-    extern __shared__ int childrenAndDuplicateStatus[];
-    // Write all 32 pendant children to shared memory
-    // This offset works because it isnt treewise global, just levelwise
-    childrenAndDuplicateStatus[threadIdx.x] = global_pendant_child_dev_ptr[myBlockOffset + threadIdx.x];
-    __syncthreads();
-    //if (myBlockIndex == 0){
-    printf("leaf value %d path %d's pendant[%d] is %d\n", leafValue, myBlockIndex, threadIdx.x, childrenAndDuplicateStatus[threadIdx.x]);
-    // See if myChild is duplicated, 1 vs all comparison written to shared memory
-    // Also, if it is duplicated, only process the largest index duplicate
-    // If it isn't duplicated, process the child.
-
-    // By the cardinality of rational numbers, 
-    // Obviously the path should be pendant...currently failing because there are paths including 18 which aren't pendant
-    childrenAndDuplicateStatus[blockDim.x + threadIdx.x] = ((childrenAndDuplicateStatus[threadIdx.x] == myChild) 
-                                                            && myBlockIndex < threadIdx.x);
-    __syncthreads();
-    printf("leaf value %d Block index %d's childrenAndDuplicateStatus[%d] is %d\n", leafValue, myBlockIndex, threadIdx.x, childrenAndDuplicateStatus[blockDim.x + threadIdx.x]);
-    int i = blockDim.x/2;
-    // Checks for any duplicate children which have a smaller index than their other self
-    // Only the smallest instance of a duplication will be false for both
-    // 1) childrenAndDuplicateStatus[threadIdx.x] == myChild)
-    // 2) myBlockIndex < threadIdx.x
-
-    // We have a growing mask from the second condition like so
-    // MASK 0: 0 0 ... 0
-    // MASK 1: 1 0 ... 0
-    // MASK 2: 1 1 ... 0
-    //        .
-    //        .
-    //        .
-    // MASK 3: 1 1 . 1 0
-    // By the pigeonhole principle, 
-    // there are only so many smallest index duplications.
-    // If there is 1, then all 32 threads are equal,
-    // Since we are or-redudcing, every block will 
-    // return true except the first one.
-    // If there are two or more, then at least one
-    // of the masks (1-31) will set it false, and 
-    // all the masks larger than it will mask the 
-    // non-smallest duplicate to true.
-
-    // Finally, the fact that mask 31 has a zero
-    // in the last index is ok, because this child is
-    // either the smallest duplicate and therefore 
-    // should be false and added to the cover
-    // or it is not the smallest, and it will be masked
-    // by one of the smaller masks (0-30).
-
-    while (i != 0) {
-        if (threadIdx.x < i){
-            childrenAndDuplicateStatus[blockDim.x + threadIdx.x] |= childrenAndDuplicateStatus[blockDim.x + threadIdx.x + i];
-        }
-        __syncthreads();
-        i /= 2;
-    }
-    __syncthreads();
-    if (childrenAndDuplicateStatus[blockDim.x])
-        return;
-
-    if (threadIdx.x == 0)
-        printf("leafValue %d Block index %d made it past the return\n", leafValue, myBlockIndex);
-
-
-    int rowOffsOffset = leafIndex * (numberOfRows + 1);
-    int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
-    int degreesOffset = leafIndex * numberOfRows;
-    int LB, UB, v, vLB, vUB;
-    // Set out-edges
-    LB = global_row_offsets_dev_ptr[rowOffsOffset + myChild];
-    UB = global_row_offsets_dev_ptr[rowOffsOffset + myChild + 1]; 
-    if (threadIdx.x == 0){
-        printf("leafValue %d block index %d Set offsets in PPP\n", leafValue, myBlockIndex);
-    }   
-    for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
-        // Since there are only 2 edges b/w each node,
-        // We can safely decrement the target node's degree
-        // If these are atomic, then duplicate myChildren isn't a problem
-        // Since we'd be decrementing by 0 the second, third, ...etc time 
-        // a duplicate myChild was processed.
-        global_degrees_dev_ptr[degreesOffset + 
-            global_columns_dev_ptr[valsAndColsOffset + edge]] 
-                -= global_values_dev_ptr[valsAndColsOffset + edge];
-        // This avoids a reduction of the degrees array to get total edges
-        atomicAdd(&global_edges_left_to_cover_count[leafIndex], -2*global_values_dev_ptr[valsAndColsOffset + edge]);
-        global_values_dev_ptr[valsAndColsOffset + edge] = 0;
-    }
-
-    if (threadIdx.x == 0){
-            global_degrees_dev_ptr[degreesOffset + myChild] = 0;
-    }
-    __syncthreads();
-    if (threadIdx.x == 0){
-        printf("leafValue %d Block index %d Finished out edges PPP\n", leafValue, myBlockIndex);
-    }  
-    if (threadIdx.x == 0){
-        printf("leafValue %d Block index %d removed myChild %d\n", leafValue, myBlockIndex, myChild);
-    }
-    // (u,v) is the form of edge pairs.  We are traversing over v's outgoing edges, 
-    // looking for u as the destination and turning off that edge.
-    // this may be more elegantly handled by 
-    // (1) an associative data structure
-    // (2) an undirected graph 
-    // Parallel implementations of both of these need to be investigated.
-    bool foundChild, tmp;
-    LB = global_row_offsets_dev_ptr[rowOffsOffset + myChild];
-    UB = global_row_offsets_dev_ptr[rowOffsOffset + myChild + 1];    // Set out-edges
-    // There are two possibilities for parallelization here:
-    // 1) Each thread will take an out edge, and then each thread will scan the edges leaving 
-    // that vertex for the original vertex.
-    //for (int edge = LB + threadIdx.x; edge < UB; edge += blockDim.x){
-
-    // Basically, each thread is reading wildly different data
-    // 2) 1 out edge is traversed at a time, and then all the threads scan
-    // all the edges leaving that vertex for the original vertex.
-    // This is the more favorable data access pattern.
-    for (int edge = LB; edge < UB; ++edge){
-        v = global_columns_dev_ptr[valsAndColsOffset + edge];
-        // guarunteed to only have one incoming and one outgoing edge connecting (x,y)
-        // All outgoing edges were set and are separated from this method by a __syncthreads
-        // Thus there is no chance of decrementing the degree of the same node simulataneously
-        vLB = global_row_offsets_dev_ptr[rowOffsOffset + v];
-        vUB = global_row_offsets_dev_ptr[rowOffsOffset + v + 1];
-        for (int outgoingEdgeOfV = vLB + threadIdx.x; 
-                outgoingEdgeOfV < vUB; 
-                    outgoingEdgeOfV += blockDim.x){
-
-                foundChild = myChild == global_columns_dev_ptr[valsAndColsOffset + outgoingEdgeOfV];
-                // Set in-edge
-                // store edge status
-                tmp = global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV];
-                //   foundChild     tmp   (foundChild & tmp)  (foundChild & tmp)^tmp
-                //1)      0          0            0                       0
-                //2)      1          0            0                       0
-                //3)      0          1            0                       1
-                //4)      1          1            1                       0
-                //
-                // Case 1: isnt myChild and edge is off, stay off
-                // Case 2: is myChild and edge is off, stay off
-                // Case 3: isn't myChild and edge is on, stay on
-                // Case 4: is myChild and edge is on, turn off
-                // All this logic is necessary because we aren't using degree to set upperbound
-                // we are using row offsets, which may include some edges turned off on a previous
-                // pendant edge processing step.
-                global_values_dev_ptr[valsAndColsOffset + outgoingEdgeOfV] ^= (foundChild & tmp);
-        
-        }
-    }
-    __syncthreads();
-}
-
-/* 
-    Shared Memory Layout:
-    1) DFS Paths of Length 4 = blockDim.x * 4
-    2) Adjacency matrix = blockDim.x * blockDim.x
-    3) Random Numbers = blockDim.x
-    4) Pendant Path Boolean = blockDim.x
-    4) Neighbors with a pendant boolean = blockDim.x
-    5) Reduction buffer = blockDim.x
-    6) I Set = blockDim.x
-    7) V Set = blockDim.x
-+ ______________________________________
-    blockDim ^ 2 + 10*blockDim
-*/
-
-// SIMPLIFY THIS METHOD!
-__global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
-                            
-                            int numberOfRows,
-                            int numberOfEdgesPerGraph,
-                            int * global_row_offsets_dev_ptr,
-                            int * global_columns_dev_ptr,
-                            int * global_values_dev_ptr,
-                            int * global_pendant_path_bool_dev_ptr,
-                            int * global_paths_ptr,
-                            int * global_set_inclusion_bool_ptr,
-                            int * global_reduced_set_inclusion_count_ptr){
-    //if (threadIdx.x == 0){
-    printf("Block ID %d Started ParallelIdentifyVertexDisjointNonPendantPaths\n", blockIdx.x);
-    //}
-
-    int leafIndex = blockIdx.x;
-    int globalPathOffset = leafIndex * 4 * blockDim.x;
-    // Only allocated for one level, not tree global
-    int globalPendantPathBoolOffset = blockIdx.x * blockDim.x;
-    int globalSetInclusionBoolOffset = blockIdx.x * blockDim.x;
-
-    extern __shared__ int pathsAndIndependentStatus[];
-
-    int adjMatrixOffset = blockDim.x * 4;
-    int randNumOffset = adjMatrixOffset + blockDim.x * blockDim.x;
-    int pendPathBoolOffset = randNumOffset + blockDim.x;
-    int neighborsWithAPendantOffset = pendPathBoolOffset + blockDim.x;
-    int setReductionOffset = neighborsWithAPendantOffset + blockDim.x;
-    int setInclusionOffset = setReductionOffset + blockDim.x;
-    int setRemainingOffset = setInclusionOffset + blockDim.x;
-
-    if (threadIdx.x == 0){
-        printf("Block ID %d globalPathOffset %d\n", blockIdx.x, globalPathOffset);
-        printf("Block ID %d globalPendantPathBoolOffset %d\n", blockIdx.x, globalPendantPathBoolOffset);
-        printf("Block ID %d globalSetInclusionBoolOffset %d\n", blockIdx.x, globalSetInclusionBoolOffset);
-        printf("Block ID %d adjMatrixOffset %d\n", blockIdx.x, adjMatrixOffset);
-        printf("Block ID %d randNumOffset %d\n", blockIdx.x, randNumOffset);
-        printf("Block ID %d pendPathBoolOffset %d\n", blockIdx.x, pendPathBoolOffset);
-        printf("Block ID %d neighborsWithAPendantOffset %d\n", blockIdx.x, neighborsWithAPendantOffset);
-        printf("Block ID %d setReductionOffset %d\n", blockIdx.x, setReductionOffset);
-        printf("Block ID %d setInclusionOffset %d\n", blockIdx.x, setInclusionOffset);
-        printf("Block ID %d setRemainingOffset %d\n", blockIdx.x, setRemainingOffset);
-    }
-    __syncthreads();
-
-    // Write all 32 nonpendant paths to shared memory
-    for (int start = threadIdx.x; start < blockDim.x*4; start += blockDim.x){
-        pathsAndIndependentStatus[start] = global_paths_ptr[globalPathOffset + start];
-    }
-    if (threadIdx.x == 0){
-        printf("Block ID %d threadIdx.x %d copied path into sm\n", blockIdx.x, threadIdx.x);
-    }
-    printf("Block ID %d path %d %s pendant\n", blockIdx.x, threadIdx.x, 
-        global_pendant_path_bool_dev_ptr[globalPendantPathBoolOffset + threadIdx.x] ? "is" : "isn't");
-
-    // Automatically include pendant  paths to set
-    pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x] = 
-        global_pendant_path_bool_dev_ptr[globalPendantPathBoolOffset + threadIdx.x];
-
-    __syncthreads();
-    if (threadIdx.x == 0){
-        printf("Block ID %d threadIdx.x %d copied into sm\n", blockIdx.x, threadIdx.x);
-    }
-    // See if each vertex in my path is duplicated, 1 vs all comparison written to shared memory
-    // Also, if it is duplicated, only process the largest index duplicate
-    // If it isn't duplicated, process the path.
-
-    // I need a for loop to define who "my path" is TPB times
-    // my v1 versus 31 comparator v1's
-    // my v2 versus 31 comparator v1's
-    // my v3 versus 31 comparator v1's
-    // my v4 versus 31 comparator v1's
-    //              .
-    //              .
-    // my v1 versus 31 comparator v4's
-    // my v2 versus 31 comparator v4's
-    // my v3 versus 31 comparator v4's
-    // my v4 versus 31 comparator v4's
-    // myChild               comparatorChild 
-    // ____________________________________
-    // vertex % 4             vertex / 4
-    //int myPathIndex = blockIdx.x % blockDim.x;
-    printf("Block ID %d thread %d about to start adj mat\n", blockIdx.x, threadIdx.x);
-    __syncthreads();
-
-    int row, rowOffset, myChild, comparatorChild, vertex, myPathOffset, comparatorPathOffset;
-    for (row = 0; row < blockDim.x; ++row){
-        // blockDim.x*4 +  -- to skip the paths
-        // the adj matrix size (32x32)
-        rowOffset = adjMatrixOffset + row * blockDim.x;
-        myPathOffset = row * 4;
-        comparatorPathOffset = threadIdx.x * 4;
-        printf("Block ID %d row %d started\n", blockIdx.x, row);
-        for (vertex = 0; vertex < 4*4; ++vertex){
-            // Same path for all TPB threads
-            myChild = pathsAndIndependentStatus[myPathOffset + vertex / 4];
-            // Different comparator child for all TPB threads
-            comparatorChild = pathsAndIndependentStatus[comparatorPathOffset + vertex % 4];
-            // Guarunteed to be true at least once, when i == j in adj matrix
-            // We have a diagonal of ones.
-            pathsAndIndependentStatus[rowOffset + threadIdx.x] |= (comparatorChild == myChild);
-        }
-        __syncthreads();
-        printf("Block ID %d row %d done\n", blockIdx.x, row);
-    }
-    __syncthreads();
-    if (threadIdx.x == 0){
-        printf("Block ID %d threadIdx.x %d created adj matrix\n", blockIdx.x, threadIdx.x);
-    }
-    // Corresponds to an array of random numbers between [0,1]
-    // This way every thread has its own randGen, and no thread sync is neccessary.
-    unsigned int seed = 0;
-    RNG::ctr_type r;
-    r =  randomGPU_four(threadIdx.x, leafIndex, seed); 
-    pathsAndIndependentStatus[randNumOffset + threadIdx.x] = r[0];
-    __syncthreads();
-     
-    if (threadIdx.x == 0){
-        for (int row = 0; row < blockDim.x; ++row){
-            printf("Block ID %d threadIdx.x %d rand num %d\n", blockIdx.x, row, pathsAndIndependentStatus[randNumOffset + row]);
-        }
-    }
-    for (int row = 0; row < blockDim.x; ++row){
-        rowOffset = adjMatrixOffset + row*blockDim.x;
-        // Check if any of my neighbors are pendant paths.
-        // If I have a pendant neighbor I won't ever be included in the set.
-        // Notably, the diagonal is true if the vertex is pendant
-        // At this point the set I is the pendant paths
-        pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[rowOffset + threadIdx.x]   
-                                                                    && pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x];
-        int i = blockDim.x/2;
-        __syncthreads();
-        while (i != 0) {
-            if (threadIdx.x < i){
-                pathsAndIndependentStatus[setReductionOffset + threadIdx.x] |= pathsAndIndependentStatus[setReductionOffset + threadIdx.x + i];
-            }
-            __syncthreads();
-            i /= 2;
-        }
-        __syncthreads();
-        if (threadIdx.x == 0){
-            printf("Block ID %d row %d %s neighbors with a pendant edge\n", blockIdx.x, row, 
-                pathsAndIndependentStatus[setReductionOffset] ? "is" :  "isn't");
-            pathsAndIndependentStatus[neighborsWithAPendantOffset + row] = pathsAndIndependentStatus[setReductionOffset];
-            // If it is neighbors (is) a pendant - false, it is not remaining; else - true
-            pathsAndIndependentStatus[setRemainingOffset + row] = !pathsAndIndependentStatus[neighborsWithAPendantOffset + row];
-            printf("Block ID %d row %d %s remaining in V\n", blockIdx.x, row, 
-                pathsAndIndependentStatus[setRemainingOffset + row] ? "is" :  "isn't");
-        }              
-        __syncthreads();       
-    }
-    /*
-    if (threadIdx.x == 0){
-        printf("Adj Mat\n");
-        for (int row = 0; row < blockDim.x; ++row){
-            for(int colIndex = 0; colIndex < blockDim.x; ++colIndex){
-                rowOffset = adjMatrixOffset + row*blockDim.x;
-                printf("%d ", pathsAndIndependentStatus[rowOffset + colIndex]);
-            }
-            printf("\n");
-        }
-    }
-    */
-    // S = {p | p is a set of length 4 of vertex indices in G}
-    // An edge (u,v), where u ∈ S, v ∈ S, and u ∩ v ≠ ∅
-    // At this point I = {∀p ∈ S | p is pendant}
-    // V = S / N(I)
-
-    int cardinalityOfV = 1;
-
-    // https://en.wikipedia.org/wiki/Maximal_independent_set#:~:text=Random-priority%20parallel%20algorithm%5Bedit%5D
-    // Note that in every step, the node with the smallest number in each connected component always enters I, 
-    // so there is always some progress. In particular, in the worst-case of the previous algorithm (n/2 connected components with 2 nodes each), a MIS will be found in a single step.
-    // O(log_{4/3}(m)+1)
-    while(cardinalityOfV){
-        for (int row = 0; row < blockDim.x; ++row){
-            // If a neighboring vertex has a random number less than mine and said vertex isn't
-            // neighbors with a pendant edge, it should be added to the set, not me.
-            pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[adjMatrixOffset + row*blockDim.x + threadIdx.x]
-                                                                        && pathsAndIndependentStatus[setRemainingOffset + threadIdx.x]
-                                                                        && (pathsAndIndependentStatus[randNumOffset + threadIdx.x]
-                                                                            < pathsAndIndependentStatus[randNumOffset + row]);
-            //printf("Row %d thread %d included %d\n", row, threadIdx.x, pathsAndIndependentStatus[setReductionOffset + threadIdx.x]);
-            int i = blockDim.x/2;
-            __syncthreads();
-            while (i != 0) {
-                if (threadIdx.x < i){
-                    pathsAndIndependentStatus[setReductionOffset + threadIdx.x] |= pathsAndIndependentStatus[setReductionOffset + threadIdx.x + i];
-                }
-                __syncthreads();
-                i /= 2;
-            }
-            __syncthreads();
-
-            // If there exists a remaining vertex that has a smaller number than me, 
-            // this reduces is true, thus when we negate it, it has no effect when or'ed
-            // else if it was false, then it didn't fail, is negated to true and includes 
-            // this vertex.
-            // If this vertex was removed previously, we need to make sure it isn't added to I
-            // Hence,  && pathsAndIndependentStatus[setRemainingOffset + row];
-            if (threadIdx.x == 0){
-                pathsAndIndependentStatus[setInclusionOffset + row] |= !pathsAndIndependentStatus[setReductionOffset] && pathsAndIndependentStatus[setRemainingOffset + row];
-            }    
-            __syncthreads();
-            if (threadIdx.x == 0){
-                printf("Block ID %d row %d %s included in the I set\n", blockIdx.x, row, 
-                    pathsAndIndependentStatus[setInclusionOffset + row] ? "is" :  "isn't");
-            }
-        }
-
-        for (int row = 0; row < blockDim.x; ++row){
-            // Do we share an edge and were you included
-            pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[adjMatrixOffset + row*blockDim.x + threadIdx.x]
-                                                                        && pathsAndIndependentStatus[setInclusionOffset + threadIdx.x];
-            int i = blockDim.x/2;
-            __syncthreads();
-            while (i != 0) {
-                if (threadIdx.x < i){
-                    pathsAndIndependentStatus[setReductionOffset + threadIdx.x] |= pathsAndIndependentStatus[setReductionOffset + threadIdx.x + i];
-                }
-                __syncthreads();
-                i /= 2;
-            }
-            // If, so I will turn myself off
-            // If I was included, I be included and I have an edge with myself, 
-            // therefore I will be removed from V.
-            if (threadIdx.x == 0){
-                pathsAndIndependentStatus[setRemainingOffset + row] &= !pathsAndIndependentStatus[setReductionOffset];
-            }    
-            if (threadIdx.x == 0){
-                printf("Block ID %d row %d %s remaining the V set\n", blockIdx.x, row, 
-                    pathsAndIndependentStatus[setRemainingOffset + row] ? "is" :  "isn't");
-            }
-            __syncthreads();
-        }
-
-        // Am I remaining?
-        pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[setRemainingOffset + threadIdx.x];
-        int i = blockDim.x/2;
-        __syncthreads();
-        while (i != 0) {
-            if (threadIdx.x < i){
-                pathsAndIndependentStatus[setReductionOffset + threadIdx.x] += pathsAndIndependentStatus[setReductionOffset + threadIdx.x + i];
-            }
-            __syncthreads();
-            i /= 2;
-        }
-        // when V is empty the algorithm terminates
-        cardinalityOfV = pathsAndIndependentStatus[setReductionOffset];
-        __syncthreads();
-        
-        if (threadIdx.x == 0){
-            printf("Block ID %d cardinality of the V set is %d\n", blockIdx.x, cardinalityOfV);
-        }
-    }
-    // Everything works to this point :)
-    
-    // We only have use for the non-pendant members of I, 
-    // since the pendant paths have been processed already
-    pathsAndIndependentStatus[setReductionOffset + threadIdx.x] = pathsAndIndependentStatus[setInclusionOffset + threadIdx.x]
-        && !pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x];
-    int i = blockDim.x/2;
-    __syncthreads();
-    while (i != 0) {
-        if (threadIdx.x < i){
-            pathsAndIndependentStatus[setReductionOffset + threadIdx.x] += pathsAndIndependentStatus[setReductionOffset + threadIdx.x + i];
-        }
-        __syncthreads();
-        i /= 2;
-    }
-    __syncthreads();
-
-    // Copy from shared mem to global..
-    // We only have use for the non-pendant members of I, 
-    // since the pendant paths have been processed already
-    global_set_inclusion_bool_ptr[globalSetInclusionBoolOffset + threadIdx.x] = pathsAndIndependentStatus[setInclusionOffset + threadIdx.x]
-        && !pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x];
-
-    printf("Block ID %d row %d %s included in the I set\n", blockIdx.x, threadIdx.x, 
-        pathsAndIndependentStatus[setInclusionOffset + threadIdx.x]
-    && !pathsAndIndependentStatus[pendPathBoolOffset + threadIdx.x] ? "is" :  "isn't"); 
-
-    // Record how many sets are in the MIS
-    if (threadIdx.x == 0){
-        global_reduced_set_inclusion_count_ptr[leafIndex] = pathsAndIndependentStatus[setReductionOffset];
-    }          
-}
-
 
 /* 
     Shared Memory Layout:
@@ -1691,9 +1212,11 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
                             int * global_reduced_set_inclusion_count_ptr,
                             int * global_edges_left_to_cover_count,
                             int * global_verts_remain_count){
+    #ifndef NDEBUG
     if (threadIdx.x == 0){
         printf("Block ID %d Started ParallelIdentifyVertexDisjointNonPendantPathsClean\n", blockIdx.x);
     }
+    #endif
     int leafIndex = blockIdx.x;
     if (0 == global_edges_left_to_cover_count[leafIndex] || 0 == global_verts_remain_count[leafIndex]){
         global_reduced_set_inclusion_count_ptr[leafIndex] = 0;
@@ -1915,6 +1438,9 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
     // where g(2) = left-most child of depth 3
     // ...
     //int arbitraryParameter = 3*(3*leafValue)+1));
+    // Shared memory layout
+    // 0 to blockDim, the sorting index
+    // blockDim to 5*blockDim, the path values
 
 __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_leaf_value,
                                         int * global_set_paths_indices,
@@ -1962,13 +1488,14 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
         paths[blockDim.x + index] = global_paths_ptr[globalPathOffset + pathValue*4 + pathChild];
     }    
     __syncthreads();
-
+    #ifndef NDEBUG
     if (threadIdx.x == 0){
         printf("Block ID %d thread %d entered ParallelAssignMISToNodesBreadthFirst\n", blockIdx.x, threadIdx.x);
         printf("Block ID %d thread %d can process leafIndex %d\n", blockIdx.x, threadIdx.x, leafIndex);
         printf("Block ID %d thread %d can process leafValue %d\n", blockIdx.x, threadIdx.x, leafValue);
         printf("Block ID %d thread %d can process %d leaves\n", blockIdx.x, threadIdx.x, leavesThatICanProcess);
     }
+    #endif
     // This pattern uses adjacent threads to write aligned memory, 
     // but thread indexing is math intensive
     // Desired mapping:
@@ -2015,21 +1542,10 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
         // Closed form sum of Geometric Series 3^k
         totalNodes = (levelDepth!=0)*(((1.0-powf(3.0, levelDepth+1))/(1.0-3.0))-1);
         dispFromLeft = index - 2*totalNodes;
-        /*
-        if (blockIdx.x == 0){
-            printf("thread %d index %d\n",threadIdx.x, index);
-            printf("thread %d pathIndex %d\n", threadIdx.x, pathIndex);
-            printf("thread %d indexMod6 %d\n", threadIdx.x, indexMod6);
-            printf("thread %d pathChildIndex %d\n", threadIdx.x, pathChildIndex);
-            printf("thread %d levelDepth %d\n", threadIdx.x, levelDepth);
-            printf("thread %d leftMostChildOfLevel %d\n", threadIdx.x, leftMostChildOfLevel);
-            printf("thread %d leftMostChildOfLevelExpanded %d\n", threadIdx.x, leftMostChildOfLevelExpanded);
-            printf("thread %d dispFromLeft %d\n", threadIdx.x, dispFromLeft);
-        }
-        */
         global_vertices_included_dev_ptr[leftMostChildOfLevelExpanded + dispFromLeft] = paths[blockDim.x + pathIndex*4 + pathChildIndex];
     }
     __syncthreads();
+    #ifndef NDEBUG
     if (threadIdx.x == 0 && blockIdx.x == 0){
         printf("VertsIncluded\n");
         int numLvls = 4;
@@ -2049,103 +1565,8 @@ __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_le
             else
                 LB = LB + (int)(powf(3.0, lvl)*2.0);
         }
-
     }
-}
-
-__global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_value,
-                                        int * global_set_paths_indices,
-                                        int * global_reduced_set_inclusion_count_ptr,
-                                        int * global_paths_ptr,
-                                        int * global_vertices_included_dev_ptr){
-    int leafIndex = blockIdx.x;
-    int leafValue = global_active_leaf_value[leafIndex];
-    int setPathOffset = leafIndex * blockDim.x;
-    int globalPathOffset = setPathOffset*4;
-    // |I| - The cardinality of the set.  If |I| = 0; we don't induce children
-    // Else we will induce (3*|I| children), Each path induces 3 leaves.
-    int leavesThatICanProcess = global_reduced_set_inclusion_count_ptr[leafIndex];
-    if (threadIdx.x == 0){
-        printf("Block ID %d thread %d entered ParallelAssignMISToNodesBreadthFirst\n", blockIdx.x, threadIdx.x);
-        printf("Block ID %d thread %d can process leafIndex %d\n", blockIdx.x, threadIdx.x, leafIndex);
-        printf("Block ID %d thread %d can process leafValue %d\n", blockIdx.x, threadIdx.x, leafValue);
-        printf("Block ID %d thread %d can process %d leaves\n", blockIdx.x, threadIdx.x, leavesThatICanProcess);
-    }
-    // This pattern uses adjacent threads to write aligned memory, 
-    // but thread indexing is math intensive
-    // Desired mapping:
-    // 0 -> 2 
-    // 1 -> 0
-    // 2 -> 2
-    // 3 -> 1
-    // 4 -> 3
-    // 5 -> 1
-    // indexMod6 = index % 6
-    // Functor: (indexMod6 % 2 == 1) * (indexMod6 != 1) +
-    //          (indexMod6 % 2 == 0) * (2 + (indexMod6 == 4))
-
-    int indexMod6, pathChildIndex, pathIndex, pathValue, leftMostChildOfLevel, leftMostChildOfLevelExpanded, dispFromLeft, levelDepth, indexMapper, levelWidth;
-    for(int index = threadIdx.x; index < leavesThatICanProcess*6; index += blockDim.x){
-        pathIndex = index / 6;
-        pathValue = global_set_paths_indices[setPathOffset + pathIndex];
-        indexMod6 = index % 6;
-        // Have to handle 0 and 1..
-        pathChildIndex = (indexMod6 % 2 == 1) * (indexMod6 != 1) +
-                            (indexMod6 % 2 == 0) * (2 + (indexMod6 == 4));
-        levelDepth = 1.0;
-        indexMapper = index;
-        leftMostChildOfLevel = leafValue + (leafValue == 0);
-        levelWidth = (int)(2.0*powf(3.0, levelDepth));
-        leftMostChildOfLevelExpanded = 0;
-        while(indexMapper / levelWidth){
-            indexMapper -=  (int)(2*powf(3.0, levelDepth));
-            ++levelDepth;
-            leftMostChildOfLevel *= 3.0;
-            leftMostChildOfLevelExpanded += leftMostChildOfLevel;
-            levelWidth = (int)(2.0*powf(3.0, levelDepth));
-            indexMapper = indexMapper*((int)(indexMapper >= 0));
-        }
-        // Handles index 0 : + (int)(leftMostChildOfLevelExpanded == 0)
-        leftMostChildOfLevelExpanded = ((int)(leftMostChildOfLevelExpanded != 0))*(leftMostChildOfLevelExpanded*2 + 1) + (int)(leftMostChildOfLevelExpanded == 0);
-        printf("thread %d levelWidth %d\n",threadIdx.x, levelWidth);
-        dispFromLeft = index - leftMostChildOfLevelExpanded + 1;
-        /*
-        if (blockIdx.x == 0){
-            printf("thread %d index %d\n",threadIdx.x, index);
-            printf("thread %d pathIndex %d\n", threadIdx.x, pathIndex);
-            printf("thread %d pathValue %d\n", threadIdx.x, pathValue);
-            printf("thread %d indexMod6 %d\n", threadIdx.x, indexMod6);
-            printf("thread %d pathChildIndex %d\n", threadIdx.x, pathChildIndex);
-            printf("thread %d levelDepth %d\n", threadIdx.x, levelDepth);
-            printf("thread %d leftMostChildOfLevel %d\n", threadIdx.x, leftMostChildOfLevel);
-            printf("thread %d leftMostChildOfLevelExpanded %d\n", threadIdx.x, leftMostChildOfLevelExpanded);
-            printf("thread %d dispFromLeft %d\n", threadIdx.x, dispFromLeft);
-        }
-        */
-        global_vertices_included_dev_ptr[leftMostChildOfLevelExpanded + dispFromLeft] = global_paths_ptr[globalPathOffset + pathValue*4 + pathChildIndex];
-    }
-    __syncthreads();
-    if (threadIdx.x == 0 && blockIdx.x == 0){
-        printf("VertsIncluded\n");
-        int numLvls = 4;
-        int LB = 0, UB = 0;
-        for (int lvl = 0; lvl < numLvls; ++lvl){
-            if (LB == 0)
-                UB = 1;
-            else
-                UB = LB + (int)(powf(3.0, lvl)*2.0);
-            //printf("LB : %d; UB : %d\n ", LB, UB);
-            for (int i = LB; i < UB; ++i){
-                printf("%d ", global_vertices_included_dev_ptr[i]);
-            }
-            printf("\n");
-            if (LB == 0)
-                LB = 1;
-            else
-                LB = LB + (int)(powf(3.0, lvl)*2.0);
-        }
-
-    }
+    #endif
 }
 
 __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
@@ -2161,9 +1582,10 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
     // We need to enter this loop to set leavesToProcess to 0
     // for terminating condition.
     if (globalIndex < global_active_leaves_count_current[0]){
-
+        #ifndef NDEBUG
         printf("globalIndex %d, global_active_leaves_count_current %d\n",globalIndex, global_active_leaves_count_current[0]);
         printf("globalIndex %d, ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst\n",globalIndex);
+        #endif
         int leavesToProcess = global_reduced_set_inclusion_count_ptr[globalIndex];
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         // Solved for leavesToProcess < closed form
@@ -2194,14 +1616,17 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
         int removeFromComplete = ((3*leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
         // Leaves that are used in next level
         int leavesFromIncompleteLvl = 3*removeFromComplete;
+        // Total leaf nodes
+        int totalNewActive = (leavesFromCompleteLvl - removeFromComplete) + leavesFromIncompleteLvl;
+
+        #ifndef NDEBUG
         printf("Leaves %d, completeLevel Depth %d\n",leavesToProcess, completeLevel);
         printf("Leaves %d, leavesFromCompleteLvl %d\n",leavesToProcess, leavesFromCompleteLvl);
         printf("Leaves %d, incompleteLevel Depth %d\n",leavesToProcess, incompleteLevel);
         printf("Leaves %d, treeSizeComplete Leaves%d\n",leavesToProcess, treeSizeComplete);
-     
         printf("Leaves %d, removeFromComplete %d\n",leavesToProcess, removeFromComplete);
-        int totalNewActive = (leavesFromCompleteLvl - removeFromComplete) + leavesFromIncompleteLvl;
         printf("Leaves %d, totalNewActive %d\n",leavesToProcess, totalNewActive);
+        #endif
         // Write to global memory
         // If new leaves == 0, then either the graph is empty, which will be handled elsewhere
         // Or every path was on a pendant node, and the current vertex should be written to the 
@@ -2219,7 +1644,9 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
     __syncthreads();
     while (i != 0) {
         if (threadIdx.x < i){
+            #ifndef NDEBUG
             printf("new_active_leaves_count_red[%d] = %d + %d\n", threadIdx.x, new_active_leaves_count_red[threadIdx.x], new_active_leaves_count_red[threadIdx.x + i]);
+            #endif
             new_active_leaves_count_red[threadIdx.x] += new_active_leaves_count_red[threadIdx.x + i];
         }
         __syncthreads();
@@ -2229,90 +1656,15 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
         atomicAdd(global_active_leaves_count_new, new_active_leaves_count_red[threadIdx.x]);
 }
 
-    //int leafValue = global_active_leaf_value[leafIndex];
-    // Solve recurrence relation 
-    // g(n) = 1/6*((2*C+3)*3^n - 3)
-    // C depends on leafValue
-    // where g(0) = left-most child of depth 1
-    // where g(1) = left-most child of depth 2
-    // where g(2) = left-most child of depth 3
-    // ...
-    //int arbitraryParameter = 3*(3*leafValue)+1);
-
-// Not thrilled about this.  1 thread fills in all the entries of belonging to a single active leaf
-// in the new active leaves buffer.  To avoid this I'd likely need another buffer
-__global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
-                                        int * global_active_leaves,
-                                        int * global_newly_active_leaves,
-                                        int * global_active_leaves_count_current,
-                                        int * global_reduced_set_inclusion_count_ptr,
-                                        int * global_newly_active_offset_ptr,
-                                        int * global_active_leaf_parent_leaf_index,
-                                        int * global_active_leaf_parent_leaf_value){
-    int globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
-    int leafValue;
-
-    printf("globalIndex %d, global_active_leaves_count_current %x\n",globalIndex, global_active_leaves_count_current[0]);
-    if (globalIndex < global_active_leaves_count_current[0]){
-        int leavesToProcess = global_reduced_set_inclusion_count_ptr[globalIndex];
-        // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
-        // Solved for leavesToProcess < closed form
-        int completeLevel = floor(logf(2*leavesToProcess + 1) / logf(3));
-        int leavesFromCompleteLvl = powf(3.0, completeLevel);
-        // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
-        // Solved for closed form < leavesToProcess
-        int incompleteLevel = ceil(logf(2*leavesToProcess + 1) / logf(3));
-        // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
-        int treeSizeComplete = (1.0 - powf(3.0, completeLevel))/(1.0 - 3.0);
-        printf("Leaves %d, completeLevel Level Depth %d\n",leavesToProcess, completeLevel);
-        printf("Leaves %d, leavesFromCompleteLvl Level Depth %d\n",leavesToProcess, leavesFromCompleteLvl);
-        printf("Leaves %d, incompleteLevel Level Depth %d\n",leavesToProcess, incompleteLevel);
-        printf("Leaves %d, treeSizeComplete Level Depth %d\n",leavesToProcess, treeSizeComplete);
-        int removeFromComplete = ((leavesToProcess - treeSizeComplete) + 3 - 1) / 3;
-        int leavesFromIncompleteLvl = (leavesToProcess - treeSizeComplete);
-        leafValue = global_active_leaves[globalIndex];
-        int leftMostLeafIndexOfFullLevel = leafValue;
-        while (completeLevel > 0){
-            leftMostLeafIndexOfFullLevel = (3.0 * leftMostLeafIndexOfFullLevel + 1);
-            completeLevel -= 1;
-        }
-        int newly_active_offset = global_newly_active_offset_ptr[globalIndex];
-        int index = 0;
-        // These values will be overwritten in the for loops, if leavesToProcess > 0
-        // Therefore initialize the values as if there were not any non-pendant paths
-        // found in the DFS.  This way we minimize the amount of conditionals.
-        global_newly_active_leaves[newly_active_offset + index] = leafValue;
-        global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
-        global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
-
-        // If non-pendant paths were found, populate the search tree in the 
-        // complete level
-        for (; index < leavesFromCompleteLvl - removeFromComplete; ++index){
-            //printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfFullLevel + index + removeFromComplete);
-            global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfFullLevel + index + removeFromComplete;
-            global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
-            global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
-        }
-        int leftMostLeafIndexOfIncompleteLevel = leafValue;
-        while (incompleteLevel > 0){
-            leftMostLeafIndexOfIncompleteLevel = (3.0 * leftMostLeafIndexOfIncompleteLevel + 1);
-            incompleteLevel -= 1;
-        }
-        int totalNewActive = 3*leavesFromIncompleteLvl + leavesFromCompleteLvl - removeFromComplete;
-        printf("Leaves %d, totalNewActive %d\n",leavesToProcess, totalNewActive);
-        // If non-pendant paths were found, populate the search tree in the 
-        // incomplete level
-        for (int incompleteIndex = 0; index < totalNewActive; ++index, ++incompleteIndex){
-            //printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfIncompleteLevel + incompleteIndex);
-            global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfIncompleteLevel + incompleteIndex;
-            global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
-            global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
-        }
-        //for (int testP = 0; testP < global_active_leaves_count_new[0]; ++testP){
-        //    printf("global_newly_active_leaves[%d] = %d\n",testP, global_newly_active_leaves[testP]);
-        //}
-    }
-}
+//int leafValue = global_active_leaf_value[leafIndex];
+// Solve recurrence relation 
+// g(n) = 1/6*((2*C+3)*3^n - 3)
+// C depends on leafValue
+// where g(0) = left-most child of depth 1
+// where g(1) = left-most child of depth 2
+// where g(2) = left-most child of depth 3
+// ...
+//int arbitraryParameter = 3*(3*leafValue)+1);
 
 __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
                                         int * global_active_leaves,
@@ -2335,9 +1687,10 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
     if (globalIndex < global_active_leaves_count_current[0] 
         && 0 < global_verts_remain_count[globalIndex]
         && 0 < global_edges_left_to_cover_count[globalIndex]){
-
+        #ifndef NDEBUG
         printf("globalIndex %d, ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean\n",globalIndex);
         printf("globalIndex %d, global_active_leaves_count_current %x\n",globalIndex, global_active_leaves_count_current[0]);
+        #endif
         int leavesToProcess = global_reduced_set_inclusion_count_ptr[globalIndex];
         // https://en.wikipedia.org/wiki/Geometric_series#Closed-form_formula
         // Solved for leavesToProcess < closed form
@@ -2388,7 +1741,6 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
         // If non-pendant paths were found, populate the search tree in the 
         // complete level
         for (int startingCLL = removeFromComplete; index < leavesFromCompleteLvl - removeFromComplete; ++index, ++startingCLL){
-            //printf("global_newly_active_leaves[%d] = %d\n",newly_active_offset + index, leftMostLeafIndexOfFullLevel + index + removeFromComplete);
             global_newly_active_leaves[newly_active_offset + index] = leftMostLeafIndexOfFullLevel + startingCLL;
             global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
             global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
@@ -2396,13 +1748,14 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
         }
 
         int totalNewActive = (leavesFromCompleteLvl - removeFromComplete) + leavesFromIncompleteLvl;
+        #ifndef NDEBUG
         printf("globalIndex %d, ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean\n",globalIndex);
         printf("Leaves %d, completeLevel Level Depth %d\n",leavesToProcess, completeLevel);
         printf("Leaves %d, leavesFromCompleteLvl %d\n",leavesToProcess, leavesFromCompleteLvl);
         printf("Leaves %d, incompleteLevel Level Depth %d\n",leavesToProcess, incompleteLevel);
         printf("Leaves %d, treeSizeComplete %d\n",leavesToProcess, treeSizeComplete);
         printf("Leaves %d, totalNewActive %d\n",leavesToProcess, totalNewActive);
-
+        #endif
         // If non-pendant paths were found, populate the search tree in the 
         // incomplete level
         for (int incompleteIndex = 0; index < totalNewActive; ++index, ++incompleteIndex){
@@ -2412,115 +1765,11 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
             global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
             global_active_leaf_index[newly_active_offset + index] = newly_active_offset + index;
         }
+        #ifndef NDEBUG
         for (int testP = 0; testP < totalNewActive; ++testP){
             printf("leafValue %d new active %d new active's parent %d\n",leafValue, global_newly_active_leaves[newly_active_offset + testP],global_active_leaf_parent_leaf_value[newly_active_offset + testP]);
         }
-    }
-}
-
-    /*
-    int levelDepth = CalculateNumberOfFullLevels(leavesThatICanProcess);
-    printf("Block ID %d thread  %d %s can process %d full levels\n", blockIdx.x, threadIdx.x, levelDepth);
-
-    // int myLB = CalculateLevelOffset(levelDepth);
-    // int myUB = CalculateLevelUpperBound(levelDepth);
-    // int globalLevelOffset = CalculateLevelOffset(level + levelDepth);
-
-    int lowestFullLevelSize = CalculateLevelSize(levelDepth);
-    printf("Block ID %d thread  %d %s can process %d leaves in the lowers full levely\n", blockIdx.x, threadIdx.x, lowestFullLevelSize);
-
-    int leftMostLeafIndexOfFullLevel = pow(3.0, levelDepth) * leafIndex;
-    // [my LB, myUB] correspond to a subset of the level of the global tree
-    //      0
-    //    0 x 0
-    // 000 yyy 000
-    // For example consider vertex 'x'.
-    // If it wanted to induce 1 level
-    // [my LB, myUB] would correspond to the global leaf indices of the 'y's
-
-    // This is for inducing the next full lowest level
-    // I need to double check the math here.
-    // for (int c = 1; c <= 3; ++c){
-    //    graphs[3*leafIndex + c]
-    /*
-    int numberOfToSkipInFullLevel = CalculateNumberInIncompleteLevel(leavesThatICanProcess);
-
-    // To skip activating a node in the full level with an active child
-    // Ceiling Divide by 3
-    int numberWithActiveChildren = (numberOfToSkipInFullLevel + 3 - 1) / 3;
-    for (int child = numberWithActiveChildren + 1; child <= lowestFullLevelSize; ++child){
-        global_active_vertices[leftMostLeafIndexOfFullLevel + child] = 1;
-    }
-
-    // Deactivates the members of the lowest full level
-    // which have children lower than them
-    int leftMostLeafIndexOfIncompleteLevel = pow(3.0, levelDepth+1) * leafIndex;
-    for (int child = 1; child <= numberWithActiveChildren * 3; ++child){
-        global_active_vertices[leftMostLeafIndexOfIncompleteLevel + child] = 1;
-    }
-  
-}
-
-  */
-__global__ void ParallelProcessDegreeZeroVertices(
-                            int numberOfRows,
-                            int verticesRemainingInGraph,
-                            int * global_remaining_vertices_dev_ptr,
-                            int * global_remaining_vertices_size_dev_ptr,
-                            int * global_degrees_dev_ptr){
-
-
-    int leafIndex = blockIdx.x;
-    if (threadIdx.x == 0){
-        printf("Leaf index %d Entered ProcessDeg0\n", leafIndex);
-    }
-    extern __shared__ int degreeZeroVertex[];
-
-    int degreesOffset = leafIndex * numberOfRows;
-    int remainingVerticesOffset = leafIndex * verticesRemainingInGraph;
-    int numVertices = global_remaining_vertices_size_dev_ptr[leafIndex];
-    int numVerticesRemoved = 0;
-    int numIters = (numVertices + blockDim.x + 1 )/blockDim.x;
-    //for (int iter = threadIdx.x; iter < numVertices; iter += blockDim.x){
-    //    
-    //}
-    //__syncthreads();
-    // Sync threads will hang for num verts > tPB...
-    int iter = 0;
-    int vertex;
-    for (vertex = threadIdx.x; iter < numIters; ++iter, vertex += blockDim.x){
-        // Prevent out of bound memory access by setting vertex to 0 for vertex > numVertices
-        degreeZeroVertex[threadIdx.x] = (int)(0 == (global_degrees_dev_ptr[degreesOffset + global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex*((int)(vertex < numVertices))]]));
-        // Set the garbage values to 0.  Since there is a sync threads in this for loop, we need
-        // to round up the iters, and some threads won't correspond to actual remaining vertices.
-        // Set these to 0.
-        degreeZeroVertex[threadIdx.x] *= (int)(vertex < numVertices);
-
-        // Makes this entry INT_MAX if degree 0
-        // Leaves unaltered if not degree 0
-        // Prevent out of bound memory access by setting vertex to 0 for vertex > numVertices
-        global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex*((int)(vertex < numVertices))] += (INT_MAX - global_remaining_vertices_dev_ptr[remainingVerticesOffset + vertex*((int)(vertex < numVertices))])*degreeZeroVertex[threadIdx.x];        
-        int i = blockDim.x/2;
-        __syncthreads();
-        while (i != 0) {
-            if (threadIdx.x < i){
-                //printf("degreeZeroVertex[%d] = %d + %d\n", threadIdx.x, degreeZeroVertex[threadIdx.x], degreeZeroVertex[threadIdx.x + i]);
-                degreeZeroVertex[threadIdx.x] += degreeZeroVertex[threadIdx.x + i];
-                degreeZeroVertex[threadIdx.x + i] = 0;
-            }
-            __syncthreads();
-            i /= 2;
-        }
-        if (threadIdx.x == 0){
-            numVerticesRemoved += degreeZeroVertex[threadIdx.x];
-            printf("leafIndex %d numVerticesRemoved %d\n", leafIndex, numVerticesRemoved);
-        }
-    }
-    // Update remaining vert size
-    // Now just need to sort those INT_MAX entries to the end of the array
-    if (threadIdx.x == 0){
-        printf("leafIndex %d total numVerticesRemoved %d\n", leafIndex, numVerticesRemoved);
-        global_remaining_vertices_size_dev_ptr[leafIndex] -= numVerticesRemoved;
+        #endif
     }
 }
 
@@ -2536,9 +1785,11 @@ __global__ void ParallelProcessDegreeZeroVerticesClean(
     int leafIndex = blockIdx.x;
     if (0 == global_remaining_vertices_size_dev_ptr[leafIndex])
         return;
+    #ifndef NDEBUG
     if (threadIdx.x == 0){
         printf("Leaf index %d Entered ProcessDeg0\n", leafIndex);
     }
+    #endif
     extern __shared__ int degreeZeroVertex[];
 
     int degreesOffset = leafIndex * numberOfRows;
@@ -2582,7 +1833,6 @@ __global__ void ParallelProcessDegreeZeroVerticesClean(
         __syncthreads();
         while (i != 0) {
             if (threadIdx.x < i){
-                //printf("degreeZeroVertex[%d] = %d + %d\n", threadIdx.x, degreeZeroVertex[threadIdx.x], degreeZeroVertex[threadIdx.x + i]);
                 degreeZeroVertex[threadIdx.x] += degreeZeroVertex[threadIdx.x + i];
             }
             __syncthreads();
@@ -2590,66 +1840,18 @@ __global__ void ParallelProcessDegreeZeroVerticesClean(
         }
         if (threadIdx.x == 0){
             numVerticesRemoved += degreeZeroVertex[threadIdx.x];
+            #ifndef NDEBUG
             printf("leafIndex %d numVerticesRemoved %d\n", leafIndex, numVerticesRemoved);
+            #endif
         }
     }
     // Update remaining vert size
     // Now just need to sort those INT_MAX entries to the end of the array
     if (threadIdx.x == 0){
+        #ifndef NDEBUG
         printf("leafIndex %d total numVerticesRemoved %d\n", leafIndex, numVerticesRemoved);
+        #endif
         global_remaining_vertices_size_dev_ptr[leafIndex] -= numVerticesRemoved;
-    }
-}
-/*
-__global__ void ParallelActiveVertexPathOffsets(int * global_active_leaf_value,
-                                                int global_active_leaf_indices_count,
-                                                ){
-
-    int leafIndex = levelOffset + blockIdx.x;
-    if (leafIndex >= levelUpperBound)
-        return;    
-
-    printf("LevelAware RowOffs blockIdx %d is running\n", blockIdx.x);
-    printf("LevelAware RowOffs leaf index %d is running\n", leafIndex);
-
-    int rowOffsOffset = leafIndex * (numberOfRows + 1);
-    int bufferRowOffsOffset = blockIdx.x * (numberOfRows + 1);
-
-    for (int iter = threadIdx.x; iter < numberOfRows+1; iter += blockDim.x){
-        global_cols_vals_segments[bufferRowOffsOffset + iter] = (blockIdx.x * numberOfEdgesPerGraph) + global_row_offsets_dev_ptr[rowOffsOffset + iter];
-        printf("global_cols_vals_segments[bufferRowOffsOffset + %d] = %d + %d\n", iter, (blockIdx.x * numberOfEdgesPerGraph), global_row_offsets_dev_ptr[rowOffsOffset + iter]);
-
-    }
-
-    if(threadIdx.x == 0){
-        printf("LevelAware RowOffs \n");
-        for (int i = 0; i < numberOfRows+1; ++i){
-            printf("global_cols_vals_segments[%d] = %d  \n",i, global_cols_vals_segments[bufferRowOffsOffset+i]);
-        }
-        printf("\n");
-    }
-}
-*/
-
-__global__ void ParallelCreateActiveVerticesRowOffsets(
-                            int numberOfRows,
-                            int numberOfEdgesPerGraph,
-                            int * global_row_offsets_dev_ptr,
-                            int * global_cols_vals_segments,
-                            int * global_set_inclusion_bool_ptr){
-
-    int leafIndex = blockIdx.x;
-
-    printf("LevelAware RowOffs blockIdx %d is running\n", blockIdx.x);
-    printf("LevelAware RowOffs leaf index %d is running\n", leafIndex);
-
-    int rowOffsOffset = leafIndex * (numberOfRows + 1);
-    int bufferRowOffsOffset = blockIdx.x * (numberOfRows + 1);
-
-    for (int iter = threadIdx.x; iter < numberOfRows+1; iter += blockDim.x){
-        global_cols_vals_segments[bufferRowOffsOffset + iter] = (blockIdx.x * numberOfEdgesPerGraph) + global_row_offsets_dev_ptr[rowOffsOffset + iter];
-        printf("global_cols_vals_segments[bufferRowOffsOffset + %d] = %d + %d\n", iter, (blockIdx.x * numberOfEdgesPerGraph), global_row_offsets_dev_ptr[rowOffsOffset + iter]);
-
     }
 }
 
@@ -2665,52 +1867,6 @@ __global__ void SetPathOffsets(int sDLSPlus1,
                                int * global_set_path_offsets){
     for (int entry = threadIdx.x; entry < sDLSPlus1; entry += blockDim.x){
         global_set_path_offsets[entry] = entry * threadsPerBlock;
-    }
-}
-__device__ void SetOutgoingEdges(int rowOffsOffset,
-                                int valsAndColsOffset,
-                                int degreesOffset,
-                                int u,
-                                int * global_row_offsets_dev_ptr,
-                                int * global_columns_dev_ptr,
-                                int * global_values_dev_ptr,
-                                int * global_degrees_dev_ptr){
-    //int rowOffsOffset = leafIndex * (numberOfRows + 1);
-    //int valsAndColsOffset = leafIndex * numberOfEdgesPerGraph;
-    int uLB = global_row_offsets_dev_ptr[rowOffsOffset + u];
-    int uUB = global_row_offsets_dev_ptr[rowOffsOffset + u + 1];    // Set out-edges
-    for (int i = uLB; i < uUB; ++i){
-        global_values_dev_ptr[valsAndColsOffset + i] = 0;
-    }
-    global_degrees_dev_ptr[degreesOffset + u] = 0;
-}
-
-
-__device__ void SetIncomingEdges(int rowOffsOffset,
-                                int valsAndColsOffset,
-                                int degreesOffset,
-                                int u,
-                                int * global_row_offsets_dev_ptr,
-                                int * global_columns_dev_ptr,
-                                int * global_values_dev_ptr,
-                                int * global_degrees_dev_ptr){
-    int v;
-    int uLB = global_row_offsets_dev_ptr[rowOffsOffset + u];
-    int uUB = global_row_offsets_dev_ptr[rowOffsOffset + u + 1];
-    int vLB;
-    int vUB;
-        // Set out-edges
-    for (int i = uLB; i < uUB; ++i){
-        v = global_columns_dev_ptr[valsAndColsOffset + i];
-        vLB = global_row_offsets_dev_ptr[rowOffsOffset + v];
-        vUB = global_row_offsets_dev_ptr[rowOffsOffset + v + 1];
-        for (int j = vLB; i < vUB; ++j){
-            if(u == global_columns_dev_ptr[valsAndColsOffset + j]){
-                global_values_dev_ptr[valsAndColsOffset + j] = 0;
-                --global_degrees_dev_ptr[degreesOffset + v];
-                break;
-            }
-        }
     }
 }
 
@@ -2750,12 +1906,12 @@ void CallPopulateTree(int numberOfLevels,
 
     std::cout << "You are about to allocate " << double(totalMem)/1024/1024/1024 << " GB" << std::endl;
     std::cout << "Your GPU RAM has " << double(free)/1024/1024/1024 << " GB available" << std::endl;
-    /*
+    #ifndef NDEBUG
     do 
     {
         std::cout << '\n' << "Press enter to continue...; ctrl-c to terminate";
     } while (std::cin.get() != '\n');
-    */
+    #endif
 // Each of these will be wrapped in a cub double buffer
 // which will switch the active set passed to the methods which
 // rely on these pointers.  This way I only keep the relevant 
@@ -3094,14 +2250,6 @@ void CallPopulateTree(int numberOfLevels,
                                                     
         }
         notFirstCall = true;        
-        // 1 thread per leaf
-        std::cout << "Calling DFS" << std::endl;
-        // 1 block per leaf; tries tPB random paths in G
-        // Hence threadsPerBlock*4,
-        // Each thread checks it's path's pendant status
-        // These booleans are reduced in shared memory
-        // Hence + threadsPerBlock
-        std::cout << "pendantNodeExists - true " << std::endl;
 
         // Assumes all edges are turned on.  We need to compress a graph
         // after processing the edges of pendant paths
@@ -3141,9 +2289,7 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        // Everything seems to be working till this point, need to print inside this method.
         // The deg 0 vertices are in the middle of the remVerts list..
-        std::cout << "Calling ParallelIdentifyVertexDisjointNonPendantPathsClean" << std::endl;
         ParallelIdentifyVertexDisjointNonPendantPathsClean<<<activeVerticesCount,
                                                         threadsPerBlock,
                                                         10*threadsPerBlock*sizeof(int)>>>
@@ -3163,7 +2309,6 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        std::cout << "Calling SortPathIndices" << std::endl;
         SortPathIndices(activeVerticesCount,
                         threadsPerBlock,
                         paths_indices,
@@ -3172,23 +2317,17 @@ void CallPopulateTree(int numberOfLevels,
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
-
-        std::cout << "Calling PrintSets" << std::endl;
+        #ifndef NDEBUG
         PrintSets<<<1,1>>>(activeVerticesCount,
                 paths_indices.Current(),
                 paths_indices.Alternate(),
                 set_inclusion.Current(),
                 set_inclusion.Alternate(),
                 global_set_path_offsets);
-
+        #endif
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        // 2*threadsPerBlock 
-        // 0 to blockDim, the sorting index
-        // blockDim to 5*blockDim, the path values
-        std::cout << "Calling ParallelAssignMISToNodesBreadthFirstClean" << std::endl;
-        // Need to test the recurrence relation.
         ParallelAssignMISToNodesBreadthFirstClean<<<activeVerticesCount,
                                                threadsPerBlock,
                                                (threadsPerBlock + threadsPerBlock*4)*sizeof(int)>>>(
@@ -3209,7 +2348,6 @@ void CallPopulateTree(int numberOfLevels,
         checkLastErrorCUDA(__FILE__, __LINE__);
 
         numberOfBlocksForOneThreadPerLeaf = (activeVerticesCount + threadsPerBlock - 1) / threadsPerBlock;
-        // Need to test the recurrence relation.
         ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock,threadsPerBlock*sizeof(int)>>>(
                                         active_leaves_count.Current(),
                                         active_leaves_count.Alternate(),
@@ -3247,6 +2385,8 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
+        #ifndef NDEBUG
+
         std::cout << "hostOffset" << std::endl;
         for (int i = 0; i < activeVerticesCount+1; ++i){
             std::cout << hostOffset[i] << " ";
@@ -3259,6 +2399,7 @@ void CallPopulateTree(int numberOfLevels,
 
         // Just to test a single iteration
         printf("TRUE activeVerticesCount : %d\n", activeVerticesCount);
+        #endif
         // Need to test the recurrence relation.
         ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean<<<numberOfBlocksForOneThreadPerLeaf,threadsPerBlock>>>(
                                         active_leaves_value.Current(),
@@ -3280,8 +2421,9 @@ void CallPopulateTree(int numberOfLevels,
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
-
+        #ifndef NDEBUG
         std::cout << "activeVerticesCount: " << activeVerticesCount << std::endl;
+        #endif
         cudaMemcpy(&activeLeavesHostIndex[0], (int*)active_leaves_index.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
         cudaMemcpy(&activeLeavesHostValue[0], (int*)active_leaves_value.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
         cudaMemcpy(&activeParentHostIndex[0], (int*)parent_leaf_index.Alternate(), (activeVerticesCount)*sizeof(int), cudaMemcpyDeviceToHost);
@@ -3291,6 +2433,7 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
+        #ifndef NDEBUG
 
         // I need the indices not the absolute vals here.
         std::cout << "activeLeavesHostIndices" << std::endl;
@@ -3313,6 +2456,7 @@ void CallPopulateTree(int numberOfLevels,
             std::cout << activeParentHostValue[i] << " ";
         }
         std::cout << std::endl;
+        #endif
 
         int * old_row_offs = row_offsets.Current();
         int * new_row_offs = row_offsets.Alternate();
@@ -3377,9 +2521,9 @@ void CallPopulateTree(int numberOfLevels,
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
-
+        #ifndef NDEBUG
         printf("Before flip active_leaves_value.selector %d\n", active_leaves_value.selector);
-
+        #endif
         // Flips Current and Alternate
 
         row_offsets.selector = !row_offsets.selector;
@@ -3398,9 +2542,10 @@ void CallPopulateTree(int numberOfLevels,
         parent_leaf_index.selector = !parent_leaf_index.selector;
         parent_leaf_value.selector = !parent_leaf_value.selector;     
 
-        printf("After flip active_leaves_value.selector %d\n", active_leaves_value.selector);
-
         #ifndef NDEBUG
+            printf("After flip active_leaves_value.selector %d\n", active_leaves_value.selector);
+
+     
             PrintData<<<1,1>>>(activeVerticesCount,
                                 numberOfRows,
                                 numberOfEdgesPerGraph, 

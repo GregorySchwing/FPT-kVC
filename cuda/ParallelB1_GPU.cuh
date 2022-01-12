@@ -58,6 +58,7 @@ CUDA_HOSTDEV int CalculateNumberOfFullLevels(int leavesThatICanGenerate);
 CUDA_HOSTDEV int ClosedFormLevelDepth(int leavesThatICanGenerate);
 
 //__global__ int ClosedFormLevelDepth(int leavesThatICanProcess);
+#ifndef NDEBUG
 
 __global__ void  PrintEdges(int activeVerticesCount,
                                     int numberOfRows,
@@ -96,31 +97,7 @@ __global__ void  PrintData(int activeVerticesCount,
                             int * verts_remain,
                             int * edges_left,
                             int * verts_remain_count);
-
-__global__ void First_Graph_GPU(int vertexCount, 
-                                int size,
-                                int numberOfRows,
-                                int * old_row_offsets_dev,
-                                int * old_columns_dev,
-                                int * old_values_dev,
-                                int * new_row_offsets_dev,
-                                int * new_columns_dev,
-                                int * new_values_dev,
-                                int * old_degrees_dev,
-                                int * new_degrees_dev,
-                                int * global_row_offsets_dev_ptr,
-                                int * global_columns_dev_ptr,
-                                int * global_values_dev_ptr,
-                                int * global_degrees_dev_ptr
-                                );
-
-__device__ void AssignPointers(long long globalIndex,
-                                long long edgesPerNode,
-                                long long numberOfVertices,
-                                int * new_row_offsets_dev,
-                                int * new_columns_dev,
-                                int * values_dev,
-                                int * new_degrees_dev);
+#endif
 
 __global__ void SetEdges(const int numberOfRows,
                         const int numberOfEdgesPerGraph,
@@ -178,43 +155,6 @@ __global__ void CalculateNewRowOffsets( int numberOfRows,
                                         int * global_row_offsets_dev_ptr,
                                         int * global_degrees_dev_ptr);
 
-__global__ void CreateSubsetOfRemainingVerticesLevelWise(int levelOffset,
-                                                int levelUpperBound,
-                                                int numberOfRows,
-                                                int * global_degrees_dev_ptr,
-                                                int * global_vertices_remaining,
-                                                int * global_vertices_remaining_count);
-/*
-__global__ void DFSLevelWise(int levelOffset,
-                            int levelUpperBound,
-                            int numberOfRows,
-                            int maxDegree,
-                            int numberOfEdgesPerGraph,
-                            int * global_degrees_dev_ptr,
-                            int * global_row_offsets_dev_ptr,
-                            int * global_columns_dev_ptr,
-                            int * global_values_dev_ptr,
-                            int * global_vertices_remaining,
-                            int * global_vertices_remaining_count,
-                            int * global_paths_ptr,
-                            int * global_paths_length,
-                            int * global_outgoing_edge_vertices,
-                            int * global_outgoing_edge_vertices_count);
-*/
-__global__ void GetRandomVertex(int levelOffset,
-                                int levelUpperBound,
-                                int numberOfRows,
-                                int * global_remaining_vertices_dev_ptr,
-                                int * global_remaining_vertices_size_dev_ptr,
-                                int * global_paths_ptr);
-
-__global__ void GetRandomVertexSharedMem(int levelOffset,
-                                int levelUpperBound,
-                                int numberOfRows,
-                                int * global_remaining_vertices_dev_ptr,
-                                int * global_remaining_vertices_size_dev_ptr,
-                                int * global_paths_ptr);
-
 __global__ void ParallelDFSRandom(int numberOfRows,
                             int numberOfEdgesPerGraph,
                             int verticesRemainingInGraph,
@@ -232,30 +172,6 @@ __global__ void ParallelDFSRandom(int numberOfRows,
                             int * global_edges_left_to_cover_count,
                             int * global_verts_remain_count);
 
-__global__ void ParallelProcessPendantEdges(
-                            int numberOfRows,
-                            int numberOfEdgesPerGraph,
-                            int * global_active_leaf_indices,
-                            int * global_row_offsets_dev_ptr,
-                            int * global_columns_dev_ptr,
-                            int * global_values_dev_ptr,
-                            int * global_degrees_dev_ptr,
-                            int * global_edges_left_to_cover_count,
-                            int * global_nonpendant_path_bool_dev_ptr,
-                            int * global_pendant_child_dev_ptr);
-
-__global__ void ParallelIdentifyVertexDisjointNonPendantPaths(
-                            int numberOfRows,
-                            int numberOfEdgesPerGraph,
-                            int * global_active_leaf_indices,
-                            int * global_row_offsets_dev_ptr,
-                            int * global_columns_dev_ptr,
-                            int * global_values_dev_ptr,
-                            int * global_pendant_path_bool_dev_ptr,
-                            int * global_pendant_child_dev_ptr,
-                            int * global_set_inclusion_bool_ptr,
-                            int * global_reduced_set_inclusion_count_ptr);
-
 __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
                             int numberOfRows,
                             int numberOfEdgesPerGraph,
@@ -269,14 +185,6 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
                             int * global_reduced_set_inclusion_count_ptr,
                             int * edges_left,
                             int * verts_remain_count);
-
-__global__ void ParallelProcessDegreeZeroVertices(
-                            int numberOfRows,
-                            int verticesRemainingInGraph,
-                            int * global_active_leaf_indices,
-                            int * global_remaining_vertices_dev_ptr,
-                            int * global_remaining_vertices_size_dev_ptr,
-                            int * global_degrees_dev_ptr);
 
 __global__ void ParallelProcessDegreeZeroVerticesClean(
                             int numberOfRows,
@@ -296,18 +204,8 @@ __global__ void SetVerticesRemaingSegements(int dLSPlus1,
                                             int numberOfRows,
                                             int * global_vertex_segments);
 
-__global__ void SetSegments(int dLSPlus1,
-                            int numberOfRows,
-                            int * global_vertex_segments);
-
 __global__ void SetPathOffsets(int sDLSPlus1,
                                int * global_set_path_offsets);
-
-__global__ void ParallelAssignMISToNodesBreadthFirst(int * global_active_leaf_indices,
-                                        int * global_set_paths_indices,
-                                        int * global_reduced_set_inclusion_count_ptr,
-                                        int * global_paths_ptr,
-                                        int * global_vertices_included_dev_ptr);
 
 __global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_leaf_indices,
                                         int * global_set_paths_indices,
@@ -325,15 +223,6 @@ __global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
                                         int * edges_left,
                                         int * verts_remain_count);
 
-__global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirst(
-                                        int * global_active_leaves,
-                                        int * global_newly_active_leaves,
-                                        int * global_active_leaves_count_current,
-                                        int * global_reduced_set_inclusion_count_ptr,
-                                        int * global_newly_active_offset_ptr,
-                                        int * global_active_leaf_parent_leaf_index,
-                                        int * global_active_leaf_parent_leaf_value);
-
 __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
                                         int * global_active_leaves,
                                         int * global_newly_active_leaves,
@@ -345,97 +234,6 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
                                         int * global_active_leaf_parent_leaf_value,
                                         int * edges_left,
                                         int * verts_remain_count);
-
-__global__ void ParallelQuicksortWithDNF(int levelOffset,
-                            int levelUpperBound,
-                            int numberOfRows,
-                            int numberOfEdgesPerGraph,
-                            int * global_row_offsets_dev_ptr,
-                            int * global_columns_dev_ptr,
-                            int * global_values_dev_ptr,
-                            int * global_degrees_dev_ptr);
-                            /*
-__global__ void SerialProcessPendantEdge(int levelOffset,
-                            int levelUpperBound,
-                            int numberOfRows,
-                            int numberOfEdgesPerGraph,
-                            int * global_row_offsets_dev_ptr,
-                            int * global_columns_dev_ptr,
-                            int * global_remaining_vertices_dev_ptr,
-                            int * global_remaining_vertices_size_dev_ptr,
-                            int * global_paths_ptr,
-                            int * global_nonpendant_path_bool_dev_ptr);
-*/
-
-__device__ void SetOutgoingEdges(int rowOffsOffset,
-                                int valsAndColsOffset,
-                                int degreesOffset,
-                                int u,
-                                int * global_row_offsets_dev_ptr,
-                                int * global_columns_dev_ptr,
-                                int * global_values_dev_ptr,
-                                int * global_degrees_dev_ptr);
-
-__device__ void SetIncomingEdges(int rowOffsOffset,
-                                int valsAndColsOffset,
-                                int degreesOffset,
-                                int u,
-                                int * global_row_offsets_dev_ptr,
-                                int * global_columns_dev_ptr,
-                                int * global_values_dev_ptr,
-                                int * global_degrees_dev_ptr);
-
-__global__ void GenerateChildren(int leafIndex,
-                                int numberOfRows,
-                                int maxDegree,
-                                int numberOfEdgesPerGraph,
-                                int * global_row_offsets_dev_ptr,
-                                int * global_columns_dev_ptr,
-                                int * global_values_dev_ptr,
-                                int * global_degrees_dev_ptr,
-                                int * global_vertices_remaining,
-                                int * global_paths_ptr,
-                                int * global_vertices_remaining_count,
-                                int * global_outgoing_edge_vertices);
-/*
-__host__ __device__ void PopulateTree(int treeSize, 
-                                std::vector<Graph> & graphs,
-                                std::vector<int> & answer);
-__host__ __device__ void PopulateTreeParallel(int treeSize, 
-                                std::vector<Graph> & graphs,
-                                std::vector<int> & answer);
-__host__ __device__ int PopulateTreeParallelLevelWise(int numberOfLevels, 
-                                std::vector<Graph> & graphs,
-                                std::vector<int> & answer);
-__host__ __device__ void PopulateTreeParallelAsymmetric(int treeSize, 
-                                std::vector<Graph> & graphs,
-                                std::vector<int> & answer);
-__host__ __device__ int GenerateChildren( Graph & child_g);
-
-__host__ __device__ void TraverseUpTree(int index, 
-                            std::vector<Graph> & graphs,
-                            std::vector<int> & answer);
-*/
-
-
-/*
-    __host__ __device__ void DFS(std::vector<int> & new_row_off,
-                    std::vector<int> & new_col_ref,
-                    std::vector<int> & new_vals_ref,
-                    std::vector<int> & path, 
-                    int rootVertex);
-    __host__ __device__ int GetRandomVertex(std::vector<int> & verticesRemaining);
-    __host__ __device__ int GetRandomOutgoingEdge(std::vector<int> & new_row_off,
-                                    std::vector<int> & new_col_ref,
-                                    std::vector<int> & new_values_ref,
-                                    int v, 
-                                    std::vector<int> & path);
-    __host__ __device__ int classifyPath(std::vector<int> & path);
-    __host__ __device__ void createVertexSetsForEachChild(std::vector< std::vector<int> > & childrensVertices, 
-                                                int caseNumber, 
-                                                std::vector<int> & path);
-*/
-
 
 #endif
 #endif
