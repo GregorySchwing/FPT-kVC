@@ -2646,12 +2646,12 @@ void CallPopulateTree(int numberOfLevels,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
         std::cout << "You are about to start iteration " << cycle << std::endl;
-        /*
+        #ifndef NDEBUG
         do 
         {
             std::cout << '\n' << "Press enter to continue...; ctrl-c to terminate";
         } while (std::cin.get() != '\n');
-        */
+        #endif
     }
 
 
