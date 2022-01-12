@@ -53,7 +53,7 @@ message("-- Debug build type detected, GPU_NVT setting CUDA_RESOLVE_DEVICE_SYMBO
 set_property(TARGET GPU_bin PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 endif()
 
-target_link_libraries( GPU_bin ${CUDA_cusparse_LIBRARY} ${CUDA_LIBRARIES})
+target_link_libraries( GPU_bin ${CUDA_cusparse_LIBRARY} ${CUDA_LIBRARIES} cuda)
 if(WIN32)
     #needed for hostname
     target_link_libraries(GPU ws2_32)
