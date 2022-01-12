@@ -2600,7 +2600,6 @@ void CallPopulateTree(int numberOfLevels,
 
         for (int lowestLeaf = minParentLeafVal; lowestLeaf <= maxActiveLeafVal; ++lowestLeaf){
             if (lowestLeaf == 0){
-                std::cout << "root" << std::endl;
                 std::string node1Name = std::to_string(lowestLeaf);
                 std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMapSearchTree.find(node1Name);
                 // New node
@@ -2646,8 +2645,7 @@ void CallPopulateTree(int numberOfLevels,
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
-
-        std::cout << "You are about to start another loop " << std::endl;
+        std::cout << "You are about to start iteration " cycle << std::endl;
         /*
         do 
         {
