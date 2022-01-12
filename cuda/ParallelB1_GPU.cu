@@ -2645,7 +2645,7 @@ void CallPopulateTree(int numberOfLevels,
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
-        std::cout << "You are about to start iteration " cycle << std::endl;
+        std::cout << "You are about to start iteration " << cycle << std::endl;
         /*
         do 
         {
