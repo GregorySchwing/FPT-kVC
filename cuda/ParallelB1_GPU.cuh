@@ -31,15 +31,17 @@ __device__ int randomGPU(unsigned int counter, ulong step, ulong seed);
 class Graph;
 
 void CopyGraphToDevice( Graph & g,
+                        int numberOfEdgesPerGraph,
+                        int * global_edges_left_to_cover_count,
                         int * new_row_offsets_dev_ptr,
                         int * new_columns_dev_ptr,
                         int * values_dev_ptr,
-                        int * new_degrees_dev_ptr,
-                        int numberOfEdgesPerGraph,
-                        int * global_edges_left_to_cover_count,
-                        int * global_remaining_vertices_dev_ptr,
-                        int * global_remaining_vertices_size_dev_ptr,
                         int verticesRemainingInGraph,
+                        int * global_remaining_vertices_size_dev_ptr,
+                        int * global_degrees_offsets_ptr,
+                        int * new_degrees_dev_ptr,
+                        int * global_remaining_vertices_dev_ptr,
+                        int * global_vertex_is_remaining_flag_dev_ptr,
                         int * global_active_leaf_indices,
                         int * global_active_leaf_indices_count);
 
@@ -161,6 +163,7 @@ __global__ void ParallelDFSRandom(int numberOfRows,
                             int * global_active_leaf_indices,
                             int * global_row_offsets_dev_ptr,
                             int * global_columns_dev_ptr,
+                            int * global_degrees_offsets_dev_ptr,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
                             int * global_degrees_dev_ptr,
@@ -200,10 +203,11 @@ __global__ void ParallelRowOffsetsPrefixSumDevice(int numberOfEdgesPerGraph,
                                                 int * global_row_offsets_dev_ptr,
                                                 int * global_cols_vals_segments);
 
+
 __global__ void SetVerticesRemaingSegements(int dLSPlus1,
                                             int numberOfRows,
                                             int * global_vertex_segments);
-
+*/
 __global__ void SetPathOffsets(int sDLSPlus1,
                                int * global_set_path_offsets);
 

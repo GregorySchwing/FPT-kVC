@@ -855,7 +855,7 @@ __global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
     int rowOffsOffset = (numberOfRows + 1) * (leafIndex-1)/3;
     // my vals some of which are now 0
     int valsAndColsOffset = numberOfEdgesPerGraph * leafIndex;
-    int degreesOffset = leafIndex * numberOfRows;
+    int degreesOffset = global_degrees_offsets_dev_ptr[leafIndex];
     int LB, UB, iter, row, edge;
 
     row = threadIdx.x;
@@ -981,7 +981,7 @@ __global__ void CalculateNewRowOffsets( int numberOfRows,
     int leafIndex = levelOffset + threadID;
     if (leafIndex >= levelUpperBound) return;
     int rowOffsOffset = leafIndex * (numberOfRows + 1);
-    int degreesOffset = leafIndex * numberOfRows;
+    int degreesOffset = global_degrees_offsets_dev_ptr[leafIndex];
 
     int i = 0;
     #ifndef NDEBUG
@@ -1012,6 +1012,7 @@ __global__ void ParallelDFSRandom(
                             int * global_active_leaf_value,
                             int * global_row_offsets_dev_ptr,
                             int * global_columns_dev_ptr,
+                            int * global_degrees_offsets_dev_ptr,
                             int * global_remaining_vertices_dev_ptr,
                             int * global_remaining_vertices_size_dev_ptr,
                             int * global_degrees_dev_ptr,
@@ -1222,7 +1223,7 @@ __global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
         global_reduced_set_inclusion_count_ptr[leafIndex] = 0;
         return;
     }
-
+  
     int globalPathOffset = leafIndex * 4 * blockDim.x;
     // Only allocated for one level, not tree global
     int globalPendantPathBoolOffset = blockIdx.x * blockDim.x;
@@ -1764,6 +1765,7 @@ __global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
             global_active_leaf_parent_leaf_value[newly_active_offset + index] = leafValue;
             global_active_leaf_parent_leaf_index[newly_active_offset + index] = globalIndex;
             global_active_leaf_index[newly_active_offset + index] = newly_active_offset + index;
+
         }
         #ifndef NDEBUG
         for (int testP = 0; testP < totalNewActive; ++testP){
@@ -1916,6 +1918,9 @@ void CallPopulateTree(int numberOfLevels,
 // which will switch the active set passed to the methods which
 // rely on these pointers.  This way I only keep the relevant 
 // data instead of the entire tree.
+
+// 2 CSR's
+// Vertices and Edges
     int * global_row_offsets_dev_ptr;
     int * global_columns_dev_ptr;
     int * global_values_dev_ptr;
@@ -1923,16 +1928,23 @@ void CallPopulateTree(int numberOfLevels,
     int * global_remaining_vertices_dev_ptr;
     int * global_remaining_vertices_size_dev_ptr;
 
+
     int * global_row_offsets_dev_ptr_buffer;
     int * global_columns_dev_ptr_buffer;
     int * global_values_dev_ptr_buffer;
-    int * global_degrees_dev_ptr_buffer; 
+
+// Vertices and Degrees and Removed Flag
+    // For calculating the heterogeneous offsets of each active leaf
+    // This way memory usage can shrink as graphs shrink
+    int * global_degrees_offsets_ptr;
+    int * global_degrees_offsets_ptr_buffer;
+
+    int * global_remaining_vertices_dev_ptr;
     int * global_remaining_vertices_dev_ptr_buffer;
     int * global_remaining_vertices_size_dev_ptr_buffer;
 
 
     int * global_paths_ptr;
-
 
     int * global_vertices_included_dev_ptr;
     int * global_pendant_path_bool_dev_ptr;
@@ -1969,34 +1981,47 @@ void CallPopulateTree(int numberOfLevels,
     int max_dfs_depth = 4;
     int numberOfRows = g.GetNumberOfRows();
     int numberOfEdgesPerGraph = g.GetEdgesLeftToCover(); 
-    int verticesRemainingInGraph = g.GetRemainingVertices().size(); 
+    int verticesRemainingInGraphCount = g.GetRemainingVertices().size(); 
     int activeLeavesPerNode = CalculateAmountOfMemoryToAllocatePerActiveLeaf();
 
+    // Vertex, Cols, Edge(on/off)
     cudaMalloc( (void**)&global_row_offsets_dev_ptr, ((numberOfRows+1)*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_columns_dev_ptr, (numberOfEdgesPerGraph*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_values_dev_ptr, (numberOfEdgesPerGraph*deepestLevelSize) * sizeof(int) );
+
     cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_dev_ptr, (verticesRemainingInGraph*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr, deepestLevelSize * sizeof(int) );
 
+
     cudaMalloc( (void**)&global_row_offsets_dev_ptr_buffer, ((numberOfRows+1)*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_columns_dev_ptr_buffer, (numberOfEdgesPerGraph*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_values_dev_ptr_buffer, (numberOfEdgesPerGraph*deepestLevelSize) * sizeof(int) );
+
+    // Degrees, Vertex ID, VertexRemoved(true/false) - Binary Val of Deg == 0
+    cudaMalloc( (void**)&global_degrees_offsets_ptr, (deepestLevelSize+1) * sizeof(int) );
+    cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows*deepestLevelSize) * sizeof(int) );
+    cudaMalloc( (void**)&global_remaining_vertices_dev_ptr, (numberOfRows*deepestLevelSize) * sizeof(int) );
+
+    cudaMalloc( (void**)&global_degrees_offsets_ptr_buffer, (deepestLevelSize+1) * sizeof(int) );
     cudaMalloc( (void**)&global_degrees_dev_ptr_buffer, (numberOfRows*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_dev_ptr_buffer, (verticesRemainingInGraph*deepestLevelSize) * sizeof(int) );
     cudaMalloc( (void**)&global_remaining_vertices_size_dev_ptr_buffer, deepestLevelSize * sizeof(int) );
 
+    // For both of these, CSR's we will sort by value/remaining_flag in between leaf inductions
+    // and use Counting Sort to compress memory on leaf inductions
+
     cub::DoubleBuffer<int> row_offsets(global_row_offsets_dev_ptr, global_row_offsets_dev_ptr_buffer);
     cub::DoubleBuffer<int> columns(global_columns_dev_ptr, global_columns_dev_ptr_buffer);
     cub::DoubleBuffer<int> values(global_values_dev_ptr, global_values_dev_ptr_buffer);
+    
+    cub::DoubleBuffer<int> degrees_offsets(global_degrees_offsets_ptr, global_degrees_offsets_ptr_buffer);
     cub::DoubleBuffer<int> degrees(global_degrees_dev_ptr, global_degrees_dev_ptr_buffer);
     cub::DoubleBuffer<int> remaining_vertices(global_remaining_vertices_dev_ptr, global_remaining_vertices_dev_ptr_buffer);
     cub::DoubleBuffer<int> remaining_vertices_count(global_remaining_vertices_size_dev_ptr, global_remaining_vertices_size_dev_ptr_buffer);
 
 
     cudaMalloc( (void**)&global_paths_ptr, (max_dfs_depth*secondDeepestLevelSize*threadsPerBlock) * sizeof(int) );
-    
-
     cudaMalloc( (void**)&global_set_path_offsets, (secondDeepestLevelSize+1) * sizeof(int) );
 
     
@@ -2096,9 +2121,14 @@ void CallPopulateTree(int numberOfLevels,
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     CopyGraphToDevice(g,
+                    numberOfEdgesPerGraph,
+                    global_edges_left_to_cover_count,
                     row_offsets.Current(),
                     columns.Current(),
                     values.Current(),
+                    verticesRemainingInGraphCount,
+                    global_remaining_vertices_size_dev_ptr,
+                    degrees_offsets.Current(),
                     degrees.Current(),
                     numberOfEdgesPerGraph,
                     edges_left.Current(),
@@ -2261,6 +2291,7 @@ void CallPopulateTree(int numberOfLevels,
                             active_leaves_value.Current(),
                             row_offsets.Current(),
                             columns.Current(),
+                            degrees_offsets.Current(),
                             remaining_vertices.Current(),
                             remaining_vertices_count.Current(),
                             degrees.Current(),
@@ -2286,6 +2317,7 @@ void CallPopulateTree(int numberOfLevels,
                                                             global_pendant_path_bool_dev_ptr,
                                                             global_pendant_child_dev_ptr,
                                                             remaining_vertices_count.Current());
+
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
@@ -2379,6 +2411,13 @@ void CallPopulateTree(int numberOfLevels,
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
+
+        // Amount of space each graph needs in the next level
+        CUBLibraryPrefixSumDevice(&activeVerticesCount,
+                                  degrees_offsets);
+
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
         
         cudaMemcpy(&hostOffset[0], (int*)active_leaf_offset.Alternate(), (activeVerticesCount+1)*sizeof(int), cudaMemcpyDeviceToHost);
 
@@ -2413,6 +2452,7 @@ void CallPopulateTree(int numberOfLevels,
                                         edges_left.Current(),
                                         remaining_vertices_count.Current());
         
+
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
@@ -2451,6 +2491,7 @@ void CallPopulateTree(int numberOfLevels,
             std::cout << activeParentHostIndex[i] << " ";
         }
         std::cout << std::endl;
+
         std::cout << "activeParentHostValue" << std::endl;
         for (int i = 0; i < activeVerticesCount; ++i){
             std::cout << activeParentHostValue[i] << " ";
@@ -2668,12 +2709,15 @@ void CallPopulateTree(int numberOfLevels,
 }
 
 void CopyGraphToDevice( Graph & g,
+                        int numberOfEdgesPerGraph,
+                        int * global_edges_left_to_cover_count,
                         int * global_row_offsets_dev_ptr,
                         int * global_columns_dev_ptr,
                         int * global_values_dev_ptr,
+                        int   verticesRemainingInGraphCount,
+                        int * global_remaining_vertices_size_dev_ptr,
+                        int * global_degrees_offsets_ptr,
                         int * global_degrees_dev_ptr,
-                        int numberOfEdgesPerGraph,
-                        int * global_edges_left_to_cover_count,
                         int * global_remaining_vertices_dev_ptr,
                         int * global_remaining_vertices_size_dev_ptr,
                         int verticesRemainingInGraph,
@@ -2681,25 +2725,45 @@ void CopyGraphToDevice( Graph & g,
                         int * global_active_leaf_indices_count){
 
     int * new_degrees_ptr = thrust::raw_pointer_cast(g.GetNewDegRef().data());
-    int * vertices_remaining_ptr = thrust::raw_pointer_cast(g.GetRemainingVertices().data());
-    
+    int * vertices_remaining_ptr = thrust::raw_pointer_cast(g.GetRemainingVerticesRef().data());
+    int * hasnt_been_removed_ptr = thrust::raw_pointer_cast(g.GetHasntBeenRemovedRef().data());
+
     std::cout << "remaining verts" << std::endl;
-    for (auto & v : g.GetRemainingVertices())
+    for (auto & v : g.GetRemainingVerticesRef())
         std::cout << v << " ";
     std::cout << std::endl;
-    std::cout << "remaining verts size " << g.GetRemainingVertices().size() << std::endl;
+    std::cout << "remaining verts size " << g.GetRemainingVerticesRef().size() << std::endl;
 
     // Graph vectors
-    cudaMemcpy(global_degrees_dev_ptr, new_degrees_ptr, g.GetNumberOfRows() * sizeof(int),
-                cudaMemcpyHostToDevice);
     cudaMemcpy(global_edges_left_to_cover_count, &numberOfEdgesPerGraph, 1 * sizeof(int),
                 cudaMemcpyHostToDevice);
-    cudaMemcpy(global_remaining_vertices_dev_ptr, vertices_remaining_ptr, g.GetRemainingVertices().size() * sizeof(int),
-            cudaMemcpyHostToDevice);         
-    cudaMemcpy(global_remaining_vertices_size_dev_ptr, &verticesRemainingInGraph, 1 * sizeof(int),
-            cudaMemcpyHostToDevice);    
+    
+    // Degree CSR Data
+    cudaMemcpy(global_remaining_vertices_size_dev_ptr, &verticesRemainingInGraphCount, 1 * sizeof(int),
+            cudaMemcpyHostToDevice);   
+    cudaMemcpy(global_degrees_dev_ptr, new_degrees_ptr, g.GetNumberOfRows() * sizeof(int),
+                cudaMemcpyHostToDevice);
+    cudaMemcpy(global_remaining_vertices_dev_ptr, vertices_remaining_ptr, g.GetRemainingVerticesRef().size() * sizeof(int),
+            cudaMemcpyHostToDevice);      
+    cudaMemcpy(global_vertex_is_remaining_flag_dev_ptr, hasnt_been_removed_ptr, g.GetRemainingVerticesRef().size() * sizeof(int),
+            cudaMemcpyHostToDevice); 
+
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
+
+    // Currenly only sets the first graph in the cuda memory
+    // Might as well be host code
+    CalculateNewRowOffsets<<<1,1>>>(1,
+                                    0,
+                                    1,
+                                    global_degrees_offsets_ptr,
+                                    global_remaining_vertices_size_dev_ptr); 
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+    
+
+
     // CSR vectors
     thrust::device_vector<int> old_row_offsets_dev = *(g.GetCSR().GetOldRowOffRef());
     thrust::device_vector<int> old_column_indices_dev = *(g.GetCSR().GetOldColRef());
@@ -2710,17 +2774,16 @@ void CopyGraphToDevice( Graph & g,
     // CSR pointers
     int * old_row_offsets_dev_ptr = thrust::raw_pointer_cast(old_row_offsets_dev.data());
     int * old_column_indices_dev_ptr = thrust::raw_pointer_cast(old_column_indices_dev.data());
-    
     // SparseMatrix pointers
     int * new_values_dev_ptr = thrust::raw_pointer_cast(new_values_dev.data());
 
     // Currenly only sets the first graph in the cuda memory
     // Might as well be host code
     CalculateNewRowOffsets<<<1,1>>>(g.GetNumberOfRows(),
-                                        0,
-                                        1,
-                                        global_row_offsets_dev_ptr,
-                                        global_degrees_dev_ptr); 
+                                    0,
+                                    1,
+                                    global_row_offsets_dev_ptr,
+                                    global_degrees_dev_ptr); 
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
