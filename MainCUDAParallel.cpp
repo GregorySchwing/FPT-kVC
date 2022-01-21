@@ -23,6 +23,7 @@ int main(int argc, char *argv[])
     //Graph g("small.csv");
     COO coordinateFormat;
     //std::string filename = "small.csv";
+    //std::string filename = "simulated_blockmodel_graph_50_nodes.csv";
     std::string filename = "25_nodes.csv";
     //std::string filename = "pendants.csv";
 

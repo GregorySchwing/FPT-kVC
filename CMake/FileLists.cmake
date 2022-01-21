@@ -100,12 +100,36 @@ set(sources_lib
     lib/CSVIterator.cpp
     lib/CSVRange.cpp
     lib/CSVRow.cpp
+    lib/DotWriter/lib/AttributeSet.cpp
+    lib/DotWriter/lib/Cluster.cpp
+    lib/DotWriter/lib/DotWriter.h
+    lib/DotWriter/lib/Edge.cpp
+    lib/DotWriter/lib/Enums.cpp
+    lib/DotWriter/lib/Graph.cpp
+    lib/DotWriter/lib/IdManager.cpp
+    lib/DotWriter/lib/Node.cpp
+    lib/DotWriter/lib/RootGraph.cpp
+    lib/DotWriter/lib/Subgraph.cpp
+    lib/DotWriter/lib/Util.cpp
 )
 
 set(headers_lib
     lib/CSVIterator.h
     lib/CSVRange.h
     lib/CSVRow.h
+    lib/DotWriter/lib/Attribute.h
+    lib/DotWriter/lib/AttributeSet.h
+    lib/DotWriter/lib/Cluster.h
+    lib/DotWriter/lib/DotWriter.h
+    lib/DotWriter/lib/Edge.h
+    lib/DotWriter/lib/Enums.h
+    lib/DotWriter/lib/Graph.h
+    lib/DotWriter/lib/Idable.h
+    lib/DotWriter/lib/IdManager.h
+    lib/DotWriter/lib/Node.h
+    lib/DotWriter/lib/RootGraph.h
+    lib/DotWriter/lib/Subgraph.h
+    lib/DotWriter/lib/Util.h
 )
 
 set(headers_lib_gpu
