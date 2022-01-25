@@ -149,8 +149,14 @@ void CallPopulateTree(Graph & g,
     cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows+1) * sizeof(int) );
     cudaMalloc( (void**)&global_levels, numberOfRows * sizeof(int) );
 
-    // Set all levels value to root
-    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_levels),  root, size_t(numberOfRows));
+    // Set all levels value to INT_MAX
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_levels),  INT_MAX, size_t(numberOfRows));
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    // Set root value to 0
+    cudaMemcpy( &global_levels[root], 0, 1 * sizeof(int) , cudaMemcpyHostToDevice);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
