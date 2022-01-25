@@ -281,6 +281,8 @@ __host__ void CalculateNewRowOffsets( int numberOfRows,
 __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                                             int *nodes, int *edges, int * finished){
     int v = threadIdx.x;
+    if (v >= N)
+        return;
     if (levels[v] == curr) {
         // iterate over neighbors
         int num_nbr = nodes[v+1] - nodes[v];
