@@ -9,6 +9,9 @@
 #ifdef FPT_CUDA
 #include "ParallelB1_GPU.cuh"
 #endif
+// For viz
+#include "../lib/DotWriter/lib/DotWriter.h"
+#include <map>
 unsigned long long getTotalSystemMemory()
 {
     long pages = sysconf(_SC_PHYS_PAGES);
@@ -64,5 +67,36 @@ int main(int argc, char *argv[])
     std::cout << std::endl;
     g.RemoveDegreeZeroVertices();
     int root = 0;
-    CallPopulateTree(g, root);
+    int numberOfRows = g.GetRemainingVertices().size(); 
+    int * host_levels = new int[numberOfRows];
+    CallPopulateTree(g, root, host_levels);
+    thrust::host_vector<int> old_row_offsets = *(g.GetCSR().GetOldRowOffRef());
+    thrust::host_vector<int> old_columns = *(g.GetCSR().GetOldColRef());
+
+
+    std::string name = "main";
+    std::string filenameGraph = "BFS";
+    bool isDirected = true;
+    DotWriter::RootGraph gVizWriter(isDirected, name);
+    std::string subgraph1 = "BFS";
+    DotWriter::Subgraph * actLeaves = gVizWriter.AddSubgraph(subgraph1);
+    std::map<std::string, DotWriter::Node *> nodeMap;    
+    // Since the graph doesnt grow uniformly, it is too difficult to only copy the new parts..
+    for (int i = 0; i < numberOfRows; ++i){
+        for (int j = old_row_offsets[i]; j < old_row_offsets[i+1]; ++j){
+            std::string node1Name = std::to_string(i);
+            std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMap.find(node1Name);
+            if(nodeIt1 == nodeMap.end()) {
+                nodeMap[node1Name] = actLeaves->AddNode(node1Name);
+            }
+            std::string node2Name = std::to_string(j);
+            std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMap.find(node2Name);
+            if(nodeIt2 == nodeMap.end()) {
+                nodeMap[node2Name] = actLeaves->AddNode(node2Name);
+            }  
+            actLeaves->AddEdge(nodeMap[node1Name], nodeMap[node2Name], std::to_string(host_levels[i])); 
+        }
+    }
+
+    gVizWriter.WriteToFile(filenameGraph);
 }

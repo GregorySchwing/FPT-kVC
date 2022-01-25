@@ -44,7 +44,9 @@ void CopyGraphToDevice( Graph & g,
 __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                             int *nodes, int *edges, int * finished);
 
-void CallPopulateTree(Graph & gPrime, int root);
+void CallPopulateTree(Graph & gPrime, 
+                        int root, 
+                        int * host_levels);
 
 __global__ void InduceSubgraph( int numberOfRows,
                                 int edgesLeftToCover,

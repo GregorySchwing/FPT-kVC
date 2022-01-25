@@ -104,7 +104,9 @@ __global__ void InduceSubgraph( int numberOfRows,
     delete[] C_ref;
 }
 
-void CallPopulateTree(Graph & g, int root){
+void CallPopulateTree(Graph & g, 
+                     int root,
+                     int * host_levels){
 
     int * global_row_offsets_dev_ptr; // size N + 1
     int * global_degrees_dev_ptr; // size N, used for inducing the subgraph
@@ -112,11 +114,12 @@ void CallPopulateTree(Graph & g, int root){
     int * global_values_dev_ptr; // on or off, size M
     int * global_levels; // size N, will contatin BFS level of nth node
 
-    int expandedData = g.GetEdgesLeftToCover();  // size M
+    int numberOfRows = g.GetRemainingVertices().size(); 
+    int numberOfEdgesPerGraph = g.GetEdgesLeftToCover();  // size M
     int condensedData = g.GetVertexCount(); // size N
 
     int condensedData_plus1 = condensedData + 1; // size N + 1
-    long long sizeOfSingleGraph = expandedData*2 + 2*condensedData + condensedData_plus1;
+    long long sizeOfSingleGraph = numberOfEdgesPerGraph*2 + 2*condensedData + condensedData_plus1;
     long long totalMem = sizeOfSingleGraph * sizeof(int);
 
     int num_gpus;
@@ -138,12 +141,6 @@ void CallPopulateTree(Graph & g, int root){
         std::cout << '\n' << "Press enter to continue...; ctrl-c to terminate";
     } while (std::cin.get() != '\n');
     #endif
-
-// Vertices and Edges
-
-    int numberOfRows = g.GetNumberOfRows();
-    int numberOfEdgesPerGraph = g.GetEdgesLeftToCover(); 
-    int verticesRemainingInGraphCount = g.GetRemainingVertices().size(); 
 
     // Vertex, Cols, Edge(on/off)
     cudaMalloc( (void**)&global_row_offsets_dev_ptr, (numberOfRows+1) * sizeof(int) );
@@ -184,11 +181,17 @@ void CallPopulateTree(Graph & g, int root){
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
+    cudaMemcpy(&host_levels[0], &global_levels[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
     cudaFree( global_row_offsets_dev_ptr );
     cudaFree( global_columns_dev_ptr );
     cudaFree( global_values_dev_ptr );
     cudaFree( global_degrees_dev_ptr );
     cudaFree( global_levels );
+
     cudaDeviceSynchronize();
 }
 
