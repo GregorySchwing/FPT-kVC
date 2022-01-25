@@ -168,10 +168,17 @@ void CallPopulateTree(Graph & g, int root){
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
-    int curr = 0; finished = false;
+    int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
+    int curr = 0;
+    int finished = 0;
     do {
         finished = true;
-        launch_gpu_bfs_kernel(g, curr++, &finished);
+        launch_gpu_bfs_kernel<<<threadsPerBlock,oneThreadPerNode>>>(numberOfRows,
+                                curr++, 
+                                global_levels,
+                                global_row_offsets_dev_ptr,
+                                global_columns_dev_ptr,
+                                &finished);
     } while (!finished);
 
     cudaDeviceSynchronize();
@@ -266,6 +273,23 @@ __host__ void CalculateNewRowOffsets( int numberOfRows,
     cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
     // d_out s<-- [0, 8, 14, 21, 26, 29, 29]
     cudaFree(d_temp_storage);
+}
+
+__global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
+                                            int *nodes, int *edges, int * finished){
+    int v = threadIdx.x;
+    if (levels[v] == curr) {
+        // iterate over neighbors
+        int num_nbr = nodes[v+1] - nodes[v];
+        int * nbrs = & edges[ nodes[v] ];
+        for(int i = 0; i < num_nbr; i++) {
+            int w = nbrs[i];
+            if (levels[w] == INT_MAX) { // if not visited yet
+                *finished = false;
+                levels[w] = curr + 1;
+            }
+        }
+    }
 }
 
 
