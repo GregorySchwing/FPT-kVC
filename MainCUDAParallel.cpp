@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     COO coordinateFormat;
     //std::string filename = "small.csv";
     //std::string filename = "simulated_blockmodel_graph_50_nodes.csv";
-    std::string filename = "25_nodes.csv";
+    std::string filename = "/home6/greg/FPT-kVC/25_nodes.csv";
     //std::string filename = "pendants.csv";
 
     coordinateFormat.BuildCOOFromFile(filename);
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
             if(nodeIt1 == nodeMap.end()) {
                 nodeMap[node1Name] = actLeaves->AddNode(node1Name);
             }
-            std::string node2Name = std::to_string(j);
+            std::string node2Name = std::to_string(old_columns[j]);
             std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMap.find(node2Name);
             if(nodeIt2 == nodeMap.end()) {
                 nodeMap[node2Name] = actLeaves->AddNode(node2Name);
@@ -99,4 +99,5 @@ int main(int argc, char *argv[])
     }
 
     gVizWriter.WriteToFile(filenameGraph);
+    std::cout << "finished" << std::endl;
 }
