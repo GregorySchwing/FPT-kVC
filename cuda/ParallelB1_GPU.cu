@@ -160,7 +160,7 @@ void CallPopulateTree(Graph & g,
 
     int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
     int curr = 0;
-    
+
     int * finished = &zero;
     int * finished_gpu;
     cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
@@ -176,6 +176,8 @@ void CallPopulateTree(Graph & g,
                                 global_row_offsets_dev_ptr,
                                 global_columns_dev_ptr,
                                 finished_gpu);
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
         cudaMemcpy(&finished[0], &finished_gpu[0], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
     } while (!finished);
 
@@ -242,7 +244,7 @@ void CopyGraphToDevice( Graph & g,
     #ifndef NDEBUG
         std::cout << "NRO" << std::endl;
         int * new_row_offs = new int[g.GetNumberOfRows()+1];
-        cudaMemcpy( &new_row_offs[0], &global_row_offsets_dev_ptr[0], g.GetNumberOfRows() * sizeof(int) , cudaMemcpyDeviceToHost);
+        cudaMemcpy( &new_row_offs[0], &global_row_offsets_dev_ptr[0], (g.GetNumberOfRows()+1) * sizeof(int) , cudaMemcpyDeviceToHost);
         for (int i = 0; i < g.GetNumberOfRows()+1; ++i){
             printf("%d ",new_row_offs[i]);
         }
@@ -278,17 +280,17 @@ __host__ void CalculateNewRowOffsets( int numberOfRows,
                                         int * global_row_offsets_dev_ptr,
                                         int * global_degrees_dev_ptr){
     // Declare, allocate, and initialize device-accessible pointers for input and output
-    int  num_items = numberOfRows+1;      // e.g., 7
+    int  num_items = numberOfRows;      // e.g., 7
     int  *d_in = global_degrees_dev_ptr;        // e.g., [8, 6, 7, 5, 3, 0, 9]
-    int  *d_out = global_row_offsets_dev_ptr;         // e.g., [ ,  ,  ,  ,  ,  ,  ]
+    int  *d_out = &global_row_offsets_dev_ptr[1];         // e.g., [ ,  ,  ,  ,  ,  ,  ]
     // Determine temporary device storage requirements
     void     *d_temp_storage = NULL;
     size_t   temp_storage_bytes = 0;
-    cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
+    cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
     // Allocate temporary storage
     cudaMalloc(&d_temp_storage, temp_storage_bytes);
     // Run exclusive prefix sum
-    cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
+    cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
     // d_out s<-- [0, 8, 14, 21, 26, 29, 29]
     cudaFree(d_temp_storage);
 }

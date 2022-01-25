@@ -78,14 +78,39 @@ int main(int argc, char *argv[])
     std::string filenameGraph = "BFS";
     bool isDirected = false;
     DotWriter::RootGraph gVizWriter(isDirected, name);
-    std::string subgraph1 = "graph";
-    DotWriter::Subgraph * graph = gVizWriter.AddSubgraph(subgraph1);
+    std::string subgraph1 = "BFS";
+    std::string subgraph2 = "graph";
+
+    DotWriter::Subgraph * bfs = gVizWriter.AddSubgraph(subgraph1);
+    DotWriter::Subgraph * graph = gVizWriter.AddSubgraph(subgraph2);
+
+    std::map<std::string, DotWriter::Node *> bfsMap;    
+
     std::map<std::string, DotWriter::Node *> nodeMap;    
 
     // Since the graph doesnt grow uniformly, it is too difficult to only copy the new parts..
     for (int i = 0; i < numberOfRows; ++i){
         for (int j = old_row_offsets[i]; j < old_row_offsets[i+1]; ++j){
             if (i < old_columns[j]){
+                std::string node1Name = std::to_string(i);
+                std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = bfsMap.find(node1Name);
+                if(nodeIt1 == bfsMap.end()) {
+                    bfsMap[node1Name] = graph->AddNode(node1Name);
+                }
+                std::string node2Name = std::to_string(old_columns[j]);
+                std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = bfsMap.find(node2Name);
+                if(nodeIt2 == bfsMap.end()) {
+                    bfsMap[node2Name] = graph->AddNode(node2Name);
+                }  
+                if(host_levels[i] != INT_MAX)
+                bfs->AddEdge(bfsMap[node1Name], bfsMap[node2Name], std::to_string(host_levels[i])); 
+            }
+        }
+    }
+
+    for (int i = 0; i < numberOfRows; ++i){
+        for (int j = old_row_offsets[i]; j < old_row_offsets[i+1]; ++j){
+            if (i < j){
                 std::string node1Name = std::to_string(i);
                 std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMap.find(node1Name);
                 if(nodeIt1 == nodeMap.end()) {
@@ -96,7 +121,7 @@ int main(int argc, char *argv[])
                 if(nodeIt2 == nodeMap.end()) {
                     nodeMap[node2Name] = graph->AddNode(node2Name);
                 }  
-                graph->AddEdge(nodeMap[node1Name], nodeMap[node2Name], std::to_string(host_levels[i])); 
+                graph->AddEdge(nodeMap[node1Name], nodeMap[node2Name]); 
             }
         }
     }
