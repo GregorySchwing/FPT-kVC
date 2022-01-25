@@ -76,46 +76,29 @@ int main(int argc, char *argv[])
 
     std::string name = "main";
     std::string filenameGraph = "BFS";
-    bool isDirected = true;
+    bool isDirected = false;
     DotWriter::RootGraph gVizWriter(isDirected, name);
     std::string subgraph1 = "graph";
-    std::string subgraph2 = "BFS";
-
     DotWriter::Subgraph * graph = gVizWriter.AddSubgraph(subgraph1);
-    DotWriter::Subgraph * BFS = gVizWriter.AddSubgraph(subgraph2);
     std::map<std::string, DotWriter::Node *> nodeMap;    
-    std::map<std::string, DotWriter::Node *> bfsMap;    
 
     // Since the graph doesnt grow uniformly, it is too difficult to only copy the new parts..
     for (int i = 0; i < numberOfRows; ++i){
         for (int j = old_row_offsets[i]; j < old_row_offsets[i+1]; ++j){
-            std::string node1Name = std::to_string(i);
-            std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMap.find(node1Name);
-            if(nodeIt1 == nodeMap.end()) {
-                nodeMap[node1Name] = graph->AddNode(node1Name);
-            }
-            std::string node2Name = std::to_string(old_columns[j]);
-            std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMap.find(node2Name);
-            if(nodeIt2 == nodeMap.end()) {
-                nodeMap[node2Name] = graph->AddNode(node2Name);
-            }  
-            if (i < j)
+            if (i < old_columns[j]){
+                std::string node1Name = std::to_string(i);
+                std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMap.find(node1Name);
+                if(nodeIt1 == nodeMap.end()) {
+                    nodeMap[node1Name] = graph->AddNode(node1Name);
+                }
+                std::string node2Name = std::to_string(old_columns[j]);
+                std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMap.find(node2Name);
+                if(nodeIt2 == nodeMap.end()) {
+                    nodeMap[node2Name] = graph->AddNode(node2Name);
+                }  
                 graph->AddEdge(nodeMap[node1Name], nodeMap[node2Name], std::to_string(host_levels[i])); 
+            }
         }
-    }
-
-    std::string node1Name = std::to_string(root);
-    std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = bfsMap.find(node1Name);
-    if(nodeIt1 == bfsMap.end()) {
-        bfsMap[node1Name] = graph->AddNode(node1Name);
-    }
-    for (int i = 0; i < numberOfRows; ++i){
-        std::string node2Name = std::to_string(i);
-        std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = bfsMap.find(node2Name);
-        if(nodeIt2 == bfsMap.end()) {
-            bfsMap[node2Name] = graph->AddNode(node2Name);
-        }  
-        bfsMap->AddEdge(bfsMap[node1Name], bfsMap[node2Name], std::to_string(host_levels[i])); 
     }
 
     gVizWriter.WriteToFile(filenameGraph);

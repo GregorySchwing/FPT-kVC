@@ -160,6 +160,7 @@ void CallPopulateTree(Graph & g,
 
     int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
     int curr = 0;
+    
     int * finished = &zero;
     int * finished_gpu;
     cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
@@ -304,7 +305,7 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
         for(int i = 0; i < num_nbr; i++) {
             int w = nbrs[i];
             if (levels[w] == INT_MAX) { // if not visited yet
-                *finished = false;
+                *finished = 0;
                 levels[w] = curr + 1;
             }
         }
