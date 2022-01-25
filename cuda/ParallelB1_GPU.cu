@@ -57,8 +57,7 @@ __global__ void InduceSubgraph( int numberOfRows,
                                 int * new_columns_dev,
                                 int * new_values_dev){
 
-    //int row = threadIdx.x + blockDim.x * blockIdx.x;
-    int row = threadIdx.x;
+    int row = threadIdx.x + blockDim.x * blockIdx.x;
 
     inner_array_t *C_ref = new inner_array_t[numberOfRows];
 
@@ -87,19 +86,6 @@ __global__ void InduceSubgraph( int numberOfRows,
                 --C_ref[iter][old_values_dev[i]];
             }
         }
-        #ifndef NDEBUG
-        if (row == 0){
-            printf("Block %d induced root of graph", blockIdx.x);
-            for (int i = 0; i < edgesLeftToCover; ++i){
-                printf("%d ",new_columns_dev[i]);
-            }
-            printf("\n");
-            for (int i = 0; i < edgesLeftToCover; ++i){
-                printf("%d ",new_values_dev[i]);
-            }
-            printf("\n");
-        }
-        #endif
     }
     delete[] C_ref;
 }
@@ -114,7 +100,7 @@ void CallPopulateTree(Graph & g,
     int * global_values_dev_ptr; // on or off, size M
     int * global_levels; // size N, will contatin BFS level of nth node
 
-    int numberOfRows = g.GetRemainingVertices().size(); 
+    int numberOfRows = g.GetVertexCount(); 
     int numberOfEdgesPerGraph = g.GetEdgesLeftToCover();  // size M
     int condensedData = g.GetVertexCount(); // size N
 
@@ -155,8 +141,9 @@ void CallPopulateTree(Graph & g,
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
+    int zero = 0;
     // Set root value to 0
-    cudaMemcpy( &global_levels[root], 0, 1 * sizeof(int) , cudaMemcpyHostToDevice);
+    cudaMemcpy(&global_levels[root], &zero, 1 * sizeof(int), cudaMemcpyHostToDevice);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -173,15 +160,22 @@ void CallPopulateTree(Graph & g,
 
     int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
     int curr = 0;
-    int finished = 0;
+    int * finished = &zero;
+    int * finished_gpu;
+    cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  0, size_t(1));
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
     do {
-        finished = true;
+        *finished = 1;
         launch_gpu_bfs_kernel<<<threadsPerBlock,oneThreadPerNode>>>(numberOfRows,
                                 curr++, 
                                 global_levels,
                                 global_row_offsets_dev_ptr,
                                 global_columns_dev_ptr,
-                                &finished);
+                                finished_gpu);
+        cudaMemcpy(&finished[0], &finished_gpu[0], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
     } while (!finished);
 
     cudaDeviceSynchronize();
@@ -239,6 +233,20 @@ void CopyGraphToDevice( Graph & g,
     CalculateNewRowOffsets(g.GetNumberOfRows(),
                             global_row_offsets_dev_ptr,
                             global_degrees_dev_ptr); 
+       
+    
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    #ifndef NDEBUG
+        std::cout << "NRO" << std::endl;
+        int * new_row_offs = new int[g.GetNumberOfRows()+1];
+        cudaMemcpy( &new_row_offs[0], &global_row_offsets_dev_ptr[0], g.GetNumberOfRows() * sizeof(int) , cudaMemcpyDeviceToHost);
+        for (int i = 0; i < g.GetNumberOfRows()+1; ++i){
+            printf("%d ",new_row_offs[i]);
+        }
+        printf("\n");
+    #endif
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -270,7 +278,7 @@ __host__ void CalculateNewRowOffsets( int numberOfRows,
                                         int * global_degrees_dev_ptr){
     // Declare, allocate, and initialize device-accessible pointers for input and output
     int  num_items = numberOfRows+1;      // e.g., 7
-    int  *d_in = global_row_offsets_dev_ptr;        // e.g., [8, 6, 7, 5, 3, 0, 9]
+    int  *d_in = global_degrees_dev_ptr;        // e.g., [8, 6, 7, 5, 3, 0, 9]
     int  *d_out = global_row_offsets_dev_ptr;         // e.g., [ ,  ,  ,  ,  ,  ,  ]
     // Determine temporary device storage requirements
     void     *d_temp_storage = NULL;
