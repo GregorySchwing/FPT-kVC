@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
         if(nodeIt2 == bfsMap.end()) {
             bfsMap[node2Name] = graph->AddNode(node2Name);
         }  
-        graph->AddEdge(bfsMap[node1Name], bfsMap[node2Name], std::to_string(host_levels[i])); 
+        bfsMap->AddEdge(bfsMap[node1Name], bfsMap[node2Name], std::to_string(host_levels[i])); 
     }
 
     gVizWriter.WriteToFile(filenameGraph);
