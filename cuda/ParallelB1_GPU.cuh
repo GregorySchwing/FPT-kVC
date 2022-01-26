@@ -45,7 +45,12 @@ void CopyGraphToDevice( Graph & g,
 __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                             int *nodes, int *edges, int * finished);
 
-__global__ void launch_gpu_coloring_kernel( int N, int curr, int k, int *levels,
+__global__ void launch_gpu_bfs_coloring_kernel( int N, int curr, int k, int *levels,
+                int *nodes, int *edges, int *colors,
+                int * color_card,
+                int * finished);
+    
+__global__ void launch_gpu_dfs_coloring_kernel( int N, int curr, int k, int *levels,
                 int *nodes, int *edges, int *colors,
                 int * color_card,
                 int * finished);

@@ -371,6 +371,50 @@ void PerformBFSColoring(int numberOfRows,
         checkLastErrorCUDA(__FILE__, __LINE__);
 }
 
+void PerformDFSColoring(int numberOfRows,
+                int k,
+                int * global_levels,
+                int * global_row_offsets_dev_ptr,
+                int * global_columns_dev_ptr,
+                int * global_colors,
+                int * global_color_card){
+
+        int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
+        int curr = 0;
+        int zero;
+        int * finished = &zero;
+        int * finished_gpu;
+
+        cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
+        cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  0, size_t(1));
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+    
+        do {
+            cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  1, size_t(1));
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+            launch_gpu_coloring_kernel<<<oneThreadPerNode,threadsPerBlock>>>(
+                                    numberOfRows,
+                                    curr++, 
+                                    k,
+                                    global_levels,
+                                    global_row_offsets_dev_ptr,
+                                    global_columns_dev_ptr,
+                                    global_colors,
+                                    global_color_card,
+                                    finished_gpu);
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+            cudaMemcpy(&finished[0], &finished_gpu[0], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+        } while (!(*finished));
+    
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+}
+
 
 __host__ void CalculateNewRowOffsets( int numberOfRows,
                                         int * global_row_offsets_dev_ptr,
@@ -410,7 +454,39 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
     }
 }
 
-__global__ void launch_gpu_coloring_kernel( int N, 
+__global__ void launch_gpu_bfs_coloring_kernel( int N, 
+                                            int curr, 
+                                            int k,
+                                            int *levels,
+                                            int *nodes, 
+                                            int *edges, 
+                                            int *colors,
+                                            int * color_card,
+                                            int * finished){
+    int v = threadIdx.x;
+    if (v >= N)
+        return;
+    int colored = 0;
+    if (levels[v] == curr) {
+        // iterate over neighbors
+        int num_nbr = nodes[v+1] - nodes[v];
+        int * nbrs = & edges[ nodes[v] ];
+        for(int i = 0; i < num_nbr; i++) {
+            int w = nbrs[i];
+            if (levels[w] == INT_MAX) { // if not visited yet
+                *finished = 0;
+                levels[w] = curr + 1;
+                if (!colored && color_card[colors[i]] < k){
+                    colors[w] = colors[i];
+                    color_card[colors[i]] = color_card[colors[i]] + 1;
+                    colored = 1;
+                }
+            }
+        }
+    }
+}
+
+__global__ void launch_gpu_dfs_coloring_kernel( int N, 
                                             int curr, 
                                             int k,
                                             int *levels,
