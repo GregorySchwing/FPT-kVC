@@ -46,7 +46,9 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
 
 void CallPopulateTree(Graph & gPrime, 
                         int root, 
-                        int * host_levels);
+                        int * host_levels,
+                        int * new_row_offs,
+                        int * new_cols);
 
 __global__ void InduceSubgraph( int numberOfRows,
                                 int edgesLeftToCover,

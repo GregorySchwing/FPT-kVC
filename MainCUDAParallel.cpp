@@ -69,10 +69,10 @@ int main(int argc, char *argv[])
     int root = 0;
     int numberOfRows = g.GetRemainingVertices().size(); 
     int * host_levels = new int[numberOfRows];
-    CallPopulateTree(g, root, host_levels);
-    thrust::host_vector<int> old_row_offsets = *(g.GetCSR().GetOldRowOffRef());
-    thrust::host_vector<int> old_columns = *(g.GetCSR().GetOldColRef());
+    int * new_row_offsets = new int[numberOfRows+1];
+    int * new_cols = new int[g.GetEdgesLeftToCover()];
 
+    CallPopulateTree(g, root, host_levels, new_row_offsets, new_cols);
 
     std::string name = "main";
     std::string filenameGraph = "BFS";
@@ -90,40 +90,35 @@ int main(int argc, char *argv[])
 
     // Since the graph doesnt grow uniformly, it is too difficult to only copy the new parts..
     for (int i = 0; i < numberOfRows; ++i){
-        for (int j = old_row_offsets[i]; j < old_row_offsets[i+1]; ++j){
-            if (i < old_columns[j]){
-                std::string node1Name = std::to_string(i);
-                std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = bfsMap.find(node1Name);
-                if(nodeIt1 == bfsMap.end()) {
-                    bfsMap[node1Name] = graph->AddNode(node1Name);
-                }
-                std::string node2Name = std::to_string(old_columns[j]);
-                std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = bfsMap.find(node2Name);
-                if(nodeIt2 == bfsMap.end()) {
-                    bfsMap[node2Name] = graph->AddNode(node2Name);
-                }  
-                if(host_levels[i] != INT_MAX)
-                bfs->AddEdge(bfsMap[node1Name], bfsMap[node2Name], std::to_string(host_levels[i])); 
-            }
+        std::string node1Name = std::to_string(i);
+        std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMap.find(node1Name);
+        if(nodeIt1 == nodeMap.end()) {
+            nodeMap[node1Name] = graph->AddNode(node1Name);
         }
-    }
-
-    for (int i = 0; i < numberOfRows; ++i){
-        for (int j = old_row_offsets[i]; j < old_row_offsets[i+1]; ++j){
-            if (i < j){
-                std::string node1Name = std::to_string(i);
-                std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMap.find(node1Name);
-                if(nodeIt1 == nodeMap.end()) {
-                    nodeMap[node1Name] = graph->AddNode(node1Name);
-                }
-                std::string node2Name = std::to_string(old_columns[j]);
+        for (int j = new_row_offsets[i]; j < new_row_offsets[i+1]; ++j){
+            if (i < new_cols[j]){
+                std::string node2Name = std::to_string(new_cols[j]);
                 std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMap.find(node2Name);
                 if(nodeIt2 == nodeMap.end()) {
                     nodeMap[node2Name] = graph->AddNode(node2Name);
                 }  
-                graph->AddEdge(nodeMap[node1Name], nodeMap[node2Name]); 
+                graph->AddEdge(nodeMap[node1Name], nodeMap[node2Name], std::to_string(host_levels[i])); 
             }
         }
+    }
+
+    std::string node1Name = std::to_string(root);
+    std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = bfsMap.find(node1Name);
+    if(nodeIt1 == bfsMap.end()) {
+        bfsMap[node1Name] = bfs->AddNode(node1Name);
+    }
+    for (int i = 0; i < numberOfRows; ++i){
+        std::string node2Name = std::to_string(i);
+        std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = bfsMap.find(node2Name);
+        if(nodeIt2 == bfsMap.end()) {
+            bfsMap[node2Name] = bfs->AddNode(node2Name);
+        }  
+        bfs->AddEdge(bfsMap[node1Name], bfsMap[node2Name], std::to_string(host_levels[i])); 
     }
 
     gVizWriter.WriteToFile(filenameGraph);

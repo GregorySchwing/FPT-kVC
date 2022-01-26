@@ -92,7 +92,9 @@ __global__ void InduceSubgraph( int numberOfRows,
 
 void CallPopulateTree(Graph & g, 
                      int root,
-                     int * host_levels){
+                     int * host_levels,
+                    int * new_row_offs,
+                    int * new_cols){
 
     int * global_row_offsets_dev_ptr; // size N + 1
     int * global_degrees_dev_ptr; // size N, used for inducing the subgraph
@@ -121,12 +123,12 @@ void CallPopulateTree(Graph & g,
 
     std::cout << "You are about to allocate " << double(totalMem)/1024/1024/1024 << " GB" << std::endl;
     std::cout << "Your GPU RAM has " << double(free)/1024/1024/1024 << " GB available" << std::endl;
-    #ifndef NDEBUG
-    do 
-    {
-        std::cout << '\n' << "Press enter to continue...; ctrl-c to terminate";
-    } while (std::cin.get() != '\n');
-    #endif
+    //#ifndef NDEBUG
+    //do 
+    //{
+    //    std::cout << '\n' << "Press enter to continue...; ctrl-c to terminate";
+    //} while (std::cin.get() != '\n');
+    //#endif
 
     // Vertex, Cols, Edge(on/off)
     cudaMalloc( (void**)&global_row_offsets_dev_ptr, (numberOfRows+1) * sizeof(int) );
@@ -169,8 +171,10 @@ void CallPopulateTree(Graph & g,
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     do {
-        *finished = 1;
-        launch_gpu_bfs_kernel<<<threadsPerBlock,oneThreadPerNode>>>(numberOfRows,
+        cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  1, size_t(1));
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+        launch_gpu_bfs_kernel<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
                                 curr++, 
                                 global_levels,
                                 global_row_offsets_dev_ptr,
@@ -179,12 +183,16 @@ void CallPopulateTree(Graph & g,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
         cudaMemcpy(&finished[0], &finished_gpu[0], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
-    } while (!finished);
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+    } while (!(*finished));
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     cudaMemcpy(&host_levels[0], &global_levels[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(&new_row_offs[0], &global_row_offsets_dev_ptr[0], (numberOfRows+1) * sizeof(int) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(&new_cols[0], &global_columns_dev_ptr[0], numberOfEdgesPerGraph * sizeof(int) , cudaMemcpyDeviceToHost);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
