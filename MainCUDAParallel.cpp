@@ -11,6 +11,8 @@
 #endif
 // For viz
 #include "../lib/DotWriter/lib/DotWriter.h"
+#include "../lib/DotWriter/lib/Enums.h"
+
 #include <map>
 unsigned long long getTotalSystemMemory()
 {
@@ -117,6 +119,10 @@ int main(int argc, char *argv[])
         std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = bfsMap.find(node2Name);
         if(nodeIt2 == bfsMap.end()) {
             bfsMap[node2Name] = bfs->AddNode(node2Name);
+            bfsMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(10+(i%2)));
+            bfsMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(10+(i%2)));
+            bfsMap[node2Name]->GetAttributes().SetStyle("filled");
+
         }  
         bfs->AddEdge(bfsMap[node1Name], bfsMap[node2Name], std::to_string(host_levels[i])); 
     }
