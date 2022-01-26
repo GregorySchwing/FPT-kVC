@@ -73,8 +73,9 @@ int main(int argc, char *argv[])
     int * host_levels = new int[numberOfRows];
     int * new_row_offsets = new int[numberOfRows+1];
     int * new_cols = new int[g.GetEdgesLeftToCover()];
+    int * new_colors = new int[numberOfRows];
 
-    CallPopulateTree(g, root, host_levels, new_row_offsets, new_cols);
+    CallPopulateTree(g, root, host_levels, new_row_offsets, new_cols, new_colors);
 
     std::string name = "main";
     std::string filenameGraph = "BFS";
@@ -96,6 +97,9 @@ int main(int argc, char *argv[])
         std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMap.find(node1Name);
         if(nodeIt1 == nodeMap.end()) {
             nodeMap[node1Name] = graph->AddNode(node1Name);
+            nodeMap[node1Name]->GetAttributes().SetColor(DotWriter::Color::e(1+new_colors[i]));
+            nodeMap[node1Name]->GetAttributes().SetFillColor(DotWriter::Color::e(1+new_colors[i]));
+            nodeMap[node1Name]->GetAttributes().SetStyle("filled");
         }
         for (int j = new_row_offsets[i]; j < new_row_offsets[i+1]; ++j){
             if (i < new_cols[j]){
@@ -103,6 +107,9 @@ int main(int argc, char *argv[])
                 std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMap.find(node2Name);
                 if(nodeIt2 == nodeMap.end()) {
                     nodeMap[node2Name] = graph->AddNode(node2Name);
+                    nodeMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(1+new_colors[new_cols[j]]));
+                    nodeMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(1+new_colors[new_cols[j]]));
+                    nodeMap[node2Name]->GetAttributes().SetStyle("filled");
                 }  
                 graph->AddEdge(nodeMap[node1Name], nodeMap[node2Name], std::to_string(host_levels[i])); 
             }
@@ -119,10 +126,9 @@ int main(int argc, char *argv[])
         std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = bfsMap.find(node2Name);
         if(nodeIt2 == bfsMap.end()) {
             bfsMap[node2Name] = bfs->AddNode(node2Name);
-            bfsMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(10+(i%2)));
-            bfsMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(10+(i%2)));
+            bfsMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(1+new_colors[i]));
+            bfsMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(1+new_colors[i]));
             bfsMap[node2Name]->GetAttributes().SetStyle("filled");
-
         }  
         bfs->AddEdge(bfsMap[node1Name], bfsMap[node2Name], std::to_string(host_levels[i])); 
     }
