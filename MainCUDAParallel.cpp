@@ -11,6 +11,8 @@
 #endif
 // For viz
 #include "../lib/DotWriter/lib/DotWriter.h"
+#include "../lib/DotWriter/lib/Enums.h"
+
 #include <map>
 unsigned long long getTotalSystemMemory()
 {
@@ -27,7 +29,7 @@ int main(int argc, char *argv[])
     COO coordinateFormat;
     //std::string filename = "small.csv";
     //std::string filename = "simulated_blockmodel_graph_50_nodes.csv";
-    std::string filename = "25_nodes.csv";
+    std::string filename = "/home6/greg/FPT-kVC/25_nodes.csv";
     //std::string filename = "pendants.csv";
 
     coordinateFormat.BuildCOOFromFile(filename);
@@ -69,34 +71,68 @@ int main(int argc, char *argv[])
     int root = 0;
     int numberOfRows = g.GetRemainingVertices().size(); 
     int * host_levels = new int[numberOfRows];
-    CallPopulateTree(g, root, host_levels);
-    thrust::host_vector<int> old_row_offsets = *(g.GetCSR().GetOldRowOffRef());
-    thrust::host_vector<int> old_columns = *(g.GetCSR().GetOldColRef());
+    int * new_row_offsets = new int[numberOfRows+1];
+    int * new_cols = new int[g.GetEdgesLeftToCover()];
+    int * new_colors = new int[numberOfRows];
 
+    CallPopulateTree(g, root, host_levels, new_row_offsets, new_cols, new_colors);
 
     std::string name = "main";
     std::string filenameGraph = "BFS";
-    bool isDirected = true;
+    bool isDirected = false;
     DotWriter::RootGraph gVizWriter(isDirected, name);
     std::string subgraph1 = "BFS";
-    DotWriter::Subgraph * actLeaves = gVizWriter.AddSubgraph(subgraph1);
+    std::string subgraph2 = "graph";
+
+    DotWriter::Subgraph * bfs = gVizWriter.AddSubgraph(subgraph1);
+    DotWriter::Subgraph * graph = gVizWriter.AddSubgraph(subgraph2);
+
+    std::map<std::string, DotWriter::Node *> bfsMap;    
+
     std::map<std::string, DotWriter::Node *> nodeMap;    
+
     // Since the graph doesnt grow uniformly, it is too difficult to only copy the new parts..
     for (int i = 0; i < numberOfRows; ++i){
-        for (int j = old_row_offsets[i]; j < old_row_offsets[i+1]; ++j){
-            std::string node1Name = std::to_string(i);
-            std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMap.find(node1Name);
-            if(nodeIt1 == nodeMap.end()) {
-                nodeMap[node1Name] = actLeaves->AddNode(node1Name);
+        std::string node1Name = std::to_string(i);
+        std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMap.find(node1Name);
+        if(nodeIt1 == nodeMap.end()) {
+            nodeMap[node1Name] = graph->AddNode(node1Name);
+            nodeMap[node1Name]->GetAttributes().SetColor(DotWriter::Color::e(1+new_colors[i]));
+            nodeMap[node1Name]->GetAttributes().SetFillColor(DotWriter::Color::e(1+new_colors[i]));
+            nodeMap[node1Name]->GetAttributes().SetStyle("filled");
+        }
+        for (int j = new_row_offsets[i]; j < new_row_offsets[i+1]; ++j){
+            if (i < new_cols[j]){
+                std::string node2Name = std::to_string(new_cols[j]);
+                std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMap.find(node2Name);
+                if(nodeIt2 == nodeMap.end()) {
+                    nodeMap[node2Name] = graph->AddNode(node2Name);
+                    nodeMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(1+new_colors[new_cols[j]]));
+                    nodeMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(1+new_colors[new_cols[j]]));
+                    nodeMap[node2Name]->GetAttributes().SetStyle("filled");
+                }  
+                graph->AddEdge(nodeMap[node1Name], nodeMap[node2Name], std::to_string(host_levels[i])); 
             }
-            std::string node2Name = std::to_string(j);
-            std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMap.find(node2Name);
-            if(nodeIt2 == nodeMap.end()) {
-                nodeMap[node2Name] = actLeaves->AddNode(node2Name);
-            }  
-            actLeaves->AddEdge(nodeMap[node1Name], nodeMap[node2Name], std::to_string(host_levels[i])); 
         }
     }
 
+    std::string node1Name = std::to_string(root);
+    std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = bfsMap.find(node1Name);
+    if(nodeIt1 == bfsMap.end()) {
+        bfsMap[node1Name] = bfs->AddNode(node1Name);
+    }
+    for (int i = 0; i < numberOfRows; ++i){
+        std::string node2Name = std::to_string(i);
+        std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = bfsMap.find(node2Name);
+        if(nodeIt2 == bfsMap.end()) {
+            bfsMap[node2Name] = bfs->AddNode(node2Name);
+            bfsMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(1+new_colors[i]));
+            bfsMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(1+new_colors[i]));
+            bfsMap[node2Name]->GetAttributes().SetStyle("filled");
+        }  
+        bfs->AddEdge(bfsMap[node1Name], bfsMap[node2Name], std::to_string(host_levels[i])); 
+    }
+
     gVizWriter.WriteToFile(filenameGraph);
+    std::cout << "finished" << std::endl;
 }

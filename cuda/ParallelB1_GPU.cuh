@@ -39,14 +39,41 @@ void CopyGraphToDevice( Graph & g,
                         int * global_row_offsets_dev_ptr,
                         int * global_columns_dev_ptr,
                         int * global_values_dev_ptr,
-                        int * global_degrees_dev_ptr);
+                        int * global_degrees_dev_ptr,
+                        int * global_colors);
 
 __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                             int *nodes, int *edges, int * finished);
 
+__global__ void launch_gpu_bfs_coloring_kernel( int N, int curr, int k, int *levels,
+                int *nodes, int *edges, int *colors,
+                int * color_card,
+                int * finished);
+    
+__global__ void launch_gpu_dfs_coloring_kernel( int N, int curr, int k, int *levels,
+                int *nodes, int *edges, int *colors,
+                int * color_card,
+                int * finished);
+
+void PerformBFS(int numberOfRows,
+                int * global_levels,
+                int * global_row_offsets_dev_ptr,
+                int * global_columns_dev_ptr);
+
+void PerformBFSColoring(int numberOfRows,
+                int k,
+                int * global_levels,
+                int * global_row_offsets_dev_ptr,
+                int * global_columns_dev_ptr,
+                int * global_colors,
+                int * global_color_card);
+
 void CallPopulateTree(Graph & gPrime, 
                         int root, 
-                        int * host_levels);
+                        int * host_levels,
+                        int * new_row_offs,
+                        int * new_cols,
+                        int * new_colors);
 
 __global__ void InduceSubgraph( int numberOfRows,
                                 int edgesLeftToCover,

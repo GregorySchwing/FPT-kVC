@@ -57,8 +57,7 @@ __global__ void InduceSubgraph( int numberOfRows,
                                 int * new_columns_dev,
                                 int * new_values_dev){
 
-    //int row = threadIdx.x + blockDim.x * blockIdx.x;
-    int row = threadIdx.x;
+    int row = threadIdx.x + blockDim.x * blockIdx.x;
 
     inner_array_t *C_ref = new inner_array_t[numberOfRows];
 
@@ -87,34 +86,27 @@ __global__ void InduceSubgraph( int numberOfRows,
                 --C_ref[iter][old_values_dev[i]];
             }
         }
-        #ifndef NDEBUG
-        if (row == 0){
-            printf("Block %d induced root of graph", blockIdx.x);
-            for (int i = 0; i < edgesLeftToCover; ++i){
-                printf("%d ",new_columns_dev[i]);
-            }
-            printf("\n");
-            for (int i = 0; i < edgesLeftToCover; ++i){
-                printf("%d ",new_values_dev[i]);
-            }
-            printf("\n");
-        }
-        #endif
     }
     delete[] C_ref;
 }
 
 void CallPopulateTree(Graph & g, 
                      int root,
-                     int * host_levels){
+                     int * host_levels,
+                    int * new_row_offs,
+                    int * new_cols,
+                    int * new_colors){
 
     int * global_row_offsets_dev_ptr; // size N + 1
     int * global_degrees_dev_ptr; // size N, used for inducing the subgraph
     int * global_columns_dev_ptr; // size M
     int * global_values_dev_ptr; // on or off, size M
     int * global_levels; // size N, will contatin BFS level of nth node
+    int * global_colors; // size N, will contatin color of nth node
+    int * global_color_card;   // size N, will contatin size of color set
 
-    int numberOfRows = g.GetRemainingVertices().size(); 
+
+    int numberOfRows = g.GetVertexCount(); 
     int numberOfEdgesPerGraph = g.GetEdgesLeftToCover();  // size M
     int condensedData = g.GetVertexCount(); // size N
 
@@ -135,12 +127,12 @@ void CallPopulateTree(Graph & g,
 
     std::cout << "You are about to allocate " << double(totalMem)/1024/1024/1024 << " GB" << std::endl;
     std::cout << "Your GPU RAM has " << double(free)/1024/1024/1024 << " GB available" << std::endl;
-    #ifndef NDEBUG
-    do 
-    {
-        std::cout << '\n' << "Press enter to continue...; ctrl-c to terminate";
-    } while (std::cin.get() != '\n');
-    #endif
+    //#ifndef NDEBUG
+    //do 
+    //{
+    //    std::cout << '\n' << "Press enter to continue...; ctrl-c to terminate";
+    //} while (std::cin.get() != '\n');
+    //#endif
 
     // Vertex, Cols, Edge(on/off)
     cudaMalloc( (void**)&global_row_offsets_dev_ptr, (numberOfRows+1) * sizeof(int) );
@@ -148,9 +140,20 @@ void CallPopulateTree(Graph & g,
     cudaMalloc( (void**)&global_values_dev_ptr, numberOfEdgesPerGraph * sizeof(int) );
     cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows+1) * sizeof(int) );
     cudaMalloc( (void**)&global_levels, numberOfRows * sizeof(int) );
+    cudaMalloc( (void**)&global_colors, numberOfRows * sizeof(int) );
+    cudaMalloc( (void**)&global_color_card, numberOfRows * sizeof(int) );
 
-    // Set all levels value to root
-    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_levels),  root, size_t(numberOfRows));
+
+    // Set all levels value to INT_MAX
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_levels),  INT_MAX, size_t(numberOfRows));
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_color_card),  1, size_t(numberOfRows));
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    int zero = 0;
+    // Set root value to 0
+    cudaMemcpy(&global_levels[root], &zero, 1 * sizeof(int), cudaMemcpyHostToDevice);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -160,28 +163,32 @@ void CallPopulateTree(Graph & g,
                     global_row_offsets_dev_ptr,
                     global_columns_dev_ptr,
                     global_values_dev_ptr,
-                    global_degrees_dev_ptr);
+                    global_degrees_dev_ptr,
+                    global_colors);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
+/*
+    PerformBFS( numberOfRows,
+                global_levels,
+                global_row_offsets_dev_ptr,
+                global_columns_dev_ptr);
+*/
+    int k = 5;
 
-    int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
-    int curr = 0;
-    int finished = 0;
-    do {
-        finished = true;
-        launch_gpu_bfs_kernel<<<threadsPerBlock,oneThreadPerNode>>>(numberOfRows,
-                                curr++, 
-                                global_levels,
-                                global_row_offsets_dev_ptr,
-                                global_columns_dev_ptr,
-                                &finished);
-    } while (!finished);
-
-    cudaDeviceSynchronize();
-    checkLastErrorCUDA(__FILE__, __LINE__);
+    PerformBFSColoring( numberOfRows,
+        k,
+        global_levels,
+        global_row_offsets_dev_ptr,
+        global_columns_dev_ptr,
+        global_colors,
+        global_color_card);
+        
 
     cudaMemcpy(&host_levels[0], &global_levels[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(&new_row_offs[0], &global_row_offsets_dev_ptr[0], (numberOfRows+1) * sizeof(int) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(&new_cols[0], &global_columns_dev_ptr[0], numberOfEdgesPerGraph * sizeof(int) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(&new_colors[0], &global_colors[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -191,6 +198,8 @@ void CallPopulateTree(Graph & g,
     cudaFree( global_values_dev_ptr );
     cudaFree( global_degrees_dev_ptr );
     cudaFree( global_levels );
+    cudaFree( global_colors );
+    cudaFree( global_color_card );
 
     cudaDeviceSynchronize();
 }
@@ -200,9 +209,16 @@ void CopyGraphToDevice( Graph & g,
                         int * global_row_offsets_dev_ptr,
                         int * global_columns_dev_ptr,
                         int * global_values_dev_ptr,
-                        int * global_degrees_dev_ptr){
+                        int * global_degrees_dev_ptr,
+                        int * global_colors){
 
     int * new_degrees_ptr = thrust::raw_pointer_cast(g.GetNewDegRef().data());
+    // allocate three device_vectors with 10 elements
+    thrust::device_vector<int> colors(g.GetNumberOfRows());
+    // initialize X to 0,1,2,3, ....
+    thrust::sequence(colors.begin(), colors.end());
+    int * new_colors_ptr = thrust::raw_pointer_cast(colors.data());
+
     std::cout << "remaining verts" << std::endl;
     for (auto & v : g.GetRemainingVerticesRef())
         std::cout << v << " ";
@@ -212,6 +228,8 @@ void CopyGraphToDevice( Graph & g,
     // Degree CSR Data
     cudaMemcpy(global_degrees_dev_ptr, new_degrees_ptr, g.GetNumberOfRows() * sizeof(int),
                 cudaMemcpyHostToDevice);
+    cudaMemcpy(global_colors, new_colors_ptr, g.GetNumberOfRows() * sizeof(int),
+            cudaMemcpyHostToDevice);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -233,6 +251,20 @@ void CopyGraphToDevice( Graph & g,
     CalculateNewRowOffsets(g.GetNumberOfRows(),
                             global_row_offsets_dev_ptr,
                             global_degrees_dev_ptr); 
+       
+    
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    #ifndef NDEBUG
+        std::cout << "NRO" << std::endl;
+        int * new_row_offs = new int[g.GetNumberOfRows()+1];
+        cudaMemcpy( &new_row_offs[0], &global_row_offsets_dev_ptr[0], (g.GetNumberOfRows()+1) * sizeof(int) , cudaMemcpyDeviceToHost);
+        for (int i = 0; i < g.GetNumberOfRows()+1; ++i){
+            printf("%d ",new_row_offs[i]);
+        }
+        printf("\n");
+    #endif
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -259,21 +291,146 @@ void CopyGraphToDevice( Graph & g,
     std::cout << std::endl;
 }
 
+void PerformBFS(int numberOfRows,
+                int * global_levels,
+                int * global_row_offsets_dev_ptr,
+                int * global_columns_dev_ptr){
+
+        int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
+        int curr = 0;
+        int zero;
+        int * finished = &zero;
+        int * finished_gpu;
+        cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
+        cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  0, size_t(1));
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+    
+        do {
+            cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  1, size_t(1));
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+            launch_gpu_bfs_kernel<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
+                                    curr++, 
+                                    global_levels,
+                                    global_row_offsets_dev_ptr,
+                                    global_columns_dev_ptr,
+                                    finished_gpu);
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+            cudaMemcpy(&finished[0], &finished_gpu[0], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+        } while (!(*finished));
+    
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+}
+
+void PerformBFSColoring(int numberOfRows,
+                int k,
+                int * global_levels,
+                int * global_row_offsets_dev_ptr,
+                int * global_columns_dev_ptr,
+                int * global_colors,
+                int * global_color_card){
+
+        int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
+        int curr = 0;
+        int zero;
+        int * finished = &zero;
+        int * finished_gpu;
+
+        cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
+        cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  0, size_t(1));
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+    
+        do {
+            cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  1, size_t(1));
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+            launch_gpu_coloring_kernel<<<oneThreadPerNode,threadsPerBlock>>>(
+                                    numberOfRows,
+                                    curr++, 
+                                    k,
+                                    global_levels,
+                                    global_row_offsets_dev_ptr,
+                                    global_columns_dev_ptr,
+                                    global_colors,
+                                    global_color_card,
+                                    finished_gpu);
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+            cudaMemcpy(&finished[0], &finished_gpu[0], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+        } while (!(*finished));
+    
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+}
+
+void PerformDFSColoring(int numberOfRows,
+                int k,
+                int * global_levels,
+                int * global_row_offsets_dev_ptr,
+                int * global_columns_dev_ptr,
+                int * global_colors,
+                int * global_color_card){
+
+        int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
+        int curr = 0;
+        int zero;
+        int * finished = &zero;
+        int * finished_gpu;
+
+        cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
+        cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  0, size_t(1));
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+    
+        do {
+            cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  1, size_t(1));
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+            launch_gpu_coloring_kernel<<<oneThreadPerNode,threadsPerBlock>>>(
+                                    numberOfRows,
+                                    curr++, 
+                                    k,
+                                    global_levels,
+                                    global_row_offsets_dev_ptr,
+                                    global_columns_dev_ptr,
+                                    global_colors,
+                                    global_color_card,
+                                    finished_gpu);
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+            cudaMemcpy(&finished[0], &finished_gpu[0], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+        } while (!(*finished));
+    
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+}
+
+
 __host__ void CalculateNewRowOffsets( int numberOfRows,
                                         int * global_row_offsets_dev_ptr,
                                         int * global_degrees_dev_ptr){
     // Declare, allocate, and initialize device-accessible pointers for input and output
-    int  num_items = numberOfRows+1;      // e.g., 7
-    int  *d_in = global_row_offsets_dev_ptr;        // e.g., [8, 6, 7, 5, 3, 0, 9]
-    int  *d_out = global_row_offsets_dev_ptr;         // e.g., [ ,  ,  ,  ,  ,  ,  ]
+    int  num_items = numberOfRows;      // e.g., 7
+    int  *d_in = global_degrees_dev_ptr;        // e.g., [8, 6, 7, 5, 3, 0, 9]
+    int  *d_out = &global_row_offsets_dev_ptr[1];         // e.g., [ ,  ,  ,  ,  ,  ,  ]
     // Determine temporary device storage requirements
     void     *d_temp_storage = NULL;
     size_t   temp_storage_bytes = 0;
-    cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
+    cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
     // Allocate temporary storage
     cudaMalloc(&d_temp_storage, temp_storage_bytes);
     // Run exclusive prefix sum
-    cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
+    cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
     // d_out s<-- [0, 8, 14, 21, 26, 29, 29]
     cudaFree(d_temp_storage);
 }
@@ -281,6 +438,8 @@ __host__ void CalculateNewRowOffsets( int numberOfRows,
 __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                                             int *nodes, int *edges, int * finished){
     int v = threadIdx.x;
+    if (v >= N)
+        return;
     if (levels[v] == curr) {
         // iterate over neighbors
         int num_nbr = nodes[v+1] - nodes[v];
@@ -288,8 +447,72 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
         for(int i = 0; i < num_nbr; i++) {
             int w = nbrs[i];
             if (levels[w] == INT_MAX) { // if not visited yet
-                *finished = false;
+                *finished = 0;
                 levels[w] = curr + 1;
+            }
+        }
+    }
+}
+
+__global__ void launch_gpu_bfs_coloring_kernel( int N, 
+                                            int curr, 
+                                            int k,
+                                            int *levels,
+                                            int *nodes, 
+                                            int *edges, 
+                                            int *colors,
+                                            int * color_card,
+                                            int * finished){
+    int v = threadIdx.x;
+    if (v >= N)
+        return;
+    int colored = 0;
+    if (levels[v] == curr) {
+        // iterate over neighbors
+        int num_nbr = nodes[v+1] - nodes[v];
+        int * nbrs = & edges[ nodes[v] ];
+        for(int i = 0; i < num_nbr; i++) {
+            int w = nbrs[i];
+            if (levels[w] == INT_MAX) { // if not visited yet
+                *finished = 0;
+                levels[w] = curr + 1;
+                if (!colored && color_card[colors[i]] < k){
+                    colors[w] = colors[i];
+                    color_card[colors[i]] = color_card[colors[i]] + 1;
+                    colored = 1;
+                }
+            }
+        }
+    }
+}
+
+__global__ void launch_gpu_dfs_coloring_kernel( int N, 
+                                            int curr, 
+                                            int k,
+                                            int *levels,
+                                            int *nodes, 
+                                            int *edges, 
+                                            int *colors,
+                                            int * color_card,
+                                            int * finished){
+    int v = threadIdx.x;
+    if (v >= N)
+        return;
+    int colored = 0;
+    if (levels[v] == curr) {
+        // iterate over neighbors
+        int num_nbr = nodes[v+1] - nodes[v];
+        int * nbrs = & edges[ nodes[v] ];
+        for(int i = 0; i < num_nbr; i++) {
+            int w = nbrs[i];
+            if (levels[w] == INT_MAX) { // if not visited yet
+                *finished = 0;
+                levels[w] = curr + 1;
+                if (!colored && color_card[colors[i]] < k){
+                    colors[w] = colors[i];
+                    color_card[colors[i]] = color_card[colors[i]] + 1;
+                    colored = 1;
+                }
             }
         }
     }
