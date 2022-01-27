@@ -57,7 +57,9 @@ void PerformSSSP(int numberOfRows,
                 int * global_W,
                 int * global_M,
                 int * global_C,
-                int * global_U);
+                int * global_U,
+                int * global_Pred,
+                int * global_U_Pred);
 
 
 __global__ void launch_gpu_sssp_kernel_1(   int N,             
@@ -66,7 +68,8 @@ __global__ void launch_gpu_sssp_kernel_1(   int N,
                                             int * global_W,
                                             int * global_M,
                                             int * global_C,
-                                            int * global_U);
+                                            int * global_U,
+                                            int * U_Pred);
 
 
 __global__ void launch_gpu_sssp_kernel_2(   int N,              
@@ -75,7 +78,9 @@ __global__ void launch_gpu_sssp_kernel_2(   int N,
                                             int * global_W,
                                             int * global_M,
                                             int * global_C,
-                                            int * global_U);
+                                            int * global_U,
+                                            int * Pred,
+                                            int * U_Pred);
 
 void PerformBFS(int numberOfRows,
                 int * global_levels,

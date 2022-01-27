@@ -114,6 +114,10 @@ void CallPopulateTree(Graph & g,
     int * global_C;
     // Update = size M
     int * global_U;
+    // Intermediate = size M
+    int * global_Pred;
+    // Update = size M
+    int * global_U_Pred;
 
     int numberOfRows = g.GetVertexCount(); 
     int numberOfEdgesPerGraph = g.GetEdgesLeftToCover();  // size M
@@ -155,8 +159,14 @@ void CallPopulateTree(Graph & g,
     // SSSP
     cudaMalloc( (void**)&global_W, numberOfEdgesPerGraph * sizeof(int) );
     cudaMalloc( (void**)&global_M, numberOfRows * sizeof(int) );
+    // Intermediate
     cudaMalloc( (void**)&global_C, numberOfRows * sizeof(int) );
+    // Updated final
     cudaMalloc( (void**)&global_U, numberOfRows * sizeof(int) );
+    // Intermediate
+    cudaMalloc( (void**)&global_Pred, numberOfRows * sizeof(int) );
+    // Updated final
+    cudaMalloc( (void**)&global_U_Pred, numberOfRows * sizeof(int) );
 
     // Set all levels value to INT_MAX
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_levels),  INT_MAX, size_t(numberOfRows));
@@ -165,6 +175,7 @@ void CallPopulateTree(Graph & g,
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_M),  0, size_t(numberOfRows));
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_C),  INT_MAX, size_t(numberOfRows));
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_U),  INT_MAX, size_t(numberOfRows));
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_Pred),  INT_MAX, size_t(numberOfRows));
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -209,7 +220,9 @@ void CallPopulateTree(Graph & g,
                 global_W,
                 global_M,
                 global_C,
-                global_U);
+                global_U,
+                global_Pred,
+                global_U_Pred);
     
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -412,7 +425,9 @@ void PerformSSSP(int numberOfRows,
                 int * global_W,
                 int * global_M,
                 int * global_C,
-                int * global_U){
+                int * global_U,
+                int * global_Pred,
+                int * global_U_Pred){
 
         int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
         int zero;
@@ -423,6 +438,7 @@ void PerformSSSP(int numberOfRows,
         cuMemsetD32(reinterpret_cast<CUdeviceptr>(&global_M[root]),  1, size_t(1));
         cuMemsetD32(reinterpret_cast<CUdeviceptr>(&global_C[root]),  0, size_t(1));
         cuMemsetD32(reinterpret_cast<CUdeviceptr>(&global_U[root]),  0, size_t(1));
+        cuMemsetD32(reinterpret_cast<CUdeviceptr>(&global_Pred[root]),  0, size_t(1));
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -439,7 +455,8 @@ void PerformSSSP(int numberOfRows,
                                     global_W,
                                     global_M,
                                     global_C,
-                                    global_U);
+                                    global_U,
+                                    global_U_Pred);
 
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
@@ -451,7 +468,9 @@ void PerformSSSP(int numberOfRows,
                                     global_W,
                                     global_M,
                                     global_C,
-                                    global_U);
+                                    global_U,
+                                    global_Pred,
+                                    global_U_Pred);
 
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
@@ -544,7 +563,8 @@ __global__ void launch_gpu_sssp_kernel_1(   int N,
                                             int * W,
                                             int * M,
                                             int * C,
-                                            int * U){
+                                            int * U,
+                                            int * U_Pred){
     int v = threadIdx.x;
     if (v >= N || !M[v])
         return;
@@ -556,6 +576,7 @@ __global__ void launch_gpu_sssp_kernel_1(   int N,
             int w = nbrs[i];
             if (U[w] > C[v] + W[w]){
                 U[w] = C[v] + W[w];
+                U_Pred[w] = v;
             }
         }
     }
@@ -567,16 +588,20 @@ __global__ void launch_gpu_sssp_kernel_2(   int N,
                                             int * W,
                                             int * M,
                                             int * C,
-                                            int * U){
+                                            int * U,
+                                            int * Pred,
+                                            int * U_Pred){
     int v = threadIdx.x;
     if (v >= N)
         return;
     else {
         if (C[v] > U[v]){
             C[v] = U[v];
+            Pred[v] = U_Pred[v];
             M[v] = true;
         }
         U[v] = C[v];
+        U_Pred[v] = Pred[v];
     }
 }
 
