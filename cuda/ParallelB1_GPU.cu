@@ -552,6 +552,7 @@ void PerformPathPartitioning(int numberOfRows,
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
+        // Worst case number of loops is k
         do {
             cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_M),  0, size_t(numberOfRows));
             cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  0, size_t(1));
