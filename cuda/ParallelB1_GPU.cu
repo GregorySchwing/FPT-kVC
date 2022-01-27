@@ -259,9 +259,13 @@ void CallPopulateTree(Graph & g,
     PerformPathPartitioning(numberOfRows,
                             k,
                             root,
+                            global_row_offsets_dev_ptr,
+                            global_columns_dev_ptr,
+                            global_M,
                             global_U,
                             global_U_Pred,
-                            global_colors);
+                            global_colors,
+                            global_color_card);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -524,13 +528,21 @@ void PerformSSSP(int numberOfRows,
 void PerformPathPartitioning(int numberOfRows,
                             int k,
                             int root,
+                            int * global_row_offsets_dev_ptr,
+                            int * global_columns_dev_ptr,
+                            int * global_M,
                             int * global_U,
                             int * global_U_Pred,
-                            int * global_colors){
+                            int * global_colors,
+                            int * global_color_card){
     int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
-       // k-1 iterations to prevent claiming the root
-       for (int iter = 0; iter < k-1; ++iter){
-        launch_gpu_sssp_coloring<<<oneThreadPerNode,threadsPerBlock>>>(
+    int zero = 0;
+    int * finished = &zero;
+    int * finished_gpu;
+    cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
+    // k-1 iterations to prevent claiming the root
+    for (int iter = 0; iter < k-1; ++iter){
+        launch_gpu_sssp_coloring_1<<<oneThreadPerNode,threadsPerBlock>>>(
                                 numberOfRows,
                                 k,
                                 iter,
@@ -538,6 +550,41 @@ void PerformPathPartitioning(int numberOfRows,
                                 global_U_Pred,
                                 global_colors);
 
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+        do {
+            cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_M),  0, size_t(numberOfRows));
+            cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  0, size_t(1));
+
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+
+            launch_gpu_sssp_coloring_2<<<oneThreadPerNode,threadsPerBlock>>>(
+                            numberOfRows,
+                            k,
+                            iter,
+                            global_M,
+                            global_U,
+                            global_U_Pred,
+                            global_colors,
+                            global_color_card);
+
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+
+            Sum(numberOfRows, global_M, finished_gpu);
+            cudaMemcpy(&finished[0], &finished_gpu[0], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+        } while (*finished);
+        launch_gpu_sssp_coloring_3<<<oneThreadPerNode,threadsPerBlock>>>(
+                                                                        numberOfRows,
+                                                                        k,
+                                                                        iter,
+                                                                        global_U,
+                                                                        global_U_Pred,
+                                                                        global_colors,
+                                                                        global_color_card);
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
     }
@@ -650,7 +697,6 @@ __global__ void launch_gpu_sssp_kernel_2(   int N,
         return;
     } else {
         if (C[v] > U[v]){
-            printf("updating thread %d\n", v);
             C[v] = U[v];
             Pred[v] = U_Pred[v];
             M[v] = true;
@@ -660,7 +706,7 @@ __global__ void launch_gpu_sssp_kernel_2(   int N,
     }
 }
 
-__global__ void launch_gpu_sssp_coloring(int N,
+__global__ void launch_gpu_sssp_coloring_1(int N,
                                         int k,
                                         int iter,
                                         int * U,
@@ -675,6 +721,57 @@ __global__ void launch_gpu_sssp_coloring(int N,
     // Race condition, but the kernel ends, so we get synchronization
     // it doesn't matter who wins.
     colors[w] = colors[v];
+}
+
+
+__global__ void launch_gpu_sssp_coloring_2(int N,
+                                        int k,
+                                        int iter,
+                                        int * M,
+                                        int * U,
+                                        int * U_Pred,
+                                        int * colors,
+                                        int * color_card){
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= N)
+        return;
+    if ((U[v] + iter) % k != 0 || U[v] == INT_MAX)
+        return;
+
+    int vc = colors[v];
+    int vcc = color_card[vc];
+    
+    int w = U_Pred[v];
+    int wc = colors[w];
+    int wcc = color_card[wc];
+    // Still a race condition, of what color is assigned color[w]
+    // so we need to keep calling this method until no marked vertices exist.
+    if (vcc > wcc){
+        colors[w] = colors[v];
+        M[w] = 1;
+    }
+}
+
+__global__ void launch_gpu_sssp_coloring_3(int N,
+                                        int k,
+                                        int iter,
+                                        int * U,
+                                        int * U_Pred,
+                                        int * colors,
+                                        int * color_card){
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= N)
+        return;
+    if ((U[v] + iter) % k != 0 || U[v] == INT_MAX)
+        return;
+
+    int vc = colors[v];
+
+    int w = U_Pred[v];
+    int wc = colors[w];
+    if (vc == wc){
+        color_card[wc] = color_card[wc] + 1;
+    }
 }
 
 void Sum(int expanded_size,
