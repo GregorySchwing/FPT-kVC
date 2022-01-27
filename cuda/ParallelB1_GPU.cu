@@ -153,7 +153,8 @@ void CallPopulateTree(Graph & g,
     cudaMalloc( (void**)&global_values_dev_ptr, numberOfEdgesPerGraph * sizeof(int) );
     cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows+1) * sizeof(int) );
     cudaMalloc( (void**)&global_levels, numberOfRows * sizeof(int) );
-    cudaMalloc( (void**)&global_colors, numberOfRows * sizeof(int) );
+    // Malloc'ed by thrust
+    //cudaMalloc( (void**)&global_colors, numberOfRows * sizeof(int) );
     cudaMalloc( (void**)&global_color_card, numberOfRows * sizeof(int) );
 
     // SSSP
@@ -187,13 +188,18 @@ void CallPopulateTree(Graph & g,
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
+    // allocate three device_vectors with 10 elements
+    thrust::device_vector<int> colors(g.GetNumberOfRows());
+    // initialize X to 0,1,2,3, ....
+    thrust::sequence(colors.begin(), colors.end());
+    global_colors = thrust::raw_pointer_cast(colors.data());
+
     CopyGraphToDevice(g,
                     numberOfEdgesPerGraph,
                     global_row_offsets_dev_ptr,
                     global_columns_dev_ptr,
                     global_values_dev_ptr,
-                    global_degrees_dev_ptr,
-                    global_colors);
+                    global_degrees_dev_ptr);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -232,8 +238,23 @@ void CallPopulateTree(Graph & g,
     // 1 thread per vertex
     // only vertices with cost a multiple of X are active on first iteration.
     // if so, write my color to the color of my predecessor
-    // don't worry about race conditions, if nodes share a predecessor,
-    // last to write wins.  The kernel call ends to obtain SMP sync.
+    // don't worry about race conditions, 
+    // if two or more nodes share a predecessor,
+    // last to write wins.  
+    //The kernel call ends after every iteration to obtain SMP sync.
+
+    // Since this is single-source shortest path,
+    // all paths must eventually merge.  
+    // Once they merge, they won't diverge.*
+    // *TODO: double check this for divergent equal length paths.
+    // *If they can diverge, modify algorithm to prevent as it could cause
+    // Two colors of cardinality k/2, instead of 1 with k and the other < k.
+
+    // Therefore, any color with a cardinality of K is an
+    // independent path of length K.  
+    // Colors with cardinality < K are disregarded.
+    // Worst case: No paths of length K exist. (Star graph of depth K-1)
+    // Best case: The entire graph is colored (Star graph of depth K+1)
     PerformPathPartitioning(numberOfRows,
                             k,
                             root,
@@ -248,7 +269,7 @@ void CallPopulateTree(Graph & g,
     //cudaMemcpy(&host_levels[0], &global_levels[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
     cudaMemcpy(&new_row_offs[0], &global_row_offsets_dev_ptr[0], (numberOfRows+1) * sizeof(int) , cudaMemcpyDeviceToHost);
     cudaMemcpy(&new_cols[0], &global_columns_dev_ptr[0], numberOfEdgesPerGraph * sizeof(int) , cudaMemcpyDeviceToHost);
-    //cudaMemcpy(&new_colors[0], &global_colors[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(&new_colors[0], &global_colors[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
     cudaMemcpy(&host_U[0], &global_U[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
 
     cudaDeviceSynchronize();
@@ -259,7 +280,7 @@ void CallPopulateTree(Graph & g,
     cudaFree( global_values_dev_ptr );
     cudaFree( global_degrees_dev_ptr );
     cudaFree( global_levels );
-    cudaFree( global_colors );
+    //cudaFree( global_colors );
     cudaFree( global_color_card );
     cudaFree( global_W );
     cudaFree( global_M );
@@ -274,15 +295,9 @@ void CopyGraphToDevice( Graph & g,
                         int * global_row_offsets_dev_ptr,
                         int * global_columns_dev_ptr,
                         int * global_values_dev_ptr,
-                        int * global_degrees_dev_ptr,
-                        int * global_colors){
+                        int * global_degrees_dev_ptr){
 
     int * new_degrees_ptr = thrust::raw_pointer_cast(g.GetNewDegRef().data());
-    // allocate three device_vectors with 10 elements
-    thrust::device_vector<int> colors(g.GetNumberOfRows());
-    // initialize X to 0,1,2,3, ....
-    thrust::sequence(colors.begin(), colors.end());
-    int * new_colors_ptr = thrust::raw_pointer_cast(colors.data());
 
     std::cout << "remaining verts" << std::endl;
     for (auto & v : g.GetRemainingVerticesRef())
@@ -293,8 +308,7 @@ void CopyGraphToDevice( Graph & g,
     // Degree CSR Data
     cudaMemcpy(global_degrees_dev_ptr, new_degrees_ptr, g.GetNumberOfRows() * sizeof(int),
                 cudaMemcpyHostToDevice);
-    cudaMemcpy(global_colors, new_colors_ptr, g.GetNumberOfRows() * sizeof(int),
-            cudaMemcpyHostToDevice);
+
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -481,9 +495,6 @@ void PerformSSSP(int numberOfRows,
 
             launch_gpu_sssp_kernel_2<<<oneThreadPerNode,threadsPerBlock>>>(
                                     numberOfRows,
-                                    global_row_offsets_dev_ptr,
-                                    global_columns_dev_ptr,
-                                    global_W,
                                     global_M,
                                     global_C,
                                     global_U,
@@ -492,6 +503,7 @@ void PerformSSSP(int numberOfRows,
 
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
+
             Sum(numberOfRows, global_M, finished_gpu);
             cudaMemcpy(&finished[0], &finished_gpu[0], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
             cudaDeviceSynchronize();
@@ -509,7 +521,21 @@ void PerformPathPartitioning(int numberOfRows,
                             int * global_U_Pred,
                             int * global_colors){
     int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
+    int * pred_host = new int[numberOfRows];
+    /*
+    cudaMemcpy(&pred_host[0], &global_U_Pred[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
 
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    for (int i = 0; i < numberOfRows; ++i){
+        std::cout << i << " " << pred_host[i] << std::endl;
+    }
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);    
+    */
     for (int curr = k; curr > 0; --curr){
         launch_gpu_sssp_coloring<<<oneThreadPerNode,threadsPerBlock>>>(
                                 numberOfRows,
@@ -602,7 +628,7 @@ __global__ void launch_gpu_sssp_kernel_1(   int N,
                                             int * C,
                                             int * U,
                                             int * U_Pred){
-    int v = threadIdx.x;
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N || !M[v])
         return;
     else {
@@ -619,20 +645,18 @@ __global__ void launch_gpu_sssp_kernel_1(   int N,
     }
 }
 
-__global__ void launch_gpu_sssp_kernel_2(   int N,       
-                                            int * nodes,
-                                            int * edges,
-                                            int * W,
+__global__ void launch_gpu_sssp_kernel_2(   int N,     
                                             int * M,
                                             int * C,
                                             int * U,
                                             int * Pred,
                                             int * U_Pred){
-    int v = threadIdx.x;
-    if (v >= N)
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= N) {
         return;
-    else {
+    } else {
         if (C[v] > U[v]){
+            printf("updating thread %d\n", v);
             C[v] = U[v];
             Pred[v] = U_Pred[v];
             M[v] = true;
@@ -647,7 +671,7 @@ __global__ void launch_gpu_sssp_coloring(int N,
                                         int * U,
                                         int * U_Pred,
                                         int * colors){
-    int v = threadIdx.x;
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
         return;
     if (U[v] % curr != 0 || U[v] == INT_MAX)

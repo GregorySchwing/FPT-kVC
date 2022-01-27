@@ -39,8 +39,7 @@ void CopyGraphToDevice( Graph & g,
                         int * global_row_offsets_dev_ptr,
                         int * global_columns_dev_ptr,
                         int * global_values_dev_ptr,
-                        int * global_degrees_dev_ptr,
-                        int * global_colors);
+                        int * global_degrees_dev_ptr);
 
 __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                             int *nodes, int *edges, int * finished);
@@ -85,10 +84,7 @@ __global__ void launch_gpu_sssp_kernel_1(   int N,
                                             int * U_Pred);
 
 
-__global__ void launch_gpu_sssp_kernel_2(   int N,              
-                                            int * global_row_offsets_dev_ptr,
-                                            int * global_columns_dev_ptr,
-                                            int * global_W,
+__global__ void launch_gpu_sssp_kernel_2(   int N,
                                             int * global_M,
                                             int * global_C,
                                             int * global_U,
