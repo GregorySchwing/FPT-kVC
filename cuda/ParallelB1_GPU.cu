@@ -96,7 +96,8 @@ void CallPopulateTree(Graph & g,
                     int * new_row_offs,
                     int * new_cols,
                     int * new_colors,
-                    int * host_U){
+                    int * host_U,
+                    int * new_Pred){
 
     int * global_row_offsets_dev_ptr; // size N + 1
     int * global_degrees_dev_ptr; // size N, used for inducing the subgraph
@@ -271,6 +272,7 @@ void CallPopulateTree(Graph & g,
     cudaMemcpy(&new_cols[0], &global_columns_dev_ptr[0], numberOfEdgesPerGraph * sizeof(int) , cudaMemcpyDeviceToHost);
     cudaMemcpy(&new_colors[0], &global_colors[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
     cudaMemcpy(&host_U[0], &global_U[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(&new_Pred[0], &global_U_Pred[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -514,7 +516,7 @@ void PerformSSSP(int numberOfRows,
         checkLastErrorCUDA(__FILE__, __LINE__);
 }
 
-// Partitions path from
+// Partitions path from root
 // 1 to k
 // k+1 to 2k
 // ...
@@ -526,7 +528,8 @@ void PerformPathPartitioning(int numberOfRows,
                             int * global_U_Pred,
                             int * global_colors){
     int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
-       for (int iter = 0; iter < k; ++iter){
+       // k-1 iterations to prevent claiming the root
+       for (int iter = 0; iter < k-1; ++iter){
         launch_gpu_sssp_coloring<<<oneThreadPerNode,threadsPerBlock>>>(
                                 numberOfRows,
                                 k,
