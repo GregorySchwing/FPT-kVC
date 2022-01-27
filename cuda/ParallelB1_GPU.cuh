@@ -49,11 +49,33 @@ __global__ void launch_gpu_bfs_coloring_kernel( int N, int curr, int k, int *lev
                 int *nodes, int *edges, int *colors,
                 int * color_card,
                 int * finished);
-    
-__global__ void launch_gpu_dfs_coloring_kernel( int N, int curr, int k, int *levels,
-                int *nodes, int *edges, int *colors,
-                int * color_card,
-                int * finished);
+
+void PerformSSSP(int numberOfRows,
+                int root,
+                int * global_row_offsets_dev_ptr,
+                int * global_columns_dev_ptr,
+                int * global_W,
+                int * global_M,
+                int * global_C,
+                int * global_U);
+
+
+__global__ void launch_gpu_sssp_kernel_1(   int N,             
+                                            int * global_row_offsets_dev_ptr,
+                                            int * global_columns_dev_ptr,
+                                            int * global_W,
+                                            int * global_M,
+                                            int * global_C,
+                                            int * global_U);
+
+
+__global__ void launch_gpu_sssp_kernel_2(   int N,              
+                                            int * global_row_offsets_dev_ptr,
+                                            int * global_columns_dev_ptr,
+                                            int * global_W,
+                                            int * global_M,
+                                            int * global_C,
+                                            int * global_U);
 
 void PerformBFS(int numberOfRows,
                 int * global_levels,
@@ -73,7 +95,8 @@ void CallPopulateTree(Graph & gPrime,
                         int * host_levels,
                         int * new_row_offs,
                         int * new_cols,
-                        int * new_colors);
+                        int * new_colors,
+                        int * host_U);
 
 __global__ void InduceSubgraph( int numberOfRows,
                                 int edgesLeftToCover,
@@ -83,6 +106,10 @@ __global__ void InduceSubgraph( int numberOfRows,
                                 int * global_row_offsets_dev_ptr,
                                 int * global_columns_dev_ptr,
                                 int * new_values_dev);
+
+void Sum(int expanded_size,
+        int * expanded,
+        int * reduced);
 
 #endif
 #endif
