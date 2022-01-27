@@ -50,7 +50,8 @@ __global__ void launch_gpu_bfs_coloring_kernel( int N, int curr, int k, int *lev
                 int * finished);
 
 __global__ void launch_gpu_sssp_coloring(int N,
-                                        int curr,
+                                        int k,
+                                        int iter,
                                         int * U,
                                         int * U_Pred,
                                         int * colors);

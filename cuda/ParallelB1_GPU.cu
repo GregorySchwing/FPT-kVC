@@ -514,6 +514,11 @@ void PerformSSSP(int numberOfRows,
         checkLastErrorCUDA(__FILE__, __LINE__);
 }
 
+// Partitions path from
+// 1 to k
+// k+1 to 2k
+// ...
+// Currently root isn't assigned to any color.
 void PerformPathPartitioning(int numberOfRows,
                             int k,
                             int root,
@@ -521,25 +526,11 @@ void PerformPathPartitioning(int numberOfRows,
                             int * global_U_Pred,
                             int * global_colors){
     int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
-    int * pred_host = new int[numberOfRows];
-    /*
-    cudaMemcpy(&pred_host[0], &global_U_Pred[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
-
-
-    cudaDeviceSynchronize();
-    checkLastErrorCUDA(__FILE__, __LINE__);
-
-    for (int i = 0; i < numberOfRows; ++i){
-        std::cout << i << " " << pred_host[i] << std::endl;
-    }
-
-    cudaDeviceSynchronize();
-    checkLastErrorCUDA(__FILE__, __LINE__);    
-    */
-    for (int curr = k; curr > 0; --curr){
+       for (int iter = 0; iter < k; ++iter){
         launch_gpu_sssp_coloring<<<oneThreadPerNode,threadsPerBlock>>>(
                                 numberOfRows,
-                                curr,
+                                k,
+                                iter,
                                 global_U,
                                 global_U_Pred,
                                 global_colors);
@@ -667,14 +658,15 @@ __global__ void launch_gpu_sssp_kernel_2(   int N,
 }
 
 __global__ void launch_gpu_sssp_coloring(int N,
-                                        int curr,
+                                        int k,
+                                        int iter,
                                         int * U,
                                         int * U_Pred,
                                         int * colors){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
         return;
-    if (U[v] % curr != 0 || U[v] == INT_MAX)
+    if ((U[v] + iter) % k != 0 || U[v] == INT_MAX)
         return;
     int w = U_Pred[v];
     // Race condition, but the kernel ends, so we get synchronization
