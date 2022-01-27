@@ -50,6 +50,12 @@ __global__ void launch_gpu_bfs_coloring_kernel( int N, int curr, int k, int *lev
                 int * color_card,
                 int * finished);
 
+__global__ void launch_gpu_sssp_coloring(int N,
+                                        int curr,
+                                        int * U,
+                                        int * U_Pred,
+                                        int * colors);
+
 void PerformSSSP(int numberOfRows,
                 int root,
                 int * global_row_offsets_dev_ptr,
@@ -60,6 +66,13 @@ void PerformSSSP(int numberOfRows,
                 int * global_U,
                 int * global_Pred,
                 int * global_U_Pred);
+
+void PerformPathPartitioning(int numberOfRows,
+                            int k,
+                            int root,
+                            int * global_U,
+                            int * global_U_Pred,
+                            int * global_colors);
 
 
 __global__ void launch_gpu_sssp_kernel_1(   int N,             

@@ -227,6 +227,24 @@ void CallPopulateTree(Graph & g,
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
+    int k = 4;
+    // Loop, X = k to 0
+    // 1 thread per vertex
+    // only vertices with cost a multiple of X are active on first iteration.
+    // if so, write my color to the color of my predecessor
+    // don't worry about race conditions, if nodes share a predecessor,
+    // last to write wins.  The kernel call ends to obtain SMP sync.
+    PerformPathPartitioning(numberOfRows,
+                            k,
+                            root,
+                            global_U,
+                            global_U_Pred,
+                            global_colors);
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+
     //cudaMemcpy(&host_levels[0], &global_levels[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
     cudaMemcpy(&new_row_offs[0], &global_row_offsets_dev_ptr[0], (numberOfRows+1) * sizeof(int) , cudaMemcpyDeviceToHost);
     cudaMemcpy(&new_cols[0], &global_columns_dev_ptr[0], numberOfEdgesPerGraph * sizeof(int) , cudaMemcpyDeviceToHost);
@@ -484,7 +502,26 @@ void PerformSSSP(int numberOfRows,
         checkLastErrorCUDA(__FILE__, __LINE__);
 }
 
+void PerformPathPartitioning(int numberOfRows,
+                            int k,
+                            int root,
+                            int * global_U,
+                            int * global_U_Pred,
+                            int * global_colors){
+    int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
 
+    for (int curr = k; curr > 0; --curr){
+        launch_gpu_sssp_coloring<<<oneThreadPerNode,threadsPerBlock>>>(
+                                numberOfRows,
+                                curr,
+                                global_U,
+                                global_U_Pred,
+                                global_colors);
+
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+    }
+}
 
 __host__ void CalculateNewRowOffsets( int numberOfRows,
                                         int * global_row_offsets_dev_ptr,
@@ -603,6 +640,22 @@ __global__ void launch_gpu_sssp_kernel_2(   int N,
         U[v] = C[v];
         U_Pred[v] = Pred[v];
     }
+}
+
+__global__ void launch_gpu_sssp_coloring(int N,
+                                        int curr,
+                                        int * U,
+                                        int * U_Pred,
+                                        int * colors){
+    int v = threadIdx.x;
+    if (v >= N)
+        return;
+    if (U[v] % curr != 0 || U[v] == INT_MAX)
+        return;
+    int w = U_Pred[v];
+    // Race condition, but the kernel ends, so we get synchronization
+    // it doesn't matter who wins.
+    colors[w] = colors[v];
 }
 
 void Sum(int expanded_size,
