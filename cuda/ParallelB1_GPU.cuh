@@ -181,7 +181,8 @@ void CallPopulateTree(Graph & gPrime,
                         int * new_cols,
                         int * new_colors,
                         int * host_U,
-                        int * new_Pred);
+                        int * new_Pred,
+                        int * new_color_finished);
 
 __global__ void InduceSubgraph( int numberOfRows,
                                 int edgesLeftToCover,

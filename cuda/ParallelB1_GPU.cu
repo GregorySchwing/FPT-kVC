@@ -97,7 +97,8 @@ void CallPopulateTree(Graph & g,
                     int * new_cols,
                     int * new_colors,
                     int * host_U,
-                    int * new_Pred){
+                    int * new_Pred,
+                    int * new_color_finished){
 
     int * global_row_offsets_dev_ptr; // size N + 1
     int * global_degrees_dev_ptr; // size N, used for inducing the subgraph
@@ -232,7 +233,9 @@ void CallPopulateTree(Graph & g,
         cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_M),  0, size_t(numberOfRows));
         cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_C),  INT_MAX, size_t(numberOfRows));
         cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_U),  INT_MAX, size_t(numberOfRows));
+        cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_U_Pred),  INT_MAX, size_t(numberOfRows));
         cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_Pred),  INT_MAX, size_t(numberOfRows));
+        
         
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -303,8 +306,9 @@ void CallPopulateTree(Graph & g,
         cudaMemcpy(&host_reduced, &global_finished_card_reduced[0], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
         cudaMemcpy(&root, &nextroot_gpu[0], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
         cudaMemcpy(&global_U_Prev[0], &global_U[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToDevice);
+        cudaMemcpy(&new_color_finished[0], &global_color_finished[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
 
-        host_percentage_finished = host_reduced/numberOfRows;
+        host_percentage_finished = ((double)host_reduced/(double)numberOfRows);
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -659,13 +663,12 @@ void PerformPathPartitioning(int numberOfRows,
                                                             global_middle_vertex);    
                             
     cudaDeviceSynchronize();
-    checkLastErrorCUDA(__FILE__, __LINE__);
-
-    calculate_percent_partitioned<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
-                                                                        global_color_card,
-                                                                        global_color_finished,
-                                                                        global_finished_card_reduced);    
+    checkLastErrorCUDA(__FILE__, __LINE__);   
                             
+    Sum(numberOfRows,
+        global_color_finished,
+        global_finished_card_reduced);
+
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
@@ -986,7 +989,10 @@ __global__ void reset_partial_paths(int N,
                                     int * color_finished,
                                     int * middle_vertex){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
-    if (v >= N || color_finished[v])
+    if (v >= N)
+        return;
+    int vc = colors[v];
+    if (color_finished[vc])
         return;
     colors[v] = v;
     color_card[v] = 1;
@@ -998,10 +1004,10 @@ __global__ void calculate_percent_partitioned(int N,
                                                 int * color_finished,
                                                 int * finished_card_reduced){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
-    if (v >= N || color_finished[v])
+    if (v >= N)
         return;
     if (color_finished[v])
-        atomicAdd(finished_card_reduced, color_card[v]);
+        atomicAdd(finished_card_reduced, 1);
 }
 
 __global__ void launch_gpu_sssp_coloring_maximize(int N,
@@ -1028,7 +1034,7 @@ __global__ void launch_gpu_sssp_coloring_maximize(int N,
     int wcc = color_card[wc];
     // Still a race condition, of what color is assigned color[w]
     // so we need to keep calling this method until no marked vertices exist.
-    if (vcc > wcc){
+    if (vcc > wcc && !color_finished[w]){
         colors[w] = colors[v];
         M[w] = 1;
     }
@@ -1053,7 +1059,8 @@ __global__ void launch_gpu_sssp_coloring_2(int N,
     int w = U_Pred[v];
     int wc;
     wc = colors[w];
-    color_card[wc] = color_card[wc] + 1;
+    if(!color_finished[w])
+        color_card[wc] = color_card[wc] + 1;
 }
 
 void Sum(int expanded_size,

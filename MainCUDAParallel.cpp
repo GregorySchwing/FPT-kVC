@@ -79,14 +79,14 @@ int main(int argc, char *argv[])
     int * new_colors = new int[numberOfRows];
     int * new_U = new int[numberOfRows];
     int * new_Pred = new int[numberOfRows];
+    int * new_color_finished = new int[numberOfRows];
 
 
-    CallPopulateTree(g, root, host_levels, new_row_offsets, new_cols, new_colors, new_U, new_Pred);
+    CallPopulateTree(g, root, host_levels, new_row_offsets, new_cols, new_colors, new_U, new_Pred, new_color_finished);
 
     std::random_device rd; // obtain a random number from hardware
     std::mt19937 gen(rd()); // seed the generator
     std::uniform_int_distribution<> distr(0, 655); // define the range
-
 
     int * new_colors_randomized = new int[numberOfRows];
     int * new_colors_mapper = new int[numberOfRows];
@@ -123,9 +123,11 @@ int main(int argc, char *argv[])
         std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMap.find(node1Name);
         if(nodeIt1 == nodeMap.end()) {
             nodeMap[node1Name] = graph->AddNode(node1Name);
-            nodeMap[node1Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[i]));
-            nodeMap[node1Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[i]));
-            nodeMap[node1Name]->GetAttributes().SetStyle("filled");
+            if(new_color_finished[new_colors[i]]){
+                nodeMap[node1Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[i]));
+                nodeMap[node1Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[i]));
+                nodeMap[node1Name]->GetAttributes().SetStyle("filled");
+            }
         }
         for (int j = new_row_offsets[i]; j < new_row_offsets[i+1]; ++j){
             if (i < new_cols[j]){
@@ -133,9 +135,11 @@ int main(int argc, char *argv[])
                 std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMap.find(node2Name);
                 if(nodeIt2 == nodeMap.end()) {
                     nodeMap[node2Name] = graph->AddNode(node2Name);
-                    nodeMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[new_cols[j]]));
-                    nodeMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[new_cols[j]]));
-                    nodeMap[node2Name]->GetAttributes().SetStyle("filled");
+                    if(new_color_finished[new_colors[new_cols[j]]]){
+                        nodeMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[new_cols[j]]));
+                        nodeMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[new_cols[j]]));
+                        nodeMap[node2Name]->GetAttributes().SetStyle("filled");
+                    }
                 }  
                 //graph->AddEdge(nodeMap[node1Name], nodeMap[node2Name], std::to_string(host_levels[i]));
                 graph->AddEdge(nodeMap[node1Name], nodeMap[node2Name]); 
@@ -160,6 +164,7 @@ int main(int argc, char *argv[])
         }  
         bfs->AddEdge(bfsMap[node1Name], bfsMap[node2Name], std::to_string(new_U[i])); 
     }
+
     int maxdepth = 0;
     for (int i = 0; i < numberOfRows; ++i){
         if (new_U[i] > maxdepth && new_U[i] != INT_MAX){
