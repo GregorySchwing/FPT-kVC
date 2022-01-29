@@ -44,34 +44,49 @@ void CopyGraphToDevice( Graph & g,
 __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                             int *nodes, int *edges, int * finished);
 
-__global__ void launch_gpu_bfs_coloring_kernel( int N, int curr, int k, int *levels,
-                int *nodes, int *edges, int *colors,
-                int * color_card,
-                int * finished);
+__global__ void launch_gpu_cycle_coloring_kernel( int N,
+                                                int k,
+                                                int iter,
+                                                int * nodes,
+                                                int * edges,
+                                                int * M,
+                                                int * U,
+                                                int * U_Pred,
+                                                int * colors,
+                                                int * color_card,
+                                                int * color_finished);
+
+__global__ void launch_gpu_combine_colors_kernel( int N,
+                                                int k,
+                                                int iter,
+                                                int * nodes,
+                                                int * edges,
+                                                int * M,
+                                                int * U,
+                                                int * U_Pred,
+                                                int * colors,
+                                                int * color_card);
 
 __global__ void launch_gpu_sssp_coloring_1(int N,
-                                        int k,
-                                        int iter,
-                                        int * U,
-                                        int * U_Pred,
-                                        int * colors);
-
-__global__ void launch_gpu_sssp_coloring_2(int N,
                                         int k,
                                         int iter,
                                         int * M,
                                         int * U,
                                         int * U_Pred,
                                         int * colors,
-                                        int * color_card);
+                                        int * color_card,
+                                        int * color_finished,
+                                        int * middle_vertex);
 
-__global__ void launch_gpu_sssp_coloring_3(int N,
+__global__ void launch_gpu_sssp_coloring_2(int N,
                                         int k,
                                         int iter,
                                         int * U,
                                         int * U_Pred,
                                         int * colors,
-                                        int * color_card);
+                                        int * color_card,
+                                        int * color_finished,
+                                        int * middle_vertex);
 
 void PerformSSSP(int numberOfRows,
                 int root,
@@ -89,11 +104,13 @@ void PerformPathPartitioning(int numberOfRows,
                         int root,
                         int * global_row_offsets_dev_ptr,
                         int * global_columns_dev_ptr,
+                        int * global_middle_vertex,
                         int * global_M,
                         int * global_U,
                         int * global_U_Pred,
                         int * global_colors,
-                        int * global_color_card);
+                        int * global_color_card,
+                        int * global_color_finished);
 
 
 __global__ void launch_gpu_sssp_kernel_1(   int N,             
@@ -147,6 +164,18 @@ __global__ void InduceSubgraph( int numberOfRows,
 void Sum(int expanded_size,
         int * expanded,
         int * reduced);
+
+void MaximizePathLength(int numberOfRows,
+                        int k,
+                        int iter,
+                        int * finished_gpu,
+                        int * global_M,
+                        int * global_U,
+                        int * global_U_Pred,
+                        int * global_colors,
+                        int * global_color_card,
+                        int * global_color_finished,
+                        int * global_middle_vertex);
 
 #endif
 #endif
