@@ -181,13 +181,17 @@ void CallPopulateTree(Graph & g,
 
     // Set all levels value to INT_MAX
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_levels),  INT_MAX, size_t(numberOfRows));
-    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_color_card),  1, size_t(numberOfRows));
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_color_card),  0, size_t(numberOfRows));
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_middle_vertex),  0, size_t(numberOfRows));
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_color_finished),  0, size_t(numberOfRows));
+
+
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_W),  1, size_t(numberOfEdgesPerGraph));
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_M),  0, size_t(numberOfRows));
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_C),  INT_MAX, size_t(numberOfRows));
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_U),  INT_MAX, size_t(numberOfRows));
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_Pred),  INT_MAX, size_t(numberOfRows));
-
+    
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
@@ -499,14 +503,26 @@ void PerformPathPartitioning(int numberOfRows,
                             int * global_color_finished){
     int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
     int * finished_gpu;
-    bool maximizePathLength = true;
-    bool groupLowCardinalityColors = true;
+    int maximizePathLength = true;
     cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
     // k-1 iterations to prevent claiming the root
     for (int iter = 0; iter < k-1; ++iter){
+        launch_gpu_sssp_coloring_1<<<oneThreadPerNode,threadsPerBlock>>>(
+                                                                        numberOfRows,
+                                                                        k,
+                                                                        iter,
+                                                                        global_U,
+                                                                        global_U_Pred,
+                                                                        global_colors,
+                                                                        global_color_finished,
+                                                                        global_middle_vertex);
+
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+        
         // Loop until winner is largest cardinality color
         // Worst case number of loops is k
-        if (maximizePathLength){
+        if (maximizePathLength)
             MaximizePathLength(numberOfRows,
                                 k,
                                 iter,
@@ -518,9 +534,8 @@ void PerformPathPartitioning(int numberOfRows,
                                 global_color_card,
                                 global_color_finished,
                                 global_middle_vertex);
-        }
         // Increment cardinality of winner
-        launch_gpu_sssp_coloring_2<<<oneThreadPerNode,threadsPerBlock>>>(
+        launch_gpu_sssp_coloring_3<<<oneThreadPerNode,threadsPerBlock>>>(
                                                                         numberOfRows,
                                                                         k,
                                                                         iter,
@@ -534,9 +549,13 @@ void PerformPathPartitioning(int numberOfRows,
         checkLastErrorCUDA(__FILE__, __LINE__);
     }
 
-    if (groupLowCardinalityColors){
-
-    }
+    launch_gpu_color_finishing_kernel<<<oneThreadPerNode,threadsPerBlock>>>(
+                                                                            numberOfRows,
+                                                                            global_row_offsets_dev_ptr,
+                                                                            global_columns_dev_ptr,
+                                                                            global_colors,
+                                                                            global_color_card,
+                                                                            global_color_finished);
 
 
     cudaFree (finished_gpu);
@@ -583,7 +602,7 @@ void MaximizePathLength(int numberOfRows,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        launch_gpu_sssp_coloring_1<<<oneThreadPerNode,threadsPerBlock>>>(
+        launch_gpu_sssp_coloring_2<<<oneThreadPerNode,threadsPerBlock>>>(
                         numberOfRows,
                         k,
                         iter,
@@ -629,14 +648,9 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
 // Processes colors of cardinality 3
 // If this is a cycle, finish the color
 // else, mark the middle so we dont add a four vertex onto the middle.
-__global__ void launch_gpu_cycle_coloring_kernel( int N,
-                                                int k,
-                                                int iter,
+__global__ void launch_gpu_color_finishing_kernel( int N,
                                                 int * nodes,
                                                 int * edges,
-                                                int * M,
-                                                int * U,
-                                                int * U_Pred,
                                                 int * colors,
                                                 int * color_card,
                                                 int * color_finished){
@@ -648,7 +662,8 @@ __global__ void launch_gpu_cycle_coloring_kernel( int N,
     int foundCycle;
     // Guaruntees we need another vertex and v is not an internal vertex
     // for example, with path a - b - c; we guaruntee v is not b.
-    if (color_card[v] == 3) {
+    // Note, color card starts at zero, so we are 1 less than the true value.
+    if (color_card[v] == 2) {
         // iterate over neighbors
         int num_nbr = nodes[v+1] - nodes[v];
         int * nbrs = & edges[ nodes[v] ];
@@ -661,6 +676,8 @@ __global__ void launch_gpu_cycle_coloring_kernel( int N,
         }
         foundCycle = myOwnColorEdges > 1;
         color_finished[v] = foundCycle;
+    } else if (color_card[v] == 3){
+        color_finished[v] = true;
     }
 }
 
@@ -745,6 +762,26 @@ __global__ void launch_gpu_sssp_kernel_2(   int N,
 __global__ void launch_gpu_sssp_coloring_1(int N,
                                         int k,
                                         int iter,
+                                        int * U,
+                                        int * U_Pred,
+                                        int * colors,
+                                        int * color_finished,
+                                        int * middle_vertex){
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= N || color_finished[v] || middle_vertex[v])
+        return;
+    if ((U[v] + iter) % k != 0 || U[v] == INT_MAX)
+        return;
+    int w = U_Pred[v];
+    // Race condition, but the kernel ends, so we get synchronization
+    // it doesn't matter who wins, we need to initiate change in the graph.
+    if (!color_finished[w] && !middle_vertex[w])
+        colors[w] = colors[v];
+}
+
+__global__ void launch_gpu_sssp_coloring_2(int N,
+                                        int k,
+                                        int iter,
                                         int * M,
                                         int * U,
                                         int * U_Pred,
@@ -766,13 +803,13 @@ __global__ void launch_gpu_sssp_coloring_1(int N,
     int wcc = color_card[wc];
     // Still a race condition, of what color is assigned color[w]
     // so we need to keep calling this method until no marked vertices exist.
-    if (vcc >= wcc && !middle_vertex[w]){
+    if (vcc > wcc && !middle_vertex[w]){
         colors[w] = colors[v];
         M[w] = 1;
     }
 }
 
-__global__ void launch_gpu_sssp_coloring_2(int N,
+__global__ void launch_gpu_sssp_coloring_3(int N,
                                         int k,
                                         int iter,
                                         int * U,
