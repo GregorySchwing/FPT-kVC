@@ -114,18 +114,22 @@ void PerformSSSP(int numberOfRows,
                 int * global_Pred,
                 int * global_U_Pred);
 
+// Currently root isn't assigned to any color.
 void PerformPathPartitioning(int numberOfRows,
-                        int k,
-                        int root,
-                        int * global_row_offsets_dev_ptr,
-                        int * global_columns_dev_ptr,
-                        int * global_middle_vertex,
-                        int * global_M,
-                        int * global_U,
-                        int * global_U_Pred,
-                        int * global_colors,
-                        int * global_color_card,
-                        int * global_color_finished);
+                            int k,
+                            int root,
+                            int * global_row_offsets_dev_ptr,
+                            int * global_columns_dev_ptr,
+                            int * global_middle_vertex,
+                            int * global_M,
+                            int * global_U,
+                            int * global_U_Pred,
+                            int * global_colors,
+                            int * global_color_card,
+                            int * global_color_finished,
+                            int * global_finished_card_reduced,
+                            int * finished_gpu, 
+                            int * nextroot_gpu);
 
 
 __global__ void launch_gpu_sssp_kernel_1(   int N,             
@@ -150,6 +154,11 @@ __global__ void reset_partial_paths(int N,
                                     int * color_card,
                                     int * color_finished,
                                     int * middle_vertex);
+
+__global__ void calculate_percent_partitioned(int N,
+                                                int * color_card,
+                                                int * color_finished,
+                                                int * finished_card_reduced);
 
 void PerformBFS(int numberOfRows,
                 int * global_levels,
@@ -197,6 +206,18 @@ void MaximizePathLength(int numberOfRows,
                         int * global_color_card,
                         int * global_color_finished,
                         int * global_middle_vertex);
+
+void FindMaximumDistanceNonFinishedColor(int * numberOfRows,
+                                        int * global_colors,
+                                        int * global_M,
+                                        int * global_color_finished,
+                                        int * global_U,
+                                        int * nextroot_gpu);
+
+__global__ void multiply_distance_by_finished_boolean(int * numberOfRows,
+                                                        int * global_M,
+                                                        int * global_color_finished,
+                                                        int * global_U);
 
 #endif
 #endif

@@ -108,6 +108,10 @@ void CallPopulateTree(Graph & g,
     int * global_colors; // size N, will contatin color of nth node
     int * global_color_card;   // size N, will contatin size of color set
     int * global_color_finished; // size N, contatin boolean of color finished, sometimes cardinality 1,2,3 is finished.
+    int * global_finished_card_reduced;
+    int * finished_gpu;
+    int * nextroot_gpu;
+
     // SSSP
     // Weights = size N
     int * global_W;
@@ -165,6 +169,10 @@ void CallPopulateTree(Graph & g,
     cudaMalloc( (void**)&global_middle_vertex, numberOfRows * sizeof(int) );
     cudaMalloc( (void**)&global_color_card, numberOfRows * sizeof(int) );
     cudaMalloc( (void**)&global_color_finished, numberOfRows * sizeof(int) );
+    cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
+    cudaMalloc( (void**)&nextroot_gpu, 1 * sizeof(int) );
+
+    cudaMalloc( (void**)&global_finished_card_reduced, 1 * sizeof(int) );
 
     // SSSP
     // Can be removed for unweighted-graphs
@@ -196,11 +204,7 @@ void CallPopulateTree(Graph & g,
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     int zero = 0;
-    // Set root value to 0
-    cudaMemcpy(&global_levels[root], &zero, 1 * sizeof(int), cudaMemcpyHostToDevice);
-
-    cudaDeviceSynchronize();
-    checkLastErrorCUDA(__FILE__, __LINE__);
+    int k = 4;
 
     // allocate three device_vectors with 10 elements
     thrust::device_vector<int> colors(g.GetNumberOfRows());
@@ -218,7 +222,7 @@ void CallPopulateTree(Graph & g,
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
-    // Root should be a degree 1 vertex.
+    // Root should optimally be a degree 1 vertex.
     // We never color the root, so by starting the sssp from
     // degree 1 vertices, this isn't a problem.
     // Root's neighbot also must have color cardinality < k.
@@ -240,7 +244,6 @@ void CallPopulateTree(Graph & g,
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
-    int k = 4;
     // Loop, X = k to 0
     // 1 thread per vertex
     // only vertices with cost a multiple of X are active on first iteration.
@@ -273,10 +276,15 @@ void CallPopulateTree(Graph & g,
                             global_U_Pred,
                             global_colors,
                             global_color_card,
-                            global_color_finished);
+                            global_color_finished,
+                            global_finished_card_reduced,
+                            finished_gpu,
+                            nextroot_gpu);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
+
+
 
 
     //cudaMemcpy(&host_levels[0], &global_levels[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
@@ -294,8 +302,13 @@ void CallPopulateTree(Graph & g,
     cudaFree( global_values_dev_ptr );
     cudaFree( global_degrees_dev_ptr );
     cudaFree( global_levels );
+    cudaFree( finished_gpu );
+    cudaFree( global_finished_card_reduced );
     //cudaFree( global_colors );
     cudaFree( global_color_card );
+    cudaFree( global_color_finished );
+    cudaFree( global_middle_vertex );
+
     cudaFree( global_W );
     cudaFree( global_M );
     cudaFree( global_C );
@@ -500,11 +513,16 @@ void PerformPathPartitioning(int numberOfRows,
                             int * global_U_Pred,
                             int * global_colors,
                             int * global_color_card,
-                            int * global_color_finished){
+                            int * global_color_finished,
+                            int * global_finished_card_reduced,
+                            int * finished_gpu, 
+                            int * nextroot_gpu){
+
     int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
-    int * finished_gpu;
     int maximizePathLength = true;
-    cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
+
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_finished_card_reduced),  0, size_t(1));
+
     // k-1 iterations to prevent claiming the root
     for (int iter = 0; iter < k-1; ++iter){
         launch_gpu_sssp_coloring_1<<<oneThreadPerNode,threadsPerBlock>>>(
@@ -576,6 +594,28 @@ void PerformPathPartitioning(int numberOfRows,
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
+    launch_gpu_color_finishing_kernel_2<<<oneThreadPerNode,threadsPerBlock>>>(
+        numberOfRows,
+        global_row_offsets_dev_ptr,
+        global_columns_dev_ptr,
+        global_colors,
+        global_color_card,
+        global_color_finished,
+        global_middle_vertex);
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    FindMaximumDistanceNonFinishedColor(numberOfRows,
+                                        global_colors,
+                                        global_M,
+                                        global_color_finished,
+                                        global_U,
+                                        nextroot_gpu);
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
     reset_partial_paths<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
                                                             global_colors,
                                                             global_color_card,
@@ -585,6 +625,13 @@ void PerformPathPartitioning(int numberOfRows,
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
+    calculate_percent_partitioned<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
+                                                                        global_color_card,
+                                                                        global_color_finished,
+                                                                        global_finished_card_reduced);    
+                            
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
 
 }
 
@@ -649,6 +696,35 @@ void MaximizePathLength(int numberOfRows,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
     } while (*finished);
+}
+
+void FindMaximumDistanceNonFinishedColor(int * numberOfRows,
+                                        int * global_colors,
+                                        int * global_M,
+                                        int * global_color_finished,
+                                        int * global_U,
+                                        int * nextroot_gpu){
+
+    multiply_distance_by_finished_boolean<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
+                                                                                global_M,
+                                                                                global_color_card,
+                                                                                global_color_finished); 
+                                                                                
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    
+
+}
+
+__global__ void multiply_distance_by_finished_boolean(int * numberOfRows,
+                                                    int * global_M,
+                                                    int * global_color_finished,
+                                                    int * global_U){
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= N)
+        return;
+    global_M[v] = global_color_finished[v]*global_U[v]    
 }
 
 
@@ -853,7 +929,17 @@ __global__ void reset_partial_paths(int N,
     middle_vertex[v] = 0;
 }   
 
-// Not currently working since we reset the marks to 0.
+__global__ void calculate_percent_partitioned(int N,
+                                                int * color_card,
+                                                int * color_finished,
+                                                int * finished_card_reduced){
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= N || color_finished[v])
+        return;
+    if (color_finished[v])
+        atomicAdd(finished_card_reduced, color_card[v]);
+}
+
 __global__ void launch_gpu_sssp_coloring_maximize(int N,
                                         int k,
                                         int iter,
