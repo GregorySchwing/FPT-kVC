@@ -749,6 +749,7 @@ void FindMaximumDistanceNonFinishedColor(int numberOfRows,
 
     multiply_distance_by_finished_boolean<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
                                                                                 global_M,
+                                                                                global_colors,
                                                                                 global_color_finished,
                                                                                 global_U_Prev,
                                                                                 global_U); 
@@ -764,13 +765,16 @@ void FindMaximumDistanceNonFinishedColor(int numberOfRows,
 
 __global__ void multiply_distance_by_finished_boolean(int N,
                                                     int * M,
+                                                    int * colors,
                                                     int * color_finished,
                                                     int * U_Prev,
                                                     int * U){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
         return;
-    M[v] = color_finished[v]*U[v] + color_finished[v]*U_Prev[v]; 
+
+    int vc = colors[v];
+    M[v] = color_finished[vc]*U[v] + color_finished[vc]*U_Prev[v]; 
 }
 
 void GetMaxDist(int N,
@@ -826,14 +830,14 @@ __global__ void launch_gpu_color_finishing_kernel_1( int N,
                                                 int * color_finished,
                                                 int * middle_vertex){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
-    if (v >= N || color_finished[v])
+    if (v >= N)
         return;
     int cv = colors[v];
     int myOwnColorEdges = 0;
     int middleVertex;
     // Guaruntees we need another vertex and v is not an internal vertex
     // for example, with path a - b - c; we guaruntee v is not b.
-    if (color_card[v] == 3) {
+    if (color_card[cv] == 3 && !color_finished[cv]) {
         // iterate over neighbors
         int num_nbr = nodes[v+1] - nodes[v];
         int * nbrs = & edges[ nodes[v] ];
@@ -857,14 +861,14 @@ __global__ void launch_gpu_color_finishing_kernel_2( int N,
                                                 int * color_finished,
                                                 int * middle_vertex){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
-    if (v >= N || color_finished[v])
+    if (v >= N)
         return;
     int cv = colors[v];
     int middleVertexCount = 0;
     int foundCycle;
     // Guaruntees we need another vertex and v is not an internal vertex
     // for example, with path a - b - c; we guaruntee v is not b.
-    if (color_card[cv] == 3) {
+    if (color_card[cv] == 3 && !color_finished[cv]) {
         // iterate over neighbors
         int num_nbr = nodes[v+1] - nodes[v];
         int * nbrs = & edges[ nodes[v] ];
@@ -970,14 +974,17 @@ __global__ void launch_gpu_sssp_coloring_1(int N,
                                         int * color_finished,
                                         int * middle_vertex){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
-    if (v >= N || color_finished[v])
+    if (v >= N)
         return;
     if ((U[v] + iter) % k != 0 || U[v] == INT_MAX)
         return;
     int w = U_Pred[v];
+    int vc = colors[v];
+    int wc = colors[w];
+
     // Race condition, but the kernel ends, so we get synchronization
     // it doesn't matter who wins, we need to initiate change in the graph.
-    if (!color_finished[w]){
+    if (!color_finished[wc] && !color_finished[vc]){
         colors[w] = colors[v];
     }
 }
@@ -1021,7 +1028,7 @@ __global__ void launch_gpu_sssp_coloring_maximize(int N,
                                         int * color_finished,
                                         int * middle_vertex){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
-    if (v >= N || color_finished[v])
+    if (v >= N)
         return;
     if ((U[v] + iter) % k != 0 || U[v] == INT_MAX)
         return;
@@ -1034,7 +1041,7 @@ __global__ void launch_gpu_sssp_coloring_maximize(int N,
     int wcc = color_card[wc];
     // Still a race condition, of what color is assigned color[w]
     // so we need to keep calling this method until no marked vertices exist.
-    if (vcc > wcc && !color_finished[w]){
+    if (vcc > wcc && !color_finished[vc] && !color_finished[wc]){
         colors[w] = colors[v];
         M[w] = 1;
     }
@@ -1051,15 +1058,15 @@ __global__ void launch_gpu_sssp_coloring_2(int N,
                                         int * color_finished,
                                         int * middle_vertex){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
-    if (v >= N || color_finished[v])
+    if (v >= N)
         return;
     if ((U[v] + iter) % k != 0 || U[v] == INT_MAX)
         return;
 
     int w = U_Pred[v];
-    int wc;
-    wc = colors[w];
-    if(!color_finished[w])
+    int wc = colors[w];
+    int vc = colors[v];
+    if(!color_finished[wc] && !color_finished[vc])
         color_card[wc] = color_card[wc] + 1;
 }
 

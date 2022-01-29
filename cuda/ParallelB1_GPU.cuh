@@ -220,6 +220,7 @@ void FindMaximumDistanceNonFinishedColor(int numberOfRows,
 
 __global__ void multiply_distance_by_finished_boolean(int N,
                                                     int * M,
+                                                    int * colors,
                                                     int * color_finished,
                                                     int * U_Prev,
                                                     int * U);
