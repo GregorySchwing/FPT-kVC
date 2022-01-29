@@ -502,6 +502,9 @@ void PerformPathPartitioning(int numberOfRows,
                             int * global_color_card,
                             int * global_color_finished){
     int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
+    int * finished_gpu;
+    int maximizePathLength = false;
+    cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
     // k-1 iterations to prevent claiming the root
     for (int iter = 0; iter < k-1; ++iter){
         launch_gpu_sssp_coloring_1<<<oneThreadPerNode,threadsPerBlock>>>(
@@ -518,6 +521,20 @@ void PerformPathPartitioning(int numberOfRows,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
+        // Loop until winner is largest cardinality color
+        // Worst case number of loops is k
+        if (maximizePathLength)
+            MaximizePathLength(numberOfRows,
+                                k,
+                                iter,
+                                finished_gpu,
+                                global_M,
+                                global_U,
+                                global_U_Pred,
+                                global_colors,
+                                global_color_card,
+                                global_color_finished,
+                                global_middle_vertex);
         // Increment cardinality of winner
         launch_gpu_sssp_coloring_2<<<oneThreadPerNode,threadsPerBlock>>>(
                                                                         numberOfRows,
@@ -558,6 +575,7 @@ void PerformPathPartitioning(int numberOfRows,
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
+
 
 }
 
@@ -813,6 +831,37 @@ __global__ void launch_gpu_sssp_coloring_1(int N,
     }
 }
 
+// Not currently working since we reset the marks to 0.
+__global__ void launch_gpu_sssp_coloring_maximize(int N,
+                                        int k,
+                                        int iter,
+                                        int * M,
+                                        int * U,
+                                        int * U_Pred,
+                                        int * colors,
+                                        int * color_card,
+                                        int * color_finished,
+                                        int * middle_vertex){
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= N || color_finished[v] || middle_vertex[v])
+        return;
+    if ((U[v] + iter) % k != 0 || U[v] == INT_MAX)
+        return;
+
+    int vc = colors[v];
+    int vcc = color_card[vc];
+    
+    int w = U_Pred[v];
+    int wc = colors[w];
+    int wcc = color_card[wc];
+    // Still a race condition, of what color is assigned color[w]
+    // so we need to keep calling this method until no marked vertices exist.
+    if (vcc > wcc && !middle_vertex[w]){
+        colors[w] = colors[v];
+        M[w] = 1;
+    }
+}
+
 __global__ void launch_gpu_sssp_coloring_2(int N,
                                         int k,
                                         int iter,
@@ -857,36 +906,5 @@ void Sum(int expanded_size,
     cudaFree(d_temp_storage);
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
-}
-
-// Not currently working since we reset the marks to 0.
-__global__ void launch_gpu_sssp_coloring_maximize(int N,
-                                        int k,
-                                        int iter,
-                                        int * M,
-                                        int * U,
-                                        int * U_Pred,
-                                        int * colors,
-                                        int * color_card,
-                                        int * color_finished,
-                                        int * middle_vertex){
-    int v = threadIdx.x + blockDim.x * blockIdx.x;
-    if (v >= N || color_finished[v] || middle_vertex[v])
-        return;
-    if ((U[v] + iter) % k != 0 || U[v] == INT_MAX)
-        return;
-
-    int vc = colors[v];
-    int vcc = color_card[vc];
-    
-    int w = U_Pred[v];
-    int wc = colors[w];
-    int wcc = color_card[wc];
-    // Still a race condition, of what color is assigned color[w]
-    // so we need to keep calling this method until no marked vertices exist.
-    if (vcc > wcc && !middle_vertex[w]){
-        colors[w] = colors[v];
-        M[w] = 1;
-    }
 }
 #endif
