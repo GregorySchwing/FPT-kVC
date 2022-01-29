@@ -173,6 +173,7 @@ int main(int argc, char *argv[])
     }
     int w = 0;
     int c = 0;
+    predMap.clear();
     for (int depth = 0; depth <= maxdepth; ++depth){
         for (int i = 0; i < numberOfRows; ++i){
             if (new_U[i] == depth){

@@ -219,14 +219,36 @@ void CallPopulateTree(Graph & g,
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     int host_reduced;
-    double host_percentage_finished;
+    double host_percentage_finished = 0;
     double percentage_threshold = 0.80;
-    int iteration_threshold = 10;
+    int iteration_threshold = 1;
 
     int done = 0;
     int iteration = 0;
+    bool graphEveryIteration = true;
+    
+    std::string name = "main";
+    std::string filenameGraphPrefix = "SSSP_iter_";
+    bool isDirected = false;
+    DotWriter::RootGraph gVizWriter(isDirected, name);
+    std::string subgraph1 = "SSSP";
+
+    std::random_device rd; // obtain a random number from hardware
+    std::mt19937 gen(rd()); // seed the generator
+    std::uniform_int_distribution<> distr(0, 655); // define the range
+
+    int * new_colors_randomized = new int[numberOfRows];
+    int * new_colors_mapper = new int[numberOfRows];
+
+    for(int n=0; n<numberOfRows; ++n){
+        new_colors_mapper[n] = distr(gen); // generate numbers
+    }
 
     while(!done){
+
+        std::cout << "Iteration : " << iteration << std::endl;
+        std::cout << "Root : " << root << std::endl;
+        std::cout << "Percentage Done : " << host_percentage_finished << std::endl;
 
         // Reset SSSP vectors
         cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_W),  1, size_t(numberOfEdgesPerGraph));
@@ -316,12 +338,64 @@ void CallPopulateTree(Graph & g,
         done |= percentage_threshold < host_percentage_finished;
         done |= iteration_threshold < iteration;
 
-        std::cout << "Iteration : " << iteration << std::endl;
-        std::cout << "Root : " << root << std::endl;
-        std::cout << "Percentage Done : " << host_percentage_finished << std::endl;
-
         ++iteration;
 
+        if (graphEveryIteration){
+            cudaMemcpy(&new_colors[0], &global_colors[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+            cudaMemcpy(&host_U[0], &global_U[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+            cudaMemcpy(&new_Pred[0], &global_U_Pred[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+            
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+
+            for(int n=0; n<numberOfRows; ++n){
+                new_colors_randomized[n] = new_colors_mapper[new_colors[n]]; // generate numbers
+            }
+    
+            std::map<std::string, DotWriter::Node *> predMap;    
+            int maxdepth = 0;
+            for (int i = 0; i < numberOfRows; ++i){
+                if (host_U[i] > maxdepth && host_U[i] != INT_MAX){
+                    maxdepth = host_U[i];
+                }
+            }
+            int w = 0;
+            int c = 0;
+            predMap.clear();
+            DotWriter::Subgraph * pred = gVizWriter.AddSubgraph(subgraph1);
+            
+            //pred->clear();
+            for (int depth = 0; depth <= maxdepth; ++depth){
+                for (int i = 0; i < numberOfRows; ++i){
+                    if (host_U[i] == depth){
+                        w = new_Pred[i];
+                        c = new_colors[i];
+                        std::string node1Name = std::to_string(i);
+                        std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = predMap.find(node1Name);
+                        if(nodeIt1 == predMap.end()) {
+                            predMap[node1Name] = pred->AddNode(node1Name);
+                            predMap[node1Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[i]));
+                            predMap[node1Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[i]));
+                            predMap[node1Name]->GetAttributes().SetStyle("filled");
+                        }
+                        std::string node2Name = std::to_string(w);
+                        std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = predMap.find(node2Name);
+                        if(nodeIt2 == predMap.end()) {
+                            predMap[node2Name] = pred->AddNode(node2Name);
+                            predMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[w]));
+                            predMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[w]));
+                            predMap[node2Name]->GetAttributes().SetStyle("filled");
+                        }
+                        pred->AddEdge(predMap[node1Name], predMap[node2Name], std::to_string(c)); 
+                    }
+                }
+            }
+            std::string iterFileName = filenameGraphPrefix+std::to_string(iteration)+".viz";
+            gVizWriter.WriteToFile(iterFileName);
+            gVizWriter.RemoveSubgraph(pred);
+            //pred->~Subgraph();
+            std::cout << "finished writing " << iterFileName << std::endl;
+        }
     }
 
 
@@ -351,6 +425,9 @@ void CallPopulateTree(Graph & g,
     cudaFree( global_M );
     cudaFree( global_C );
     cudaFree( global_U );
+
+    delete[] new_colors_randomized;
+    delete[] new_colors_mapper;
 
     cudaDeviceSynchronize();
 }
@@ -868,16 +945,18 @@ __global__ void launch_gpu_color_finishing_kernel_2( int N,
     int foundCycle;
     // Guaruntees we need another vertex and v is not an internal vertex
     // for example, with path a - b - c; we guaruntee v is not b.
-    if (color_card[cv] == 3 && !color_finished[cv]) {
+    // middle_vertex[v] is required to prevent race conditions 
+    // since only those with 
+    if (middle_vertex[v] && color_card[cv] == 3 && !color_finished[cv]) {
         // iterate over neighbors
         int num_nbr = nodes[v+1] - nodes[v];
         int * nbrs = & edges[ nodes[v] ];
         for(int i = 0; i < num_nbr; i++) {
             int w = nbrs[i];
             int mvw = middle_vertex[w];
-            if (mvw){
-                ++middleVertexCount;
-            }
+            int cw = colors[w];
+            if (cw  == cv)
+                middleVertexCount = middleVertexCount + mvw;
         }
         foundCycle = middleVertexCount > 1;
         color_finished[cv] = foundCycle;
