@@ -231,7 +231,11 @@ void CallPopulateTree(Graph & g,
     std::string filenameGraphPrefix = "SSSP_iter_";
     bool isDirected = false;
     DotWriter::RootGraph gVizWriter(isDirected, name);
-    std::string subgraph1 = "SSSP";
+    std::string subgraph1 = "graph";
+    std::string subgraph2 = "SSSP";
+
+    std::map<std::string, DotWriter::Node *> nodeMap;    
+    std::map<std::string, DotWriter::Node *> predMap;    
 
     std::random_device rd; // obtain a random number from hardware
     std::mt19937 gen(rd()); // seed the generator
@@ -341,6 +345,8 @@ void CallPopulateTree(Graph & g,
         ++iteration;
 
         if (graphEveryIteration){
+            cudaMemcpy(&new_row_offs[0], &global_row_offsets_dev_ptr[0], (numberOfRows+1) * sizeof(int) , cudaMemcpyDeviceToHost);
+            cudaMemcpy(&new_cols[0], &global_columns_dev_ptr[0], numberOfEdgesPerGraph * sizeof(int) , cudaMemcpyDeviceToHost);
             cudaMemcpy(&new_colors[0], &global_colors[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
             cudaMemcpy(&host_U[0], &global_U[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
             cudaMemcpy(&new_Pred[0], &global_U_Pred[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
@@ -352,7 +358,6 @@ void CallPopulateTree(Graph & g,
                 new_colors_randomized[n] = new_colors_mapper[new_colors[n]]; // generate numbers
             }
     
-            std::map<std::string, DotWriter::Node *> predMap;    
             int maxdepth = 0;
             for (int i = 0; i < numberOfRows; ++i){
                 if (host_U[i] > maxdepth && host_U[i] != INT_MAX){
@@ -362,8 +367,41 @@ void CallPopulateTree(Graph & g,
             int w = 0;
             int c = 0;
             predMap.clear();
-            DotWriter::Subgraph * pred = gVizWriter.AddSubgraph(subgraph1);
-            
+            nodeMap.clear();
+            DotWriter::Subgraph * graph = gVizWriter.AddSubgraph(subgraph1);
+            DotWriter::Subgraph * pred = gVizWriter.AddSubgraph(subgraph2);
+
+            // Since the graph doesnt grow uniformly, it is too difficult to only copy the new parts..
+            for (int i = 0; i < numberOfRows; ++i){
+                std::string node1Name = std::to_string(i);
+                std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMap.find(node1Name);
+                if(nodeIt1 == nodeMap.end()) {
+                    nodeMap[node1Name] = graph->AddNode(node1Name);
+                    if(new_color_finished[new_colors[i]]){
+                        nodeMap[node1Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[i]));
+                        nodeMap[node1Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[i]));
+                        nodeMap[node1Name]->GetAttributes().SetStyle("filled");
+                    }
+                }
+                for (int j = new_row_offs[i]; j < new_row_offs[i+1]; ++j){
+                    if (i < new_cols[j]){
+                        std::string node2Name = std::to_string(new_cols[j]);
+                        std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMap.find(node2Name);
+                        if(nodeIt2 == nodeMap.end()) {
+                            nodeMap[node2Name] = graph->AddNode(node2Name);
+                            if(new_color_finished[new_colors[new_cols[j]]]){
+                                nodeMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[new_cols[j]]));
+                                nodeMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[new_cols[j]]));
+                                nodeMap[node2Name]->GetAttributes().SetStyle("filled");
+                            }
+                        }  
+                        //graph->AddEdge(nodeMap[node1Name], nodeMap[node2Name], std::to_string(host_levels[i]));
+                        graph->AddEdge(nodeMap[node1Name], nodeMap[node2Name]); 
+         
+                    }
+                }
+            }
+
             //pred->clear();
             for (int depth = 0; depth <= maxdepth; ++depth){
                 for (int i = 0; i < numberOfRows; ++i){
@@ -374,17 +412,21 @@ void CallPopulateTree(Graph & g,
                         std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = predMap.find(node1Name);
                         if(nodeIt1 == predMap.end()) {
                             predMap[node1Name] = pred->AddNode(node1Name);
-                            predMap[node1Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[i]));
-                            predMap[node1Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[i]));
-                            predMap[node1Name]->GetAttributes().SetStyle("filled");
+                            if(new_color_finished[new_colors[i]]){
+                                predMap[node1Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[i]));
+                                predMap[node1Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[i]));
+                                predMap[node1Name]->GetAttributes().SetStyle("filled");
+                            }
                         }
                         std::string node2Name = std::to_string(w);
                         std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = predMap.find(node2Name);
                         if(nodeIt2 == predMap.end()) {
                             predMap[node2Name] = pred->AddNode(node2Name);
-                            predMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[w]));
-                            predMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[w]));
-                            predMap[node2Name]->GetAttributes().SetStyle("filled");
+                            if(new_color_finished[new_colors[w]]){
+                                predMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[w]));
+                                predMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[w]));
+                                predMap[node2Name]->GetAttributes().SetStyle("filled");
+                            }
                         }
                         pred->AddEdge(predMap[node1Name], predMap[node2Name], std::to_string(c)); 
                     }
@@ -392,6 +434,7 @@ void CallPopulateTree(Graph & g,
             }
             std::string iterFileName = filenameGraphPrefix+std::to_string(iteration)+".viz";
             gVizWriter.WriteToFile(iterFileName);
+            gVizWriter.RemoveSubgraph(graph);
             gVizWriter.RemoveSubgraph(pred);
             //pred->~Subgraph();
             std::cout << "finished writing " << iterFileName << std::endl;
