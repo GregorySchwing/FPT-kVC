@@ -122,6 +122,7 @@ void PerformPathPartitioning(int numberOfRows,
                             int * global_columns_dev_ptr,
                             int * global_middle_vertex,
                             int * global_M,
+                            int * global_U_Prev,
                             int * global_U,
                             int * global_U_Pred,
                             int * global_colors,
@@ -207,17 +208,24 @@ void MaximizePathLength(int numberOfRows,
                         int * global_color_finished,
                         int * global_middle_vertex);
 
-void FindMaximumDistanceNonFinishedColor(int * numberOfRows,
+void FindMaximumDistanceNonFinishedColor(int numberOfRows,
                                         int * global_colors,
                                         int * global_M,
                                         int * global_color_finished,
+                                        int * global_U_Prev,
                                         int * global_U,
                                         int * nextroot_gpu);
 
-__global__ void multiply_distance_by_finished_boolean(int * numberOfRows,
-                                                        int * global_M,
-                                                        int * global_color_finished,
-                                                        int * global_U);
+
+__global__ void multiply_distance_by_finished_boolean(int N,
+                                                    int * M,
+                                                    int * color_finished,
+                                                    int * U_Prev,
+                                                    int * U);
+
+void GetMaxDist(int N,
+                int * M,
+                int * nextroot_gpu);
 
 #endif
 #endif

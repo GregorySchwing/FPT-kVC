@@ -119,6 +119,8 @@ void CallPopulateTree(Graph & g,
     int * global_M;
     // Cost = size M
     int * global_C;
+    // Final cost from prev sssp for choosing next root.
+    int * global_U_Prev;
     // Update = size M
     int * global_U;
     // Intermediate = size M
@@ -171,6 +173,8 @@ void CallPopulateTree(Graph & g,
     cudaMalloc( (void**)&global_color_finished, numberOfRows * sizeof(int) );
     cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
     cudaMalloc( (void**)&nextroot_gpu, 1 * sizeof(int) );
+    cudaMalloc( (void**)&global_U_Prev, numberOfRows * sizeof(int) );
+
 
     cudaMalloc( (void**)&global_finished_card_reduced, 1 * sizeof(int) );
 
@@ -194,16 +198,7 @@ void CallPopulateTree(Graph & g,
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_color_finished),  0, size_t(numberOfRows));
 
 
-    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_W),  1, size_t(numberOfEdgesPerGraph));
-    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_M),  0, size_t(numberOfRows));
-    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_C),  INT_MAX, size_t(numberOfRows));
-    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_U),  INT_MAX, size_t(numberOfRows));
-    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_Pred),  INT_MAX, size_t(numberOfRows));
-    
-    cudaDeviceSynchronize();
-    checkLastErrorCUDA(__FILE__, __LINE__);
 
-    int zero = 0;
     int k = 4;
 
     // allocate three device_vectors with 10 elements
@@ -222,69 +217,83 @@ void CallPopulateTree(Graph & g,
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
-    // Root should optimally be a degree 1 vertex.
-    // We never color the root, so by starting the sssp from
-    // degree 1 vertices, this isn't a problem.
-    // Root's neighbot also must have color cardinality < k.
-    // Finally, the next root should be chosen at a maximal 
-    // depth from the previous root.
-    // The SSSP and Color algorithm ends when either the entire graph is colored
-    // or no such vertices remain.
-    PerformSSSP(numberOfRows,
-                root,
-                global_row_offsets_dev_ptr,
-                global_columns_dev_ptr,
-                global_W,
-                global_M,
-                global_C,
-                global_U,
-                global_Pred,
-                global_U_Pred);
-    
-    cudaDeviceSynchronize();
-    checkLastErrorCUDA(__FILE__, __LINE__);
 
-    // Loop, X = k to 0
-    // 1 thread per vertex
-    // only vertices with cost a multiple of X are active on first iteration.
-    // if so, write my color to the color of my predecessor
-    // don't worry about race conditions, 
-    // if two or more nodes share a predecessor,
-    // last to write wins.  
-    //The kernel call ends after every iteration to obtain SMP sync.
+    while(notDone){
 
-    // Since this is single-source shortest path,
-    // all paths must eventually merge.  
-    // Once they merge, they won't diverge.*
-    // *TODO: double check this for divergent equal length paths.
-    // *If they can diverge, modify algorithm to prevent as it could cause
-    // Two colors of cardinality k/2, instead of 1 with k and the other < k.
+        // Reset SSSP vectors
+        cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_W),  1, size_t(numberOfEdgesPerGraph));
+        cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_M),  0, size_t(numberOfRows));
+        cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_C),  INT_MAX, size_t(numberOfRows));
+        cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_U),  INT_MAX, size_t(numberOfRows));
+        cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_Pred),  INT_MAX, size_t(numberOfRows));
+        
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
 
-    // Therefore, any color with a cardinality of K is an
-    // independent path of length K.  
-    // Colors with cardinality < K are disregarded.
-    // Worst case: No paths of length K exist. (Star graph of depth K-1)
-    // Best case: The entire graph is colored (Star graph of depth K+1)
-    PerformPathPartitioning(numberOfRows,
-                            k,
-                            root,
-                            global_row_offsets_dev_ptr,
-                            global_columns_dev_ptr,
-                            global_middle_vertex,
-                            global_M,
-                            global_U,
-                            global_U_Pred,
-                            global_colors,
-                            global_color_card,
-                            global_color_finished,
-                            global_finished_card_reduced,
-                            finished_gpu,
-                            nextroot_gpu);
+        // Root should optimally be a degree 1 vertex.
+        // We never color the root, so by starting the sssp from
+        // degree 1 vertices, this isn't a problem.
+        // Root's neighbot also must have color cardinality < k.
+        // Finally, the next root should be chosen at a maximal 
+        // depth from the previous root.
+        // The SSSP and Color algorithm ends when either the entire graph is colored
+        // or no such vertices remain.
+        PerformSSSP(numberOfRows,
+                    root,
+                    global_row_offsets_dev_ptr,
+                    global_columns_dev_ptr,
+                    global_W,
+                    global_M,
+                    global_C,
+                    global_U,
+                    global_Pred,
+                    global_U_Pred);
+        
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
 
-    cudaDeviceSynchronize();
-    checkLastErrorCUDA(__FILE__, __LINE__);
+        // Loop, X = k to 0
+        // 1 thread per vertex
+        // only vertices with cost a multiple of X are active on first iteration.
+        // if so, write my color to the color of my predecessor
+        // don't worry about race conditions, 
+        // if two or more nodes share a predecessor,
+        // last to write wins.  
+        //The kernel call ends after every iteration to obtain SMP sync.
 
+        // Since this is single-source shortest path,
+        // all paths must eventually merge.  
+        // Once they merge, they won't diverge.*
+        // *TODO: double check this for divergent equal length paths.
+        // *If they can diverge, modify algorithm to prevent as it could cause
+        // Two colors of cardinality k/2, instead of 1 with k and the other < k.
 
+        // Therefore, any color with a cardinality of K is an
+        // independent path of length K.  
+        // Colors with cardinality < K are disregarded.
+        // Worst case: No paths of length K exist. (Star graph of depth K-1)
+        // Best case: The entire graph is colored (Star graph of depth K+1)
+        PerformPathPartitioning(numberOfRows,
+                                k,
+                                root,
+                                global_row_offsets_dev_ptr,
+                                global_columns_dev_ptr,
+                                global_middle_vertex,
+                                global_M,
+                                global_U_Prev,
+                                global_U,
+                                global_U_Pred,
+                                global_colors,
+                                global_color_card,
+                                global_color_finished,
+                                global_finished_card_reduced,
+                                finished_gpu,
+                                nextroot_gpu);
+
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+
+    }
 
 
     //cudaMemcpy(&host_levels[0], &global_levels[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
@@ -509,6 +518,7 @@ void PerformPathPartitioning(int numberOfRows,
                             int * global_columns_dev_ptr,
                             int * global_middle_vertex,
                             int * global_M,
+                            int * global_U_Prev,
                             int * global_U,
                             int * global_U_Pred,
                             int * global_colors,
@@ -610,6 +620,7 @@ void PerformPathPartitioning(int numberOfRows,
                                         global_colors,
                                         global_M,
                                         global_color_finished,
+                                        global_U_Prev,
                                         global_U,
                                         nextroot_gpu);
 
@@ -698,35 +709,63 @@ void MaximizePathLength(int numberOfRows,
     } while (*finished);
 }
 
-void FindMaximumDistanceNonFinishedColor(int * numberOfRows,
+void FindMaximumDistanceNonFinishedColor(int numberOfRows,
                                         int * global_colors,
                                         int * global_M,
                                         int * global_color_finished,
+                                        int * global_U_Prev,
                                         int * global_U,
                                         int * nextroot_gpu){
 
+    int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
+
     multiply_distance_by_finished_boolean<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
                                                                                 global_M,
-                                                                                global_color_card,
-                                                                                global_color_finished); 
+                                                                                global_color_finished,
+                                                                                global_U_Prev,
+                                                                                global_U); 
                                                                                 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
-    
+    GetMaxDist(numberOfRows,
+                global_M,
+                nextroot_gpu);
 
 }
 
-__global__ void multiply_distance_by_finished_boolean(int * numberOfRows,
-                                                    int * global_M,
-                                                    int * global_color_finished,
-                                                    int * global_U){
+__global__ void multiply_distance_by_finished_boolean(int N,
+                                                    int * M,
+                                                    int * color_finished,
+                                                    int * U_Prev,
+                                                    int * U){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
         return;
-    global_M[v] = global_color_finished[v]*global_U[v]    
+    M[v] = color_finished[v]*U[v] + color_finished[v]*U_Prev[v]; 
 }
 
+void GetMaxDist(int N,
+                int * M,
+                int * nextroot_gpu){
+    // Declare, allocate, and initialize device-accessible pointers for input and output
+    int  num_items = N;      // e.g., 7
+    int  *d_in = M;          // e.g., [8, 6, 7, 5, 3, 0, 9]
+    int  *d_out = nextroot_gpu;         // e.g., [-]
+    // Determine temporary device storage requirements
+    void     *d_temp_storage = NULL;
+    size_t   temp_storage_bytes = 0;
+    cub::DeviceReduce::Max(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
+    // Allocate temporary storage
+    cudaMalloc(&d_temp_storage, temp_storage_bytes);
+    // Run max-reduction
+    cub::DeviceReduce::Max(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
+    // d_out <-- [9]
+    cudaFree(d_temp_storage);
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+}
 
 
 __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
