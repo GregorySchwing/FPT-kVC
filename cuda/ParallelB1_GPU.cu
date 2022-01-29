@@ -217,8 +217,15 @@ void CallPopulateTree(Graph & g,
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
+    int host_reduced;
+    double host_percentage_finished;
+    double percentage_threshold = 0.80;
+    int iteration_threshold = 10;
 
-    while(notDone){
+    int done = 0;
+    int iteration = 0;
+
+    while(!done){
 
         // Reset SSSP vectors
         cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_W),  1, size_t(numberOfEdgesPerGraph));
@@ -292,6 +299,24 @@ void CallPopulateTree(Graph & g,
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
+
+        cudaMemcpy(&host_reduced, &global_finished_card_reduced[0], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
+        cudaMemcpy(&root, &nextroot_gpu[0], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
+        cudaMemcpy(&global_U_Prev[0], &global_U[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToDevice);
+
+        host_percentage_finished = host_reduced/numberOfRows;
+
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+
+        done |= percentage_threshold < host_percentage_finished;
+        done |= iteration_threshold < iteration;
+
+        std::cout << "Iteration : " << iteration << std::endl;
+        std::cout << "Root : " << root << std::endl;
+        std::cout << "Percentage Done : " << host_percentage_finished << std::endl;
+
+        ++iteration;
 
     }
 
