@@ -145,6 +145,12 @@ __global__ void launch_gpu_sssp_kernel_2(   int N,
                                             int * Pred,
                                             int * U_Pred);
 
+__global__ void reset_partial_paths(int N,
+                                    int * colors,
+                                    int * color_card,
+                                    int * color_finished,
+                                    int * middle_vertex);
+
 void PerformBFS(int numberOfRows,
                 int * global_levels,
                 int * global_row_offsets_dev_ptr,

@@ -503,7 +503,7 @@ void PerformPathPartitioning(int numberOfRows,
                             int * global_color_finished){
     int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
     int * finished_gpu;
-    int maximizePathLength = false;
+    int maximizePathLength = true;
     cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
     // k-1 iterations to prevent claiming the root
     for (int iter = 0; iter < k-1; ++iter){
@@ -573,6 +573,15 @@ void PerformPathPartitioning(int numberOfRows,
                                                                             global_middle_vertex);
 
 
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    reset_partial_paths<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
+                                                            global_colors,
+                                                            global_color_card,
+                                                            global_color_finished,
+                                                            global_middle_vertex);    
+                            
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
@@ -818,18 +827,31 @@ __global__ void launch_gpu_sssp_coloring_1(int N,
                                         int * color_finished,
                                         int * middle_vertex){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
-    if (v >= N || color_finished[v] || middle_vertex[v])
+    if (v >= N || color_finished[v])
         return;
     if ((U[v] + iter) % k != 0 || U[v] == INT_MAX)
         return;
     int w = U_Pred[v];
     // Race condition, but the kernel ends, so we get synchronization
     // it doesn't matter who wins, we need to initiate change in the graph.
-    if (!color_finished[w] && !middle_vertex[w]){
+    if (!color_finished[w]){
         colors[w] = colors[v];
-        M[w] = 1;
     }
 }
+
+
+__global__ void reset_partial_paths(int N,
+                                    int * colors,
+                                    int * color_card,
+                                    int * color_finished,
+                                    int * middle_vertex){
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= N || color_finished[v])
+        return;
+    colors[v] = v;
+    color_card[v] = 1;
+    middle_vertex[v] = 0;
+}   
 
 // Not currently working since we reset the marks to 0.
 __global__ void launch_gpu_sssp_coloring_maximize(int N,
@@ -843,7 +865,7 @@ __global__ void launch_gpu_sssp_coloring_maximize(int N,
                                         int * color_finished,
                                         int * middle_vertex){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
-    if (v >= N || color_finished[v] || middle_vertex[v])
+    if (v >= N || color_finished[v])
         return;
     if ((U[v] + iter) % k != 0 || U[v] == INT_MAX)
         return;
@@ -856,7 +878,7 @@ __global__ void launch_gpu_sssp_coloring_maximize(int N,
     int wcc = color_card[wc];
     // Still a race condition, of what color is assigned color[w]
     // so we need to keep calling this method until no marked vertices exist.
-    if (vcc > wcc && !middle_vertex[w]){
+    if (vcc > wcc){
         colors[w] = colors[v];
         M[w] = 1;
     }
@@ -873,18 +895,15 @@ __global__ void launch_gpu_sssp_coloring_2(int N,
                                         int * color_finished,
                                         int * middle_vertex){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
-    if (v >= N || color_finished[v] || middle_vertex[v])
+    if (v >= N || color_finished[v])
         return;
     if ((U[v] + iter) % k != 0 || U[v] == INT_MAX)
         return;
 
     int w = U_Pred[v];
     int wc;
-    if (M[w]){
-        wc = colors[w];
-        color_card[wc] = color_card[wc] + 1;
-        M[w] = 0;
-    }
+    wc = colors[w];
+    color_card[wc] = color_card[wc] + 1;
 }
 
 void Sum(int expanded_size,
