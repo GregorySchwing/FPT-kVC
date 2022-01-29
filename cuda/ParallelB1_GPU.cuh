@@ -44,12 +44,21 @@ void CopyGraphToDevice( Graph & g,
 __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                             int *nodes, int *edges, int * finished);
 
-__global__ void launch_gpu_color_finishing_kernel( int N,
+__global__ void launch_gpu_color_finishing_kernel_1( int N,
                                                 int * nodes,
                                                 int * edges,
                                                 int * colors,
                                                 int * color_card,
-                                                int * color_finished);
+                                                int * color_finished,
+                                                int * middle_vertex);
+
+__global__ void launch_gpu_color_finishing_kernel_2( int N,
+                                                int * nodes,
+                                                int * edges,
+                                                int * colors,
+                                                int * color_card,
+                                                int * color_finished,
+                                                int * middle_vertex);
 
 __global__ void launch_gpu_combine_colors_kernel( int N,
                                                 int k,
@@ -65,13 +74,14 @@ __global__ void launch_gpu_combine_colors_kernel( int N,
 __global__ void launch_gpu_sssp_coloring_1(int N,
                                         int k,
                                         int iter,
+                                        int * M,
                                         int * U,
                                         int * U_Pred,
                                         int * colors,
                                         int * color_finished,
                                         int * middle_vertex);
 
-__global__ void launch_gpu_sssp_coloring_2(int N,
+__global__ void launch_gpu_sssp_coloring_maximize(int N,
                                         int k,
                                         int iter,
                                         int * M,
@@ -82,9 +92,10 @@ __global__ void launch_gpu_sssp_coloring_2(int N,
                                         int * color_finished,
                                         int * middle_vertex);
 
-__global__ void launch_gpu_sssp_coloring_3(int N,
+__global__ void launch_gpu_sssp_coloring_2(int N,
                                         int k,
                                         int iter,
+                                        int * M,
                                         int * U,
                                         int * U_Pred,
                                         int * colors,

@@ -181,7 +181,7 @@ void CallPopulateTree(Graph & g,
 
     // Set all levels value to INT_MAX
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_levels),  INT_MAX, size_t(numberOfRows));
-    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_color_card),  0, size_t(numberOfRows));
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_color_card),  1, size_t(numberOfRows));
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_middle_vertex),  0, size_t(numberOfRows));
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_color_finished),  0, size_t(numberOfRows));
 
@@ -502,15 +502,13 @@ void PerformPathPartitioning(int numberOfRows,
                             int * global_color_card,
                             int * global_color_finished){
     int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
-    int * finished_gpu;
-    int maximizePathLength = true;
-    cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
     // k-1 iterations to prevent claiming the root
     for (int iter = 0; iter < k-1; ++iter){
         launch_gpu_sssp_coloring_1<<<oneThreadPerNode,threadsPerBlock>>>(
                                                                         numberOfRows,
                                                                         k,
                                                                         iter,
+                                                                        global_M,
                                                                         global_U,
                                                                         global_U_Pred,
                                                                         global_colors,
@@ -519,26 +517,13 @@ void PerformPathPartitioning(int numberOfRows,
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
-        
-        // Loop until winner is largest cardinality color
-        // Worst case number of loops is k
-        if (maximizePathLength)
-            MaximizePathLength(numberOfRows,
-                                k,
-                                iter,
-                                finished_gpu,
-                                global_M,
-                                global_U,
-                                global_U_Pred,
-                                global_colors,
-                                global_color_card,
-                                global_color_finished,
-                                global_middle_vertex);
+
         // Increment cardinality of winner
-        launch_gpu_sssp_coloring_3<<<oneThreadPerNode,threadsPerBlock>>>(
+        launch_gpu_sssp_coloring_2<<<oneThreadPerNode,threadsPerBlock>>>(
                                                                         numberOfRows,
                                                                         k,
                                                                         iter,
+                                                                        global_M,
                                                                         global_U,
                                                                         global_U_Pred,
                                                                         global_colors,
@@ -549,16 +534,31 @@ void PerformPathPartitioning(int numberOfRows,
         checkLastErrorCUDA(__FILE__, __LINE__);
     }
 
-    launch_gpu_color_finishing_kernel<<<oneThreadPerNode,threadsPerBlock>>>(
+    launch_gpu_color_finishing_kernel_1<<<oneThreadPerNode,threadsPerBlock>>>(
                                                                             numberOfRows,
                                                                             global_row_offsets_dev_ptr,
                                                                             global_columns_dev_ptr,
                                                                             global_colors,
                                                                             global_color_card,
-                                                                            global_color_finished);
+                                                                            global_color_finished,
+                                                                            global_middle_vertex);
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    launch_gpu_color_finishing_kernel_2<<<oneThreadPerNode,threadsPerBlock>>>(
+                                                                            numberOfRows,
+                                                                            global_row_offsets_dev_ptr,
+                                                                            global_columns_dev_ptr,
+                                                                            global_colors,
+                                                                            global_color_card,
+                                                                            global_color_finished,
+                                                                            global_middle_vertex);
 
 
-    cudaFree (finished_gpu);
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
 }
 
 __host__ void CalculateNewRowOffsets( int numberOfRows,
@@ -602,7 +602,7 @@ void MaximizePathLength(int numberOfRows,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
-        launch_gpu_sssp_coloring_2<<<oneThreadPerNode,threadsPerBlock>>>(
+        launch_gpu_sssp_coloring_maximize<<<oneThreadPerNode,threadsPerBlock>>>(
                         numberOfRows,
                         k,
                         iter,
@@ -628,7 +628,7 @@ void MaximizePathLength(int numberOfRows,
 
 __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                                             int *nodes, int *edges, int * finished){
-    int v = threadIdx.x;
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
         return;
     if (levels[v] == curr) {
@@ -645,25 +645,25 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
     }
 }
 
-// Processes colors of cardinality 3
-// If this is a cycle, finish the color
+// Processes colors of cardinality 3 and 4
+// If a color with cardinality 3 is a cycle, finish the color
 // else, mark the middle so we dont add a four vertex onto the middle.
-__global__ void launch_gpu_color_finishing_kernel( int N,
+__global__ void launch_gpu_color_finishing_kernel_1( int N,
                                                 int * nodes,
                                                 int * edges,
                                                 int * colors,
                                                 int * color_card,
-                                                int * color_finished){
-    int v = threadIdx.x;
+                                                int * color_finished,
+                                                int * middle_vertex){
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N || color_finished[v])
         return;
     int cv = colors[v];
     int myOwnColorEdges = 0;
-    int foundCycle;
+    int middleVertex;
     // Guaruntees we need another vertex and v is not an internal vertex
     // for example, with path a - b - c; we guaruntee v is not b.
-    // Note, color card starts at zero, so we are 1 less than the true value.
-    if (color_card[v] == 2) {
+    if (color_card[v] == 3) {
         // iterate over neighbors
         int num_nbr = nodes[v+1] - nodes[v];
         int * nbrs = & edges[ nodes[v] ];
@@ -674,10 +674,41 @@ __global__ void launch_gpu_color_finishing_kernel( int N,
                 ++myOwnColorEdges;
             }
         }
-        foundCycle = myOwnColorEdges > 1;
-        color_finished[v] = foundCycle;
-    } else if (color_card[v] == 3){
-        color_finished[v] = true;
+        middleVertex = myOwnColorEdges > 1;
+        middle_vertex[v] = middleVertex;
+    }
+}
+
+__global__ void launch_gpu_color_finishing_kernel_2( int N,
+                                                int * nodes,
+                                                int * edges,
+                                                int * colors,
+                                                int * color_card,
+                                                int * color_finished,
+                                                int * middle_vertex){
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= N || color_finished[v])
+        return;
+    int cv = colors[v];
+    int middleVertexCount = 0;
+    int foundCycle;
+    // Guaruntees we need another vertex and v is not an internal vertex
+    // for example, with path a - b - c; we guaruntee v is not b.
+    if (color_card[cv] == 3) {
+        // iterate over neighbors
+        int num_nbr = nodes[v+1] - nodes[v];
+        int * nbrs = & edges[ nodes[v] ];
+        for(int i = 0; i < num_nbr; i++) {
+            int w = nbrs[i];
+            int mvw = middle_vertex[w];
+            if (mvw){
+                ++middleVertexCount;
+            }
+        }
+        foundCycle = middleVertexCount > 1;
+        color_finished[cv] = foundCycle;
+    } else if (color_card[cv] == 4){
+        color_finished[cv] = true;
     }
 }
 
@@ -691,7 +722,7 @@ __global__ void launch_gpu_combine_colors_kernel( int N,
                                                 int * U_Pred,
                                                 int * colors,
                                                 int * color_card){
-    int v = threadIdx.x;
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
         return;
     int cv = colors[v];
@@ -762,6 +793,7 @@ __global__ void launch_gpu_sssp_kernel_2(   int N,
 __global__ void launch_gpu_sssp_coloring_1(int N,
                                         int k,
                                         int iter,
+                                        int * M,
                                         int * U,
                                         int * U_Pred,
                                         int * colors,
@@ -775,11 +807,60 @@ __global__ void launch_gpu_sssp_coloring_1(int N,
     int w = U_Pred[v];
     // Race condition, but the kernel ends, so we get synchronization
     // it doesn't matter who wins, we need to initiate change in the graph.
-    if (!color_finished[w] && !middle_vertex[w])
+    if (!color_finished[w] && !middle_vertex[w]){
         colors[w] = colors[v];
+        M[w] = 1;
+    }
 }
 
 __global__ void launch_gpu_sssp_coloring_2(int N,
+                                        int k,
+                                        int iter,
+                                        int * M,
+                                        int * U,
+                                        int * U_Pred,
+                                        int * colors,
+                                        int * color_card,
+                                        int * color_finished,
+                                        int * middle_vertex){
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= N || color_finished[v] || middle_vertex[v])
+        return;
+    if ((U[v] + iter) % k != 0 || U[v] == INT_MAX)
+        return;
+
+    int w = U_Pred[v];
+    int wc;
+    if (M[w]){
+        wc = colors[w];
+        color_card[wc] = color_card[wc] + 1;
+        M[w] = 0;
+    }
+}
+
+void Sum(int expanded_size,
+        int * expanded,
+        int * reduced){
+    // Declare, allocate, and initialize device-accessible pointers for input and output
+    int  num_items = expanded_size;      // e.g., 7
+    int  *d_in = expanded;          // e.g., [8, 6, 7, 5, 3, 0, 9]
+    int  *d_out = reduced;         // e.g., [-]
+    // Determine temporary device storage requirements
+    void     *d_temp_storage = NULL;
+    size_t   temp_storage_bytes = 0;
+    cub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
+    // Allocate temporary storage
+    cudaMalloc(&d_temp_storage, temp_storage_bytes);
+    // Run sum-reduction
+    cub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
+    // d_out <-- [38]
+    cudaFree(d_temp_storage);
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+}
+
+// Not currently working since we reset the marks to 0.
+__global__ void launch_gpu_sssp_coloring_maximize(int N,
                                         int k,
                                         int iter,
                                         int * M,
@@ -807,50 +888,5 @@ __global__ void launch_gpu_sssp_coloring_2(int N,
         colors[w] = colors[v];
         M[w] = 1;
     }
-}
-
-__global__ void launch_gpu_sssp_coloring_3(int N,
-                                        int k,
-                                        int iter,
-                                        int * U,
-                                        int * U_Pred,
-                                        int * colors,
-                                        int * color_card,
-                                        int * color_finished,
-                                        int * middle_vertex){
-    int v = threadIdx.x + blockDim.x * blockIdx.x;
-    if (v >= N || color_finished[v] || middle_vertex[v])
-        return;
-    if ((U[v] + iter) % k != 0 || U[v] == INT_MAX)
-        return;
-
-    int vc = colors[v];
-
-    int w = U_Pred[v];
-    int wc = colors[w];
-    if (vc == wc && !middle_vertex[w]){
-        color_card[wc] = color_card[wc] + 1;
-    }
-}
-
-void Sum(int expanded_size,
-        int * expanded,
-        int * reduced){
-    // Declare, allocate, and initialize device-accessible pointers for input and output
-    int  num_items = expanded_size;      // e.g., 7
-    int  *d_in = expanded;          // e.g., [8, 6, 7, 5, 3, 0, 9]
-    int  *d_out = reduced;         // e.g., [-]
-    // Determine temporary device storage requirements
-    void     *d_temp_storage = NULL;
-    size_t   temp_storage_bytes = 0;
-    cub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
-    // Allocate temporary storage
-    cudaMalloc(&d_temp_storage, temp_storage_bytes);
-    // Run sum-reduction
-    cub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
-    // d_out <-- [38]
-    cudaFree(d_temp_storage);
-    cudaDeviceSynchronize();
-    checkLastErrorCUDA(__FILE__, __LINE__);
 }
 #endif
