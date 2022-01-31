@@ -34,7 +34,7 @@ __host__ void CalculateNewRowOffsets( int numberOfRows,
                                     int * global_row_offsets_dev_ptr,
                                     int * global_degrees_dev_ptr);
 
-void CopyGraphToDevice( Graph & g,
+void CopyGraphToDeviceAndInduce( Graph & g,
                         int numberOfEdgesPerGraph,
                         int * global_row_offsets_dev_ptr,
                         int * global_columns_dev_ptr,
@@ -182,7 +182,7 @@ void PerformBFSColoring(int numberOfRows,
                 int * global_colors,
                 int * global_color_card);
 
-void ColorGraph(Graph & gPrime, 
+void SSSPAndBuildDepthCSR(Graph & gPrime, 
                         int root, 
                         int * host_levels,
                         int * new_row_offs_host,

@@ -130,7 +130,7 @@ void CallInduceSubgraph(Graph & g,
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
-    CopyGraphToDevice(g,
+    CopyGraphToDeviceAndInduce(g,
                       numberOfEdgesPerGraph,
                       new_row_offs_dev,
                       new_cols_dev,
@@ -151,26 +151,13 @@ void CallInduceSubgraph(Graph & g,
     checkLastErrorCUDA(__FILE__, __LINE__);
 }
 
-void ColorGraph(Graph & g, 
+void SSSPAndBuildDepthCSR(Graph & g, 
                      int root,
-                     int * host_levels,
                      int * new_row_offs_host,
                      int * new_cols_host,
+                    int * Depth_CSR_host,
                     int * new_row_offs_dev,
-                    int * new_cols_dev,
-                    int * new_colors,
-                    int * host_U,
-                    int * new_Pred,
-                    int * new_color_finished){
-
-    int * global_levels; // size N, will contatin BFS level of nth node
-    int * global_middle_vertex;
-    int * global_colors; // size N, will contatin color of nth node
-    int * global_color_card;   // size N, will contatin size of color set
-    int * global_color_finished; // size N, contatin boolean of color finished, sometimes cardinality 1,2,3 is finished.
-    int * global_finished_card_reduced;
-    int * finished_gpu;
-    int * nextroot_gpu;
+                    int * new_cols_dev){
 
     // SSSP
     // Weights = size N
@@ -179,8 +166,6 @@ void ColorGraph(Graph & g,
     int * global_M;
     // Cost = size M
     int * global_C;
-    // Final cost from prev sssp for choosing next root.
-    int * global_U_Prev;
     // Update = size M
     int * global_U;
     // Intermediate = size M
@@ -191,23 +176,6 @@ void ColorGraph(Graph & g,
 
     int numberOfRows = g.GetVertexCount(); 
     int numberOfEdgesPerGraph = g.GetEdgesLeftToCover();  // size M
-
-    cudaMalloc( (void**)&global_levels, numberOfRows * sizeof(int) );
-    // Malloc'ed by thrust
-    //cudaMalloc( (void**)&global_colors, numberOfRows * sizeof(int) );
-    // middle vertex flag can be removed if colors with
-    // cardinality of size 3 that are non-cycles
-    // are reset to original colors every time.
-    // This might be worth experimenting with for a low-memory version.
-    cudaMalloc( (void**)&global_middle_vertex, numberOfRows * sizeof(int) );
-    cudaMalloc( (void**)&global_color_card, numberOfRows * sizeof(int) );
-    cudaMalloc( (void**)&global_color_finished, numberOfRows * sizeof(int) );
-    cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
-    cudaMalloc( (void**)&nextroot_gpu, 1 * sizeof(int) );
-    cudaMalloc( (void**)&global_U_Prev, numberOfRows * sizeof(int) );
-
-
-    cudaMalloc( (void**)&global_finished_card_reduced, 1 * sizeof(int) );
 
     // SSSP
     // Can be removed for unweighted-graphs
@@ -222,12 +190,106 @@ void ColorGraph(Graph & g,
     // Updated final
     cudaMalloc( (void**)&global_U_Pred, numberOfRows * sizeof(int) );
 
-    // Set all levels value to INT_MAX
-    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_levels),  INT_MAX, size_t(numberOfRows));
+    // Reset SSSP vectors
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_W),  1, size_t(numberOfEdgesPerGraph));
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_M),  0, size_t(numberOfRows));
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_C),  INT_MAX, size_t(numberOfRows));
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_U),  INT_MAX, size_t(numberOfRows));
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_U_Pred),  INT_MAX, size_t(numberOfRows));
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_Pred),  INT_MAX, size_t(numberOfRows));
+    
+    
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    // Root should optimally be a degree 1 vertex.
+    // We never color the root, so by starting the sssp from
+    // degree 1 vertices, this isn't a problem.
+    // Root's neighbot also must have color cardinality < k.
+    // Finally, the next root should be chosen at a maximal 
+    // depth from the previous root.
+    // The SSSP and Color algorithm ends when either the entire graph is colored
+    // or no such vertices remain.
+    PerformSSSP(numberOfRows,
+                root,
+                new_row_offs_dev,
+                new_cols_dev,
+                global_W,
+                global_M,
+                global_C,
+                global_U,
+                global_Pred,
+                global_U_Pred);
+    
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+
+}
+
+void CreateDepthCSR(numberOfRows,
+                    global_U,
+                    ){
+    // Declare, allocate, and initialize device-accessible pointers for sorting data
+    int  num_items ;          // e.g., 7
+    int  *d_keys_in;         // e.g., [8, 6, 7, 5, 3, 0, 9]
+    int  *d_keys_out;        // e.g., [        ...        ]
+    int  *d_values_in;       // e.g., [0, 1, 2, 3, 4, 5, 6]
+    int  *d_values_out;      // e.g., [        ...        ]
+
+    thrust::device_vector<int> colors(g.GetNumberOfRows());
+    // initialize X to 0,1,2,3, ....
+    thrust::sequence(colors.begin(), colors.end());
+    global_colors = thrust::raw_pointer_cast(colors.data());
+
+    // Determine temporary device storage requirements
+    void     *d_temp_storage = NULL;
+    size_t   temp_storage_bytes = 0;
+    cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes,
+        d_keys_in, d_keys_out, d_values_in, d_values_out, num_items);
+    // Allocate temporary storage
+    cudaMalloc(&d_temp_storage, temp_storage_bytes);
+    // Run sorting operation
+    cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes,
+        d_keys_in, d_keys_out, d_values_in, d_values_out, num_items);
+    // d_keys_out            <-- [0, 3, 5, 6, 7, 8, 9]
+    // d_values_out          <-- [5, 4, 3, 1, 2, 0, 6]
+}
+
+void ColorGraph(){
+
+/*
+
+    int * global_levels; // size N, will contatin BFS level of nth node
+    int * global_middle_vertex;
+    int * global_colors; // size N, will contatin color of nth node
+    int * global_color_card;   // size N, will contatin size of color set
+    int * global_color_finished; // size N, contatin boolean of color finished, sometimes cardinality 1,2,3 is finished.
+    int * global_finished_card_reduced;
+    int * finished_gpu;
+    int * nextroot_gpu;
+
+    int numberOfRows = g.GetVertexCount(); 
+    int numberOfEdgesPerGraph = g.GetEdgesLeftToCover();  // size M
+
+    // Malloc'ed by thrust
+    //cudaMalloc( (void**)&global_colors, numberOfRows * sizeof(int) );
+    // middle vertex flag can be removed if colors with
+    // cardinality of size 3 that are non-cycles
+    // are reset to original colors every time.
+    // This might be worth experimenting with for a low-memory version.
+    cudaMalloc( (void**)&global_middle_vertex, numberOfRows * sizeof(int) );
+    cudaMalloc( (void**)&global_color_card, numberOfRows * sizeof(int) );
+    cudaMalloc( (void**)&global_color_finished, numberOfRows * sizeof(int) );
+    cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
+    cudaMalloc( (void**)&nextroot_gpu, 1 * sizeof(int) );
+    cudaMalloc( (void**)&global_U_Prev, numberOfRows * sizeof(int) );
+    cudaMalloc( (void**)&global_finished_card_reduced, 1 * sizeof(int) );
+
+
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_color_card),  1, size_t(numberOfRows));
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_middle_vertex),  0, size_t(numberOfRows));
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_color_finished),  0, size_t(numberOfRows));
-
 
 
     int k = 4;
@@ -269,45 +331,10 @@ void ColorGraph(Graph & g,
         new_colors_mapper[n] = distr(gen); // generate numbers
     }
 
-    while(!done){
 
         std::cout << "Iteration : " << iteration << std::endl;
         std::cout << "Root : " << root << std::endl;
         std::cout << "Percentage Done : " << host_percentage_finished << std::endl;
-
-        // Reset SSSP vectors
-        cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_W),  1, size_t(numberOfEdgesPerGraph));
-        cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_M),  0, size_t(numberOfRows));
-        cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_C),  INT_MAX, size_t(numberOfRows));
-        cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_U),  INT_MAX, size_t(numberOfRows));
-        cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_U_Pred),  INT_MAX, size_t(numberOfRows));
-        cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_Pred),  INT_MAX, size_t(numberOfRows));
-        
-        
-        cudaDeviceSynchronize();
-        checkLastErrorCUDA(__FILE__, __LINE__);
-
-        // Root should optimally be a degree 1 vertex.
-        // We never color the root, so by starting the sssp from
-        // degree 1 vertices, this isn't a problem.
-        // Root's neighbot also must have color cardinality < k.
-        // Finally, the next root should be chosen at a maximal 
-        // depth from the previous root.
-        // The SSSP and Color algorithm ends when either the entire graph is colored
-        // or no such vertices remain.
-        PerformSSSP(numberOfRows,
-                    root,
-                    new_row_offs_dev,
-                    new_cols_dev,
-                    global_W,
-                    global_M,
-                    global_C,
-                    global_U,
-                    global_Pred,
-                    global_U_Pred);
-        
-        cudaDeviceSynchronize();
-        checkLastErrorCUDA(__FILE__, __LINE__);
 
         // Loop, X = k to 0
         // 1 thread per vertex
@@ -474,14 +501,6 @@ void ColorGraph(Graph & g,
     checkLastErrorCUDA(__FILE__, __LINE__);
 
 
-    //cudaFree( global_levels );
-    cudaFree( finished_gpu );
-    cudaFree( global_finished_card_reduced );
-    //cudaFree( global_colors );
-    cudaFree( global_color_card );
-    cudaFree( global_color_finished );
-    cudaFree( global_middle_vertex );
-
     cudaFree( global_W );
     cudaFree( global_M );
     cudaFree( global_C );
@@ -491,9 +510,19 @@ void ColorGraph(Graph & g,
     delete[] new_colors_mapper;
 
     cudaDeviceSynchronize();
+
+
+    //cudaFree( global_levels );
+    cudaFree( finished_gpu );
+    cudaFree( global_finished_card_reduced );
+    //cudaFree( global_colors );
+    cudaFree( global_color_card );
+    cudaFree( global_color_finished );
+    cudaFree( global_middle_vertex );
+    */
 }
 
-void CopyGraphToDevice( Graph & g,
+void CopyGraphToDeviceAndInduce( Graph & g,
                         int numberOfEdgesPerGraph,
                         int * global_row_offsets_dev_ptr,
                         int * global_columns_dev_ptr,

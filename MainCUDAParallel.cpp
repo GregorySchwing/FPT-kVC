@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
                     new_vals);
 
     // Step 1
-    //ColorGraph(g, root, host_levels, new_row_offsets, new_cols, new_colors, new_U, new_Pred, new_color_finished);
+    //SSSPAndBuildDepthCSR(g, root, host_levels, new_row_offsets, new_cols, new_colors, new_U, new_Pred, new_color_finished);
     // Step 2
     //EnumerateSearchTree(g, new_row_offsets, new_cols, new_colors, new_color_finished);
 
