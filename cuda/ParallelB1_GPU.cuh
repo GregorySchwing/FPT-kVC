@@ -30,108 +30,169 @@ __device__ int randomGPU(unsigned int counter, ulong step, ulong seed);
 
 class Graph;
 
+__host__ void CalculateNewRowOffsets( int numberOfRows,
+                                    int * global_row_offsets_dev_ptr,
+                                    int * global_degrees_dev_ptr);
+
 void CopyGraphToDevice( Graph & g,
                         int numberOfEdgesPerGraph,
-                        int * global_edges_left_to_cover_count,
-                        int * new_row_offsets_dev_ptr,
-                        int * new_columns_dev_ptr,
-                        int * values_dev_ptr,
-                        int verticesRemainingInGraph,
-                        int * global_remaining_vertices_size_dev_ptr,
-                        int * global_degrees_offsets_ptr,
-                        int * new_degrees_dev_ptr,
-                        int * global_remaining_vertices_dev_ptr,
-                        int * global_vertex_is_remaining_flag_dev_ptr,
-                        int * global_active_leaf_indices,
-                        int * global_active_leaf_indices_count);
-
-void CallPopulateTree(int numberOfLevels, 
-                    Graph & gPrime);
-
-CUDA_HOSTDEV int CalculateWorstCaseSpaceComplexity(int vertexCount);
-CUDA_HOSTDEV long long CalculateSpaceForDesiredNumberOfLevels(int NumberOfLevels);
-CUDA_HOSTDEV long long CalculateSizeRequirement(int startingLevel,
-                                                            int endingLevel);
-CUDA_HOSTDEV long long CalculateLevelOffset(int level);
-CUDA_HOSTDEV long long CalculateLevelUpperBound(int level);
-CUDA_HOSTDEV long long CalculateDeepestLevelWidth(int maxLevel);
-CUDA_HOSTDEV int CalculateNumberOfFullLevels(int leavesThatICanGenerate);
-
-CUDA_HOSTDEV int ClosedFormLevelDepth(int leavesThatICanGenerate);
-
-//__global__ int ClosedFormLevelDepth(int leavesThatICanProcess);
-#ifndef NDEBUG
-
-__global__ void  PrintEdges(int activeVerticesCount,
-                                    int numberOfRows,
-                                    int numberOfEdgesPerGraph,
-                                    int * global_columns_tree,
-                                    int * global_offsets_buffer,
-                                    int * printAlt,
-                                    int * printCurr);
-
-__global__ void  PrintVerts(int activeVerticesCount,
-                                    int numberOfRows,
-                                    int * global_verts_tree,
-                                    int * global_vertex_buffer,
-                                    int * printAlt,
-                                    int * printCurr);
-
-__global__ void  PrintRowOffs(int activeVerticesCount,
-                                    int numberOfRows,
-                                    int * printAlt,
-                                    int * printCurr);                                    
-
-__global__ void  PrintSets(int activeVerticesCount,
-                            int * curr_paths_indices,
-                            int * alt_paths_indices,
-                            int * curr_set_inclusion,
-                            int * alt_set_inclusion,
-                           int * global_set_path_offsets);
-
-__global__ void  PrintData(int activeVerticesCount,
-                            int numberOfRows,
-                            int numberOfEdgesPerGraph, 
-                            int * row_offs,
-                            int * cols,
-                            int * vals,
-                            int * degrees,
-                            int * verts_remain,
-                            int * edges_left,
-                            int * verts_remain_count);
-#endif
-
-__global__ void SetEdges(const int numberOfRows,
-                        const int numberOfEdgesPerGraph,
-                        const int * global_active_leaf_indices,
-                        const int * global_active_leaf_parent_leaf_index,
-                        const int * global_row_offsets_dev_ptr,
-                        const int * global_columns_dev_ptr,
+                        int * global_row_offsets_dev_ptr,
+                        int * global_columns_dev_ptr,
                         int * global_values_dev_ptr,
-                        int * global_degrees_dev_ptr,
-                        int * global_edges_left_to_cover_count,
-                        int * verts_remain_count,
-                        const int * global_vertices_included_dev_ptr);
+                        int * global_degrees_dev_ptr);
 
-__global__ void SetPendantEdges(const int numberOfRows,
-                        const int numberOfEdgesPerGraph,
-                        const int * global_row_offsets_dev_ptr,
-                        const int * global_columns_dev_ptr,
-                        int * global_values_dev_ptr,
-                        int * global_degrees_dev_ptr,
-                        int * global_edges_left_to_cover_count,
-                        const int * global_pendant_path_bool_dev_ptr,
-                        const int * global_pendant_child_dev_ptr,
-                        int * verts_remain_count);
+void CopyGraphFromDevice(Graph & g,
+                        int numberOfEdgesPerGraph,
+                        int * global_row_offsets_dev_ptr,
+                        int * global_columns_dev_ptr,
+                        int * host_row_offsets,
+                        int * host_columns);
 
-__global__ void SetDegreesAndCountEdgesLeftToCover(int numberOfRows,
-                                            int numberOfEdgesPerGraph,
-                                            int levelOffset,
-                                            int levelUpperBound,
+__global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
+                            int *nodes, int *edges, int * finished);
+
+__global__ void launch_gpu_color_finishing_kernel_1( int N,
+                                                int * nodes,
+                                                int * edges,
+                                                int * colors,
+                                                int * color_card,
+                                                int * color_finished,
+                                                int * middle_vertex);
+
+__global__ void launch_gpu_color_finishing_kernel_2( int N,
+                                                int * nodes,
+                                                int * edges,
+                                                int * colors,
+                                                int * color_card,
+                                                int * color_finished,
+                                                int * middle_vertex);
+
+__global__ void launch_gpu_combine_colors_kernel( int N,
+                                                int k,
+                                                int iter,
+                                                int internal_iter,
+                                                int * nodes,
+                                                int * edges,
+                                                int * M,
+                                                int * U,
+                                                int * U_Pred,
+                                                int * colors,
+                                                int * color_card);
+
+__global__ void launch_gpu_sssp_coloring_1(int N,
+                                        int k,
+                                        int iter,
+                                        int * M,
+                                        int * U,
+                                        int * U_Pred,
+                                        int * colors,
+                                        int * color_finished,
+                                        int * middle_vertex);
+
+__global__ void launch_gpu_sssp_coloring_maximize(int N,
+                                        int k,
+                                        int iter,
+                                        int * M,
+                                        int * U,
+                                        int * U_Pred,
+                                        int * colors,
+                                        int * color_card,
+                                        int * color_finished,
+                                        int * middle_vertex);
+
+__global__ void launch_gpu_sssp_coloring_2(int N,
+                                        int k,
+                                        int iter,
+                                        int * M,
+                                        int * U,
+                                        int * U_Pred,
+                                        int * colors,
+                                        int * color_card,
+                                        int * color_finished,
+                                        int * middle_vertex);
+
+void PerformSSSP(int numberOfRows,
+                int root,
+                int * global_row_offsets_dev_ptr,
+                int * global_columns_dev_ptr,
+                int * global_W,
+                int * global_M,
+                int * global_C,
+                int * global_U,
+                int * global_Pred,
+                int * global_U_Pred);
+
+// Currently root isn't assigned to any color.
+void PerformPathPartitioning(int numberOfRows,
+                            int k,
+                            int root,
+                            int * global_row_offsets_dev_ptr,
+                            int * global_columns_dev_ptr,
+                            int * global_middle_vertex,
+                            int * global_M,
+                            int * global_U_Prev,
+                            int * global_U,
+                            int * global_U_Pred,
+                            int * global_colors,
+                            int * global_color_card,
+                            int * global_color_finished,
+                            int * global_finished_card_reduced,
+                            int * finished_gpu, 
+                            int * nextroot_gpu);
+
+
+__global__ void launch_gpu_sssp_kernel_1(   int N,             
                                             int * global_row_offsets_dev_ptr,
-                                            int * global_values_dev_ptr,
-                                            int * global_degrees_dev_ptr,
-                                            int * global_edges_left_to_cover_count);
+                                            int * global_columns_dev_ptr,
+                                            int * global_W,
+                                            int * global_M,
+                                            int * global_C,
+                                            int * global_U,
+                                            int * U_Pred);
+
+
+__global__ void launch_gpu_sssp_kernel_2(   int N,
+                                            int * global_M,
+                                            int * global_C,
+                                            int * global_U,
+                                            int * Pred,
+                                            int * U_Pred);
+
+__global__ void reset_partial_paths(int N,
+                                    int * colors,
+                                    int * color_card,
+                                    int * color_finished,
+                                    int * middle_vertex);
+
+__global__ void calculate_percent_partitioned(int N,
+                                                int * color_card,
+                                                int * color_finished,
+                                                int * finished_card_reduced);
+
+void PerformBFS(int numberOfRows,
+                int * global_levels,
+                int * global_row_offsets_dev_ptr,
+                int * global_columns_dev_ptr);
+
+void PerformBFSColoring(int numberOfRows,
+                int k,
+                int * global_levels,
+                int * global_row_offsets_dev_ptr,
+                int * global_columns_dev_ptr,
+                int * global_colors,
+                int * global_color_card);
+
+void ColorGraph(Graph & gPrime, 
+                        int root, 
+                        int * host_levels,
+                        int * new_row_offs_host,
+                        int * new_cols_host,
+                        int * new_row_offs,
+                        int * new_cols,
+                        int * new_colors,
+                        int * host_U,
+                        int * new_Pred,
+                        int * new_color_finished);
 
 __global__ void InduceSubgraph( int numberOfRows,
                                 int edgesLeftToCover,
@@ -142,102 +203,50 @@ __global__ void InduceSubgraph( int numberOfRows,
                                 int * global_columns_dev_ptr,
                                 int * new_values_dev);
 
-__global__ void InduceRowOfSubgraphs( int numberOfRows,
-                                      int levelOffset,
-                                      int levelUpperBound,
-                                      int numberOfEdgesPerGraph,
-                                      int * global_edges_left_to_cover_count,                                      int * global_row_offsets_dev_ptr,
-                                      int * global_columns_dev_ptr,
-                                      int * global_values_dev_ptr
-                                    );
+void CallInduceSubgraph(Graph & g, 
+                    int * new_row_offs_dev,
+                    int * new_cols_dev,
+                    int * new_vals_dev,
+                    int * new_degrees_dev,
+                    int * new_row_offs_host,
+                    int * new_cols_host,
+                    int * new_vals_host);
 
-__global__ void CalculateNewRowOffsets( int numberOfRows,
-                                        int levelOffset,
-                                        int levelUpperBound,
-                                        int * global_row_offsets_dev_ptr,
-                                        int * global_degrees_dev_ptr);
+void Sum(int expanded_size,
+        int * expanded,
+        int * reduced);
 
-__global__ void ParallelDFSRandom(int numberOfRows,
-                            int numberOfEdgesPerGraph,
-                            int verticesRemainingInGraph,
-                            int * global_active_leaf_indices,
-                            int * global_row_offsets_dev_ptr,
-                            int * global_columns_dev_ptr,
-                            int * global_degrees_offsets_dev_ptr,
-                            int * global_remaining_vertices_dev_ptr,
-                            int * global_remaining_vertices_size_dev_ptr,
-                            int * global_degrees_dev_ptr,
-                            int * global_paths_ptr,
-                            int * global_paths_indices_ptr,
-                            int * global_nonpendant_path_bool_dev_ptr,
-                            int * global_nonpendant_path_reduced_bool_dev_ptr,
-                            int * global_nonpendant_child_dev_ptr,
-                            int * global_edges_left_to_cover_count,
-                            int * global_verts_remain_count);
+void MaximizePathLength(int numberOfRows,
+                        int k,
+                        int iter,
+                        int * finished_gpu,
+                        int * global_M,
+                        int * global_U,
+                        int * global_U_Pred,
+                        int * global_colors,
+                        int * global_color_card,
+                        int * global_color_finished,
+                        int * global_middle_vertex);
 
-__global__ void ParallelIdentifyVertexDisjointNonPendantPathsClean(
-                            int numberOfRows,
-                            int numberOfEdgesPerGraph,
-                            int * global_active_leaf_indices,
-                            int * global_row_offsets_dev_ptr,
-                            int * global_columns_dev_ptr,
-                            int * global_values_dev_ptr,
-                            int * global_pendant_path_bool_dev_ptr,
-                            int * global_pendant_child_dev_ptr,
-                            int * global_set_inclusion_bool_ptr,
-                            int * global_reduced_set_inclusion_count_ptr,
-                            int * edges_left,
-                            int * verts_remain_count);
-
-__global__ void ParallelProcessDegreeZeroVerticesClean(
-                            int numberOfRows,
-                            int verticesRemainingInGraph,
-                            int * global_active_leaf_indices,
-                            int * global_remaining_vertices_dev_ptr,
-                            int * global_remaining_vertices_size_dev_ptr,
-                            int * global_edges_left_to_cover_count,
-                            int * global_degrees_dev_ptr);
-
-__global__ void ParallelRowOffsetsPrefixSumDevice(int numberOfEdgesPerGraph,
-                                                int numberOfRows,
-                                                int * global_row_offsets_dev_ptr,
-                                                int * global_cols_vals_segments);
+void FindMaximumDistanceNonFinishedColor(int numberOfRows,
+                                        int * global_colors,
+                                        int * global_M,
+                                        int * global_color_finished,
+                                        int * global_U_Prev,
+                                        int * global_U,
+                                        int * nextroot_gpu);
 
 
-__global__ void SetVerticesRemaingSegements(int dLSPlus1,
-                                            int numberOfRows,
-                                            int * global_vertex_segments);
-*/
-__global__ void SetPathOffsets(int sDLSPlus1,
-                               int * global_set_path_offsets);
+__global__ void multiply_distance_by_finished_boolean(int N,
+                                                    int * M,
+                                                    int * colors,
+                                                    int * color_finished,
+                                                    int * U_Prev,
+                                                    int * U);
 
-__global__ void ParallelAssignMISToNodesBreadthFirstClean(int * global_active_leaf_indices,
-                                        int * global_set_paths_indices,
-                                        int * global_reduced_set_inclusion_count_ptr,
-                                        int * global_paths_ptr,
-                                        int * global_vertices_included_dev_ptr,
-                                        int * edges_left,
-                                        int * verts_remain_count);
-
-__global__ void ParallelCalculateOffsetsForNewlyActivateLeafNodesBreadthFirst(
-                                        int * global_active_leaves_count_current,
-                                        int * global_active_leaves_count_new,
-                                        int * global_reduced_set_inclusion_count_ptr,
-                                        int * global_reduced_set_newly_active_leaves_count_ptr,
-                                        int * edges_left,
-                                        int * verts_remain_count);
-
-__global__ void ParallelPopulateNewlyActivateLeafNodesBreadthFirstClean(
-                                        int * global_active_leaves,
-                                        int * global_newly_active_leaves,
-                                        int * global_active_leaves_count_current,
-                                        int * global_reduced_set_inclusion_count_ptr,
-                                        int * global_newly_active_offset_ptr,
-                                        int * global_active_leaf_index,
-                                        int * global_active_leaf_parent_leaf_index,
-                                        int * global_active_leaf_parent_leaf_value,
-                                        int * edges_left,
-                                        int * verts_remain_count);
+void GetMaxDist(int N,
+                int * M,
+                int * nextroot_gpu);
 
 #endif
 #endif

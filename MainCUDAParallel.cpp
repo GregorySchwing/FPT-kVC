@@ -9,6 +9,14 @@
 #ifdef FPT_CUDA
 #include "ParallelB1_GPU.cuh"
 #endif
+// For viz
+#include "../lib/DotWriter/lib/DotWriter.h"
+#include "../lib/DotWriter/lib/Enums.h"
+
+#include <map>
+
+#include <iostream>
+#include <random>
 unsigned long long getTotalSystemMemory()
 {
     long pages = sysconf(_SC_PHYS_PAGES);
@@ -24,7 +32,7 @@ int main(int argc, char *argv[])
     COO coordinateFormat;
     //std::string filename = "small.csv";
     //std::string filename = "simulated_blockmodel_graph_50_nodes.csv";
-    std::string filename = "25_nodes.csv";
+    std::string filename = "/home6/greg/FPT-kVC/25_nodes.csv";
     //std::string filename = "pendants.csv";
 
     coordinateFormat.BuildCOOFromFile(filename);
@@ -63,72 +71,126 @@ int main(int argc, char *argv[])
         std::cout << v << " ";
     std::cout << std::endl;
     g.RemoveDegreeZeroVertices();
-    CallPopulateTree(endingLevel - startingLevel, 
-                    g);
-    //thrust::device_vector< int > verticesToIncludeInCover_dev(g.GetVertexCount()*treeSize);
-    //thrust::device_vector< int > verticesRemaining_dev(g.GetVertexCount()*treeSize);
-    //thrust::device_vector< int > hasntBeenRemoved_dev(g.GetVertexCount()*treeSize);
+    int root = 0;
+    int numberOfRows = g.GetRemainingVertices().size(); 
+    int * host_levels = new int[numberOfRows];
 
-    /*
-    std::vector< Graph > graphs(treeSize, Graph(g));
-    thrust::host_vector<int> mpt;
-    graphs[0].InitGPrime(g, mpt);
-    graphs[0].SetVerticesToIncludeInCover(g.GetVerticesThisGraphIncludedInTheCover());
-    //std::swap(graphs[0], gPrime);
-    thrust::host_vector<int> answer;
-    //ParallelB1::PopulateTree(treeSize, graphs, answer);
-    int result = ParallelB1::PopulateTreeParallelLevelWise(numberOfLevels, graphs, answer);
-    std::cout << std::endl;
-    if (result != -1){
-        ParallelB1::TraverseUpTree(result, graphs, answer);    
-        std::cout << std::endl;
-        std::cout << "Found an answer" << std::endl;
-        for (auto & v: answer)
-            std::cout << v << " ";
-        std::cout << std::endl;
+    int * new_colors = new int[numberOfRows];
+    int * new_U = new int[numberOfRows];
+    int * new_Pred = new int[numberOfRows];
+    int * new_color_finished = new int[numberOfRows];
+
+    int * global_row_offsets_dev_ptr; // size N + 1
+    int * global_columns_dev_ptr; // size M
+    int * global_values_dev_ptr; // on or off, size M
+    int * global_degrees_dev_ptr; // size N, used for inducing the subgraph
+
+    // Vertex, Cols, Edge(on/off)
+    cudaMalloc( (void**)&global_row_offsets_dev_ptr, (numberOfRows+1) * sizeof(int) );
+    cudaMalloc( (void**)&global_columns_dev_ptr, g.GetEdgesLeftToCover() * sizeof(int) );
+    cudaMalloc( (void**)&global_values_dev_ptr, g.GetEdgesLeftToCover() * sizeof(int) );
+    cudaMalloc( (void**)&global_degrees_dev_ptr, numberOfRows * sizeof(int) );
+
+    int * new_row_offsets = new int[numberOfRows+1];
+    int * new_cols = new int[g.GetEdgesLeftToCover()];
+    int * new_vals = new int[g.GetEdgesLeftToCover()];
+
+    CallInduceSubgraph(g, 
+                    global_row_offsets_dev_ptr,
+                    global_columns_dev_ptr,
+                    global_values_dev_ptr,
+                    global_degrees_dev_ptr,
+                    new_row_offsets,
+                    new_cols,
+                    new_vals);
+
+    // Step 1
+    //ColorGraph(g, root, host_levels, new_row_offsets, new_cols, new_colors, new_U, new_Pred, new_color_finished);
+    // Step 2
+    //EnumerateSearchTree(g, new_row_offsets, new_cols, new_colors, new_color_finished);
+
+    std::random_device rd; // obtain a random number from hardware
+    std::mt19937 gen(rd()); // seed the generator
+    std::uniform_int_distribution<> distr(0, 655); // define the range
+
+    int * new_colors_randomized = new int[numberOfRows];
+    int * new_colors_mapper = new int[numberOfRows];
+
+    for(int n=0; n<numberOfRows; ++n){
+        new_colors_mapper[n] = distr(gen); // generate numbers
     }
 
-    COO coordinateFormatTest;
-    coordinateFormatTest.BuildTheExampleCOO();
-//    coordinateFormatTest.BuildCOOFromFile(filename);
-    CSR csrTest(coordinateFormatTest);
-    Graph gTest(csrTest);
-    gTest.InitG(gTest, answer);
-    std::cout << "Edges remaining in original graph after removing answer : " << gTest.GetEdgesLeftToCover() << std::endl;
-    gTest.PrintEdgesRemaining();    
-    */
-/* 
+    for(int n=0; n<numberOfRows; ++n){
+        new_colors_randomized[n] = new_colors_mapper[new_colors[n]]; // generate numbers
+    }
 
-    //Graph g(10);
-    //bool exists = pb1.IterateTreeStructure(&pb1, answer);
-    //if (exists){
-    //    for (auto & v : answer)
-    //        std::cout << v << " ";
-    //    std::cout << std::endl;
-    //} 
-    std::cout << "Building G" << std::endl;
-    Graph g("0.edges");
-    int k = 4;
-    std::cout << "Building PK" << std::endl;
-    ParallelKernelization sk(g, k);
-    int minK = 0;
-    int maxK = g.GetVertexCount();
-    for (int i = k; i < g.GetVertexCount(); ++i){
-        // If (noSolutionExists)
-        // If (Also clears and sets S if a sol'n could exist)
-        if (sk.TestAValueOfK(i))
-            continue;
-        else{
-            minK = i;
-            break;
+    std::string name = "main";
+    std::string filenameGraph = "BFS";
+    bool isDirected = false;
+    DotWriter::RootGraph gVizWriter(isDirected, name);
+    std::string subgraph1 = "BFS";
+    std::string subgraph2 = "graph";
+    std::string subgraph3 = "pred";
+
+    DotWriter::Subgraph * bfs = gVizWriter.AddSubgraph(subgraph1);
+    DotWriter::Subgraph * graph = gVizWriter.AddSubgraph(subgraph2);
+    DotWriter::Subgraph * pred = gVizWriter.AddSubgraph(subgraph3);
+
+    std::map<std::string, DotWriter::Node *> bfsMap;    
+
+    std::map<std::string, DotWriter::Node *> nodeMap;    
+
+
+    // Since the graph doesnt grow uniformly, it is too difficult to only copy the new parts..
+    for (int i = 0; i < numberOfRows; ++i){
+        std::string node1Name = std::to_string(i);
+        std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMap.find(node1Name);
+        if(nodeIt1 == nodeMap.end()) {
+            nodeMap[node1Name] = graph->AddNode(node1Name);
+            if(new_color_finished[new_colors[i]]){
+                nodeMap[node1Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[i]));
+                nodeMap[node1Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[i]));
+                nodeMap[node1Name]->GetAttributes().SetStyle("filled");
+            }
+        }
+        for (int j = new_row_offsets[i]; j < new_row_offsets[i+1]; ++j){
+            if (i < new_cols[j]){
+                std::string node2Name = std::to_string(new_cols[j]);
+                std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMap.find(node2Name);
+                if(nodeIt2 == nodeMap.end()) {
+                    nodeMap[node2Name] = graph->AddNode(node2Name);
+                    if(new_color_finished[new_colors[new_cols[j]]]){
+                        nodeMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[new_cols[j]]));
+                        nodeMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[new_cols[j]]));
+                        nodeMap[node2Name]->GetAttributes().SetStyle("filled");
+                    }
+                }  
+                //graph->AddEdge(nodeMap[node1Name], nodeMap[node2Name], std::to_string(host_levels[i]));
+                graph->AddEdge(nodeMap[node1Name], nodeMap[node2Name]); 
+ 
+            }
         }
     }
-    std::cout << "Found min K : " << minK << std::endl;
-    thrust::host_vector<int> answer;
-    int kCovSize = binarySearch(answer,
-                                minK,
-                                maxK,
-                                sk,
-                                &g);
-    */
+
+    std::string node1Name = std::to_string(root);
+    std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = bfsMap.find(node1Name);
+    if(nodeIt1 == bfsMap.end()) {
+        bfsMap[node1Name] = bfs->AddNode(node1Name);
+    }
+    for (int i = 0; i < numberOfRows; ++i){
+        std::string node2Name = std::to_string(i);
+        std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = bfsMap.find(node2Name);
+        if(nodeIt2 == bfsMap.end()) {
+            bfsMap[node2Name] = bfs->AddNode(node2Name);
+            bfsMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[i]));
+            bfsMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[i]));
+            bfsMap[node2Name]->GetAttributes().SetStyle("filled");
+        }  
+        bfs->AddEdge(bfsMap[node1Name], bfsMap[node2Name], std::to_string(new_U[i])); 
+    }
+
+
+
+    gVizWriter.WriteToFile(filenameGraph);
+    std::cout << "finished" << std::endl;
 }
