@@ -74,15 +74,40 @@ int main(int argc, char *argv[])
     int root = 0;
     int numberOfRows = g.GetRemainingVertices().size(); 
     int * host_levels = new int[numberOfRows];
-    int * new_row_offsets = new int[numberOfRows+1];
-    int * new_cols = new int[g.GetEdgesLeftToCover()];
+
     int * new_colors = new int[numberOfRows];
     int * new_U = new int[numberOfRows];
     int * new_Pred = new int[numberOfRows];
     int * new_color_finished = new int[numberOfRows];
 
+    int * global_row_offsets_dev_ptr; // size N + 1
+    int * global_columns_dev_ptr; // size M
+    int * global_values_dev_ptr; // on or off, size M
+    int * global_degrees_dev_ptr; // size N, used for inducing the subgraph
 
-    CallPopulateTree(g, root, host_levels, new_row_offsets, new_cols, new_colors, new_U, new_Pred, new_color_finished);
+    // Vertex, Cols, Edge(on/off)
+    cudaMalloc( (void**)&global_row_offsets_dev_ptr, (numberOfRows+1) * sizeof(int) );
+    cudaMalloc( (void**)&global_columns_dev_ptr, g.GetEdgesLeftToCover() * sizeof(int) );
+    cudaMalloc( (void**)&global_values_dev_ptr, g.GetEdgesLeftToCover() * sizeof(int) );
+    cudaMalloc( (void**)&global_degrees_dev_ptr, numberOfRows * sizeof(int) );
+
+    int * new_row_offsets = new int[numberOfRows+1];
+    int * new_cols = new int[g.GetEdgesLeftToCover()];
+    int * new_vals = new int[g.GetEdgesLeftToCover()];
+
+    CallInduceSubgraph(g, 
+                    global_row_offsets_dev_ptr,
+                    global_columns_dev_ptr,
+                    global_values_dev_ptr,
+                    global_degrees_dev_ptr,
+                    new_row_offsets,
+                    new_cols,
+                    new_vals);
+
+    // Step 1
+    //ColorGraph(g, root, host_levels, new_row_offsets, new_cols, new_colors, new_U, new_Pred, new_color_finished);
+    // Step 2
+    //EnumerateSearchTree(g, new_row_offsets, new_cols, new_colors, new_color_finished);
 
     std::random_device rd; // obtain a random number from hardware
     std::mt19937 gen(rd()); // seed the generator
@@ -115,7 +140,6 @@ int main(int argc, char *argv[])
 
     std::map<std::string, DotWriter::Node *> nodeMap;    
 
-    std::map<std::string, DotWriter::Node *> predMap;    
 
     // Since the graph doesnt grow uniformly, it is too difficult to only copy the new parts..
     for (int i = 0; i < numberOfRows; ++i){
@@ -165,40 +189,7 @@ int main(int argc, char *argv[])
         bfs->AddEdge(bfsMap[node1Name], bfsMap[node2Name], std::to_string(new_U[i])); 
     }
 
-    int maxdepth = 0;
-    for (int i = 0; i < numberOfRows; ++i){
-        if (new_U[i] > maxdepth && new_U[i] != INT_MAX){
-            maxdepth = new_U[i];
-        }
-    }
-    int w = 0;
-    int c = 0;
-    predMap.clear();
-    for (int depth = 0; depth <= maxdepth; ++depth){
-        for (int i = 0; i < numberOfRows; ++i){
-            if (new_U[i] == depth){
-                w = new_Pred[i];
-                c = new_colors[i];
-                std::string node1Name = std::to_string(i);
-                std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = predMap.find(node1Name);
-                if(nodeIt1 == predMap.end()) {
-                    predMap[node1Name] = pred->AddNode(node1Name);
-                    predMap[node1Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[i]));
-                    predMap[node1Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[i]));
-                    predMap[node1Name]->GetAttributes().SetStyle("filled");
-                }
-                std::string node2Name = std::to_string(w);
-                std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = predMap.find(node2Name);
-                if(nodeIt2 == predMap.end()) {
-                    predMap[node2Name] = pred->AddNode(node2Name);
-                    predMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[i]));
-                    predMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[i]));
-                    predMap[node2Name]->GetAttributes().SetStyle("filled");
-                }
-                pred->AddEdge(predMap[node1Name], predMap[node2Name], std::to_string(c)); 
-            }
-        }
-    }
+
 
     gVizWriter.WriteToFile(filenameGraph);
     std::cout << "finished" << std::endl;

@@ -41,6 +41,13 @@ void CopyGraphToDevice( Graph & g,
                         int * global_values_dev_ptr,
                         int * global_degrees_dev_ptr);
 
+void CopyGraphFromDevice(Graph & g,
+                        int numberOfEdgesPerGraph,
+                        int * global_row_offsets_dev_ptr,
+                        int * global_columns_dev_ptr,
+                        int * host_row_offsets,
+                        int * host_columns);
+
 __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                             int *nodes, int *edges, int * finished);
 
@@ -63,6 +70,7 @@ __global__ void launch_gpu_color_finishing_kernel_2( int N,
 __global__ void launch_gpu_combine_colors_kernel( int N,
                                                 int k,
                                                 int iter,
+                                                int internal_iter,
                                                 int * nodes,
                                                 int * edges,
                                                 int * M,
@@ -174,9 +182,11 @@ void PerformBFSColoring(int numberOfRows,
                 int * global_colors,
                 int * global_color_card);
 
-void CallPopulateTree(Graph & gPrime, 
+void ColorGraph(Graph & gPrime, 
                         int root, 
                         int * host_levels,
+                        int * new_row_offs_host,
+                        int * new_cols_host,
                         int * new_row_offs,
                         int * new_cols,
                         int * new_colors,
@@ -192,6 +202,15 @@ __global__ void InduceSubgraph( int numberOfRows,
                                 int * global_row_offsets_dev_ptr,
                                 int * global_columns_dev_ptr,
                                 int * new_values_dev);
+
+void CallInduceSubgraph(Graph & g, 
+                    int * new_row_offs_dev,
+                    int * new_cols_dev,
+                    int * new_vals_dev,
+                    int * new_degrees_dev,
+                    int * new_row_offs_host,
+                    int * new_cols_host,
+                    int * new_vals_host);
 
 void Sum(int expanded_size,
         int * expanded,

@@ -90,44 +90,14 @@ __global__ void InduceSubgraph( int numberOfRows,
     delete[] C_ref;
 }
 
-void CallPopulateTree(Graph & g, 
-                     int root,
-                     int * host_levels,
-                    int * new_row_offs,
-                    int * new_cols,
-                    int * new_colors,
-                    int * host_U,
-                    int * new_Pred,
-                    int * new_color_finished){
-
-    int * global_row_offsets_dev_ptr; // size N + 1
-    int * global_degrees_dev_ptr; // size N, used for inducing the subgraph
-    int * global_columns_dev_ptr; // size M
-    int * global_values_dev_ptr; // on or off, size M
-    int * global_levels; // size N, will contatin BFS level of nth node
-    int * global_middle_vertex;
-    int * global_colors; // size N, will contatin color of nth node
-    int * global_color_card;   // size N, will contatin size of color set
-    int * global_color_finished; // size N, contatin boolean of color finished, sometimes cardinality 1,2,3 is finished.
-    int * global_finished_card_reduced;
-    int * finished_gpu;
-    int * nextroot_gpu;
-
-    // SSSP
-    // Weights = size N
-    int * global_W;
-    // Mask = size M
-    int * global_M;
-    // Cost = size M
-    int * global_C;
-    // Final cost from prev sssp for choosing next root.
-    int * global_U_Prev;
-    // Update = size M
-    int * global_U;
-    // Intermediate = size M
-    int * global_Pred;
-    // Update = size M
-    int * global_U_Pred;
+void CallInduceSubgraph(Graph & g, 
+                    int * new_row_offs_dev,
+                    int * new_cols_dev,
+                    int * new_vals_dev,
+                    int * new_degrees_dev,
+                    int * new_row_offs_host,
+                    int * new_cols_host,
+                    int * new_vals_host){
 
     int numberOfRows = g.GetVertexCount(); 
     int numberOfEdgesPerGraph = g.GetEdgesLeftToCover();  // size M
@@ -157,11 +127,71 @@ void CallPopulateTree(Graph & g,
     //} while (std::cin.get() != '\n');
     //#endif
 
-    // Vertex, Cols, Edge(on/off)
-    cudaMalloc( (void**)&global_row_offsets_dev_ptr, (numberOfRows+1) * sizeof(int) );
-    cudaMalloc( (void**)&global_columns_dev_ptr, numberOfEdgesPerGraph * sizeof(int) );
-    cudaMalloc( (void**)&global_values_dev_ptr, numberOfEdgesPerGraph * sizeof(int) );
-    cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows+1) * sizeof(int) );
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    CopyGraphToDevice(g,
+                      numberOfEdgesPerGraph,
+                      new_row_offs_dev,
+                      new_cols_dev,
+                      new_vals_dev,
+                      new_degrees_dev);
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    CopyGraphFromDevice(g,
+                        numberOfEdgesPerGraph,
+                        new_row_offs_dev,
+                        new_cols_dev,
+                        new_row_offs_host,
+                        new_cols_host);
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+}
+
+void ColorGraph(Graph & g, 
+                     int root,
+                     int * host_levels,
+                     int * new_row_offs_host,
+                     int * new_cols_host,
+                    int * new_row_offs_dev,
+                    int * new_cols_dev,
+                    int * new_colors,
+                    int * host_U,
+                    int * new_Pred,
+                    int * new_color_finished){
+
+    int * global_levels; // size N, will contatin BFS level of nth node
+    int * global_middle_vertex;
+    int * global_colors; // size N, will contatin color of nth node
+    int * global_color_card;   // size N, will contatin size of color set
+    int * global_color_finished; // size N, contatin boolean of color finished, sometimes cardinality 1,2,3 is finished.
+    int * global_finished_card_reduced;
+    int * finished_gpu;
+    int * nextroot_gpu;
+
+    // SSSP
+    // Weights = size N
+    int * global_W;
+    // Mask = size M
+    int * global_M;
+    // Cost = size M
+    int * global_C;
+    // Final cost from prev sssp for choosing next root.
+    int * global_U_Prev;
+    // Update = size M
+    int * global_U;
+    // Intermediate = size M
+    int * global_Pred;
+    // Update = size M
+    int * global_U_Pred;
+
+
+    int numberOfRows = g.GetVertexCount(); 
+    int numberOfEdgesPerGraph = g.GetEdgesLeftToCover();  // size M
+
     cudaMalloc( (void**)&global_levels, numberOfRows * sizeof(int) );
     // Malloc'ed by thrust
     //cudaMalloc( (void**)&global_colors, numberOfRows * sizeof(int) );
@@ -208,15 +238,6 @@ void CallPopulateTree(Graph & g,
     thrust::sequence(colors.begin(), colors.end());
     global_colors = thrust::raw_pointer_cast(colors.data());
 
-    CopyGraphToDevice(g,
-                    numberOfEdgesPerGraph,
-                    global_row_offsets_dev_ptr,
-                    global_columns_dev_ptr,
-                    global_values_dev_ptr,
-                    global_degrees_dev_ptr);
-
-    cudaDeviceSynchronize();
-    checkLastErrorCUDA(__FILE__, __LINE__);
 
     int host_reduced;
     double host_percentage_finished = 0;
@@ -276,8 +297,8 @@ void CallPopulateTree(Graph & g,
         // or no such vertices remain.
         PerformSSSP(numberOfRows,
                     root,
-                    global_row_offsets_dev_ptr,
-                    global_columns_dev_ptr,
+                    new_row_offs_dev,
+                    new_cols_dev,
                     global_W,
                     global_M,
                     global_C,
@@ -312,8 +333,8 @@ void CallPopulateTree(Graph & g,
         PerformPathPartitioning(numberOfRows,
                                 k,
                                 root,
-                                global_row_offsets_dev_ptr,
-                                global_columns_dev_ptr,
+                                new_row_offs_dev,
+                                new_cols_dev,
                                 global_middle_vertex,
                                 global_M,
                                 global_U_Prev,
@@ -345,8 +366,8 @@ void CallPopulateTree(Graph & g,
         ++iteration;
 
         if (graphEveryIteration){
-            cudaMemcpy(&new_row_offs[0], &global_row_offsets_dev_ptr[0], (numberOfRows+1) * sizeof(int) , cudaMemcpyDeviceToHost);
-            cudaMemcpy(&new_cols[0], &global_columns_dev_ptr[0], numberOfEdgesPerGraph * sizeof(int) , cudaMemcpyDeviceToHost);
+//            cudaMemcpy(&new_row_offs[0], &global_row_offsets_dev_ptr[0], (numberOfRows+1) * sizeof(int) , cudaMemcpyDeviceToHost);
+//            cudaMemcpy(&new_cols[0], &global_columns_dev_ptr[0], numberOfEdgesPerGraph * sizeof(int) , cudaMemcpyDeviceToHost);
             cudaMemcpy(&new_colors[0], &global_colors[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
             cudaMemcpy(&host_U[0], &global_U[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
             cudaMemcpy(&new_Pred[0], &global_U_Pred[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
@@ -383,15 +404,15 @@ void CallPopulateTree(Graph & g,
                         nodeMap[node1Name]->GetAttributes().SetStyle("filled");
                     }
                 }
-                for (int j = new_row_offs[i]; j < new_row_offs[i+1]; ++j){
-                    if (i < new_cols[j]){
-                        std::string node2Name = std::to_string(new_cols[j]);
+                for (int j = new_row_offs_host[i]; j < new_row_offs_host[i+1]; ++j){
+                    if (i < new_cols_host[j]){
+                        std::string node2Name = std::to_string(new_cols_host[j]);
                         std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMap.find(node2Name);
                         if(nodeIt2 == nodeMap.end()) {
                             nodeMap[node2Name] = graph->AddNode(node2Name);
-                            if(new_color_finished[new_colors[new_cols[j]]]){
-                                nodeMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[new_cols[j]]));
-                                nodeMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[new_cols[j]]));
+                            if(new_color_finished[new_colors[new_cols_host[j]]]){
+                                nodeMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[new_cols_host[j]]));
+                                nodeMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[new_cols_host[j]]));
                                 nodeMap[node2Name]->GetAttributes().SetStyle("filled");
                             }
                         }  
@@ -443,8 +464,8 @@ void CallPopulateTree(Graph & g,
 
 
     //cudaMemcpy(&host_levels[0], &global_levels[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
-    cudaMemcpy(&new_row_offs[0], &global_row_offsets_dev_ptr[0], (numberOfRows+1) * sizeof(int) , cudaMemcpyDeviceToHost);
-    cudaMemcpy(&new_cols[0], &global_columns_dev_ptr[0], numberOfEdgesPerGraph * sizeof(int) , cudaMemcpyDeviceToHost);
+//    cudaMemcpy(&new_row_offs[0], &global_row_offsets_dev_ptr[0], (numberOfRows+1) * sizeof(int) , cudaMemcpyDeviceToHost);
+//    cudaMemcpy(&new_cols[0], &global_columns_dev_ptr[0], numberOfEdgesPerGraph * sizeof(int) , cudaMemcpyDeviceToHost);
     cudaMemcpy(&new_colors[0], &global_colors[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
     cudaMemcpy(&host_U[0], &global_U[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
     cudaMemcpy(&new_Pred[0], &global_U_Pred[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
@@ -452,11 +473,8 @@ void CallPopulateTree(Graph & g,
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
-    cudaFree( global_row_offsets_dev_ptr );
-    cudaFree( global_columns_dev_ptr );
-    cudaFree( global_values_dev_ptr );
-    cudaFree( global_degrees_dev_ptr );
-    cudaFree( global_levels );
+
+    //cudaFree( global_levels );
     cudaFree( finished_gpu );
     cudaFree( global_finished_card_reduced );
     //cudaFree( global_colors );
@@ -484,16 +502,9 @@ void CopyGraphToDevice( Graph & g,
 
     int * new_degrees_ptr = thrust::raw_pointer_cast(g.GetNewDegRef().data());
 
-    std::cout << "remaining verts" << std::endl;
-    for (auto & v : g.GetRemainingVerticesRef())
-        std::cout << v << " ";
-    std::cout << std::endl;
-    std::cout << "remaining verts size " << g.GetRemainingVerticesRef().size() << std::endl;
-    
     // Degree CSR Data
     cudaMemcpy(global_degrees_dev_ptr, new_degrees_ptr, g.GetNumberOfRows() * sizeof(int),
                 cudaMemcpyHostToDevice);
-
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -553,6 +564,18 @@ void CopyGraphToDevice( Graph & g,
     for (auto & v : hostFinal)
         std::cout << v << " ";
     std::cout << std::endl;
+}
+
+void CopyGraphFromDevice(Graph & g,
+                        int numberOfEdgesPerGraph,
+                        int * global_row_offsets_dev_ptr,
+                        int * global_columns_dev_ptr,
+                        int * host_row_offsets,
+                        int * host_columns){
+    cudaMemcpy(&host_row_offsets[0], &global_row_offsets_dev_ptr[0], (g.GetNumberOfRows()+1) * sizeof(int) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(&host_columns[0], &global_columns_dev_ptr[0], g.GetEdgesLeftToCover() * sizeof(int) , cudaMemcpyDeviceToHost);
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
 }
 
 void PerformBFS(int numberOfRows,
@@ -654,6 +677,35 @@ void PerformSSSP(int numberOfRows,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 }
+
+void GlobalPathPartition(int numberOfRows,
+                        int k,
+                        int * global_row_offsets_dev_ptr,
+                        int * global_columns_dev_ptr,
+                        int * global_U,
+                        int * global_colors,
+                        int * global_colors_prev,
+                        int * global_color_card,
+                        int * global_color_finished,
+                        int * global_finished_card_reduced,
+                        int * finished_gpu){
+    // Kernel to maximize the number of finished colors in a depth block of size 4
+    // For each vertex in depth D, either delete an edge, add an edge, or both delete and add an edge
+    
+}
+
+__global__ void launch_recolor_depth_block( int N,
+                                            int k,
+                                            int * M,
+                                            int * U,
+                                            int * colors,
+                                            int * color_finished,
+                                            int * middle_vertex){
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    
+}
+
+
 
 // Partitions path from root
 // 1 to k
@@ -775,16 +827,7 @@ void PerformPathPartitioning(int numberOfRows,
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
-
-    reset_partial_paths<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
-                                                            global_colors,
-                                                            global_color_card,
-                                                            global_color_finished,
-                                                            global_middle_vertex);    
-                            
-    cudaDeviceSynchronize();
-    checkLastErrorCUDA(__FILE__, __LINE__);   
-                            
+       
     Sum(numberOfRows,
         global_color_finished,
         global_finished_card_reduced);
@@ -1008,9 +1051,19 @@ __global__ void launch_gpu_color_finishing_kernel_2( int N,
     }
 }
 
+// The depth of all of vertex v's neighbors's u1, u2, ... 
+// are either v's depth D, D-1, or D+1.
+// By holding D constant, and requiring the depth of u1 be
+// either D, D-1, or D+1; over three consecutive kernel calls,
+// v's color is guarunteed to only grow, meaning another vertex
+// w can't claim v at the same time v claims u.
+
+// This way v can mark u1, and there is no chance v will also
+// be marked.
 __global__ void launch_gpu_combine_colors_kernel( int N,
                                                 int k,
                                                 int iter,
+                                                int internal_iter,
                                                 int * nodes,
                                                 int * edges,
                                                 int * M,
@@ -1021,10 +1074,15 @@ __global__ void launch_gpu_combine_colors_kernel( int N,
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
         return;
+    if ((U[v] + iter) % k != 0 || U[v] == INT_MAX)
+        return;
+    
     int cv = colors[v];
+    // If I didn't win
+//    if(cv != cw)
     // Guaruntees we need another vertex and v is not an internal vertex
     // for example, with path a - b - c; we guaruntee v is not b.
-    if (color_card[v] < k && color_card[v] % ((U[v] + iter) % k) == 0) {
+    if (color_card[cv] < k && color_card[cv] % ((U[v] + iter) % k) == 0) {
         // iterate over neighbors
         int num_nbr = nodes[v+1] - nodes[v];
         int * nbrs = & edges[ nodes[v] ];
