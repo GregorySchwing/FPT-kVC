@@ -151,6 +151,62 @@ void CallInduceSubgraph(Graph & g,
     checkLastErrorCUDA(__FILE__, __LINE__);
 }
 
+void CallCountTriangles(
+    int numberOfRows,
+    int numberOfEdgesPerGraph,
+    int * new_row_offs_dev,
+    int * new_cols_dev,
+    int * new_row_offs_host,
+    int * new_cols_host,
+    int * triangle_counter_host,
+    int * triangle_counter_dev){
+
+    cudaMemcpy(&new_row_offs_dev[0], &new_row_offs_host[0], (numberOfRows+1) * sizeof(int) , cudaMemcpyHostToDevice);
+    cudaMemcpy(&new_cols_dev[0], &new_cols_host[0], numberOfEdgesPerGraph * sizeof(int) , cudaMemcpyHostToDevice);
+    // Updated final
+    cudaMalloc( (void**)&triangle_counter_dev, numberOfRows * sizeof(int) );
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(triangle_counter_dev),  0, size_t(numberOfRows));
+    int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
+    CountTriangleKernel<<<oneThreadPerNode,threadsPerBlock>>>(  numberOfRows,
+                                                                new_row_offs_dev,
+                                                                new_cols_dev,
+                                                                triangle_counter_dev
+                                                            );
+    
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    cudaMemcpy(&triangle_counter_host[0], &triangle_counter_dev[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+}
+
+__global__ void CountTriangleKernel(int numberOfRows,
+                                    int * new_row_offs_dev,
+                                    int * new_cols_dev,
+                                    int * triangle_counter_dev){
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= numberOfRows)
+        return;
+    for (int i = new_row_offs_dev[v]; i < new_row_offs_dev[v+1]; ++i){
+        int currMiddle = new_cols_dev[i];
+        if (v < currMiddle){
+            for (int j = new_row_offs_dev[currMiddle]; j < new_row_offs_dev[currMiddle+1]; ++j){
+                int currLast = new_cols_dev[j];
+                if (currMiddle < currLast){
+                    for (int k = new_row_offs_dev[currLast]; k < new_row_offs_dev[currLast+1]; ++k){
+                        int candidateClose = new_cols_dev[k];
+                        if (v == candidateClose){
+                            triangle_counter_dev[v] = triangle_counter_dev[v] + 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 void SSSPAndBuildDepthCSR(Graph & g, 
                      int root,
                      int * new_row_offs_host,
@@ -226,7 +282,7 @@ void SSSPAndBuildDepthCSR(Graph & g,
 
 
 }
-
+/*
 void CreateDepthCSR(numberOfRows,
                     global_U,
                     ){
@@ -258,7 +314,7 @@ void CreateDepthCSR(numberOfRows,
 
 void ColorGraph(){
 
-/*
+
 
     int * global_levels; // size N, will contatin BFS level of nth node
     int * global_middle_vertex;
@@ -519,9 +575,9 @@ void ColorGraph(){
     cudaFree( global_color_card );
     cudaFree( global_color_finished );
     cudaFree( global_middle_vertex );
-    */
+  
 }
-
+  */
 void CopyGraphToDeviceAndInduce( Graph & g,
                         int numberOfEdgesPerGraph,
                         int * global_row_offsets_dev_ptr,

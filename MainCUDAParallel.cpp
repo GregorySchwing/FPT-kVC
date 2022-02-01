@@ -72,7 +72,8 @@ int main(int argc, char *argv[])
     std::cout << std::endl;
     g.RemoveDegreeZeroVertices();
     int root = 0;
-    int numberOfRows = g.GetRemainingVertices().size(); 
+    int numberOfRows = g.GetVertexCount();
+    int edgesLeftToCover = g.GetEdgesLeftToCover();
     int * host_levels = new int[numberOfRows];
 
     int * new_colors = new int[numberOfRows];
@@ -87,13 +88,16 @@ int main(int argc, char *argv[])
 
     // Vertex, Cols, Edge(on/off)
     cudaMalloc( (void**)&global_row_offsets_dev_ptr, (numberOfRows+1) * sizeof(int) );
-    cudaMalloc( (void**)&global_columns_dev_ptr, g.GetEdgesLeftToCover() * sizeof(int) );
-    cudaMalloc( (void**)&global_values_dev_ptr, g.GetEdgesLeftToCover() * sizeof(int) );
+    cudaMalloc( (void**)&global_columns_dev_ptr, edgesLeftToCover * sizeof(int) );
+    cudaMalloc( (void**)&global_values_dev_ptr, edgesLeftToCover * sizeof(int) );
     cudaMalloc( (void**)&global_degrees_dev_ptr, numberOfRows * sizeof(int) );
 
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
     int * new_row_offsets = new int[numberOfRows+1];
-    int * new_cols = new int[g.GetEdgesLeftToCover()];
-    int * new_vals = new int[g.GetEdgesLeftToCover()];
+    int * new_cols = new int[edgesLeftToCover];
+    int * new_vals = new int[edgesLeftToCover];
 
     CallInduceSubgraph(g, 
                     global_row_offsets_dev_ptr,
@@ -103,6 +107,24 @@ int main(int argc, char *argv[])
                     new_row_offsets,
                     new_cols,
                     new_vals);
+
+    int * triangle_counter_host  = new int[numberOfRows];
+    int * triangle_counter_dev;
+
+    CallCountTriangles(
+                        numberOfRows,
+                        edgesLeftToCover,
+                        global_row_offsets_dev_ptr,
+                        global_columns_dev_ptr,
+                        new_row_offsets,
+                        new_cols,
+                        triangle_counter_host,
+                        triangle_counter_dev);
+    std::cout << "Number of Triangles" << std::endl;
+    for (int i = 0; i < numberOfRows; ++i){
+        std::cout << triangle_counter_host[i] << " ";
+    }
+    std::cout << std::endl;
 
     // Step 1
     //SSSPAndBuildDepthCSR(g, root, host_levels, new_row_offsets, new_cols, new_colors, new_U, new_Pred, new_color_finished);

@@ -212,6 +212,21 @@ void CallInduceSubgraph(Graph & g,
                     int * new_cols_host,
                     int * new_vals_host);
 
+void CallCountTriangles(
+                        int numberOfRows,
+                        int numberOfEdgesPerGraph,
+                        int * new_row_offs_dev,
+                        int * new_cols_dev,
+                        int * new_row_offs_host,
+                        int * new_cols_host,
+                        int * triangle_counter_host,
+                        int * triangle_counter_dev);
+
+__global__ void CountTriangleKernel(int numberOfRows,
+                                    int * new_row_offs_dev,
+                                    int * new_cols_dev,
+                                    int * triangle_counter_dev);
+
 void Sum(int expanded_size,
         int * expanded,
         int * reduced);
