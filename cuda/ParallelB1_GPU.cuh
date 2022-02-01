@@ -30,6 +30,11 @@ __device__ int randomGPU(unsigned int counter, ulong step, ulong seed);
 
 class Graph;
 
+union VertexPair {
+    // 2 16 bit unsigned integers
+    unsigned  short yz[2];
+};
+
 __host__ void CalculateNewRowOffsets( int numberOfRows,
                                     int * global_row_offsets_dev_ptr,
                                     int * global_degrees_dev_ptr);
@@ -220,12 +225,29 @@ void CallCountTriangles(
                         int * new_row_offs_host,
                         int * new_cols_host,
                         int * triangle_counter_host,
-                        int * triangle_counter_dev);
+                        int * triangle_counter_dev,
+                        int * triangle_row_offsets_array_host,
+                        VertexPair * triangle_candidates_host,
+                        int * triangle_row_offsets_array_dev,
+                        VertexPair * triangle_candidates_dev);
 
 __global__ void CountTriangleKernel(int numberOfRows,
                                     int * new_row_offs_dev,
                                     int * new_cols_dev,
                                     int * triangle_counter_dev);
+
+__global__ void SaveTrianglesKernel(int numberOfRows,
+                                    int * new_row_offs_dev,
+                                    int * new_cols_dev,
+                                    int * triangle_row_offsets_array_dev,
+                                    VertexPair * triangle_candidates_dev);
+
+
+__global__ void DisjointSetTriangleKernel(int numberOfRows,
+                                    int * new_row_offs_dev,
+                                    int * new_cols_dev,
+                                    int * triangle_counter_dev,
+                                    int * triangle_reduction_array_dev);
 
 void Sum(int expanded_size,
         int * expanded,

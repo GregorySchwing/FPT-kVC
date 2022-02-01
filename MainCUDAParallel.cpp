@@ -85,9 +85,11 @@ int main(int argc, char *argv[])
     int * global_columns_dev_ptr; // size M
     int * global_values_dev_ptr; // on or off, size M
     int * global_degrees_dev_ptr; // size N, used for inducing the subgraph
+    int * triangle_row_offsets_array_dev;
 
     // Vertex, Cols, Edge(on/off)
     cudaMalloc( (void**)&global_row_offsets_dev_ptr, (numberOfRows+1) * sizeof(int) );
+    cudaMalloc( (void**)&triangle_row_offsets_array_dev, (numberOfRows+1) * sizeof(int) );
     cudaMalloc( (void**)&global_columns_dev_ptr, edgesLeftToCover * sizeof(int) );
     cudaMalloc( (void**)&global_values_dev_ptr, edgesLeftToCover * sizeof(int) );
     cudaMalloc( (void**)&global_degrees_dev_ptr, numberOfRows * sizeof(int) );
@@ -110,6 +112,9 @@ int main(int argc, char *argv[])
 
     int * triangle_counter_host  = new int[numberOfRows];
     int * triangle_counter_dev;
+    VertexPair * triangle_candidates_dev;
+    int * triangle_row_offsets_array_host = new int[numberOfRows+1];
+    VertexPair * triangle_candidates_host;
 
     CallCountTriangles(
                         numberOfRows,
@@ -119,7 +124,11 @@ int main(int argc, char *argv[])
                         new_row_offsets,
                         new_cols,
                         triangle_counter_host,
-                        triangle_counter_dev);
+                        triangle_counter_dev,
+                        triangle_row_offsets_array_host,
+                        triangle_candidates_host,
+                        triangle_row_offsets_array_dev,
+                        triangle_candidates_dev);
     std::cout << "Number of Triangles" << std::endl;
     for (int i = 0; i < numberOfRows; ++i){
         std::cout << triangle_counter_host[i] << " ";

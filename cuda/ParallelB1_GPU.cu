@@ -46,6 +46,8 @@ __device__ RNG::ctr_type randomGPU_four(unsigned int counter, ulong step, ulong 
   return r;
 }
 
+
+
 typedef int inner_array_t[2];
 
 __global__ void InduceSubgraph( int numberOfRows,
@@ -152,17 +154,24 @@ void CallInduceSubgraph(Graph & g,
 }
 
 void CallCountTriangles(
-    int numberOfRows,
-    int numberOfEdgesPerGraph,
-    int * new_row_offs_dev,
-    int * new_cols_dev,
-    int * new_row_offs_host,
-    int * new_cols_host,
-    int * triangle_counter_host,
-    int * triangle_counter_dev){
+                        int numberOfRows,
+                        int numberOfEdgesPerGraph,
+                        int * new_row_offs_dev,
+                        int * new_cols_dev,
+                        int * new_row_offs_host,
+                        int * new_cols_host,
+                        int * triangle_counter_host,
+                        int * triangle_counter_dev,
+                        int * triangle_row_offsets_array_host,
+                        VertexPair * triangle_candidates_host,
+                        int * triangle_row_offsets_array_dev,
+                        VertexPair * triangle_candidates_dev){
 
     cudaMemcpy(&new_row_offs_dev[0], &new_row_offs_host[0], (numberOfRows+1) * sizeof(int) , cudaMemcpyHostToDevice);
     cudaMemcpy(&new_cols_dev[0], &new_cols_host[0], numberOfEdgesPerGraph * sizeof(int) , cudaMemcpyHostToDevice);
+    
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(triangle_row_offsets_array_dev),  0, size_t(numberOfRows+1));
+    
     // Updated final
     cudaMalloc( (void**)&triangle_counter_dev, numberOfRows * sizeof(int) );
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(triangle_counter_dev),  0, size_t(numberOfRows));
@@ -176,8 +185,68 @@ void CallCountTriangles(
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
+    CalculateNewRowOffsets(numberOfRows,
+                            triangle_row_offsets_array_dev,
+                            triangle_counter_dev); 
+      
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);  
+
     cudaMemcpy(&triangle_counter_host[0], &triangle_counter_dev[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
 
+    int numberOfTriangles = 0;
+    cudaMemcpy(&numberOfTriangles, &triangle_row_offsets_array_dev[numberOfRows], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
+    cudaMalloc( (void**)&triangle_candidates_dev, numberOfTriangles * sizeof(union VertexPair) );
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    SaveTrianglesKernel<<<oneThreadPerNode,threadsPerBlock>>>(  numberOfRows,
+                                                                new_row_offs_dev,
+                                                                new_cols_dev,
+                                                                triangle_row_offsets_array_dev,
+                                                                triangle_candidates_dev
+                                                            );
+    
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    triangle_candidates_host = new VertexPair[numberOfTriangles];
+    cudaMemcpy(&triangle_row_offsets_array_host[0], &triangle_row_offsets_array_dev[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(&triangle_candidates_host[0], &triangle_candidates_dev[0], numberOfTriangles * sizeof(union VertexPair) , cudaMemcpyDeviceToHost);
+  
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    for (int i = 0; i < numberOfRows; ++i){
+        std::cout << "Node " << i << "'s candidate triangles:" << std::endl;
+        for (int j = triangle_row_offsets_array_host[i]; j < triangle_row_offsets_array_host[i+1]; ++j){
+            std::cout << "(" << triangle_candidates_host[j].yz[0] << ",  " <<  triangle_candidates_host[j].yz[1] << ") ";
+        }
+        std::cout << std::endl;
+    }
+}
+
+void CallDisjointSetTriangles(
+    int numberOfRows,
+    int numberOfEdgesPerGraph,
+    int * new_row_offs_dev,
+    int * new_cols_dev,
+    int * triangle_counter_dev,
+    int * triangle_reduction_array_dev){
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
+
+    DisjointSetTriangleKernel<<<oneThreadPerNode,threadsPerBlock>>>(  numberOfRows,
+                                                                    new_row_offs_dev,
+                                                                    new_cols_dev,
+                                                                    triangle_counter_dev,
+                                                                    triangle_reduction_array_dev
+                                                                );
+    
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 }
@@ -186,6 +255,74 @@ __global__ void CountTriangleKernel(int numberOfRows,
                                     int * new_row_offs_dev,
                                     int * new_cols_dev,
                                     int * triangle_counter_dev){
+
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= numberOfRows)
+        return;
+    for (int i = new_row_offs_dev[v]; i < new_row_offs_dev[v+1]; ++i){
+        int currMiddle = new_cols_dev[i];
+        if (v < currMiddle){
+            for (int j = new_row_offs_dev[currMiddle]; j < new_row_offs_dev[currMiddle+1]; ++j){
+                int currLast = new_cols_dev[j];
+                if (currMiddle < currLast){
+                    for (int k = new_row_offs_dev[currLast]; k < new_row_offs_dev[currLast+1]; ++k){
+                        int candidateClose = new_cols_dev[k];
+                        if (v == candidateClose){
+                            triangle_counter_dev[v] = triangle_counter_dev[v] + 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+__global__ void SaveTrianglesKernel(int numberOfRows,
+                                    int * new_row_offs_dev,
+                                    int * new_cols_dev,
+                                    int * triangle_row_offsets_array_dev,
+                                    VertexPair * triangle_candidates_dev){
+
+
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+
+    if (v >= numberOfRows)
+        return;
+    int vertexOffset = triangle_row_offsets_array_dev[v];
+    int vertexOffsetEnd = triangle_row_offsets_array_dev[v+1];
+    int totalTriangles = vertexOffsetEnd-vertexOffset;
+    int triangleCounter = 0;
+    for (int i = new_row_offs_dev[v]; i < new_row_offs_dev[v+1]; ++i){
+        int currMiddle = new_cols_dev[i];
+        if (v < currMiddle){
+            for (int j = new_row_offs_dev[currMiddle]; j < new_row_offs_dev[currMiddle+1]; ++j){
+                int currLast = new_cols_dev[j];
+                if (currMiddle < currLast){
+                    for (int k = new_row_offs_dev[currLast]; k < new_row_offs_dev[currLast+1]; ++k){
+                        int candidateClose = new_cols_dev[k];
+                        if (v == candidateClose){
+                            union VertexPair vp;
+                            vp.yz[0] = (unsigned short)currMiddle;
+                            vp.yz[1] = (unsigned short)currLast;
+                            triangle_candidates_dev[vertexOffset + triangleCounter] = vp;
+                            ++triangleCounter;
+                            if (triangleCounter == totalTriangles)
+                                return;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+__global__ void DisjointSetTriangleKernel(int numberOfRows,
+                                    int * new_row_offs_dev,
+                                    int * new_cols_dev,
+                                    int * triangle_counter_dev,
+                                    int * triangle_reduction_array){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= numberOfRows)
         return;
@@ -786,7 +923,7 @@ __global__ void launch_recolor_depth_block( int N,
                                             int * colors,
                                             int * color_finished,
                                             int * middle_vertex){
-    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    //int v = threadIdx.x + blockDim.x * blockIdx.x;
     
 }
 
