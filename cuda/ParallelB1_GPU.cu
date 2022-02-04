@@ -261,16 +261,12 @@ __global__ void CountTriangleKernel(int numberOfRows,
         return;
     for (int i = new_row_offs_dev[v]; i < new_row_offs_dev[v+1]; ++i){
         int currMiddle = new_cols_dev[i];
-        if (v < currMiddle){
-            for (int j = new_row_offs_dev[currMiddle]; j < new_row_offs_dev[currMiddle+1]; ++j){
-                int currLast = new_cols_dev[j];
-                if (currMiddle < currLast){
-                    for (int k = new_row_offs_dev[currLast]; k < new_row_offs_dev[currLast+1]; ++k){
-                        int candidateClose = new_cols_dev[k];
-                        if (v == candidateClose){
-                            triangle_counter_dev[v] = triangle_counter_dev[v] + 1;
-                        }
-                    }
+        for (int j = new_row_offs_dev[currMiddle]; j < new_row_offs_dev[currMiddle+1]; ++j){
+            int currLast = new_cols_dev[j];
+            for (int k = new_row_offs_dev[currLast]; k < new_row_offs_dev[currLast+1]; ++k){
+                int candidateClose = new_cols_dev[k];
+                if (v == candidateClose){
+                    triangle_counter_dev[v] = triangle_counter_dev[v] + 1;
                 }
             }
         }
@@ -295,22 +291,18 @@ __global__ void SaveTrianglesKernel(int numberOfRows,
     int triangleCounter = 0;
     for (int i = new_row_offs_dev[v]; i < new_row_offs_dev[v+1]; ++i){
         int currMiddle = new_cols_dev[i];
-        if (v < currMiddle){
-            for (int j = new_row_offs_dev[currMiddle]; j < new_row_offs_dev[currMiddle+1]; ++j){
-                int currLast = new_cols_dev[j];
-                if (currMiddle < currLast){
-                    for (int k = new_row_offs_dev[currLast]; k < new_row_offs_dev[currLast+1]; ++k){
-                        int candidateClose = new_cols_dev[k];
-                        if (v == candidateClose){
-                            union VertexPair vp;
-                            vp.yz[0] = (unsigned short)currMiddle;
-                            vp.yz[1] = (unsigned short)currLast;
-                            triangle_candidates_dev[vertexOffset + triangleCounter] = vp;
-                            ++triangleCounter;
-                            if (triangleCounter == totalTriangles)
-                                return;
-                        }
-                    }
+        for (int j = new_row_offs_dev[currMiddle]; j < new_row_offs_dev[currMiddle+1]; ++j){
+            int currLast = new_cols_dev[j];
+            for (int k = new_row_offs_dev[currLast]; k < new_row_offs_dev[currLast+1]; ++k){
+                int candidateClose = new_cols_dev[k];
+                if (v == candidateClose){
+                    union VertexPair vp;
+                    vp.yz[0] = (unsigned short)currMiddle;
+                    vp.yz[1] = (unsigned short)currLast;
+                    triangle_candidates_dev[vertexOffset + triangleCounter] = vp;
+                    ++triangleCounter;
+                    if (triangleCounter == totalTriangles)
+                        return;
                 }
             }
         }
