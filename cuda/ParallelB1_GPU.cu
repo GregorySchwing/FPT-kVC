@@ -233,21 +233,20 @@ void CallDisjointSetTriangles(
     int * new_row_offs_dev,
     int * new_cols_dev,
     int * triangle_counter_dev,
-    int * triangle_candidates_dev,
     int * triangle_reduction_array_dev){
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
-/*
+
     DisjointSetTriangleKernel<<<oneThreadPerNode,threadsPerBlock>>>(  numberOfRows,
                                                                     new_row_offs_dev,
                                                                     new_cols_dev,
                                                                     triangle_counter_dev,
                                                                     triangle_reduction_array_dev
                                                                 );
-*/  
+    
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 }
