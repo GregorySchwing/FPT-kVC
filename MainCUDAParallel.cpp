@@ -85,6 +85,7 @@ int main(int argc, char *argv[])
     int * global_columns_dev_ptr; // size M
     int * global_values_dev_ptr; // on or off, size M
     int * global_degrees_dev_ptr; // size N, used for inducing the subgraph
+    int * global_triangle_remaining_boolean; // size |W|, where W is the subset of V contained in a triangle, used for finding MIS of triangles
     int * triangle_row_offsets_array_dev;
 
     // Vertex, Cols, Edge(on/off)
@@ -115,10 +116,11 @@ int main(int argc, char *argv[])
     VertexPair * triangle_candidates_dev;
     int * triangle_row_offsets_array_host = new int[numberOfRows+1];
     VertexPair * triangle_candidates_host;
-
+    int numberOfTriangles_host;
     CallCountTriangles(
                         numberOfRows,
                         edgesLeftToCover,
+                        &numberOfTriangles_host,
                         global_row_offsets_dev_ptr,
                         global_columns_dev_ptr,
                         new_row_offsets,
@@ -134,6 +136,15 @@ int main(int argc, char *argv[])
         std::cout << triangle_counter_host[i] << " ";
     }
     std::cout << std::endl;
+
+    cudaMalloc( (void**)&global_triangle_remaining_boolean, numberOfTriangles_host * sizeof(int) );
+
+    CallMIS(g,
+            global_row_offsets_dev_ptr,
+            global_columns_dev_ptr,
+            global_values_dev_ptr,
+            global_degrees_dev_ptr,
+            global_triangle_remaining_boolean);
 
     // Step 1
     //SSSPAndBuildDepthCSR(g, root, host_levels, new_row_offsets, new_cols, new_colors, new_U, new_Pred, new_color_finished);

@@ -217,9 +217,17 @@ void CallInduceSubgraph(Graph & g,
                     int * new_cols_host,
                     int * new_vals_host);
 
+void CallMIS(   Graph & g,
+                int * new_row_offs_dev,
+                int * new_cols_dev,
+                int * new_vals_dev,
+                int * new_degrees_dev,
+                int * vertex_remaining);
+
 void CallCountTriangles(
                         int numberOfRows,
                         int numberOfEdgesPerGraph,
+                        int * numberOfTriangles_host,
                         int * new_row_offs_dev,
                         int * new_cols_dev,
                         int * new_row_offs_host,

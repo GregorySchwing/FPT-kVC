@@ -153,9 +153,23 @@ void CallInduceSubgraph(Graph & g,
     checkLastErrorCUDA(__FILE__, __LINE__);
 }
 
+void CallMIS(   Graph & g,
+                int * new_row_offs_dev,
+                int * new_cols_dev,
+                int * new_vals_dev,
+                int * new_degrees_dev,
+                int * triangle_remaining_boolean
+            ){
+    int remainingTrianglesCount = 1;
+    while(remainingTrianglesCount){ 
+        
+    }
+}
+
 void CallCountTriangles(
                         int numberOfRows,
                         int numberOfEdgesPerGraph,
+                        int * numberOfTriangles_host,
                         int * new_row_offs_dev,
                         int * new_cols_dev,
                         int * new_row_offs_host,
