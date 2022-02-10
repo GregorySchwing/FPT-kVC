@@ -266,7 +266,7 @@ void CallDisjointSetTriangles(
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
-
+    int conflictsRemain = 0;
 
     CalculateConflictDegree<<<oneThreadPerNode,threadsPerBlock>>>(  numberOfRows,
                                                                     triangle_row_offsets_array_dev,
@@ -274,6 +274,12 @@ void CallDisjointSetTriangles(
                                                                     triangle_candidates_dev
                                                                 );
 
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    CheckForConficts<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
+                                                            triangle_counter_dev,
+                                                            &conflictsRemain);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -306,6 +312,8 @@ void CallDisjointSetTriangles(
                                                                             conflictDegreeNeighborhoodSum_dev,
                                                                             L_dev
                                                                          );
+
+    
 
     
 }
@@ -391,6 +399,16 @@ __global__ void CalculateConflictDegree(int numberOfRows,
         atomicAdd(&triangle_counter_dev[vp.yz[0]], 1);
         atomicAdd(&triangle_counter_dev[vp.yz[1]], 1);
     }
+}
+
+__global__ void CheckForConficts(int numberOfRows,
+                                int * triangle_counter_dev,
+                                int * conflictsRemain){
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= numberOfRows)
+        return;
+    if(triangle_counter_dev[v] > 1) 
+        *conflictsRemain = 1;
 }
 
 __global__ void CalculateConflictDegreeNeighborhoodSum(int numberOfRows,

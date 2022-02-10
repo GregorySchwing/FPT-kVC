@@ -265,6 +265,10 @@ __global__ void CalculateConflictDegree(int numberOfRows,
                                         int * triangle_counter_dev,
                                         VertexPair * triangle_candidates_dev);
 
+__global__ void CheckForConficts(int numberOfRows,
+                                int * triangle_counter_dev,
+                                int * conflictsRemain);
+
 __global__ void CalculateConflictDegreeNeighborhoodSum(int numberOfRows,
                                         int * new_row_offs_dev,
                                         int * new_cols_dev,
