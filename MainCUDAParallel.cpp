@@ -134,15 +134,18 @@ int main(int argc, char *argv[])
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     cudaMalloc( (void**)&triangle_candidates_dev, numberOfTriangles_host * sizeof(union VertexPair) );
-    triangle_row_offsets_array_host = new int[numberOfTriangles_host];
+    triangle_candidates_host = new VertexPair[numberOfTriangles_host];
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     CallSaveTriangles(numberOfRows,
-                        new_row_offs_dev,
-                        new_cols_dev,
+                        numberOfTriangles_host,
+                        global_row_offsets_dev_ptr,
+                        global_columns_dev_ptr,
+                        triangle_row_offsets_array_host,
                         triangle_row_offsets_array_dev,
+                        triangle_candidates_host,
                         triangle_candidates_dev);
 
     cudaDeviceSynchronize();
