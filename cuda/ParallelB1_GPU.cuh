@@ -27,6 +27,7 @@ typedef r123::Philox4x32 RNG;
 const int threadsPerBlock = 32;
 
 __device__ int randomGPU(unsigned int counter, ulong step, ulong seed);
+__device__ unsigned int h(unsigned int v);
 
 class Graph;
 
@@ -270,6 +271,19 @@ __global__ void CalculateConflictDegreeNeighborhoodSum(int numberOfRows,
                                         int * triangle_counter_dev,
                                         int * conflictDegreeNeighborhoodSum_dev);
 
+__global__ void IdentifyMaximumConflictTriangles(int numberOfRows,
+                                                int * new_row_offs_dev,
+                                                int * new_cols_dev,
+                                                int * triangle_counter_dev,
+                                                int * conflictDegreeNeighborhoodSum_dev,
+                                                int * L_dev);
+
+__global__ void TurnOffMaximumConflictTriangles(int numberOfRows,
+                                                int * triangle_row_offsets_array_dev,
+                                                VertexPair * triangle_candidates_dev,
+                                                int * triangle_counter_dev,
+                                                int * conflictDegreeNeighborhoodSum_dev,
+                                                int * L_dev);
 
 __global__ void DisjointSetTriangleKernel(int numberOfRows,
                                     int * new_row_offs_dev,
