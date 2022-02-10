@@ -255,16 +255,17 @@ void CallDisjointSetTriangles(
 
     int * conflictDegreeNeighborhoodSum_dev;
     int * L_dev;
+    int * conflictsRemain_dev;
     int * conflictsRemain;
 
 
     cudaMalloc( (void**)&conflictDegreeNeighborhoodSum_dev, numberOfRows * sizeof(int) );
     cudaMalloc( (void**)&L_dev, numberOfRows * sizeof(int) );
-    cudaMalloc( (void**)&conflictsRemain, 1 * sizeof(int) );
+    cudaMalloc( (void**)&conflictsRemain_dev, 1 * sizeof(int) );
 
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(conflictDegreeNeighborhoodSum_dev),  0, size_t(numberOfRows));
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(L_dev),  0, size_t(numberOfRows));
-    cuMemsetD32(reinterpret_cast<CUdeviceptr>(conflictsRemain),  0, size_t(numberOfRows));
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(conflictsRemain_dev),  0, size_t(numberOfRows));
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -287,37 +288,53 @@ void CallDisjointSetTriangles(
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
-    CalculateConflictDegreeNeighborhoodSum<<<oneThreadPerNode,threadsPerBlock>>>(   numberOfRows,
-                                                                                    new_row_offs_dev,
-                                                                                    new_cols_dev,
-                                                                                    triangle_counter_dev,
-                                                                                    conflictDegreeNeighborhoodSum_dev
-                                                                                );
-    
-    cudaDeviceSynchronize();
-    checkLastErrorCUDA(__FILE__, __LINE__);
+    cudaMemcpy(conflictsRemain, conflictsRemain_dev, 1 * sizeof(int) , cudaMemcpyDeviceToHost);
 
-    IdentifyMaximumConflictTriangles<<<oneThreadPerNode,threadsPerBlock>>>( numberOfRows,
-                                                                            new_row_offs_dev,
-                                                                            new_cols_dev,
-                                                                            triangle_counter_dev,
-                                                                            conflictDegreeNeighborhoodSum_dev,
-                                                                            L_dev
-                                                                          );
+    while(*conflictsRemain){
+        CalculateConflictDegreeNeighborhoodSum<<<oneThreadPerNode,threadsPerBlock>>>(   numberOfRows,
+                                                                                        new_row_offs_dev,
+                                                                                        new_cols_dev,
+                                                                                        triangle_counter_dev,
+                                                                                        conflictDegreeNeighborhoodSum_dev
+                                                                                    );
+        
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
 
-    cudaDeviceSynchronize();
-    checkLastErrorCUDA(__FILE__, __LINE__);
+        IdentifyMaximumConflictTriangles<<<oneThreadPerNode,threadsPerBlock>>>( numberOfRows,
+                                                                                new_row_offs_dev,
+                                                                                new_cols_dev,
+                                                                                triangle_counter_dev,
+                                                                                conflictDegreeNeighborhoodSum_dev,
+                                                                                L_dev
+                                                                            );
 
-    TurnOffMaximumConflictTriangles<<<oneThreadPerNode,threadsPerBlock>>>(  numberOfRows,
-                                                                            triangle_row_offsets_array_dev,
-                                                                            triangle_candidates_dev,
-                                                                            triangle_counter_dev,
-                                                                            conflictDegreeNeighborhoodSum_dev,
-                                                                            L_dev
-                                                                         );
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
 
-    
+        TurnOffMaximumConflictTriangles<<<oneThreadPerNode,threadsPerBlock>>>(  numberOfRows,
+                                                                                triangle_row_offsets_array_dev,
+                                                                                triangle_candidates_dev,
+                                                                                triangle_counter_dev,
+                                                                                conflictDegreeNeighborhoodSum_dev,
+                                                                                L_dev
+                                                                            );
 
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+
+        CheckForConficts<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
+                                                                triangle_counter_dev,
+                                                                &conflictsRemain);
+
+        cudaMemcpy(conflictsRemain, conflictsRemain_dev, 1 * sizeof(int) , cudaMemcpyDeviceToHost);
+
+        if(*conflictsRemain){
+            cuMemsetD32(reinterpret_cast<CUdeviceptr>(conflictDegreeNeighborhoodSum_dev),  0, size_t(numberOfRows));
+            cuMemsetD32(reinterpret_cast<CUdeviceptr>(L_dev),  0, size_t(numberOfRows));
+            cuMemsetD32(reinterpret_cast<CUdeviceptr>(conflictsRemain_dev),  0, size_t(numberOfRows));
+        }
+    }
     
 }
 
