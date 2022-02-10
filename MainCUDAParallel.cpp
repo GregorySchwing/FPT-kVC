@@ -113,9 +113,14 @@ int main(int argc, char *argv[])
 
     int * triangle_counter_host  = new int[numberOfRows];
     int * triangle_counter_dev;
+    cudaMalloc( (void**)&triangle_counter_dev, numberOfRows * sizeof(int) );
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
     int * triangle_row_offsets_array_host = new int[numberOfRows+1];
-    int * triangle_candidates_dev;
-    int * triangle_candidates_host;
+    int * triangle_candidates_a_dev;
+    int * triangle_candidates_b_dev;
+    int * triangle_candidates_a_host;
+    int * triangle_candidates_b_host;
     int numberOfTriangles_host;
     CallCountTriangles(
                         numberOfRows,
@@ -132,9 +137,11 @@ int main(int argc, char *argv[])
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
-
-    cudaMalloc( (void**)&triangle_candidates_dev, numberOfTriangles_host * sizeof(int) );
-    triangle_candidates_host = new int[numberOfTriangles_host];
+    printf("number of triangles %d\n", numberOfTriangles_host);
+    cudaMalloc( (void**)&triangle_candidates_a_dev, numberOfTriangles_host * sizeof(int) );
+    cudaMalloc( (void**)&triangle_candidates_b_dev, numberOfTriangles_host * sizeof(int) );
+    triangle_candidates_a_host = new int[numberOfTriangles_host];
+    triangle_candidates_b_host = new int[numberOfTriangles_host];
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -145,8 +152,10 @@ int main(int argc, char *argv[])
                         global_columns_dev_ptr,
                         triangle_row_offsets_array_host,
                         triangle_row_offsets_array_dev,
-                        triangle_candidates_host,
-                        triangle_candidates_dev);
+                        triangle_candidates_a_host,
+                        triangle_candidates_b_host,
+                        triangle_candidates_a_dev,
+                        triangle_candidates_b_dev);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);    
@@ -162,8 +171,10 @@ int main(int argc, char *argv[])
                                 global_row_offsets_dev_ptr,
                                 global_columns_dev_ptr,
                                 triangle_row_offsets_array_dev,
+                                triangle_counter_host,
                                 triangle_counter_dev,
-                                triangle_candidates_dev);
+                                triangle_candidates_a_dev,
+                                triangle_candidates_b_dev);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
