@@ -236,7 +236,11 @@ void CallCountTriangles(
                         int * triangle_counter_host,
                         int * triangle_counter_dev,
                         int * triangle_row_offsets_array_host,
-                        VertexPair * triangle_candidates_host,
+                        int * triangle_row_offsets_array_dev);
+
+void CallSaveTriangles( int numberOfRows,
+                        int * new_row_offs_dev,
+                        int * new_cols_dev,
                         int * triangle_row_offsets_array_dev,
                         VertexPair * triangle_candidates_dev);
 

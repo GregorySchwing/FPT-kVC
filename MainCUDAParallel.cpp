@@ -113,8 +113,8 @@ int main(int argc, char *argv[])
 
     int * triangle_counter_host  = new int[numberOfRows];
     int * triangle_counter_dev;
-    VertexPair * triangle_candidates_dev;
     int * triangle_row_offsets_array_host = new int[numberOfRows+1];
+    VertexPair * triangle_candidates_dev;
     VertexPair * triangle_candidates_host;
     int numberOfTriangles_host;
     CallCountTriangles(
@@ -128,9 +128,26 @@ int main(int argc, char *argv[])
                         triangle_counter_host,
                         triangle_counter_dev,
                         triangle_row_offsets_array_host,
-                        triangle_candidates_host,
+                        triangle_row_offsets_array_dev);
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    cudaMalloc( (void**)&triangle_candidates_dev, numberOfTriangles_host * sizeof(union VertexPair) );
+    triangle_row_offsets_array_host = new int[numberOfTriangles_host];
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    CallSaveTriangles(numberOfRows,
+                        new_row_offs_dev,
+                        new_cols_dev,
                         triangle_row_offsets_array_dev,
                         triangle_candidates_dev);
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);    
+
     std::cout << "Number of Triangles" << std::endl;
     for (int i = 0; i < numberOfRows; ++i){
         std::cout << triangle_counter_host[i] << " ";
