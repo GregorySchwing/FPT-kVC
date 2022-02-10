@@ -29,6 +29,9 @@ const int threadsPerBlock = 32;
 __device__ int randomGPU(unsigned int counter, ulong step, ulong seed);
 __device__ unsigned int h(unsigned int v);
 
+__host__ __device__ int32_t Pack(int16_t a, int16_t b);
+__host__ __device__ int16_t UnpackA(int32_t x);
+__host__ __device__ int16_t UnpackB(int32_t x);
 class Graph;
 
 union VertexPair {
@@ -244,8 +247,8 @@ void CallSaveTriangles( int numberOfRows,
                         int * new_cols_dev,
                         int * triangle_row_offsets_array_host,
                         int * triangle_row_offsets_array_dev,
-                        VertexPair * triangle_candidates_host,
-                        VertexPair * triangle_candidates_dev);
+                        int * triangle_candidates_host,
+                        int * triangle_candidates_dev);
 
 void CallDisjointSetTriangles(
                         int numberOfRows,
@@ -253,7 +256,7 @@ void CallDisjointSetTriangles(
                         int * new_cols_dev,
                         int * triangle_row_offsets_array_dev,
                         int * triangle_counter_dev,
-                        VertexPair * triangle_candidates_dev);
+                        int * triangle_candidates_dev);
 
 __global__ void CountTriangleKernel(int numberOfRows,
                                     int * new_row_offs_dev,
@@ -264,12 +267,12 @@ __global__ void SaveTrianglesKernel(int numberOfRows,
                                     int * new_row_offs_dev,
                                     int * new_cols_dev,
                                     int * triangle_row_offsets_array_dev,
-                                    VertexPair * triangle_candidates_dev);
+                                    int * triangle_candidates_dev);
 
 __global__ void CalculateConflictDegree(int numberOfRows,
                                         int * triangle_row_offsets_array_dev,
                                         int * triangle_counter_dev,
-                                        VertexPair * triangle_candidates_dev);
+                                        int * triangle_candidates_dev);
 
 __global__ void CheckForConficts(int numberOfRows,
                                 int * triangle_counter_dev,
@@ -290,7 +293,7 @@ __global__ void IdentifyMaximumConflictTriangles(int numberOfRows,
 
 __global__ void TurnOffMaximumConflictTriangles(int numberOfRows,
                                                 int * triangle_row_offsets_array_dev,
-                                                VertexPair * triangle_candidates_dev,
+                                                int * triangle_candidates_dev,
                                                 int * triangle_counter_dev,
                                                 int * conflictDegreeNeighborhoodSum_dev,
                                                 int * L_dev);
