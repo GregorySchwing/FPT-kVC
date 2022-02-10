@@ -255,18 +255,21 @@ void CallDisjointSetTriangles(
 
     int * conflictDegreeNeighborhoodSum_dev;
     int * L_dev;
+    int * conflictsRemain;
+
 
     cudaMalloc( (void**)&conflictDegreeNeighborhoodSum_dev, numberOfRows * sizeof(int) );
     cudaMalloc( (void**)&L_dev, numberOfRows * sizeof(int) );
+    cudaMalloc( (void**)&conflictsRemain, 1 * sizeof(int) );
 
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(conflictDegreeNeighborhoodSum_dev),  0, size_t(numberOfRows));
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(L_dev),  0, size_t(numberOfRows));
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(conflictsRemain),  0, size_t(numberOfRows));
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
-    int conflictsRemain = 0;
 
     CalculateConflictDegree<<<oneThreadPerNode,threadsPerBlock>>>(  numberOfRows,
                                                                     triangle_row_offsets_array_dev,
