@@ -137,6 +137,28 @@ int main(int argc, char *argv[])
     }
     std::cout << std::endl;
 
+    CallDisjointSetTriangles(
+                                numberOfRows,
+                                global_row_offsets_dev_ptr,
+                                global_columns_dev_ptr,
+                                triangle_row_offsets_array_dev,
+                                triangle_counter_dev,
+                                triangle_candidates_dev);
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    cudaMemcpy(&triangle_counter_host[0], &triangle_counter_dev[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    std::cout << "Number of Triangles After conflict resolution" << std::endl;
+    for (int i = 0; i < numberOfRows; ++i){
+        std::cout << triangle_counter_host[i] << " ";
+    }
+    std::cout << std::endl;
+/*
     cudaMalloc( (void**)&global_triangle_remaining_boolean, numberOfTriangles_host * sizeof(int) );
 
     CallMIS(g,
@@ -145,7 +167,7 @@ int main(int argc, char *argv[])
             global_values_dev_ptr,
             global_degrees_dev_ptr,
             global_triangle_remaining_boolean);
-
+*/
     // Step 1
     //SSSPAndBuildDepthCSR(g, root, host_levels, new_row_offsets, new_cols, new_colors, new_U, new_Pred, new_color_finished);
     // Step 2

@@ -243,7 +243,6 @@ void CallCountTriangles(
 
 void CallDisjointSetTriangles(
     int numberOfRows,
-    int numberOfEdgesPerGraph,
     int * new_row_offs_dev,
     int * new_cols_dev,
     int * triangle_row_offsets_array_dev,
@@ -256,8 +255,10 @@ void CallDisjointSetTriangles(
     int * conflictDegreeNeighborhoodSum_dev;
     int * L_dev;
     int * conflictsRemain_dev;
+    int zero = 0;
     int * conflictsRemain;
-
+    // To avoid warnings
+    conflictsRemain = &zero;
 
     cudaMalloc( (void**)&conflictDegreeNeighborhoodSum_dev, numberOfRows * sizeof(int) );
     cudaMalloc( (void**)&L_dev, numberOfRows * sizeof(int) );
@@ -283,7 +284,7 @@ void CallDisjointSetTriangles(
 
     CheckForConficts<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
                                                             triangle_counter_dev,
-                                                            &conflictsRemain);
+                                                            conflictsRemain_dev);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -325,7 +326,7 @@ void CallDisjointSetTriangles(
 
         CheckForConficts<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
                                                                 triangle_counter_dev,
-                                                                &conflictsRemain);
+                                                                conflictsRemain_dev);
 
         cudaMemcpy(conflictsRemain, conflictsRemain_dev, 1 * sizeof(int) , cudaMemcpyDeviceToHost);
 
@@ -335,7 +336,10 @@ void CallDisjointSetTriangles(
             cuMemsetD32(reinterpret_cast<CUdeviceptr>(conflictsRemain_dev),  0, size_t(numberOfRows));
         }
     }
-    
+
+    cudaFree( conflictDegreeNeighborhoodSum_dev );
+    cudaFree( L_dev );
+    cudaFree( conflictsRemain_dev );
 }
 
 __global__ void CountTriangleKernel(int numberOfRows,

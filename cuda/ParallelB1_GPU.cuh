@@ -242,7 +242,6 @@ void CallCountTriangles(
 
 void CallDisjointSetTriangles(
                         int numberOfRows,
-                        int numberOfEdgesPerGraph,
                         int * new_row_offs_dev,
                         int * new_cols_dev,
                         int * triangle_row_offsets_array_dev,
