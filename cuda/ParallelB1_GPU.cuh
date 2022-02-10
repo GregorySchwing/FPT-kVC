@@ -239,6 +239,15 @@ void CallCountTriangles(
                         int * triangle_row_offsets_array_dev,
                         VertexPair * triangle_candidates_dev);
 
+void CallDisjointSetTriangles(
+                        int numberOfRows,
+                        int numberOfEdgesPerGraph,
+                        int * new_row_offs_dev,
+                        int * new_cols_dev,
+                        int * triangle_row_offsets_array_dev,
+                        int * triangle_counter_dev,
+                        VertexPair * triangle_candidates_dev);
+
 __global__ void CountTriangleKernel(int numberOfRows,
                                     int * new_row_offs_dev,
                                     int * new_cols_dev,
@@ -249,6 +258,17 @@ __global__ void SaveTrianglesKernel(int numberOfRows,
                                     int * new_cols_dev,
                                     int * triangle_row_offsets_array_dev,
                                     VertexPair * triangle_candidates_dev);
+
+__global__ void CalculateConflictDegree(int numberOfRows,
+                                        int * triangle_row_offsets_array_dev,
+                                        int * triangle_counter_dev,
+                                        VertexPair * triangle_candidates_dev);
+
+__global__ void CalculateConflictDegreeNeighborhoodSum(int numberOfRows,
+                                        int * new_row_offs_dev,
+                                        int * new_cols_dev,
+                                        int * triangle_counter_dev,
+                                        int * conflictDegreeNeighborhoodSum_dev);
 
 
 __global__ void DisjointSetTriangleKernel(int numberOfRows,

@@ -246,23 +246,44 @@ void CallDisjointSetTriangles(
     int numberOfEdgesPerGraph,
     int * new_row_offs_dev,
     int * new_cols_dev,
+    int * triangle_row_offsets_array_dev,
     int * triangle_counter_dev,
-    int * triangle_reduction_array_dev){
+    VertexPair * triangle_candidates_dev){
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    int * conflictDegreeNeighborhoodSum_dev;
+    cudaMalloc( (void**)&conflictDegreeNeighborhoodSum_dev, numberOfRows * sizeof(int) );
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(conflictDegreeNeighborhoodSum_dev),  0, size_t(numberOfRows));
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
 
-    DisjointSetTriangleKernel<<<oneThreadPerNode,threadsPerBlock>>>(  numberOfRows,
+
+    CalculateConflictDegree<<<oneThreadPerNode,threadsPerBlock>>>(  numberOfRows,
+                                                                    triangle_row_offsets_array_dev,
+                                                                    triangle_counter_dev,
+                                                                    triangle_candidates_dev
+                                                                );
+
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
+    CalculateConflictDegreeNeighborhoodSum<<<oneThreadPerNode,threadsPerBlock>>>(  numberOfRows,
                                                                     new_row_offs_dev,
                                                                     new_cols_dev,
                                                                     triangle_counter_dev,
-                                                                    triangle_reduction_array_dev
+                                                                    conflictDegreeNeighborhoodSum_dev
                                                                 );
     
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
+
+    
 }
 
 __global__ void CountTriangleKernel(int numberOfRows,
@@ -330,6 +351,41 @@ __global__ void SaveTrianglesKernel(int numberOfRows,
         }
     }
 }
+
+__global__ void CalculateConflictDegree(int numberOfRows,
+                                        int * triangle_row_offsets_array_dev,
+                                        int * triangle_counter_dev,
+                                        VertexPair * triangle_candidates_dev){
+
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+
+    if (v >= numberOfRows)
+        return;
+    union VertexPair vp;
+    for (int i = triangle_row_offsets_array_dev[v]; i < triangle_row_offsets_array_dev[v+1]; ++i){
+        vp = triangle_candidates_dev[i];
+        atomicAdd(&triangle_counter_dev[vp.yz[0]], 1);
+        atomicAdd(&triangle_counter_dev[vp.yz[1]], 1);
+    }
+}
+
+__global__ void CalculateConflictDegreeNeighborhoodSum(int numberOfRows,
+                                                        int * new_row_offs_dev,
+                                                        int * new_cols_dev,
+                                                        int * triangle_counter_dev,
+                                                        int * conflictDegreeNeighborhoodSum_dev){
+
+
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    int neighborhoodSum = 0;
+    if (v >= numberOfRows)
+        return;
+    for (int i = new_row_offs_dev[v]; i < new_row_offs_dev[v+1]; ++i){
+        neighborhoodSum += triangle_counter_dev[new_cols_dev[i]];
+    }
+    conflictDegreeNeighborhoodSum_dev[v] = neighborhoodSum;
+}
+
 
 
 __global__ void DisjointSetTriangleKernel(int numberOfRows,
