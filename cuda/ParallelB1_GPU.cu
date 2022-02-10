@@ -189,6 +189,10 @@ void CallCountTriangles(
     // Updated final
     cudaMalloc( (void**)&triangle_counter_dev, numberOfRows * sizeof(int) );
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(triangle_counter_dev),  0, size_t(numberOfRows));
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
     int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
     CountTriangleKernel<<<oneThreadPerNode,threadsPerBlock>>>(  numberOfRows,
                                                                 new_row_offs_dev,
@@ -210,6 +214,10 @@ void CallCountTriangles(
 
     int numberOfTriangles = 0;
     cudaMemcpy(&numberOfTriangles, &triangle_row_offsets_array_dev[numberOfRows], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
+    
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+    
     cudaMalloc( (void**)&triangle_candidates_dev, numberOfTriangles * sizeof(union VertexPair) );
 
     cudaDeviceSynchronize();
@@ -226,7 +234,7 @@ void CallCountTriangles(
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     triangle_candidates_host = new VertexPair[numberOfTriangles];
-    cudaMemcpy(&triangle_row_offsets_array_host[0], &triangle_row_offsets_array_dev[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(&triangle_row_offsets_array_host[0], &triangle_row_offsets_array_dev[0], (numberOfRows+1) * sizeof(int) , cudaMemcpyDeviceToHost);
     cudaMemcpy(&triangle_candidates_host[0], &triangle_candidates_dev[0], numberOfTriangles * sizeof(union VertexPair) , cudaMemcpyDeviceToHost);
   
     cudaDeviceSynchronize();
@@ -234,6 +242,8 @@ void CallCountTriangles(
 
     for (int i = 0; i < numberOfRows; ++i){
         std::cout << "Node " << i << "'s candidate triangles:" << std::endl;
+        int LB = triangle_row_offsets_array_host[i];
+        int UB = triangle_row_offsets_array_host[i+1];
         for (int j = triangle_row_offsets_array_host[i]; j < triangle_row_offsets_array_host[i+1]; ++j){
             std::cout << "(" << triangle_candidates_host[j].yz[0] << ",  " <<  triangle_candidates_host[j].yz[1] << ") ";
         }
@@ -264,9 +274,13 @@ void CallDisjointSetTriangles(
     cudaMalloc( (void**)&L_dev, numberOfRows * sizeof(int) );
     cudaMalloc( (void**)&conflictsRemain_dev, 1 * sizeof(int) );
 
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(conflictDegreeNeighborhoodSum_dev),  0, size_t(numberOfRows));
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(L_dev),  0, size_t(numberOfRows));
-    cuMemsetD32(reinterpret_cast<CUdeviceptr>(conflictsRemain_dev),  0, size_t(numberOfRows));
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(conflictsRemain_dev),  0, size_t(1));
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -382,8 +396,10 @@ __global__ void SaveTrianglesKernel(int numberOfRows,
         return;
     int vertexOffset = triangle_row_offsets_array_dev[v];
     int vertexOffsetEnd = triangle_row_offsets_array_dev[v+1];
+    printf ("%d %d %d\n", v, vertexOffset, vertexOffsetEnd);
     int totalTriangles = vertexOffsetEnd-vertexOffset;
     int triangleCounter = 0;
+    union VertexPair vpTest;
     for (int i = new_row_offs_dev[v]; i < new_row_offs_dev[v+1]; ++i){
         int currMiddle = new_cols_dev[i];
         if (v < currMiddle){
@@ -397,6 +413,8 @@ __global__ void SaveTrianglesKernel(int numberOfRows,
                             vp.yz[0] = (unsigned short)currMiddle;
                             vp.yz[1] = (unsigned short)currLast;
                             triangle_candidates_dev[vertexOffset + triangleCounter] = vp;
+                            vpTest = triangle_candidates_dev[vertexOffset + triangleCounter];
+                            printf("Triangle %d (%d %d)\n", vertexOffset + triangleCounter, vpTest.yz[0], vpTest.yz[1]);
                             ++triangleCounter;
                             if (triangleCounter == totalTriangles)
                                 return;
@@ -418,10 +436,22 @@ __global__ void CalculateConflictDegree(int numberOfRows,
     if (v >= numberOfRows)
         return;
     union VertexPair vp;
+    int a;
+    int b;
+    printf("Use v %d with rowofftri\n", v);
+    printf("triangle_row_offsets_array_dev[%d] = %d\n", v,triangle_row_offsets_array_dev[v]);
+    printf("triangle_row_offsets_array_dev[%d] = %d\n", v+1,triangle_row_offsets_array_dev[v+1]);
     for (int i = triangle_row_offsets_array_dev[v]; i < triangle_row_offsets_array_dev[v+1]; ++i){
+        printf("about to Dereference a candidate triangle %d\n",i);
         vp = triangle_candidates_dev[i];
-        atomicAdd(&triangle_counter_dev[vp.yz[0]], 1);
-        atomicAdd(&triangle_counter_dev[vp.yz[1]], 1);
+        printf("finished to Dereferencing a candidate triangle %d\n",i);
+
+        a = (int)vp.yz[0];
+        b = (int)vp.yz[1];
+
+        printf("%d %d\n", a,b);
+        atomicAdd(&triangle_counter_dev[a], 1);
+        atomicAdd(&triangle_counter_dev[b], 1);
     }
 }
 
