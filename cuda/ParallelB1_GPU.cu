@@ -253,7 +253,7 @@ void CallSaveTriangles( int numberOfRows,
 
     cudaMemcpy(&triangle_row_offsets_array_host[0], &triangle_row_offsets_array_dev[0], (numberOfRows+1) * sizeof(int) , cudaMemcpyDeviceToHost);
     cudaMemcpy(&triangle_candidates_a_host[0], &triangle_candidates_a_dev[0], numberOfTriangles * sizeof(int) , cudaMemcpyDeviceToHost);
-      cudaMemcpy(&triangle_candidates_b_host[0], &triangle_candidates_b_dev[0], numberOfTriangles * sizeof(int) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(&triangle_candidates_b_host[0], &triangle_candidates_b_dev[0], numberOfTriangles * sizeof(int) , cudaMemcpyDeviceToHost);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -265,10 +265,11 @@ void CallSaveTriangles( int numberOfRows,
         for (int j = triangle_row_offsets_array_host[i]; j < triangle_row_offsets_array_host[i+1]; ++j){
             int a = triangle_candidates_a_host[j];
             int b = triangle_candidates_b_host[j];
-            std::cout << "(" << a << ",  " << b << ") ";
+            std::cout << "(" << a << ",  " << b << ") " << std::endl;
         }
         std::cout << std::endl;
     }
+    exit(1);
 }
 
 
@@ -390,9 +391,10 @@ __global__ void CountTriangleKernel(int numberOfRows,
         return;
     for (int i = new_row_offs_dev[v]; i < new_row_offs_dev[v+1]; ++i){
         int currMiddle = new_cols_dev[i];
+        if( v < currMiddle)
         for (int j = new_row_offs_dev[currMiddle]; j < new_row_offs_dev[currMiddle+1]; ++j){
             int currLast = new_cols_dev[j];
-            if (v != currLast){
+            if (v != currLast && currMiddle < currLast){
                 for (int k = new_row_offs_dev[currLast]; k < new_row_offs_dev[currLast+1]; ++k){
                     int candidateClose = new_cols_dev[k];
                     if (v == candidateClose){
@@ -426,9 +428,10 @@ __global__ void SaveTrianglesKernel(int numberOfRows,
     int b;
     for (int i = new_row_offs_dev[v]; i < new_row_offs_dev[v+1]; ++i){
         int currMiddle = new_cols_dev[i];
+        if (v < currMiddle)
         for (int j = new_row_offs_dev[currMiddle]; j < new_row_offs_dev[currMiddle+1]; ++j){
             int currLast = new_cols_dev[j];
-            if (v != currLast){
+            if (v != currLast && currMiddle < currLast){
                 for (int k = new_row_offs_dev[currLast]; k < new_row_offs_dev[currLast+1]; ++k){
                     int candidateClose = new_cols_dev[k];
                     if (v == candidateClose){
