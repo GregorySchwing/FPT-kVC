@@ -269,7 +269,6 @@ void CallSaveTriangles( int numberOfRows,
         }
         std::cout << std::endl;
     }
-    exit(1);
 }
 
 
@@ -373,7 +372,7 @@ void CallDisjointSetTriangles(
         checkLastErrorCUDA(__FILE__, __LINE__);
         if(*conflictsRemain){
             cuMemsetD32(reinterpret_cast<CUdeviceptr>(L_dev),  0, size_t(numberOfRows));
-            cuMemsetD32(reinterpret_cast<CUdeviceptr>(conflictsRemain_dev),  0, size_t(numberOfRows));
+            cuMemsetD32(reinterpret_cast<CUdeviceptr>(conflictsRemain_dev),  0, size_t(1));
         }
     }
 
@@ -567,6 +566,7 @@ __global__ void TurnOffMaximumEdgeOfConflictTriangles(int numberOfRows,
             maxB = b;
         }
     }
+    printf("Turning off triangle %d %d %d\n", v, maxA, maxB);
     triangle_counter_dev[v] = triangle_counter_dev[v] - 1;
     triangle_counter_dev[maxA] = triangle_counter_dev[maxA] - 1;
     triangle_counter_dev[maxB] = triangle_counter_dev[maxB] - 1;
