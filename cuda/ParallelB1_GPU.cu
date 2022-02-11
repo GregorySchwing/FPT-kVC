@@ -391,7 +391,6 @@ __global__ void CountTriangleKernel(int numberOfRows,
         return;
     for (int i = new_row_offs_dev[v]; i < new_row_offs_dev[v+1]; ++i){
         int currMiddle = new_cols_dev[i];
-        if( v < currMiddle)
         for (int j = new_row_offs_dev[currMiddle]; j < new_row_offs_dev[currMiddle+1]; ++j){
             int currLast = new_cols_dev[j];
             if (v != currLast && currMiddle < currLast){
@@ -428,7 +427,6 @@ __global__ void SaveTrianglesKernel(int numberOfRows,
     int b;
     for (int i = new_row_offs_dev[v]; i < new_row_offs_dev[v+1]; ++i){
         int currMiddle = new_cols_dev[i];
-        if (v < currMiddle)
         for (int j = new_row_offs_dev[currMiddle]; j < new_row_offs_dev[currMiddle+1]; ++j){
             int currLast = new_cols_dev[j];
             if (v != currLast && currMiddle < currLast){
