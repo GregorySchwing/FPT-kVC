@@ -296,7 +296,7 @@ __global__ void IdentifyMaximumConflictTriangles(int numberOfRows,
                                                 int * triangle_counter_dev,
                                                 int * L_dev);
 
-__global__ void TurnOffMaximumConflictTriangles(int numberOfRows,
+__global__ void TurnOffMaximumEdgeOfConflictTriangles(int numberOfRows,
                                                 int * triangle_row_offsets_array_dev,
                                                 int * triangle_candidates_a_dev,
                                                 int * triangle_candidates_b_dev,                                                
