@@ -392,10 +392,12 @@ __global__ void CountTriangleKernel(int numberOfRows,
         int currMiddle = new_cols_dev[i];
         for (int j = new_row_offs_dev[currMiddle]; j < new_row_offs_dev[currMiddle+1]; ++j){
             int currLast = new_cols_dev[j];
-            for (int k = new_row_offs_dev[currLast]; k < new_row_offs_dev[currLast+1]; ++k){
-                int candidateClose = new_cols_dev[k];
-                if (v == candidateClose){
-                    triangle_counter_dev[v] = triangle_counter_dev[v] + 1;
+            if (v != currLast){
+                for (int k = new_row_offs_dev[currLast]; k < new_row_offs_dev[currLast+1]; ++k){
+                    int candidateClose = new_cols_dev[k];
+                    if (v == candidateClose){
+                        triangle_counter_dev[v] = triangle_counter_dev[v] + 1;
+                    }
                 }
             }
         }
@@ -426,15 +428,17 @@ __global__ void SaveTrianglesKernel(int numberOfRows,
         int currMiddle = new_cols_dev[i];
         for (int j = new_row_offs_dev[currMiddle]; j < new_row_offs_dev[currMiddle+1]; ++j){
             int currLast = new_cols_dev[j];
-            for (int k = new_row_offs_dev[currLast]; k < new_row_offs_dev[currLast+1]; ++k){
-                int candidateClose = new_cols_dev[k];
-                if (v == candidateClose){
-                    triangle_candidates_a_dev[vertexOffset + triangleCounter] = currMiddle;
-                    triangle_candidates_b_dev[vertexOffset + triangleCounter] = currLast;
-                    printf("Triangle %d (%d %d)\n", vertexOffset + triangleCounter, currMiddle, currLast);
-                    ++triangleCounter;
-                    if (triangleCounter == totalTriangles)
-                        return;
+            if (v != currLast){
+                for (int k = new_row_offs_dev[currLast]; k < new_row_offs_dev[currLast+1]; ++k){
+                    int candidateClose = new_cols_dev[k];
+                    if (v == candidateClose){
+                        triangle_candidates_a_dev[vertexOffset + triangleCounter] = currMiddle;
+                        triangle_candidates_b_dev[vertexOffset + triangleCounter] = currLast;
+                        printf("Triangle %d (%d %d)\n", vertexOffset + triangleCounter, currMiddle, currLast);
+                        ++triangleCounter;
+                        if (triangleCounter == totalTriangles)
+                            return;
+                    }
                 }
             }
         }
