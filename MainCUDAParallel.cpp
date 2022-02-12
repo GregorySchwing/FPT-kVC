@@ -138,6 +138,12 @@ int main(int argc, char *argv[])
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
     printf("number of triangles %d\n", numberOfTriangles_host);
+    
+    std::cout << "Triangle row offs" << std::endl;
+    for (int i = 0; i <= numberOfRows; ++i){
+        std::cout << triangle_row_offsets_array_host[i] << " ";
+    }
+    std::cout << std::endl;
     cudaMalloc( (void**)&triangle_candidates_a_dev, numberOfTriangles_host * sizeof(int) );
     cudaMalloc( (void**)&triangle_candidates_b_dev, numberOfTriangles_host * sizeof(int) );
     triangle_candidates_a_host = new int[numberOfTriangles_host];

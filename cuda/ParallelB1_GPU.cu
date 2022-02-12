@@ -221,7 +221,7 @@ void CallCountTriangles(
     checkLastErrorCUDA(__FILE__, __LINE__);  
 
     cudaMemcpy(&triangle_counter_host[0], &triangle_counter_dev[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
-
+    cudaMemcpy(&triangle_row_offsets_array_host[0], &triangle_row_offsets_array_dev[0], (numberOfRows+1)* sizeof(int) , cudaMemcpyDeviceToHost);
     cudaMemcpy(numberOfTriangles_host, &triangle_row_offsets_array_dev[numberOfRows], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
     
     cudaDeviceSynchronize();
@@ -318,8 +318,9 @@ void CallDisjointSetTriangles(
 
     while(*conflictsRemain){
         IdentifyMaximumConflictTriangles<<<oneThreadPerNode,threadsPerBlock>>>( numberOfRows,
-                                                                                new_row_offs_dev,
-                                                                                new_cols_dev,
+                                                                                triangle_row_offsets_array_dev,
+                                                                                triangle_candidates_a_dev,
+                                                                                triangle_candidates_b_dev,
                                                                                 triangle_counter_dev,
                                                                                 L_dev
                                                                             );
@@ -503,8 +504,9 @@ __global__ void CalculateConflictDegreeNeighborhoodSum(int numberOfRows,
 }
 
 __global__ void IdentifyMaximumConflictTriangles(int numberOfRows,
-                                                int * new_row_offs_dev,
-                                                int * new_cols_dev,
+                                                int * triangle_row_offsets_array_dev,
+                                                int * triangle_candidates_a_dev,
+                                                int * triangle_candidates_b_dev,
                                                 int * triangle_counter_dev,
                                                 int * L_dev){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
@@ -515,19 +517,29 @@ __global__ void IdentifyMaximumConflictTriangles(int numberOfRows,
         return;
     int myCounter = triangle_counter_dev[v];
     int myNeighborCounter;
-    int neighbor;
+    int neighborA, myNeighborACounter;
+    int neighborB, myNeighborBCounter;
     int turnMyselfOff = true;
-    for (int i = new_row_offs_dev[v]; i < new_row_offs_dev[v+1]; ++i){
-        neighbor = new_cols_dev[i];
-        myNeighborCounter = triangle_counter_dev[neighbor];
+    for (int i = triangle_row_offsets_array_dev[v]; i < triangle_row_offsets_array_dev[v+1]; ++i){
+        neighborA = triangle_candidates_a_dev[i];
+        neighborB = triangle_candidates_b_dev[i];
+        myNeighborACounter = triangle_counter_dev[neighborA];
+        myNeighborBCounter = triangle_counter_dev[neighborB];
+
         // Assume true and only set false if find a larger neighbor
         // Either conflict sum or hash if conflict sums are equal
-        if (myNeighborCounter < myCounter){
+        if (myNeighborACounter < myCounter || myNeighborBCounter < myCounter){
             turnMyselfOff = false;
-        } else if (myNeighborCounter == myCounter && h(v) < h(neighbor)){
-            turnMyselfOff = false;
+            return;
+        } else if (myNeighborACounter == myCounter && myNeighborBCounter == myCounter){
+            if (h(v) < h(neighborA)  || h(v) < h(neighborB)){
+                turnMyselfOff = false;
+                return;
+            }
         }
     }
+    if(turnMyselfOff)
+        printf("found a max %d \n", v);
     L_dev[v] = turnMyselfOff;
 }
 
@@ -567,9 +579,9 @@ __global__ void TurnOffMaximumEdgeOfConflictTriangles(int numberOfRows,
         }
     }
     printf("Turning off triangle %d %d %d\n", v, maxA, maxB);
-    triangle_counter_dev[v] = triangle_counter_dev[v] - 1;
-    triangle_counter_dev[maxA] = triangle_counter_dev[maxA] - 1;
-    triangle_counter_dev[maxB] = triangle_counter_dev[maxB] - 1;
+    atomicAdd(&triangle_counter_dev[v], -1);
+    atomicAdd(&triangle_counter_dev[maxA], -1);
+    atomicAdd(&triangle_counter_dev[maxB], -1);
 }
 
 __global__ void DisjointSetTriangleKernel(int numberOfRows,
