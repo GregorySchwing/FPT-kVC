@@ -514,7 +514,7 @@ __global__ void IdentifyMaximumConflictTriangles(int numberOfRows,
     if (v >= numberOfRows)
         return;
     // If I have no triangles, just return.
-    if (triangle_counter_dev[v] == 0)
+    if (triangle_counter_dev[v] < 2)
         return;
     int myCounter = triangle_counter_dev[v];
     int myNeighborCounter;
@@ -526,7 +526,6 @@ __global__ void IdentifyMaximumConflictTriangles(int numberOfRows,
         neighborB = triangle_candidates_b_dev[i];
         myNeighborACounter = triangle_counter_dev[neighborA];
         myNeighborBCounter = triangle_counter_dev[neighborB];
-
         // Assume true and only set false if find a larger neighbor
         // Either conflict sum or hash if conflict sums are equal
         if (myCounter < myNeighborACounter  || myCounter < myNeighborBCounter){
@@ -572,6 +571,7 @@ __global__ void TurnOffMaximumEdgeOfConflictTriangles(int numberOfRows,
     for (; i < triangle_row_offsets_array_dev[v+1]; ++i){
         a = triangle_candidates_a_dev[i];        
         b = triangle_candidates_b_dev[i];
+
         edgeSum = triangle_counter_dev[a] + triangle_counter_dev[b];
         if(edgeSum > maxEdgeSum){
             maxA = a;
