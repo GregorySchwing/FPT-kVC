@@ -114,7 +114,7 @@ void CallInduceSubgraph(Graph & g,
                     int * new_cols_host,
                     int * new_vals_host){
 
-    int numberOfRows = g.GetVertexCount(); 
+    int numberOfRows = g.GetNumberOfRows(); 
     int numberOfEdgesPerGraph = g.GetEdgesLeftToCover();  // size M
     int condensedData = g.GetVertexCount(); // size N
 
@@ -198,7 +198,7 @@ void CallCountTriangles(
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(triangle_row_offsets_array_dev),  0, size_t(numberOfRows+1));
     
     // Updated final
-    cuMemsetD32(reinterpret_cast<CUdeviceptr>(triangle_counter_dev),  0, size_t(numberOfRows));
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(triangle_counter_dev),  0, size_t(numberOfRows+1));
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -265,9 +265,10 @@ void CallSaveTriangles( int numberOfRows,
         for (int j = triangle_row_offsets_array_host[i]; j < triangle_row_offsets_array_host[i+1]; ++j){
             int a = triangle_candidates_a_host[j];
             int b = triangle_candidates_b_host[j];
-            std::cout << "(" << a << ",  " << b << ") " << std::endl;
+            printf("(%d,  %d) ", a,b);
         }
-        std::cout << std::endl;
+        printf("\n");
+
     }
 }
 
@@ -989,11 +990,11 @@ void CopyGraphToDeviceAndInduce( Graph & g,
                         int * global_degrees_dev_ptr){
 
     int * new_degrees_ptr = thrust::raw_pointer_cast(g.GetNewDegRef().data());
-
+    int zero = 0;
     // Degree CSR Data
     cudaMemcpy(global_degrees_dev_ptr, new_degrees_ptr, g.GetNumberOfRows() * sizeof(int),
                 cudaMemcpyHostToDevice);
-
+    cudaMemcpy(&global_degrees_dev_ptr[g.GetNumberOfRows()], &zero, 1*sizeof(int), cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
@@ -1009,8 +1010,17 @@ void CopyGraphToDeviceAndInduce( Graph & g,
     // SparseMatrix pointers
     int * new_values_dev_ptr = thrust::raw_pointer_cast(new_values_dev.data());
 
-    // Currenly only sets the first graph in the cuda memory
-    // Might as well be host code
+
+    int * tail_degrees_ptr = new int[g.GetNumberOfRows()+1];
+    // Degree CSR Data
+    cudaMemcpy(tail_degrees_ptr, global_degrees_dev_ptr, (g.GetNumberOfRows()+1) * sizeof(int),
+                cudaMemcpyDeviceToHost);
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+    for (int i = 0; i < g.GetNewDegRef().size()+1; ++i){
+        std::cout << "vertex " << i << ": degree " << tail_degrees_ptr[i] << std::endl;
+    }
+
     CalculateNewRowOffsets(g.GetNumberOfRows(),
                             global_row_offsets_dev_ptr,
                             global_degrees_dev_ptr); 
@@ -1024,7 +1034,7 @@ void CopyGraphToDeviceAndInduce( Graph & g,
         int * new_row_offs = new int[g.GetNumberOfRows()+1];
         cudaMemcpy( &new_row_offs[0], &global_row_offsets_dev_ptr[0], (g.GetNumberOfRows()+1) * sizeof(int) , cudaMemcpyDeviceToHost);
         for (int i = 0; i < g.GetNumberOfRows()+1; ++i){
-            printf("%d ",new_row_offs[i]);
+            printf("vertex %d degree %d\n",i,new_row_offs[i]);
         }
         printf("\n");
     #endif
@@ -1329,17 +1339,17 @@ __host__ void CalculateNewRowOffsets( int numberOfRows,
                                         int * global_row_offsets_dev_ptr,
                                         int * global_degrees_dev_ptr){
     // Declare, allocate, and initialize device-accessible pointers for input and output
-    int  num_items = numberOfRows;      // e.g., 7
+    int  num_items = numberOfRows+1;      // e.g., 7
     int  *d_in = global_degrees_dev_ptr;        // e.g., [8, 6, 7, 5, 3, 0, 9]
-    int  *d_out = &global_row_offsets_dev_ptr[1];         // e.g., [ ,  ,  ,  ,  ,  ,  ]
+    int  *d_out = global_row_offsets_dev_ptr;         // e.g., [ ,  ,  ,  ,  ,  ,  ]
     // Determine temporary device storage requirements
     void     *d_temp_storage = NULL;
     size_t   temp_storage_bytes = 0;
-    cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
+    cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
     // Allocate temporary storage
     cudaMalloc(&d_temp_storage, temp_storage_bytes);
     // Run exclusive prefix sum
-    cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
+    cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
     // d_out s<-- [0, 8, 14, 21, 26, 29, 29]
     cudaFree(d_temp_storage);
 }
