@@ -1335,6 +1335,9 @@ void PerformPathPartitioning(int numberOfRows,
 
 }
 
+
+// Make sure a zero element is padded onto the end.
+// https://github.com/NVIDIA/cub/issues/367
 __host__ void CalculateNewRowOffsets( int numberOfRows,
                                         int * global_row_offsets_dev_ptr,
                                         int * global_degrees_dev_ptr){
