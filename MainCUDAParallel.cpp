@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
     cudaMalloc( (void**)&triangle_row_offsets_array_dev, (numberOfRows+1) * sizeof(int) );
     cudaMalloc( (void**)&global_columns_dev_ptr, edgesLeftToCover * sizeof(int) );
     cudaMalloc( (void**)&global_values_dev_ptr, edgesLeftToCover * sizeof(int) );
-    cudaMalloc( (void**)&global_degrees_dev_ptr, numberOfRows * sizeof(int) );
+    cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows+1) * sizeof(int) );
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -111,9 +111,9 @@ int main(int argc, char *argv[])
                     new_cols,
                     new_vals);
 
-    int * triangle_counter_host  = new int[numberOfRows];
+    int * triangle_counter_host  = new int[numberOfRows+1];
     int * triangle_counter_dev;
-    cudaMalloc( (void**)&triangle_counter_dev, numberOfRows * sizeof(int) );
+    cudaMalloc( (void**)&triangle_counter_dev, (numberOfRows+1) * sizeof(int) );
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
     int * triangle_row_offsets_array_host = new int[numberOfRows+1];
@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
     
     std::cout << "Triangle row offs" << std::endl;
     for (int i = 0; i <= numberOfRows; ++i){
-        std::cout << triangle_row_offsets_array_host[i] << " ";
+        printf("vertex %d degree %d\n",i,triangle_row_offsets_array_host[i]);
     }
     std::cout << std::endl;
     cudaMalloc( (void**)&triangle_candidates_a_dev, numberOfTriangles_host * sizeof(int) );

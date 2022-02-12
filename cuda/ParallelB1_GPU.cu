@@ -520,7 +520,7 @@ __global__ void IdentifyMaximumConflictTriangles(int numberOfRows,
     int myNeighborCounter;
     int neighborA, myNeighborACounter;
     int neighborB, myNeighborBCounter;
-    int turnMyselfOff = true;
+    int localMax = true;
     for (int i = triangle_row_offsets_array_dev[v]; i < triangle_row_offsets_array_dev[v+1]; ++i){
         neighborA = triangle_candidates_a_dev[i];
         neighborB = triangle_candidates_b_dev[i];
@@ -529,19 +529,18 @@ __global__ void IdentifyMaximumConflictTriangles(int numberOfRows,
 
         // Assume true and only set false if find a larger neighbor
         // Either conflict sum or hash if conflict sums are equal
-        if (myNeighborACounter < myCounter || myNeighborBCounter < myCounter){
-            turnMyselfOff = false;
+        if (myCounter < myNeighborACounter  || myCounter < myNeighborBCounter){
+            localMax = false;
             return;
-        } else if (myNeighborACounter == myCounter && myNeighborBCounter == myCounter){
-            if (h(v) < h(neighborA)  || h(v) < h(neighborB)){
-                turnMyselfOff = false;
+        } else if ((myNeighborACounter == myCounter && h(v) < h(neighborA)) ||
+                (myNeighborBCounter == myCounter && h(v) < h(neighborB))){
+                localMax = false;
                 return;
-            }
         }
     }
-    if(turnMyselfOff)
+    if(localMax)
         printf("found a max %d \n", v);
-    L_dev[v] = turnMyselfOff;
+    L_dev[v] = localMax;
 }
 
 __device__ inline unsigned int h(unsigned int v){
