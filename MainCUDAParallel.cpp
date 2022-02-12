@@ -191,10 +191,18 @@ int main(int argc, char *argv[])
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     std::cout << "Number of Triangles After conflict resolution" << std::endl;
+    int sum = 0;
     for (int i = 0; i < numberOfRows; ++i){
         std::cout << triangle_counter_host[i] << " ";
+        sum += triangle_counter_host[i];
     }
     std::cout << std::endl;
+   std::cout << "Percentage of graph partitioned into a triangle" << std::endl;
+    double percentTri = ((double)sum)/((double)numberOfRows) * 100.00;
+    printf("%.2f %%\n", percentTri);
+
+
+
 /*
     cudaMalloc( (void**)&global_triangle_remaining_boolean, numberOfTriangles_host * sizeof(int) );
 
