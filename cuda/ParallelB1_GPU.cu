@@ -287,6 +287,7 @@ void CallDisjointSetTriangles(
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     int * L_dev;
+    int * M_dev;
     int * conflictsRemain_dev;
     int zero = 0;
     int * conflictsRemain;
@@ -294,12 +295,14 @@ void CallDisjointSetTriangles(
     conflictsRemain = &zero;
 
     cudaMalloc( (void**)&L_dev, numberOfRows * sizeof(int) );
+    cudaMalloc( (void**)&M_dev, numberOfRows * sizeof(int) );
     cudaMalloc( (void**)&conflictsRemain_dev, 1 * sizeof(int) );
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(L_dev),  0, size_t(numberOfRows));
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(M_dev),  0, size_t(numberOfRows));
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(conflictsRemain_dev),  0, size_t(1));
 
     cudaDeviceSynchronize();
@@ -348,8 +351,19 @@ void CallDisjointSetTriangles(
                                                                                 triangle_candidates_a_dev,
                                                                                 triangle_candidates_b_dev,
                                                                                 triangle_counter_dev,
-                                                                                L_dev
+                                                                                L_dev,
+                                                                                M_dev
                                                                             );
+
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+
+        RemoveMaximumEdgeOfConflictTriangles<<<oneThreadPerNode,threadsPerBlock>>>(  numberOfRows,
+                                                                                    triangle_row_offsets_array_dev,
+                                                                                    triangle_candidates_a_dev,
+                                                                                    triangle_candidates_b_dev,
+                                                                                    M_dev
+                                                                                );
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -374,6 +388,7 @@ void CallDisjointSetTriangles(
         checkLastErrorCUDA(__FILE__, __LINE__);
         if(*conflictsRemain){
             cuMemsetD32(reinterpret_cast<CUdeviceptr>(L_dev),  0, size_t(numberOfRows));
+            cuMemsetD32(reinterpret_cast<CUdeviceptr>(M_dev),  0, size_t(numberOfRows));
             cuMemsetD32(reinterpret_cast<CUdeviceptr>(conflictsRemain_dev),  0, size_t(1));
         }
     }
@@ -578,7 +593,8 @@ __global__ void TurnOffMaximumEdgeOfConflictTriangles(int numberOfRows,
                                                 int * triangle_candidates_a_dev,
                                                 int * triangle_candidates_b_dev,
                                                 int * triangle_counter_dev,
-                                                int * L_dev){
+                                                int * L_dev,
+                                                int * M_dev){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= numberOfRows || !L_dev[v])
         return;
@@ -586,7 +602,6 @@ __global__ void TurnOffMaximumEdgeOfConflictTriangles(int numberOfRows,
     int i = triangle_row_offsets_array_dev[v];
     int a = triangle_candidates_a_dev[i];   
     int b = triangle_candidates_b_dev[i];
-    int maxIndex = i;
     int maxA = a;
     int maxB = b;
     int edgeSum = triangle_counter_dev[a] + triangle_counter_dev[b];
@@ -601,15 +616,34 @@ __global__ void TurnOffMaximumEdgeOfConflictTriangles(int numberOfRows,
         if(edgeSum > maxEdgeSum){
             maxA = a;
             maxB = b;
-            maxIndex = i;
         }
     }
     printf("Turning off triangle %d %d %d\n", v, maxA, maxB);
     atomicAdd(&triangle_counter_dev[v], -1);
     atomicAdd(&triangle_counter_dev[maxA], -1);
     atomicAdd(&triangle_counter_dev[maxB], -1);
-    triangle_candidates_a_dev[maxIndex] = -1;
-    triangle_candidates_b_dev[maxIndex] = -1;
+    M_dev[v] = 1;
+    M_dev[maxA] = 1;
+    M_dev[maxB] = 1;
+}
+
+__global__ void RemoveMaximumEdgeOfConflictTriangles(int numberOfRows,
+                                                    int * triangle_row_offsets_array_dev,
+                                                    int * triangle_candidates_a_dev,
+                                                    int * triangle_candidates_b_dev,
+                                                    int * M_dev){
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= numberOfRows)
+        return;
+
+    for (int i = triangle_row_offsets_array_dev[v]; i < triangle_row_offsets_array_dev[v+1]; ++i){
+        int a = triangle_candidates_a_dev[i];   
+        int b = triangle_candidates_b_dev[i];
+        if (M_dev[a] && M_dev[b]){
+            triangle_candidates_a_dev[i] = -1;
+            triangle_candidates_b_dev[i] = -1;
+        }
+    }
 }
 
 __global__ void DisjointSetTriangleKernel(int numberOfRows,
