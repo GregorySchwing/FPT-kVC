@@ -1076,6 +1076,7 @@ void PerformBFS(int numberOfRows,
                 int * global_columns_dev_ptr,
                 int * triangle_counter_dev,
                 int * global_colors_dev_ptr,
+                int * global_color_cardinalities,
                 int * global_color_finished_dev_ptr,
                 int * global_predecessors){
 
@@ -1125,6 +1126,13 @@ void PerformBFS(int numberOfRows,
             checkLastErrorCUDA(__FILE__, __LINE__);
 
 
+            launch_gpu_bfs_finish_colors_kernel<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
+                curr, 
+                global_levels,
+                global_colors_dev_ptr,
+                global_color_cardinalities,
+                global_color_finished_dev_ptr,
+                global_predecessors);
 
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
@@ -1531,6 +1539,26 @@ __global__ void launch_gpu_bfs_color_kernel( int N, int curr, int *levels,
         // un-finished color claims the predecessor.
         if (color_finished[colors[vertexToClaim]])
             colors[vertexToClaim] = colors[v];
+    }
+}
+
+__global__ void launch_gpu_bfs_finish_colors_kernel( int N, int curr, int *levels,
+                                                    int * colors,
+                                                    int * color_cardinalities,
+                                                    int * color_finished,
+                                                    int * predecessors){
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= N)
+        return;
+    if (levels[v] == curr) {
+        int vertexToClaim = predecessors[v];
+        // Race condition, but any color which has overwritten this vertex
+        // must by definition be un-finished, thus the result is an
+        // un-finished color claims the predecessor.
+        if (colors[v] == colors[vertexToClaim]){
+            color_cardinalities[colors[v]] = color_cardinalities[colors[v]] + 1;
+            color_finished[colors[v]] = (color_cardinalities[colors[v]] == 4);
+        }
     }
 }
 

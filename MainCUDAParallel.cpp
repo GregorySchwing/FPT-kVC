@@ -88,6 +88,7 @@ int main(int argc, char *argv[])
     int * global_degrees_dev_ptr; // size N, used for inducing the subgraph
     int * global_triangle_remaining_boolean; // size |W|, where W is the subset of V contained in a triangle, used for finding MIS of triangles
     int * global_colors_dev_ptr;
+    int * global_color_cardinalities;
     int * global_color_finished_dev_ptr;
     int * global_levels;
     int * global_predecessors;
@@ -102,6 +103,8 @@ int main(int argc, char *argv[])
     cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows+1) * sizeof(int) );
     cudaMalloc( (void**)&global_levels, (numberOfRows) * sizeof(int) );
     cudaMalloc( (void**)&global_predecessors, (numberOfRows) * sizeof(int) );
+    // Can use the color cardinality as a finished flag.
+    cudaMalloc( (void**)&global_color_cardinalities, (numberOfRows) * sizeof(int) );
     cudaMalloc( (void**)&global_color_finished_dev_ptr, (numberOfRows) * sizeof(int) );
 
     cudaDeviceSynchronize();
@@ -216,6 +219,7 @@ int main(int argc, char *argv[])
                 global_columns_dev_ptr,
                 triangle_counter_dev,
                 global_colors_dev_ptr,
+                global_color_cardinalities,
                 global_color_finished_dev_ptr,
                 global_predecessors);
 
