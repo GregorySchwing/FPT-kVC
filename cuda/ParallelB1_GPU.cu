@@ -260,8 +260,6 @@ void CallSaveTriangles( int numberOfRows,
 
     for (int i = 0; i < numberOfRows; ++i){
         std::cout << "Node " << i << "'s candidate triangles:" << std::endl;
-        int LB = triangle_row_offsets_array_host[i];
-        int UB = triangle_row_offsets_array_host[i+1];
         for (int j = triangle_row_offsets_array_host[i]; j < triangle_row_offsets_array_host[i+1]; ++j){
             int a = triangle_candidates_a_host[j];
             int b = triangle_candidates_b_host[j];
@@ -424,8 +422,6 @@ __global__ void SaveTrianglesKernel(int numberOfRows,
     printf ("%d %d %d\n", v, vertexOffset, vertexOffsetEnd);
     int totalTriangles = vertexOffsetEnd-vertexOffset;
     int triangleCounter = 0;
-    int a;
-    int b;
     for (int i = new_row_offs_dev[v]; i < new_row_offs_dev[v+1]; ++i){
         int currMiddle = new_cols_dev[i];
         for (int j = new_row_offs_dev[currMiddle]; j < new_row_offs_dev[currMiddle+1]; ++j){
@@ -517,7 +513,6 @@ __global__ void IdentifyMaximumConflictTriangles(int numberOfRows,
     if (triangle_counter_dev[v] < 2)
         return;
     int myCounter = triangle_counter_dev[v];
-    int myNeighborCounter;
     int neighborA, myNeighborACounter;
     int neighborB, myNeighborBCounter;
     int localMax = true;
@@ -1078,7 +1073,9 @@ void CopyGraphFromDevice(Graph & g,
 void PerformBFS(int numberOfRows,
                 int * global_levels,
                 int * global_row_offsets_dev_ptr,
-                int * global_columns_dev_ptr){
+                int * global_columns_dev_ptr,
+                int * triangle_counter_dev,
+                int * global_colors_dev_ptr){
 
         int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
         int curr = 0;
@@ -1099,6 +1096,8 @@ void PerformBFS(int numberOfRows,
                                     global_levels,
                                     global_row_offsets_dev_ptr,
                                     global_columns_dev_ptr,
+                                    global_colors_dev_ptr,
+                                    triangle_counter_dev,
                                     finished_gpu);
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
@@ -1462,9 +1461,12 @@ void GetMaxDist(int N,
     checkLastErrorCUDA(__FILE__, __LINE__);
 }
 
-
+// Vertices belonging to triangles aren't traversed.
 __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
-                                            int *nodes, int *edges, int * finished){
+                                            int *nodes, int *edges, 
+                                            int * remaining,
+                                            int * colors,
+                                            int * finished){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
         return;
@@ -1474,7 +1476,8 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
         int * nbrs = & edges[ nodes[v] ];
         for(int i = 0; i < num_nbr; i++) {
             int w = nbrs[i];
-            if (levels[w] == INT_MAX) { // if not visited yet
+            int flag = remaining[i];
+            if (levels[w] == INT_MAX && !flag) { // if not visited yet
                 *finished = 0;
                 levels[w] = curr + 1;
             }

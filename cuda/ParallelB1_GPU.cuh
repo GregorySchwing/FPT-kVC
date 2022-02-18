@@ -58,7 +58,10 @@ void CopyGraphFromDevice(Graph & g,
                         int * host_columns);
 
 __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
-                            int *nodes, int *edges, int * finished);
+                            int *nodes, int *edges, 
+                            int * remaining,
+                            int * colors,
+                            int * finished);
 
 __global__ void launch_gpu_color_finishing_kernel_1( int N,
                                                 int * nodes,
@@ -181,7 +184,9 @@ __global__ void calculate_percent_partitioned(int N,
 void PerformBFS(int numberOfRows,
                 int * global_levels,
                 int * global_row_offsets_dev_ptr,
-                int * global_columns_dev_ptr);
+                int * global_columns_dev_ptr,
+                int * triangle_counter_dev,
+                int * global_colors_dev_ptr);
 
 void PerformBFSColoring(int numberOfRows,
                 int k,

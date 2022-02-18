@@ -86,6 +86,8 @@ int main(int argc, char *argv[])
     int * global_values_dev_ptr; // on or off, size M
     int * global_degrees_dev_ptr; // size N, used for inducing the subgraph
     int * global_triangle_remaining_boolean; // size |W|, where W is the subset of V contained in a triangle, used for finding MIS of triangles
+    int * global_colors_dev_ptr;
+    int * global_levels;
     int * triangle_row_offsets_array_dev;
 
     // Vertex, Cols, Edge(on/off)
@@ -94,6 +96,9 @@ int main(int argc, char *argv[])
     cudaMalloc( (void**)&global_columns_dev_ptr, edgesLeftToCover * sizeof(int) );
     cudaMalloc( (void**)&global_values_dev_ptr, edgesLeftToCover * sizeof(int) );
     cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows+1) * sizeof(int) );
+    cudaMalloc( (void**)&global_colors_dev_ptr, (numberOfRows) * sizeof(int) );
+    cudaMalloc( (void**)&global_levels, (numberOfRows) * sizeof(int) );
+
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -201,7 +206,12 @@ int main(int argc, char *argv[])
     double percentTri = ((double)sum)/((double)numberOfRows) * 100.00;
     printf("%.2f %%\n", percentTri);
 
-
+    PerformBFS(numberOfRows,
+                global_levels,
+                global_row_offsets_dev_ptr,
+                global_columns_dev_ptr,
+                triangle_counter_dev,
+                global_colors_dev_ptr);
 
 /*
     cudaMalloc( (void**)&global_triangle_remaining_boolean, numberOfTriangles_host * sizeof(int) );
