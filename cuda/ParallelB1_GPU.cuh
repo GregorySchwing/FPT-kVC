@@ -64,8 +64,14 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                             int *nodes, int *edges, 
                             int * remaining,
                             int * colors,
+                            int * color_finished,
                             int * predecessors,
                             int * finished);
+
+__global__ void launch_gpu_bfs_color_kernel( int N, int curr, int *levels,
+                                            int * colors,
+                                            int * color_finished,
+                                            int * predecessors);
 
 __global__ void launch_gpu_color_finishing_kernel_1( int N,
                                                 int * nodes,
@@ -191,6 +197,7 @@ void PerformBFS(int numberOfRows,
                 int * global_columns_dev_ptr,
                 int * triangle_counter_dev,
                 int * global_colors_dev_ptr,
+                int * global_color_finished_dev_ptr,
                 int * global_predecessors);
 
 void PerformBFSColoring(int numberOfRows,

@@ -1076,6 +1076,7 @@ void PerformBFS(int numberOfRows,
                 int * global_columns_dev_ptr,
                 int * triangle_counter_dev,
                 int * global_colors_dev_ptr,
+                int * global_color_finished_dev_ptr,
                 int * global_predecessors){
 
         int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
@@ -1092,6 +1093,7 @@ void PerformBFS(int numberOfRows,
 
         cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
         cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  0, size_t(1));
+        cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_color_finished_dev_ptr),  0, size_t(numberOfRows));
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
     
@@ -1104,12 +1106,29 @@ void PerformBFS(int numberOfRows,
                                     global_levels,
                                     global_row_offsets_dev_ptr,
                                     global_columns_dev_ptr,
-                                    global_colors_dev_ptr,
                                     triangle_counter_dev,
+                                    global_colors_dev_ptr,
+                                    global_color_finished_dev_ptr,
                                     global_predecessors,
                                     finished_gpu);
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
+
+            launch_gpu_bfs_color_kernel<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
+                                                                        curr, 
+                                                                        global_levels,
+                                                                        global_colors_dev_ptr,
+                                                                        global_color_finished_dev_ptr,
+                                                                        global_predecessors);
+
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+
+
+
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+
             cudaMemcpy(&finished[0], &finished_gpu[0], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
@@ -1475,6 +1494,7 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                                             int *nodes, int *edges, 
                                             int * remaining,
                                             int * colors,
+                                            int * color_finished,
                                             int * predecessors,
                                             int * finished){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1486,13 +1506,31 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
         int * nbrs = & edges[ nodes[v] ];
         for(int i = 0; i < num_nbr; i++) {
             int w = nbrs[i];
-            int flag = remaining[i];
+            int flag = remaining[w] || color_finished[colors[w]];
             if (levels[w] == INT_MAX && !flag) { // if not visited yet
                 *finished = 0;
                 levels[w] = curr + 1;
                 predecessors[w] = v;
             }
         }
+    }
+}
+
+// Vertices belonging to triangles aren't traversed.
+__global__ void launch_gpu_bfs_color_kernel( int N, int curr, int *levels,
+                                            int * colors,
+                                            int * color_finished,
+                                            int * predecessors){
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= N)
+        return;
+    if (levels[v] == curr) {
+        int vertexToClaim = predecessors[v];
+        // Race condition, but any color which has overwritten this vertex
+        // must by definition be un-finished, thus the result is an
+        // un-finished color claims the predecessor.
+        if (color_finished[colors[vertexToClaim]])
+            colors[vertexToClaim] = colors[v];
     }
 }
 
