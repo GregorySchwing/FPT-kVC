@@ -612,6 +612,7 @@ __global__ void TurnOffMaximumEdgeOfConflictTriangles(int numberOfRows,
         if(edgeSum > maxEdgeSum){
             maxA = a;
             maxB = b;
+            maxEdgeSum = edgeSum;
         }
     }
     printf("Turning off triangle %d %d %d\n", v, maxA, maxB);
