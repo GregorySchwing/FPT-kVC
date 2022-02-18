@@ -1075,13 +1075,21 @@ void PerformBFS(int numberOfRows,
                 int * global_row_offsets_dev_ptr,
                 int * global_columns_dev_ptr,
                 int * triangle_counter_dev,
-                int * global_colors_dev_ptr){
+                int * global_colors_dev_ptr,
+                int * global_predecessors){
 
         int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
         int curr = 0;
         int zero;
         int * finished = &zero;
         int * finished_gpu;
+        
+        // allocate device_vector with numberOfRows
+        thrust::device_vector<int> colors(numberOfRows);
+        // initialize X to 0,1,2,3, ....
+        thrust::sequence(colors.begin(), colors.end());
+        global_colors_dev_ptr = thrust::raw_pointer_cast(colors.data());
+
         cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
         cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  0, size_t(1));
         cudaDeviceSynchronize();
@@ -1098,6 +1106,7 @@ void PerformBFS(int numberOfRows,
                                     global_columns_dev_ptr,
                                     global_colors_dev_ptr,
                                     triangle_counter_dev,
+                                    global_predecessors,
                                     finished_gpu);
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
@@ -1466,6 +1475,7 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                                             int *nodes, int *edges, 
                                             int * remaining,
                                             int * colors,
+                                            int * predecessors,
                                             int * finished){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
@@ -1480,6 +1490,7 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
             if (levels[w] == INT_MAX && !flag) { // if not visited yet
                 *finished = 0;
                 levels[w] = curr + 1;
+                predecessors[w] = v;
             }
         }
     }

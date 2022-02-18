@@ -20,7 +20,10 @@
 #include "Graph.h"
 #include "Random123/philox.h"
 #include <stdint.h>
-
+#include <thrust/device_vector.h>
+#include <thrust/copy.h>
+#include <thrust/execution_policy.h>
+#include <thrust/sequence.h>
 typedef r123::Philox4x32 RNG;
 //static const double RAND_INTERVAL_GPU = 1.0/static_cast<double>(ULONG_MAX);
 
@@ -61,6 +64,7 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                             int *nodes, int *edges, 
                             int * remaining,
                             int * colors,
+                            int * predecessors,
                             int * finished);
 
 __global__ void launch_gpu_color_finishing_kernel_1( int N,
@@ -186,7 +190,8 @@ void PerformBFS(int numberOfRows,
                 int * global_row_offsets_dev_ptr,
                 int * global_columns_dev_ptr,
                 int * triangle_counter_dev,
-                int * global_colors_dev_ptr);
+                int * global_colors_dev_ptr,
+                int * global_predecessors);
 
 void PerformBFSColoring(int numberOfRows,
                 int k,
