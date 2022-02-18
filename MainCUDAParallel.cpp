@@ -241,6 +241,11 @@ int main(int argc, char *argv[])
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
+    cudaMemcpy(&new_color_finished[0], &global_color_finished_dev_ptr[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+
     std::random_device rd; // obtain a random number from hardware
     std::mt19937 gen(rd()); // seed the generator
     std::uniform_int_distribution<> distr(0, 655); // define the range
@@ -262,14 +267,11 @@ int main(int argc, char *argv[])
     DotWriter::RootGraph gVizWriter(isDirected, name);
     std::string subgraph1 = "BFS";
     std::string subgraph2 = "graph";
-    std::string subgraph3 = "pred";
 
     DotWriter::Subgraph * bfs = gVizWriter.AddSubgraph(subgraph1);
     DotWriter::Subgraph * graph = gVizWriter.AddSubgraph(subgraph2);
-    DotWriter::Subgraph * pred = gVizWriter.AddSubgraph(subgraph3);
 
     std::map<std::string, DotWriter::Node *> bfsMap;    
-
     std::map<std::string, DotWriter::Node *> nodeMap;    
 
 
