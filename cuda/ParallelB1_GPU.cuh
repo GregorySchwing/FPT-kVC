@@ -198,6 +198,7 @@ __global__ void calculate_percent_partitioned(int N,
                                                 int * finished_card_reduced);
 
 void PerformBFS(int numberOfRows,
+                int * new_colors,
                 int * global_levels,
                 int * global_row_offsets_dev_ptr,
                 int * global_columns_dev_ptr,

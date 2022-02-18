@@ -1071,6 +1071,7 @@ void CopyGraphFromDevice(Graph & g,
 }
 
 void PerformBFS(int numberOfRows,
+                int * new_colors,
                 int * global_levels,
                 int * global_row_offsets_dev_ptr,
                 int * global_columns_dev_ptr,
@@ -1141,7 +1142,11 @@ void PerformBFS(int numberOfRows,
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
         } while (!(*finished));
-    
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+
+        cudaMemcpy(&new_colors[0], &global_colors_dev_ptr[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 }

@@ -214,6 +214,7 @@ int main(int argc, char *argv[])
     printf("%.2f %%\n", percentTri);
 
     PerformBFS(numberOfRows,
+                new_colors,
                 global_levels,
                 global_row_offsets_dev_ptr,
                 global_columns_dev_ptr,
@@ -237,11 +238,6 @@ int main(int argc, char *argv[])
     //SSSPAndBuildDepthCSR(g, root, host_levels, new_row_offsets, new_cols, new_colors, new_U, new_Pred, new_color_finished);
     // Step 2
     //EnumerateSearchTree(g, new_row_offsets, new_cols, new_colors, new_color_finished);
-    cudaDeviceSynchronize();
-    checkLastErrorCUDA(__FILE__, __LINE__);
-
-    cudaMemcpy(&new_colors[0], &global_colors_dev_ptr[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
-
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
