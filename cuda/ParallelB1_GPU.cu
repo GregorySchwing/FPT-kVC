@@ -392,6 +392,18 @@ void CallColorTriangles(
     int * triangle_candidates_a_dev,
     int * triangle_candidates_b_dev){
 
+        int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
+
+        ColorTriangleKernel<<<oneThreadPerNode,threadsPerBlock>>>(  numberOfRows,
+                                                                    triangle_row_offsets_array_dev,
+                                                                    triangle_candidates_a_dev,
+                                                                    triangle_candidates_b_dev,
+                                                                    triangle_counter_dev,
+                                                                    global_colors_dev_ptr,
+                                                                    global_color_finished_dev_ptr);    
+        
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
 }
 
 __global__ void CountTriangleKernel(int numberOfRows,
@@ -614,6 +626,29 @@ __global__ void DisjointSetTriangleKernel(int numberOfRows,
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+__global__ void ColorTriangleKernel(int numberOfRows,
+                                    int * triangle_row_offsets_array_dev,
+                                    int * triangle_candidates_a_dev,
+                                    int * triangle_candidates_b_dev,
+                                    int * triangle_counter_dev,
+                                    int * colors,
+                                    int * color_finished){
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= numberOfRows || !triangle_counter_dev[v])
+        return;
+    for (int i = triangle_row_offsets_array_dev[v]; i < triangle_row_offsets_array_dev[v+1]; ++i){
+        int a = triangle_candidates_a_dev[i];   
+        int b = triangle_candidates_b_dev[i];
+        if (v < a && v < b){
+            if (triangle_counter_dev[a] && triangle_counter_dev[b]){
+                colors[a] = colors[v];
+                colors[b] = colors[v];
+                color_finished[v] = 1;
             }
         }
     }

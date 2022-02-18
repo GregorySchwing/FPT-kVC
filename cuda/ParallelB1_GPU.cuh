@@ -350,6 +350,14 @@ __global__ void DisjointSetTriangleKernel(int numberOfRows,
                                     int * triangle_counter_dev,
                                     int * triangle_reduction_array_dev);
 
+__global__ void ColorTriangleKernel(int numberOfRows,
+                                    int * triangle_row_offsets_array_dev,
+                                    int * triangle_candidates_a_dev,
+                                    int * triangle_candidates_b_dev,
+                                    int * triangle_counter_dev,
+                                    int * colors,
+                                    int * color_finished);
+
 void Sum(int expanded_size,
         int * expanded,
         int * reduced);
