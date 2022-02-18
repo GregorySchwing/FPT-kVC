@@ -545,6 +545,8 @@ __global__ void IdentifyMaximumConflictTriangles(int numberOfRows,
     for (int i = triangle_row_offsets_array_dev[v]; i < triangle_row_offsets_array_dev[v+1]; ++i){
         neighborA = triangle_candidates_a_dev[i];
         neighborB = triangle_candidates_b_dev[i];
+        if (neighborA == -1 && neighborB == -1)
+            continue;
         myNeighborACounter = triangle_counter_dev[neighborA];
         myNeighborBCounter = triangle_counter_dev[neighborB];
         // Assume true and only set false if find a larger neighbor
@@ -584,6 +586,7 @@ __global__ void TurnOffMaximumEdgeOfConflictTriangles(int numberOfRows,
     int i = triangle_row_offsets_array_dev[v];
     int a = triangle_candidates_a_dev[i];   
     int b = triangle_candidates_b_dev[i];
+    int maxIndex = i;
     int maxA = a;
     int maxB = b;
     int edgeSum = triangle_counter_dev[a] + triangle_counter_dev[b];
@@ -592,17 +595,21 @@ __global__ void TurnOffMaximumEdgeOfConflictTriangles(int numberOfRows,
     for (; i < triangle_row_offsets_array_dev[v+1]; ++i){
         a = triangle_candidates_a_dev[i];        
         b = triangle_candidates_b_dev[i];
-
+        if (a == -1 && b == -1)
+            continue;
         edgeSum = triangle_counter_dev[a] + triangle_counter_dev[b];
         if(edgeSum > maxEdgeSum){
             maxA = a;
             maxB = b;
+            maxIndex = i;
         }
     }
     printf("Turning off triangle %d %d %d\n", v, maxA, maxB);
     atomicAdd(&triangle_counter_dev[v], -1);
     atomicAdd(&triangle_counter_dev[maxA], -1);
     atomicAdd(&triangle_counter_dev[maxB], -1);
+    triangle_candidates_a_dev[maxIndex] = -1;
+    triangle_candidates_b_dev[maxIndex] = -1;
 }
 
 __global__ void DisjointSetTriangleKernel(int numberOfRows,
@@ -644,7 +651,9 @@ __global__ void ColorTriangleKernel(int numberOfRows,
     for (int i = triangle_row_offsets_array_dev[v]; i < triangle_row_offsets_array_dev[v+1]; ++i){
         int a = triangle_candidates_a_dev[i];   
         int b = triangle_candidates_b_dev[i];
-        if (v < a && v < b){
+        if (a == -1 && b == -1)
+            continue;
+        if (v < a && v < b ){
             if (triangle_counter_dev[a] && triangle_counter_dev[b]){
                 colors[a] = colors[v];
                 colors[b] = colors[v];
