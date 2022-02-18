@@ -602,7 +602,6 @@ __global__ void TurnOffMaximumEdgeOfConflictTriangles(int numberOfRows,
     int maxA = -1;
     int maxB = -1;
     int maxEdgeSum = -1;
-    i = i + 1;
     for (int i = triangle_row_offsets_array_dev[v]; i < triangle_row_offsets_array_dev[v+1]; ++i){
         int a = triangle_candidates_a_dev[i];   
         int b = triangle_candidates_b_dev[i];
