@@ -232,7 +232,7 @@ int main(int argc, char *argv[])
    std::cout << "Percentage of graph partitioned into a triangle" << std::endl;
     double percentTri = ((double)sum)/((double)numberOfRows) * 100.00;
     printf("%.2f %%\n", percentTri);
-
+/*
     PerformBFS(numberOfRows,
                 global_levels,
                 global_row_offsets_dev_ptr,
@@ -245,7 +245,7 @@ int main(int argc, char *argv[])
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
-
+*/
     cudaMemcpy(&new_colors[0], &global_colors_dev_ptr[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
     //cudaMemcpy(&new_color_finished[0], &global_color_finished_dev_ptr[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
     cudaMemcpy(&new_color_finished[0], &triangle_counter_dev[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
