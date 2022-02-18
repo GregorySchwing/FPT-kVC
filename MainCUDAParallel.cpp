@@ -241,7 +241,8 @@ int main(int argc, char *argv[])
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
-    cudaMemcpy(&new_color_finished[0], &global_color_finished_dev_ptr[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+    //cudaMemcpy(&new_color_finished[0], &global_color_finished_dev_ptr[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(&new_color_finished[0], &triangle_counter_dev[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
