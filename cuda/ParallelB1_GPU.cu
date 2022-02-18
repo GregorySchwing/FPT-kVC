@@ -3,6 +3,8 @@
 #include "ParallelB1_GPU.cuh"
 #include <math.h>       /* pow */
 #include "cub/cub.cuh"
+#include "cub/util_type.cuh"
+
 #include "Random123/boxmuller.hpp"
 // For viz
 #include "../lib/DotWriter/lib/DotWriter.h"
@@ -1083,9 +1085,10 @@ void PerformBFS(int numberOfRows,
 
         int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
         int curr = 0;
-        int zero;
+        int zero = 0;
         int * finished = &zero;
         int * finished_gpu;
+        int source = 0;
         
         // allocate device_vector with numberOfRows
         thrust::device_vector<int> colors(numberOfRows);
@@ -1096,8 +1099,21 @@ void PerformBFS(int numberOfRows,
         cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
         cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  0, size_t(1));
         cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_color_finished_dev_ptr),  0, size_t(numberOfRows));
+        cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_levels),  INT_MAX, size_t(numberOfRows));
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
+
+        GetSource(numberOfRows,
+                triangle_counter_dev,
+                &source);
+
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);       
+
+        cudaMemcpy(&global_levels[source], &zero, 1 * sizeof(int) , cudaMemcpyHostToDevice);
+
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);       
     
         do {
             cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  1, size_t(1));
@@ -1149,6 +1165,26 @@ void PerformBFS(int numberOfRows,
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
+}
+
+void GetSource(int numberOfRows,
+                int * triangle_counter_dev,
+                int * source){
+    // Declare, allocate, and initialize device-accessible pointers for input and output
+    int                      num_items = numberOfRows;      // e.g., 7
+    int                      *d_in = triangle_counter_dev;          // e.g., [8, 6, 7, 5, 3, 0, 9]
+    cub::KeyValuePair<int, int>   *d_out;
+    cudaMalloc( (void**)&d_out, 1 * sizeof(cub::KeyValuePair<int, int>) );    
+    // Determine temporary device storage requirements
+    void     *d_temp_storage = NULL;
+    size_t   temp_storage_bytes = 0;
+    cub::DeviceReduce::ArgMin(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
+    // Allocate temporary storage
+    cudaMalloc(&d_temp_storage, temp_storage_bytes);
+    // Run argmin-reduction
+    cub::DeviceReduce::ArgMin(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items);
+    // d_out <-- [{5, 0}]            
+    cudaMemcpy(source, &d_out[0].key, 1 * sizeof(int) , cudaMemcpyDeviceToHost);
 }
 
 void PerformSSSP(int numberOfRows,

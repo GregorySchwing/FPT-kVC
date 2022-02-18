@@ -24,6 +24,7 @@
 #include <thrust/copy.h>
 #include <thrust/execution_policy.h>
 #include <thrust/sequence.h>
+
 typedef r123::Philox4x32 RNG;
 //static const double RAND_INTERVAL_GPU = 1.0/static_cast<double>(ULONG_MAX);
 
@@ -207,6 +208,12 @@ void PerformBFS(int numberOfRows,
                 int * global_color_cardinalities,
                 int * global_color_finished_dev_ptr,
                 int * global_predecessors);
+
+
+
+void GetSource(int numberOfRows,
+    int * triangle_counter_dev,
+    int * source);
 
 void PerformBFSColoring(int numberOfRows,
                 int k,
