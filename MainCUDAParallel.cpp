@@ -205,12 +205,11 @@ int main(int argc, char *argv[])
     checkLastErrorCUDA(__FILE__, __LINE__);
 
 
-    CallDisjointSetTriangles(
+    CallColorTriangles(
                             numberOfRows,
                             global_colors_dev_ptr,
                             global_color_finished_dev_ptr,
                             triangle_row_offsets_array_dev,
-                            triangle_counter_host,
                             triangle_counter_dev,
                             triangle_candidates_a_dev,
                             triangle_candidates_b_dev);
