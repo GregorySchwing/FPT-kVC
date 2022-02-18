@@ -599,20 +599,16 @@ __global__ void TurnOffMaximumEdgeOfConflictTriangles(int numberOfRows,
     if (v >= numberOfRows || !L_dev[v])
         return;
 
-    int i = triangle_row_offsets_array_dev[v];
-    int a = triangle_candidates_a_dev[i];   
-    int b = triangle_candidates_b_dev[i];
-    int maxA = a;
-    int maxB = b;
-    int edgeSum = triangle_counter_dev[a] + triangle_counter_dev[b];
-    int maxEdgeSum = edgeSum;
+    int maxA = -1;
+    int maxB = -1;
+    int maxEdgeSum = -1;
     i = i + 1;
-    for (; i < triangle_row_offsets_array_dev[v+1]; ++i){
-        a = triangle_candidates_a_dev[i];        
-        b = triangle_candidates_b_dev[i];
+    for (int i = triangle_row_offsets_array_dev[v]; i < triangle_row_offsets_array_dev[v+1]; ++i){
+        int a = triangle_candidates_a_dev[i];   
+        int b = triangle_candidates_b_dev[i];
         if (a == -1 && b == -1)
             continue;
-        edgeSum = triangle_counter_dev[a] + triangle_counter_dev[b];
+        int edgeSum = triangle_counter_dev[a] + triangle_counter_dev[b];
         if(edgeSum > maxEdgeSum){
             maxA = a;
             maxB = b;
