@@ -382,6 +382,18 @@ void CallDisjointSetTriangles(
     cudaFree( conflictsRemain_dev );
 }
 
+
+void CallColorTriangles(
+    int numberOfRows,
+    int * global_colors_dev_ptr,
+    int * global_color_finished_dev_ptr,
+    int * triangle_row_offsets_array_dev,
+    int * triangle_counter_dev,
+    int * triangle_candidates_a_dev,
+    int * triangle_candidates_b_dev){
+
+}
+
 __global__ void CountTriangleKernel(int numberOfRows,
                                     int * new_row_offs_dev,
                                     int * new_cols_dev,
@@ -1073,7 +1085,6 @@ void CopyGraphFromDevice(Graph & g,
 }
 
 void PerformBFS(int numberOfRows,
-                int * new_colors,
                 int * global_levels,
                 int * global_row_offsets_dev_ptr,
                 int * global_columns_dev_ptr,
@@ -1089,12 +1100,6 @@ void PerformBFS(int numberOfRows,
         int * finished = &zero;
         int * finished_gpu;
         int source = 0;
-        
-        // allocate device_vector with numberOfRows
-        thrust::device_vector<int> colors(numberOfRows);
-        // initialize X to 0,1,2,3, ....
-        thrust::sequence(colors.begin(), colors.end());
-        global_colors_dev_ptr = thrust::raw_pointer_cast(colors.data());
 
         cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
         cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  0, size_t(1));
@@ -1158,11 +1163,6 @@ void PerformBFS(int numberOfRows,
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
         } while (!(*finished));
-        cudaDeviceSynchronize();
-        checkLastErrorCUDA(__FILE__, __LINE__);
-
-        cudaMemcpy(&new_colors[0], &global_colors_dev_ptr[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
-
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 }

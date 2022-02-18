@@ -199,7 +199,6 @@ __global__ void calculate_percent_partitioned(int N,
                                                 int * finished_card_reduced);
 
 void PerformBFS(int numberOfRows,
-                int * new_colors,
                 int * global_levels,
                 int * global_row_offsets_dev_ptr,
                 int * global_columns_dev_ptr,
@@ -290,6 +289,15 @@ void CallDisjointSetTriangles(
                         int * new_cols_dev,
                         int * triangle_row_offsets_array_dev,
                         int * triangle_counter_host,
+                        int * triangle_counter_dev,
+                        int * triangle_candidates_a_dev,
+                        int * triangle_candidates_b_dev);
+
+void CallColorTriangles(
+                        int numberOfRows,
+                        int * global_colors_dev_ptr,
+                        int * global_color_finished_dev_ptr,
+                        int * triangle_row_offsets_array_dev,
                         int * triangle_counter_dev,
                         int * triangle_candidates_a_dev,
                         int * triangle_candidates_b_dev);

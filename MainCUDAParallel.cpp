@@ -104,11 +104,18 @@ int main(int argc, char *argv[])
     cudaMalloc( (void**)&global_levels, (numberOfRows) * sizeof(int) );
     cudaMalloc( (void**)&global_predecessors, (numberOfRows) * sizeof(int) );
     // Can use the color cardinality as a finished flag.
+    cudaMalloc( (void**)&global_colors_dev_ptr, (numberOfRows) * sizeof(int) );
     cudaMalloc( (void**)&global_color_cardinalities, (numberOfRows) * sizeof(int) );
     cudaMalloc( (void**)&global_color_finished_dev_ptr, (numberOfRows) * sizeof(int) );
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
+
+    // allocate device_vector with numberOfRows
+    thrust::host_vector<int> colors(numberOfRows);
+    // initialize X to 0,1,2,3, ....
+    thrust::sequence(colors.begin(), colors.end());    
+    cudaMemcpy(global_colors_dev_ptr, thrust::raw_pointer_cast(colors.data()), numberOfRows * sizeof(int) , cudaMemcpyHostToDevice);
 
     int * new_row_offsets = new int[numberOfRows+1];
     int * new_cols = new int[edgesLeftToCover];
@@ -197,6 +204,20 @@ int main(int argc, char *argv[])
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
+
+    CallDisjointSetTriangles(
+                            numberOfRows,
+                            global_colors_dev_ptr,
+                            global_color_finished_dev_ptr,
+                            triangle_row_offsets_array_dev,
+                            triangle_counter_host,
+                            triangle_counter_dev,
+                            triangle_candidates_a_dev,
+                            triangle_candidates_b_dev);
+
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);                              
+
     cudaMemcpy(&triangle_counter_host[0], &triangle_counter_dev[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
 
     cudaDeviceSynchronize();
@@ -214,7 +235,6 @@ int main(int argc, char *argv[])
     printf("%.2f %%\n", percentTri);
 
     PerformBFS(numberOfRows,
-                new_colors,
                 global_levels,
                 global_row_offsets_dev_ptr,
                 global_columns_dev_ptr,
@@ -224,23 +244,10 @@ int main(int argc, char *argv[])
                 global_color_finished_dev_ptr,
                 global_predecessors);
 
-/*
-    cudaMalloc( (void**)&global_triangle_remaining_boolean, numberOfTriangles_host * sizeof(int) );
-
-    CallMIS(g,
-            global_row_offsets_dev_ptr,
-            global_columns_dev_ptr,
-            global_values_dev_ptr,
-            global_degrees_dev_ptr,
-            global_triangle_remaining_boolean);
-*/
-    // Step 1
-    //SSSPAndBuildDepthCSR(g, root, host_levels, new_row_offsets, new_cols, new_colors, new_U, new_Pred, new_color_finished);
-    // Step 2
-    //EnumerateSearchTree(g, new_row_offsets, new_cols, new_colors, new_color_finished);
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
+    cudaMemcpy(&new_colors[0], &global_colors_dev_ptr[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
     //cudaMemcpy(&new_color_finished[0], &global_color_finished_dev_ptr[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
     cudaMemcpy(&new_color_finished[0], &triangle_counter_dev[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
 
