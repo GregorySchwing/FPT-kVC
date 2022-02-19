@@ -607,6 +607,24 @@ __global__ void TurnOffMaximumEdgeOfConflictTriangles(int numberOfRows,
     atomicAdd(&triangle_counter_dev[maxB], -1);
     triangle_candidates_a_dev[maxIndex] = -1;
     triangle_candidates_b_dev[maxIndex] = -1;
+    for (int i = triangle_row_offsets_array_dev[maxA]; i < triangle_row_offsets_array_dev[maxA+1]; ++i){
+        int a_tmp = triangle_candidates_a_dev[i];   
+        int b_tmp = triangle_candidates_b_dev[i];    
+        if ((a_tmp == v && b_tmp == maxB) || (a_tmp == maxB && b_tmp == v)){
+            triangle_candidates_a_dev[i] = -1;
+            triangle_candidates_b_dev[i] = -1;
+            break;
+        }
+    }
+    for (int i = triangle_row_offsets_array_dev[maxB]; i < triangle_row_offsets_array_dev[maxB+1]; ++i){
+        int a_tmp = triangle_candidates_a_dev[i];   
+        int b_tmp = triangle_candidates_b_dev[i];    
+        if ((a_tmp == v && b_tmp == maxA) || (a_tmp == maxA && b_tmp == v)){
+            triangle_candidates_a_dev[i] = -1;
+            triangle_candidates_b_dev[i] = -1;
+            break;
+        }
+    }
 }
 
 __global__ void DisjointSetTriangleKernel(int numberOfRows,
