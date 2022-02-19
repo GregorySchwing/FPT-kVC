@@ -218,9 +218,20 @@ int main(int argc, char *argv[])
     checkLastErrorCUDA(__FILE__, __LINE__);                              
 
     cudaMemcpy(&triangle_counter_host[0], &triangle_counter_dev[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(&triangle_candidates_a_host[0], &triangle_candidates_a_dev[0], numberOfTriangles_host * sizeof(int) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(&triangle_candidates_b_host[0], &triangle_candidates_b_dev[0], numberOfTriangles_host * sizeof(int) , cudaMemcpyDeviceToHost);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
+
+    std::cout << "Triangles Disjoint" << std::endl;
+    for (int i = 0; i < numberOfTriangles_host; ++i){
+        std::cout << triangle_candidates_a_host[i] << " ";
+    }
+    std::cout << std::endl;
+    for (int i = 0; i < numberOfTriangles_host; ++i){
+        std::cout << triangle_candidates_b_host[i] << " ";
+    }
 
     std::cout << "Number of Triangles After conflict resolution" << std::endl;
     int sum = 0;
