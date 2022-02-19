@@ -342,14 +342,7 @@ __global__ void TurnOffMaximumEdgeOfConflictTriangles(int numberOfRows,
                                                 int * triangle_candidates_a_dev,
                                                 int * triangle_candidates_b_dev,                                                
                                                 int * triangle_counter_dev,
-                                                int * L_dev,
-                                                int * M_dev);
-
-__global__ void RemoveMaximumEdgeOfConflictTriangles(int numberOfRows,
-                                                    int * triangle_row_offsets_array_dev,
-                                                    int * triangle_candidates_a_dev,
-                                                    int * triangle_candidates_b_dev,
-                                                    int * M_dev);
+                                                int * L_dev);
 
 __global__ void DisjointSetTriangleKernel(int numberOfRows,
                                     int * new_row_offs_dev,
