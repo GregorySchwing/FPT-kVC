@@ -311,7 +311,7 @@ int main(int argc, char *argv[])
         std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMap.find(node1Name);
         if(nodeIt1 == nodeMap.end()) {
             nodeMap[node1Name] = graph->AddNode(node1Name);
-            if(new_color_cards[i]){
+            if(new_color_cards[new_colors[i]]){
                 nodeMap[node1Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[i]));
                 nodeMap[node1Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[i]));
                 nodeMap[node1Name]->GetAttributes().SetStyle("filled");
@@ -323,7 +323,7 @@ int main(int argc, char *argv[])
                 std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMap.find(node2Name);
                 if(nodeIt2 == nodeMap.end()) {
                     nodeMap[node2Name] = graph->AddNode(node2Name);
-                    if(new_color_cards[new_cols[j]]){
+                    if(new_color_cards[new_colors[new_cols[j]]]){
                         nodeMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[new_cols[j]]));
                         nodeMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[new_cols[j]]));
                         nodeMap[node2Name]->GetAttributes().SetStyle("filled");
