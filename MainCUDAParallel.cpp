@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
     int * host_levels = new int[numberOfRows];
 
     int * new_colors = new int[numberOfRows];
-    int * new_colors = new int new_color_cards[numberOfRows];
+    int * new_color_cards = new int[numberOfRows];
     int * new_U = new int[numberOfRows];
     int * new_Pred = new int[numberOfRows];
     int * new_vertex_finished = new int[numberOfRows];
