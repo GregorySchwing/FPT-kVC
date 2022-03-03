@@ -673,10 +673,11 @@ __global__ void ColorTriangleKernel(int numberOfRows,
         int b = triangle_candidates_b_dev[i];
         if (a == -1 && b == -1)
             continue;
-        if (v < a && v < b ){
             if (triangle_counter_dev[a] && triangle_counter_dev[b]){
-                colors[a] = colors[v];
-                colors[b] = colors[v];
+                if (v < a && v < b ){
+                    colors[a] = colors[v];
+                    colors[b] = colors[v];
+                }
                 vertex_finished[v] = 1;
             }
         }
