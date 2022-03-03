@@ -61,6 +61,9 @@ void CopyGraphFromDevice(Graph & g,
                         int * host_row_offsets,
                         int * host_columns);
 
+__global__ void launch_level_masked( int N, int *levels,
+                                            int * vertex_finished);
+
 __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                             int *nodes, int *edges, 
                             int * colors,
@@ -69,6 +72,11 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                             int * finished);
 
 __global__ void launch_gpu_bfs_color_kernel( int N, int curr, int *levels,
+                                            int * colors,
+                                            int * color_cardinalities,
+                                            int * predecessors);
+
+__global__ void launch_gpu_msbfs_color_kernel( int N, int curr, int *levels,
                                             int * colors,
                                             int * color_cardinalities,
                                             int * predecessors);
@@ -204,7 +212,13 @@ void PerformBFS(int numberOfRows,
                 int * global_colors_dev_ptr,
                 int * global_predecessors);
 
-
+void PerformMSBFS(int numberOfRows,
+                int * global_levels,
+                int * global_row_offsets_dev_ptr,
+                int * global_columns_dev_ptr,
+                int * global_vertex_finished_dev_ptr,
+                int * global_colors_dev_ptr,
+                int * global_predecessors);
 
 void GetSource(int numberOfRows,
     int * triangle_counter_dev,

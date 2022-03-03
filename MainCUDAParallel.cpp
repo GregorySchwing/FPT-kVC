@@ -102,7 +102,6 @@ int main(int argc, char *argv[])
     cudaMalloc( (void**)&global_degrees_dev_ptr, (numberOfRows+1) * sizeof(int) );
     cudaMalloc( (void**)&global_levels, (numberOfRows) * sizeof(int) );
     cudaMalloc( (void**)&global_predecessors, (numberOfRows) * sizeof(int) );
-    // Can use the color cardinality as a finished flag.
     cudaMalloc( (void**)&global_colors_dev_ptr, (numberOfRows) * sizeof(int) );
 
     cudaDeviceSynchronize();
@@ -248,6 +247,14 @@ int main(int argc, char *argv[])
     double percentTri = ((double)sum)/((double)numberOfRows) * 100.00;
     printf("%.2f %%\n", percentTri);
 
+    PerformMSBFS(numberOfRows,
+                global_levels,
+                global_row_offsets_dev_ptr,
+                global_columns_dev_ptr,
+                triangle_counter_dev,
+                global_colors_dev_ptr,
+                global_predecessors);
+/*
     PerformBFS(numberOfRows,
                 global_levels,
                 global_row_offsets_dev_ptr,
@@ -255,7 +262,7 @@ int main(int argc, char *argv[])
                 triangle_counter_dev,
                 global_colors_dev_ptr,
                 global_predecessors);
-
+*/
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
     cudaMemcpy(&new_colors[0], &global_colors_dev_ptr[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
