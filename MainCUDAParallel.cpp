@@ -135,8 +135,8 @@ int main(int argc, char *argv[])
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
         // Updated final
-    cuMemsetD32(reinterpret_cast<CUdeviceptr>(triangle_counter_dev),  0, size_t(numberOfRows+1));
-    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_color_cardinalities),  1, size_t(numberOfRows+1));
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(triangle_counter_dev),  0, size_t(numberOfRows));
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_color_cardinalities),  1, size_t(numberOfRows));
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
