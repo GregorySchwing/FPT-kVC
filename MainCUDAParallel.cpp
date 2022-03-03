@@ -89,7 +89,6 @@ int main(int argc, char *argv[])
     int * global_triangle_remaining_boolean; // size |W|, where W is the subset of V contained in a triangle, used for finding MIS of triangles
     int * global_colors_dev_ptr;
     int * global_color_cardinalities;
-    int * global_vertex_finished_dev_ptr;
     int * global_levels;
     int * global_predecessors;
 
@@ -106,7 +105,6 @@ int main(int argc, char *argv[])
     // Can use the color cardinality as a finished flag.
     cudaMalloc( (void**)&global_colors_dev_ptr, (numberOfRows) * sizeof(int) );
     cudaMalloc( (void**)&global_color_cardinalities, (numberOfRows) * sizeof(int) );
-    cudaMalloc( (void**)&global_vertex_finished_dev_ptr, (numberOfRows) * sizeof(int) );
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -135,6 +133,11 @@ int main(int argc, char *argv[])
     cudaMalloc( (void**)&triangle_counter_dev, (numberOfRows+1) * sizeof(int) );
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
+        // Updated final
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(triangle_counter_dev),  0, size_t(numberOfRows+1));
+    cudaDeviceSynchronize();
+    checkLastErrorCUDA(__FILE__, __LINE__);
+    /*
     int * triangle_row_offsets_array_host = new int[numberOfRows+1];
     int * triangle_candidates_a_dev;
     int * triangle_candidates_b_dev;
@@ -208,7 +211,6 @@ int main(int argc, char *argv[])
     CallColorTriangles(
                             numberOfRows,
                             global_colors_dev_ptr,
-                            global_vertex_finished_dev_ptr,
                             triangle_row_offsets_array_dev,
                             triangle_counter_dev,
                             triangle_candidates_a_dev,
@@ -245,12 +247,12 @@ int main(int argc, char *argv[])
    std::cout << "Percentage of graph partitioned into a triangle" << std::endl;
     double percentTri = ((double)sum)/((double)numberOfRows) * 100.00;
     printf("%.2f %%\n", percentTri);
-
+*/
     // Rename variable for clarity moving forward.  Any vertex not in a triangle
     // is considered a viable path for BFS
     int * vertex_partitioned_dev = triangle_counter_dev;
 
-/*
+
     PerformBFS(numberOfRows,
                 global_levels,
                 global_row_offsets_dev_ptr,
@@ -258,15 +260,13 @@ int main(int argc, char *argv[])
                 vertex_partitioned_dev,
                 global_colors_dev_ptr,
                 global_color_cardinalities,
-                global_vertex_finished_dev_ptr,
                 global_predecessors);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
-*/
+
     cudaMemcpy(&new_colors[0], &global_colors_dev_ptr[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
-    //cudaMemcpy(&new_vertex_finished[0], &global_vertex_finished_dev_ptr[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
-    cudaMemcpy(&new_vertex_finished[0], &triangle_counter_dev[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(&new_vertex_finished[0], &vertex_partitioned_dev[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
