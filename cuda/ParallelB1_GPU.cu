@@ -385,7 +385,7 @@ void CallDisjointSetTriangles(
 void CallColorTriangles(
     int numberOfRows,
     int * global_colors_dev_ptr,
-    int * global_color_finished_dev_ptr,
+    int * global_vertex_finished_dev_ptr,
     int * triangle_row_offsets_array_dev,
     int * triangle_counter_dev,
     int * triangle_candidates_a_dev,
@@ -399,7 +399,7 @@ void CallColorTriangles(
                                                                     triangle_candidates_b_dev,
                                                                     triangle_counter_dev,
                                                                     global_colors_dev_ptr,
-                                                                    global_color_finished_dev_ptr);    
+                                                                    global_vertex_finished_dev_ptr);    
         
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -653,13 +653,18 @@ __global__ void DisjointSetTriangleKernel(int numberOfRows,
     }
 }
 
+// Each node maintains a list of the triangles it belongs to
+// by the time this kernel is called, all of the nodes triangles
+// except for one or zero will be (-1,-1).
+// If this vertex is the largest index vertex of the triangle
+// color the other two vertices with its own color.
 __global__ void ColorTriangleKernel(int numberOfRows,
                                     int * triangle_row_offsets_array_dev,
                                     int * triangle_candidates_a_dev,
                                     int * triangle_candidates_b_dev,
                                     int * triangle_counter_dev,
                                     int * colors,
-                                    int * color_finished){
+                                    int * vertex_finished){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= numberOfRows || !triangle_counter_dev[v])
         return;
@@ -672,7 +677,7 @@ __global__ void ColorTriangleKernel(int numberOfRows,
             if (triangle_counter_dev[a] && triangle_counter_dev[b]){
                 colors[a] = colors[v];
                 colors[b] = colors[v];
-                color_finished[v] = 1;
+                vertex_finished[v] = 1;
             }
         }
     }
@@ -791,7 +796,7 @@ void ColorGraph(){
     int * global_middle_vertex;
     int * global_colors; // size N, will contatin color of nth node
     int * global_color_card;   // size N, will contatin size of color set
-    int * global_color_finished; // size N, contatin boolean of color finished, sometimes cardinality 1,2,3 is finished.
+    int * global_vertex_finished; // size N, contatin boolean of color finished, sometimes cardinality 1,2,3 is finished.
     int * global_finished_card_reduced;
     int * finished_gpu;
     int * nextroot_gpu;
@@ -807,7 +812,7 @@ void ColorGraph(){
     // This might be worth experimenting with for a low-memory version.
     cudaMalloc( (void**)&global_middle_vertex, numberOfRows * sizeof(int) );
     cudaMalloc( (void**)&global_color_card, numberOfRows * sizeof(int) );
-    cudaMalloc( (void**)&global_color_finished, numberOfRows * sizeof(int) );
+    cudaMalloc( (void**)&global_vertex_finished, numberOfRows * sizeof(int) );
     cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
     cudaMalloc( (void**)&nextroot_gpu, 1 * sizeof(int) );
     cudaMalloc( (void**)&global_U_Prev, numberOfRows * sizeof(int) );
@@ -816,7 +821,7 @@ void ColorGraph(){
 
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_color_card),  1, size_t(numberOfRows));
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_middle_vertex),  0, size_t(numberOfRows));
-    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_color_finished),  0, size_t(numberOfRows));
+    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_vertex_finished),  0, size_t(numberOfRows));
 
 
     int k = 4;
@@ -896,7 +901,7 @@ void ColorGraph(){
                                 global_U_Pred,
                                 global_colors,
                                 global_color_card,
-                                global_color_finished,
+                                global_vertex_finished,
                                 global_finished_card_reduced,
                                 finished_gpu,
                                 nextroot_gpu);
@@ -907,7 +912,7 @@ void ColorGraph(){
         cudaMemcpy(&host_reduced, &global_finished_card_reduced[0], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
         cudaMemcpy(&root, &nextroot_gpu[0], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
         cudaMemcpy(&global_U_Prev[0], &global_U[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToDevice);
-        cudaMemcpy(&new_color_finished[0], &global_color_finished[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+        cudaMemcpy(&new_vertex_finished[0], &global_vertex_finished[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
 
         host_percentage_finished = ((double)host_reduced/(double)numberOfRows);
 
@@ -952,7 +957,7 @@ void ColorGraph(){
                 std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMap.find(node1Name);
                 if(nodeIt1 == nodeMap.end()) {
                     nodeMap[node1Name] = graph->AddNode(node1Name);
-                    if(new_color_finished[new_colors[i]]){
+                    if(new_vertex_finished[new_colors[i]]){
                         nodeMap[node1Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[i]));
                         nodeMap[node1Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[i]));
                         nodeMap[node1Name]->GetAttributes().SetStyle("filled");
@@ -964,7 +969,7 @@ void ColorGraph(){
                         std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMap.find(node2Name);
                         if(nodeIt2 == nodeMap.end()) {
                             nodeMap[node2Name] = graph->AddNode(node2Name);
-                            if(new_color_finished[new_colors[new_cols_host[j]]]){
+                            if(new_vertex_finished[new_colors[new_cols_host[j]]]){
                                 nodeMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[new_cols_host[j]]));
                                 nodeMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[new_cols_host[j]]));
                                 nodeMap[node2Name]->GetAttributes().SetStyle("filled");
@@ -987,7 +992,7 @@ void ColorGraph(){
                         std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = predMap.find(node1Name);
                         if(nodeIt1 == predMap.end()) {
                             predMap[node1Name] = pred->AddNode(node1Name);
-                            if(new_color_finished[new_colors[i]]){
+                            if(new_vertex_finished[new_colors[i]]){
                                 predMap[node1Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[i]));
                                 predMap[node1Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[i]));
                                 predMap[node1Name]->GetAttributes().SetStyle("filled");
@@ -997,7 +1002,7 @@ void ColorGraph(){
                         std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = predMap.find(node2Name);
                         if(nodeIt2 == predMap.end()) {
                             predMap[node2Name] = pred->AddNode(node2Name);
-                            if(new_color_finished[new_colors[w]]){
+                            if(new_vertex_finished[new_colors[w]]){
                                 predMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[w]));
                                 predMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[w]));
                                 predMap[node2Name]->GetAttributes().SetStyle("filled");
@@ -1044,7 +1049,7 @@ void ColorGraph(){
     cudaFree( global_finished_card_reduced );
     //cudaFree( global_colors );
     cudaFree( global_color_card );
-    cudaFree( global_color_finished );
+    cudaFree( global_vertex_finished );
     cudaFree( global_middle_vertex );
   
 }
@@ -1150,7 +1155,7 @@ void PerformBFS(int numberOfRows,
                 int * triangle_counter_dev,
                 int * global_colors_dev_ptr,
                 int * global_color_cardinalities,
-                int * global_color_finished_dev_ptr,
+                int * global_vertex_finished_dev_ptr,
                 int * global_predecessors){
 
         int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
@@ -1162,7 +1167,7 @@ void PerformBFS(int numberOfRows,
 
         cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
         cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  0, size_t(1));
-        cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_color_finished_dev_ptr),  0, size_t(numberOfRows));
+        cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_vertex_finished_dev_ptr),  0, size_t(numberOfRows));
         cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_levels),  INT_MAX, size_t(numberOfRows));
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -1190,7 +1195,7 @@ void PerformBFS(int numberOfRows,
                                     global_columns_dev_ptr,
                                     triangle_counter_dev,
                                     global_colors_dev_ptr,
-                                    global_color_finished_dev_ptr,
+                                    global_vertex_finished_dev_ptr,
                                     global_predecessors,
                                     finished_gpu);
             cudaDeviceSynchronize();
@@ -1200,7 +1205,7 @@ void PerformBFS(int numberOfRows,
                                                                         curr, 
                                                                         global_levels,
                                                                         global_colors_dev_ptr,
-                                                                        global_color_finished_dev_ptr,
+                                                                        global_vertex_finished_dev_ptr,
                                                                         global_predecessors);
 
             cudaDeviceSynchronize();
@@ -1212,7 +1217,7 @@ void PerformBFS(int numberOfRows,
                 global_levels,
                 global_colors_dev_ptr,
                 global_color_cardinalities,
-                global_color_finished_dev_ptr,
+                global_vertex_finished_dev_ptr,
                 global_predecessors);
 
             cudaDeviceSynchronize();
@@ -1318,7 +1323,7 @@ void GlobalPathPartition(int numberOfRows,
                         int * global_colors,
                         int * global_colors_prev,
                         int * global_color_card,
-                        int * global_color_finished,
+                        int * global_vertex_finished,
                         int * global_finished_card_reduced,
                         int * finished_gpu){
     // Kernel to maximize the number of finished colors in a depth block of size 4
@@ -1331,7 +1336,7 @@ __global__ void launch_recolor_depth_block( int N,
                                             int * M,
                                             int * U,
                                             int * colors,
-                                            int * color_finished,
+                                            int * vertex_finished,
                                             int * middle_vertex){
     //int v = threadIdx.x + blockDim.x * blockIdx.x;
     
@@ -1356,7 +1361,7 @@ void PerformPathPartitioning(int numberOfRows,
                             int * global_U_Pred,
                             int * global_colors,
                             int * global_color_card,
-                            int * global_color_finished,
+                            int * global_vertex_finished,
                             int * global_finished_card_reduced,
                             int * finished_gpu, 
                             int * nextroot_gpu){
@@ -1376,7 +1381,7 @@ void PerformPathPartitioning(int numberOfRows,
                                                                         global_U,
                                                                         global_U_Pred,
                                                                         global_colors,
-                                                                        global_color_finished,
+                                                                        global_vertex_finished,
                                                                         global_middle_vertex);
 
         cudaDeviceSynchronize();
@@ -1394,7 +1399,7 @@ void PerformPathPartitioning(int numberOfRows,
                                 global_U_Pred,
                                 global_colors,
                                 global_color_card,
-                                global_color_finished,
+                                global_vertex_finished,
                                 global_middle_vertex);
         // Increment cardinality of winner
         launch_gpu_sssp_coloring_2<<<oneThreadPerNode,threadsPerBlock>>>(
@@ -1406,7 +1411,7 @@ void PerformPathPartitioning(int numberOfRows,
                                                                         global_U_Pred,
                                                                         global_colors,
                                                                         global_color_card,
-                                                                        global_color_finished,
+                                                                        global_vertex_finished,
                                                                         global_middle_vertex);
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -1418,7 +1423,7 @@ void PerformPathPartitioning(int numberOfRows,
                                                                             global_columns_dev_ptr,
                                                                             global_colors,
                                                                             global_color_card,
-                                                                            global_color_finished,
+                                                                            global_vertex_finished,
                                                                             global_middle_vertex);
 
     cudaDeviceSynchronize();
@@ -1430,7 +1435,7 @@ void PerformPathPartitioning(int numberOfRows,
                                                                             global_columns_dev_ptr,
                                                                             global_colors,
                                                                             global_color_card,
-                                                                            global_color_finished,
+                                                                            global_vertex_finished,
                                                                             global_middle_vertex);
 
 
@@ -1443,7 +1448,7 @@ void PerformPathPartitioning(int numberOfRows,
         global_columns_dev_ptr,
         global_colors,
         global_color_card,
-        global_color_finished,
+        global_vertex_finished,
         global_middle_vertex);
 
     cudaDeviceSynchronize();
@@ -1452,7 +1457,7 @@ void PerformPathPartitioning(int numberOfRows,
     FindMaximumDistanceNonFinishedColor(numberOfRows,
                                         global_colors,
                                         global_M,
-                                        global_color_finished,
+                                        global_vertex_finished,
                                         global_U_Prev,
                                         global_U,
                                         nextroot_gpu);
@@ -1461,7 +1466,7 @@ void PerformPathPartitioning(int numberOfRows,
     checkLastErrorCUDA(__FILE__, __LINE__);
        
     Sum(numberOfRows,
-        global_color_finished,
+        global_vertex_finished,
         global_finished_card_reduced);
 
     cudaDeviceSynchronize();
@@ -1500,7 +1505,7 @@ void MaximizePathLength(int numberOfRows,
                         int * global_U_Pred,
                         int * global_colors,
                         int * global_color_card,
-                        int * global_color_finished,
+                        int * global_vertex_finished,
                         int * global_middle_vertex){
     int zero = 0;
     int * finished = &zero;
@@ -1522,7 +1527,7 @@ void MaximizePathLength(int numberOfRows,
                         global_U_Pred,
                         global_colors,
                         global_color_card,
-                        global_color_finished,
+                        global_vertex_finished,
                         global_middle_vertex);
 
         cudaDeviceSynchronize();
@@ -1538,7 +1543,7 @@ void MaximizePathLength(int numberOfRows,
 void FindMaximumDistanceNonFinishedColor(int numberOfRows,
                                         int * global_colors,
                                         int * global_M,
-                                        int * global_color_finished,
+                                        int * global_vertex_finished,
                                         int * global_U_Prev,
                                         int * global_U,
                                         int * nextroot_gpu){
@@ -1548,7 +1553,7 @@ void FindMaximumDistanceNonFinishedColor(int numberOfRows,
     multiply_distance_by_finished_boolean<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
                                                                                 global_M,
                                                                                 global_colors,
-                                                                                global_color_finished,
+                                                                                global_vertex_finished,
                                                                                 global_U_Prev,
                                                                                 global_U); 
                                                                                 
@@ -1564,7 +1569,7 @@ void FindMaximumDistanceNonFinishedColor(int numberOfRows,
 __global__ void multiply_distance_by_finished_boolean(int N,
                                                     int * M,
                                                     int * colors,
-                                                    int * color_finished,
+                                                    int * vertex_finished,
                                                     int * U_Prev,
                                                     int * U){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1572,7 +1577,7 @@ __global__ void multiply_distance_by_finished_boolean(int N,
         return;
 
     int vc = colors[v];
-    M[v] = color_finished[vc]*U[v] + color_finished[vc]*U_Prev[v]; 
+    M[v] = vertex_finished[vc]*U[v] + vertex_finished[vc]*U_Prev[v]; 
 }
 
 void GetMaxDist(int N,
@@ -1602,7 +1607,7 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                                             int *nodes, int *edges, 
                                             int * remaining,
                                             int * colors,
-                                            int * color_finished,
+                                            int * vertex_finished,
                                             int * predecessors,
                                             int * finished){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1614,7 +1619,7 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
         int * nbrs = & edges[ nodes[v] ];
         for(int i = 0; i < num_nbr; i++) {
             int w = nbrs[i];
-            int flag = remaining[w] || color_finished[colors[w]];
+            int flag = remaining[w] || vertex_finished[colors[w]];
             if (levels[w] == INT_MAX && !flag) { // if not visited yet
                 *finished = 0;
                 levels[w] = curr + 1;
@@ -1627,7 +1632,7 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
 // Vertices belonging to triangles aren't traversed.
 __global__ void launch_gpu_bfs_color_kernel( int N, int curr, int *levels,
                                             int * colors,
-                                            int * color_finished,
+                                            int * vertex_finished,
                                             int * predecessors){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
@@ -1637,7 +1642,7 @@ __global__ void launch_gpu_bfs_color_kernel( int N, int curr, int *levels,
         // Race condition, but any color which has overwritten this vertex
         // must by definition be un-finished, thus the result is an
         // un-finished color claims the predecessor.
-        if (color_finished[colors[vertexToClaim]])
+        if (vertex_finished[colors[vertexToClaim]])
             colors[vertexToClaim] = colors[v];
     }
 }
@@ -1645,7 +1650,7 @@ __global__ void launch_gpu_bfs_color_kernel( int N, int curr, int *levels,
 __global__ void launch_gpu_bfs_finish_colors_kernel( int N, int curr, int *levels,
                                                     int * colors,
                                                     int * color_cardinalities,
-                                                    int * color_finished,
+                                                    int * vertex_finished,
                                                     int * predecessors){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
@@ -1657,7 +1662,7 @@ __global__ void launch_gpu_bfs_finish_colors_kernel( int N, int curr, int *level
         // un-finished color claims the predecessor.
         if (colors[v] == colors[vertexToClaim]){
             color_cardinalities[colors[v]] = color_cardinalities[colors[v]] + 1;
-            color_finished[colors[v]] = (color_cardinalities[colors[v]] == 4);
+            vertex_finished[colors[v]] = (color_cardinalities[colors[v]] == 4);
         }
     }
 }
@@ -1670,7 +1675,7 @@ __global__ void launch_gpu_color_finishing_kernel_1( int N,
                                                 int * edges,
                                                 int * colors,
                                                 int * color_card,
-                                                int * color_finished,
+                                                int * vertex_finished,
                                                 int * middle_vertex){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
@@ -1680,7 +1685,7 @@ __global__ void launch_gpu_color_finishing_kernel_1( int N,
     int middleVertex;
     // Guaruntees we need another vertex and v is not an internal vertex
     // for example, with path a - b - c; we guaruntee v is not b.
-    if (color_card[cv] == 3 && !color_finished[cv]) {
+    if (color_card[cv] == 3 && !vertex_finished[cv]) {
         // iterate over neighbors
         int num_nbr = nodes[v+1] - nodes[v];
         int * nbrs = & edges[ nodes[v] ];
@@ -1701,7 +1706,7 @@ __global__ void launch_gpu_color_finishing_kernel_2( int N,
                                                 int * edges,
                                                 int * colors,
                                                 int * color_card,
-                                                int * color_finished,
+                                                int * vertex_finished,
                                                 int * middle_vertex){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
@@ -1713,7 +1718,7 @@ __global__ void launch_gpu_color_finishing_kernel_2( int N,
     // for example, with path a - b - c; we guaruntee v is not b.
     // middle_vertex[v] is required to prevent race conditions 
     // since only those with 
-    if (middle_vertex[v] && color_card[cv] == 3 && !color_finished[cv]) {
+    if (middle_vertex[v] && color_card[cv] == 3 && !vertex_finished[cv]) {
         // iterate over neighbors
         int num_nbr = nodes[v+1] - nodes[v];
         int * nbrs = & edges[ nodes[v] ];
@@ -1725,9 +1730,9 @@ __global__ void launch_gpu_color_finishing_kernel_2( int N,
                 middleVertexCount = middleVertexCount + mvw;
         }
         foundCycle = middleVertexCount > 1;
-        color_finished[cv] = foundCycle;
+        vertex_finished[cv] = foundCycle;
     } else if (color_card[cv] == 4){
-        color_finished[cv] = true;
+        vertex_finished[cv] = true;
     }
 }
 
@@ -1831,7 +1836,7 @@ __global__ void launch_gpu_sssp_coloring_1(int N,
                                         int * U,
                                         int * U_Pred,
                                         int * colors,
-                                        int * color_finished,
+                                        int * vertex_finished,
                                         int * middle_vertex){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
@@ -1844,7 +1849,7 @@ __global__ void launch_gpu_sssp_coloring_1(int N,
 
     // Race condition, but the kernel ends, so we get synchronization
     // it doesn't matter who wins, we need to initiate change in the graph.
-    if (!color_finished[wc] && !color_finished[vc]){
+    if (!vertex_finished[wc] && !vertex_finished[vc]){
         colors[w] = colors[v];
     }
 }
@@ -1853,13 +1858,13 @@ __global__ void launch_gpu_sssp_coloring_1(int N,
 __global__ void reset_partial_paths(int N,
                                     int * colors,
                                     int * color_card,
-                                    int * color_finished,
+                                    int * vertex_finished,
                                     int * middle_vertex){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
         return;
     int vc = colors[v];
-    if (color_finished[vc])
+    if (vertex_finished[vc])
         return;
     colors[v] = v;
     color_card[v] = 1;
@@ -1868,12 +1873,12 @@ __global__ void reset_partial_paths(int N,
 
 __global__ void calculate_percent_partitioned(int N,
                                                 int * color_card,
-                                                int * color_finished,
+                                                int * vertex_finished,
                                                 int * finished_card_reduced){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
         return;
-    if (color_finished[v])
+    if (vertex_finished[v])
         atomicAdd(finished_card_reduced, 1);
 }
 
@@ -1885,7 +1890,7 @@ __global__ void launch_gpu_sssp_coloring_maximize(int N,
                                         int * U_Pred,
                                         int * colors,
                                         int * color_card,
-                                        int * color_finished,
+                                        int * vertex_finished,
                                         int * middle_vertex){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
@@ -1901,7 +1906,7 @@ __global__ void launch_gpu_sssp_coloring_maximize(int N,
     int wcc = color_card[wc];
     // Still a race condition, of what color is assigned color[w]
     // so we need to keep calling this method until no marked vertices exist.
-    if (vcc > wcc && !color_finished[vc] && !color_finished[wc]){
+    if (vcc > wcc && !vertex_finished[vc] && !vertex_finished[wc]){
         colors[w] = colors[v];
         M[w] = 1;
     }
@@ -1915,7 +1920,7 @@ __global__ void launch_gpu_sssp_coloring_2(int N,
                                         int * U_Pred,
                                         int * colors,
                                         int * color_card,
-                                        int * color_finished,
+                                        int * vertex_finished,
                                         int * middle_vertex){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
@@ -1926,7 +1931,7 @@ __global__ void launch_gpu_sssp_coloring_2(int N,
     int w = U_Pred[v];
     int wc = colors[w];
     int vc = colors[v];
-    if(!color_finished[wc] && !color_finished[vc])
+    if(!vertex_finished[wc] && !vertex_finished[vc])
         color_card[wc] = color_card[wc] + 1;
 }
 

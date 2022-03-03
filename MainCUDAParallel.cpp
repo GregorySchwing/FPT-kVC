@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
     int * new_colors = new int[numberOfRows];
     int * new_U = new int[numberOfRows];
     int * new_Pred = new int[numberOfRows];
-    int * new_color_finished = new int[numberOfRows];
+    int * new_vertex_finished = new int[numberOfRows];
 
     int * global_row_offsets_dev_ptr; // size N + 1
     int * global_columns_dev_ptr; // size M
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
     int * global_triangle_remaining_boolean; // size |W|, where W is the subset of V contained in a triangle, used for finding MIS of triangles
     int * global_colors_dev_ptr;
     int * global_color_cardinalities;
-    int * global_color_finished_dev_ptr;
+    int * global_vertex_finished_dev_ptr;
     int * global_levels;
     int * global_predecessors;
 
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
     // Can use the color cardinality as a finished flag.
     cudaMalloc( (void**)&global_colors_dev_ptr, (numberOfRows) * sizeof(int) );
     cudaMalloc( (void**)&global_color_cardinalities, (numberOfRows) * sizeof(int) );
-    cudaMalloc( (void**)&global_color_finished_dev_ptr, (numberOfRows) * sizeof(int) );
+    cudaMalloc( (void**)&global_vertex_finished_dev_ptr, (numberOfRows) * sizeof(int) );
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
     CallColorTriangles(
                             numberOfRows,
                             global_colors_dev_ptr,
-                            global_color_finished_dev_ptr,
+                            global_vertex_finished_dev_ptr,
                             triangle_row_offsets_array_dev,
                             triangle_counter_dev,
                             triangle_candidates_a_dev,
@@ -251,15 +251,15 @@ int main(int argc, char *argv[])
                 triangle_counter_dev,
                 global_colors_dev_ptr,
                 global_color_cardinalities,
-                global_color_finished_dev_ptr,
+                global_vertex_finished_dev_ptr,
                 global_predecessors);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 */
     cudaMemcpy(&new_colors[0], &global_colors_dev_ptr[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
-    //cudaMemcpy(&new_color_finished[0], &global_color_finished_dev_ptr[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
-    cudaMemcpy(&new_color_finished[0], &triangle_counter_dev[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+    //cudaMemcpy(&new_vertex_finished[0], &global_vertex_finished_dev_ptr[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(&new_vertex_finished[0], &triangle_counter_dev[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -299,7 +299,7 @@ int main(int argc, char *argv[])
         std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMap.find(node1Name);
         if(nodeIt1 == nodeMap.end()) {
             nodeMap[node1Name] = graph->AddNode(node1Name);
-            if(new_color_finished[new_colors[i]]){
+            if(new_vertex_finished[new_colors[i]]){
                 nodeMap[node1Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[i]));
                 nodeMap[node1Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[i]));
                 nodeMap[node1Name]->GetAttributes().SetStyle("filled");
@@ -311,7 +311,7 @@ int main(int argc, char *argv[])
                 std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMap.find(node2Name);
                 if(nodeIt2 == nodeMap.end()) {
                     nodeMap[node2Name] = graph->AddNode(node2Name);
-                    if(new_color_finished[new_colors[new_cols[j]]]){
+                    if(new_vertex_finished[new_colors[new_cols[j]]]){
                         nodeMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[new_cols[j]]));
                         nodeMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[new_cols[j]]));
                         nodeMap[node2Name]->GetAttributes().SetStyle("filled");
