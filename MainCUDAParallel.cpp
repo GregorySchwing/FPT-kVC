@@ -78,6 +78,7 @@ int main(int argc, char *argv[])
     int * host_levels = new int[numberOfRows];
 
     int * new_colors = new int[numberOfRows];
+    int * new_colors = new int new_color_cards[numberOfRows];
     int * new_U = new int[numberOfRows];
     int * new_Pred = new int[numberOfRows];
     int * new_vertex_finished = new int[numberOfRows];
@@ -264,7 +265,7 @@ int main(int argc, char *argv[])
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
-
+    cudaMemcpy(&new_color_cards[0], &global_color_cardinalities[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
     cudaMemcpy(&new_colors[0], &global_colors_dev_ptr[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
     cudaMemcpy(&new_vertex_finished[0], &vertex_partitioned_dev[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
 
@@ -277,13 +278,15 @@ int main(int argc, char *argv[])
 
     int * new_colors_randomized = new int[numberOfRows];
     int * new_colors_mapper = new int[numberOfRows];
-
+    printf("Color cardinalities\n")
     for(int n=0; n<numberOfRows; ++n){
         new_colors_mapper[n] = distr(gen); // generate numbers
+        printf("%d ", new_color_cards[n])
     }
-
+    printf("Colors\n")
     for(int n=0; n<numberOfRows; ++n){
         new_colors_randomized[n] = new_colors_mapper[new_colors[n]]; // generate numbers
+        printf("%d ", new_colors[n])
     }
 
     std::string name = "main";
