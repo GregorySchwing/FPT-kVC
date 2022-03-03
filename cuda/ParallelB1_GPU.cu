@@ -1611,7 +1611,7 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
         int * nbrs = & edges[ nodes[v] ];
         for(int i = 0; i < num_nbr; i++) {
             int w = nbrs[i];
-            int flag = vertex_finished[colors[w]];
+            int flag = vertex_finished[w];
             if (levels[w] == INT_MAX && !flag) { // if not visited yet
                 *finished = 0;
                 levels[w] = curr + 1;
