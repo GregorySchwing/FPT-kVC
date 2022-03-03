@@ -385,7 +385,6 @@ void CallDisjointSetTriangles(
 void CallColorTriangles(
     int numberOfRows,
     int * global_colors_dev_ptr,
-    int * global_vertex_finished_dev_ptr,
     int * triangle_row_offsets_array_dev,
     int * triangle_counter_dev,
     int * triangle_candidates_a_dev,

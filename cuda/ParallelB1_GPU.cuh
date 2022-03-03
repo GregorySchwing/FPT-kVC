@@ -204,7 +204,6 @@ void PerformBFS(int numberOfRows,
                 int * triangle_counter_dev,
                 int * global_colors_dev_ptr,
                 int * global_color_cardinalities,
-                int * global_color_finished_dev_ptr,
                 int * global_predecessors);
 
 
@@ -295,7 +294,6 @@ void CallDisjointSetTriangles(
 void CallColorTriangles(
                         int numberOfRows,
                         int * global_colors_dev_ptr,
-                        int * global_color_finished_dev_ptr,
                         int * triangle_row_offsets_array_dev,
                         int * triangle_counter_dev,
                         int * triangle_candidates_a_dev,
