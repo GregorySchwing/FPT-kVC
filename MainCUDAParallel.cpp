@@ -306,11 +306,11 @@ int main(int argc, char *argv[])
         std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMap.find(node1Name);
         if(nodeIt1 == nodeMap.end()) {
             nodeMap[node1Name] = graph->AddNode(node1Name);
-            if(new_vertex_finished[new_colors[i]]){
+            //if(new_vertex_finished[new_colors[i]]){
                 nodeMap[node1Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[i]));
                 nodeMap[node1Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[i]));
                 nodeMap[node1Name]->GetAttributes().SetStyle("filled");
-            }
+            //}
         }
         for (int j = new_row_offsets[i]; j < new_row_offsets[i+1]; ++j){
             if (i < new_cols[j]){
@@ -318,11 +318,11 @@ int main(int argc, char *argv[])
                 std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMap.find(node2Name);
                 if(nodeIt2 == nodeMap.end()) {
                     nodeMap[node2Name] = graph->AddNode(node2Name);
-                    if(new_vertex_finished[new_colors[new_cols[j]]]){
+                    //if(new_vertex_finished[new_colors[new_cols[j]]]){
                         nodeMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[new_cols[j]]));
                         nodeMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[new_cols[j]]));
                         nodeMap[node2Name]->GetAttributes().SetStyle("filled");
-                    }
+                    //}
                 }  
                 //graph->AddEdge(nodeMap[node1Name], nodeMap[node2Name], std::to_string(host_levels[i]));
                 graph->AddEdge(nodeMap[node1Name], nodeMap[node2Name]); 
