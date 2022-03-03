@@ -89,7 +89,6 @@ int main(int argc, char *argv[])
     int * global_degrees_dev_ptr; // size N, used for inducing the subgraph
     int * global_triangle_remaining_boolean; // size |W|, where W is the subset of V contained in a triangle, used for finding MIS of triangles
     int * global_colors_dev_ptr;
-    int * global_color_cardinalities;
     int * global_levels;
     int * global_predecessors;
 
@@ -105,7 +104,6 @@ int main(int argc, char *argv[])
     cudaMalloc( (void**)&global_predecessors, (numberOfRows) * sizeof(int) );
     // Can use the color cardinality as a finished flag.
     cudaMalloc( (void**)&global_colors_dev_ptr, (numberOfRows) * sizeof(int) );
-    cudaMalloc( (void**)&global_color_cardinalities, (numberOfRows) * sizeof(int) );
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -136,7 +134,6 @@ int main(int argc, char *argv[])
     checkLastErrorCUDA(__FILE__, __LINE__);
         // Updated final
     //cuMemsetD32(reinterpret_cast<CUdeviceptr>(triangle_counter_dev),  0, size_t(numberOfRows));
-    cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_color_cardinalities),  0, size_t(numberOfRows));
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
@@ -262,12 +259,10 @@ int main(int argc, char *argv[])
                 global_columns_dev_ptr,
                 vertex_partitioned_dev,
                 global_colors_dev_ptr,
-                global_color_cardinalities,
                 global_predecessors);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
-    cudaMemcpy(&new_color_cards[0], &global_color_cardinalities[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
     cudaMemcpy(&new_colors[0], &global_colors_dev_ptr[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
     cudaMemcpy(&new_vertex_finished[0], &vertex_partitioned_dev[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
 

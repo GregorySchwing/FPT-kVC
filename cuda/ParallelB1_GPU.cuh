@@ -201,9 +201,8 @@ void PerformBFS(int numberOfRows,
                 int * global_levels,
                 int * global_row_offsets_dev_ptr,
                 int * global_columns_dev_ptr,
-                int * triangle_counter_dev,
+                int * global_vertex_finished_dev_ptr,
                 int * global_colors_dev_ptr,
-                int * global_color_cardinalities,
                 int * global_predecessors);
 
 

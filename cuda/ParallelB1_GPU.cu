@@ -1150,7 +1150,6 @@ void PerformBFS(int numberOfRows,
                 int * global_columns_dev_ptr,
                 int * global_vertex_finished_dev_ptr,
                 int * global_colors_dev_ptr,
-                int * global_color_cardinalities,
                 int * global_predecessors){
 
         int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
@@ -1202,7 +1201,7 @@ void PerformBFS(int numberOfRows,
                                                                         curr, 
                                                                         global_levels,
                                                                         global_colors_dev_ptr,
-                                                                        global_color_cardinalities,
+                                                                        global_vertex_finished_dev_ptr,
                                                                         global_predecessors);
 
             cudaDeviceSynchronize();
@@ -1213,7 +1212,7 @@ void PerformBFS(int numberOfRows,
                 curr, 
                 global_levels,
                 global_colors_dev_ptr,
-                global_color_cardinalities,
+                global_vertex_finished_dev_ptr,
                 global_vertex_finished_dev_ptr,
                 global_predecessors);
 
