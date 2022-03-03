@@ -1170,6 +1170,8 @@ void PerformBFS(int numberOfRows,
                 global_vertex_finished_dev_ptr,
                 &source);
 
+        printf("Source %d\n", source);
+
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);       
 
