@@ -283,7 +283,7 @@ int main(int argc, char *argv[])
     printf("Color cardinalities\n");
     for(int n=0; n<numberOfRows; ++n){
         new_colors_mapper[n] = distr(gen); // generate numbers
-        printf("%d ", new_color_cards[n]);
+        printf("%d ", new_color_cards[new_colors[n]]);
     }
     printf("Colors\n");
     for(int n=0; n<numberOfRows; ++n){
