@@ -135,12 +135,12 @@ int main(int argc, char *argv[])
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
         // Updated final
-    cuMemsetD32(reinterpret_cast<CUdeviceptr>(triangle_counter_dev),  0, size_t(numberOfRows));
+    //cuMemsetD32(reinterpret_cast<CUdeviceptr>(triangle_counter_dev),  0, size_t(numberOfRows));
     cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_color_cardinalities),  0, size_t(numberOfRows));
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
-    /*
+
     int * triangle_row_offsets_array_host = new int[numberOfRows+1];
     int * triangle_candidates_a_dev;
     int * triangle_candidates_b_dev;
@@ -250,7 +250,7 @@ int main(int argc, char *argv[])
    std::cout << "Percentage of graph partitioned into a triangle" << std::endl;
     double percentTri = ((double)sum)/((double)numberOfRows) * 100.00;
     printf("%.2f %%\n", percentTri);
-*/
+
     // Rename variable for clarity moving forward.  Any vertex not in a triangle
     // is considered a viable path for BFS
     int * vertex_partitioned_dev = triangle_counter_dev;
