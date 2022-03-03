@@ -1729,6 +1729,7 @@ __global__ void launch_gpu_msbfs_color_kernel( int N, int curr, int *levels,
     if (v >= N)
         return;
     if (levels[v] == curr) {
+        printf("VERTEX %d ACTIVE ON BFS ITER %d\n", v, curr);
         int vertexToClaim = predecessors[v];
         // Must prevent simple color exchanges
         // Can use a hash function instead of vertex ids..
