@@ -1178,6 +1178,7 @@ void PerformBFS(int numberOfRows,
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);       
     
+        // Partition remaining graph into colors of cardinality 1 or 2.
         do {
             cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  1, size_t(1));
             cudaDeviceSynchronize();
@@ -1194,11 +1195,12 @@ void PerformBFS(int numberOfRows,
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
 
+            // Current isnt incremented yet, curr == source.
             launch_gpu_bfs_color_kernel<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
                                                                         curr, 
                                                                         global_levels,
                                                                         global_colors_dev_ptr,
-                                                                        global_vertex_finished_dev_ptr,
+                                                                        global_color_cardinalities,
                                                                         global_predecessors);
 
             cudaDeviceSynchronize();
@@ -1621,10 +1623,9 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
     }
 }
 
-// Vertices belonging to triangles aren't traversed.
 __global__ void launch_gpu_bfs_color_kernel( int N, int curr, int *levels,
                                             int * colors,
-                                            int * vertex_finished,
+                                            int * color_cardinalities,
                                             int * predecessors){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
@@ -1634,7 +1635,7 @@ __global__ void launch_gpu_bfs_color_kernel( int N, int curr, int *levels,
         // Race condition, but any color which has overwritten this vertex
         // must by definition be un-finished, thus the result is an
         // un-finished color claims the predecessor.
-        if (vertex_finished[vertexToClaim])
+        if (color_cardinalities[colors[v]] != 2)
             colors[vertexToClaim] = colors[v];
     }
 }
@@ -1654,7 +1655,6 @@ __global__ void launch_gpu_bfs_finish_colors_kernel( int N, int curr, int *level
         // un-finished color claims the predecessor.
         if (colors[v] == colors[vertexToClaim]){
             color_cardinalities[colors[v]] = color_cardinalities[colors[v]] + 1;
-            vertex_finished[colors[v]] = (color_cardinalities[colors[v]] == 4);
         }
     }
 }

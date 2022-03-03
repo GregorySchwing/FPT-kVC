@@ -70,7 +70,7 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
 
 __global__ void launch_gpu_bfs_color_kernel( int N, int curr, int *levels,
                                             int * colors,
-                                            int * color_finished,
+                                            int * color_cardinalities,
                                             int * predecessors);
 
 __global__ void launch_gpu_bfs_finish_colors_kernel( int N, int curr, int *levels,
