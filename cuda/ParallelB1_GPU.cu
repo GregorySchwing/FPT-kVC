@@ -398,8 +398,7 @@ void CallColorTriangles(
                                                                     triangle_candidates_a_dev,
                                                                     triangle_candidates_b_dev,
                                                                     triangle_counter_dev,
-                                                                    global_colors_dev_ptr,
-                                                                    global_vertex_finished_dev_ptr);    
+                                                                    global_colors_dev_ptr);    
         
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
@@ -663,8 +662,7 @@ __global__ void ColorTriangleKernel(int numberOfRows,
                                     int * triangle_candidates_a_dev,
                                     int * triangle_candidates_b_dev,
                                     int * triangle_counter_dev,
-                                    int * colors,
-                                    int * vertex_finished){
+                                    int * colors){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= numberOfRows || !triangle_counter_dev[v])
         return;
@@ -673,12 +671,10 @@ __global__ void ColorTriangleKernel(int numberOfRows,
         int b = triangle_candidates_b_dev[i];
         if (a == -1 && b == -1)
             continue;
-            if (triangle_counter_dev[a] && triangle_counter_dev[b]){
-                if (v < a && v < b ){
-                    colors[a] = colors[v];
-                    colors[b] = colors[v];
-                }
-                vertex_finished[v] = 1;
+        if (triangle_counter_dev[a] && triangle_counter_dev[b]){
+            if (v < a && v < b ){
+                colors[a] = colors[v];
+                colors[b] = colors[v];
             }
         }
     }
@@ -1153,10 +1149,9 @@ void PerformBFS(int numberOfRows,
                 int * global_levels,
                 int * global_row_offsets_dev_ptr,
                 int * global_columns_dev_ptr,
-                int * triangle_counter_dev,
+                int * global_vertex_finished_dev_ptr,
                 int * global_colors_dev_ptr,
                 int * global_color_cardinalities,
-                int * global_vertex_finished_dev_ptr,
                 int * global_predecessors){
 
         int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
@@ -1168,13 +1163,12 @@ void PerformBFS(int numberOfRows,
 
         cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
         cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  0, size_t(1));
-        cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_vertex_finished_dev_ptr),  0, size_t(numberOfRows));
         cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_levels),  INT_MAX, size_t(numberOfRows));
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);
 
         GetSource(numberOfRows,
-                triangle_counter_dev,
+                global_vertex_finished_dev_ptr,
                 &source);
 
         cudaDeviceSynchronize();
@@ -1194,7 +1188,6 @@ void PerformBFS(int numberOfRows,
                                     global_levels,
                                     global_row_offsets_dev_ptr,
                                     global_columns_dev_ptr,
-                                    triangle_counter_dev,
                                     global_colors_dev_ptr,
                                     global_vertex_finished_dev_ptr,
                                     global_predecessors,
@@ -1606,7 +1599,6 @@ void GetMaxDist(int N,
 // Vertices belonging to triangles aren't traversed.
 __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                                             int *nodes, int *edges, 
-                                            int * remaining,
                                             int * colors,
                                             int * vertex_finished,
                                             int * predecessors,
@@ -1620,7 +1612,7 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
         int * nbrs = & edges[ nodes[v] ];
         for(int i = 0; i < num_nbr; i++) {
             int w = nbrs[i];
-            int flag = remaining[w] || vertex_finished[colors[w]];
+            int flag = vertex_finished[colors[w]];
             if (levels[w] == INT_MAX && !flag) { // if not visited yet
                 *finished = 0;
                 levels[w] = curr + 1;

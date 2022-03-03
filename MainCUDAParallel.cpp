@@ -224,6 +224,8 @@ int main(int argc, char *argv[])
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
 
+
+
     std::cout << "Triangles Disjoint" << std::endl;
     for (int i = 0; i < numberOfTriangles_host; ++i){
         std::cout << triangle_candidates_a_host[i] << " ";
@@ -243,12 +245,17 @@ int main(int argc, char *argv[])
    std::cout << "Percentage of graph partitioned into a triangle" << std::endl;
     double percentTri = ((double)sum)/((double)numberOfRows) * 100.00;
     printf("%.2f %%\n", percentTri);
+
+    // Rename variable for clarity moving forward.  Any vertex not in a triangle
+    // is considered a viable path for BFS
+    int * vertex_partitioned_dev = triangle_counter_dev;
+
 /*
     PerformBFS(numberOfRows,
                 global_levels,
                 global_row_offsets_dev_ptr,
                 global_columns_dev_ptr,
-                triangle_counter_dev,
+                vertex_partitioned_dev,
                 global_colors_dev_ptr,
                 global_color_cardinalities,
                 global_vertex_finished_dev_ptr,

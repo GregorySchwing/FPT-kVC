@@ -63,7 +63,6 @@ void CopyGraphFromDevice(Graph & g,
 
 __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                             int *nodes, int *edges, 
-                            int * remaining,
                             int * colors,
                             int * color_finished,
                             int * predecessors,
@@ -355,8 +354,7 @@ __global__ void ColorTriangleKernel(int numberOfRows,
                                     int * triangle_candidates_a_dev,
                                     int * triangle_candidates_b_dev,
                                     int * triangle_counter_dev,
-                                    int * colors,
-                                    int * color_finished);
+                                    int * colors);
 
 void Sum(int expanded_size,
         int * expanded,
