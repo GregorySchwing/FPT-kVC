@@ -273,7 +273,7 @@ int main(int argc, char *argv[])
     printf("Color cardinalities\n");
     for(int n=0; n<numberOfRows; ++n){
         new_colors_mapper[n] = distr(gen); // generate numbers
-        printf("%d ", new_color_cards[new_colors[n]]);
+        printf("%d ", new_vertex_finished[n]);
     }
     printf("Colors\n");
     for(int n=0; n<numberOfRows; ++n){
@@ -301,7 +301,7 @@ int main(int argc, char *argv[])
         std::map<std::string, DotWriter::Node *>::const_iterator nodeIt1 = nodeMap.find(node1Name);
         if(nodeIt1 == nodeMap.end()) {
             nodeMap[node1Name] = graph->AddNode(node1Name);
-            if(new_color_cards[new_colors[i]]){
+            if(new_vertex_finished[i]){
                 nodeMap[node1Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[i]));
                 nodeMap[node1Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[i]));
                 nodeMap[node1Name]->GetAttributes().SetStyle("filled");
@@ -313,7 +313,7 @@ int main(int argc, char *argv[])
                 std::map<std::string, DotWriter::Node *>::const_iterator nodeIt2 = nodeMap.find(node2Name);
                 if(nodeIt2 == nodeMap.end()) {
                     nodeMap[node2Name] = graph->AddNode(node2Name);
-                    if(new_color_cards[new_colors[new_cols[j]]]){
+                    if(new_vertex_finished[new_cols[j]]){
                         nodeMap[node2Name]->GetAttributes().SetColor(DotWriter::Color::e(new_colors_randomized[new_cols[j]]));
                         nodeMap[node2Name]->GetAttributes().SetFillColor(DotWriter::Color::e(new_colors_randomized[new_cols[j]]));
                         nodeMap[node2Name]->GetAttributes().SetStyle("filled");
