@@ -278,15 +278,15 @@ int main(int argc, char *argv[])
 
     int * new_colors_randomized = new int[numberOfRows];
     int * new_colors_mapper = new int[numberOfRows];
-    printf("Color cardinalities\n")
+    printf("Color cardinalities\n");
     for(int n=0; n<numberOfRows; ++n){
         new_colors_mapper[n] = distr(gen); // generate numbers
-        printf("%d ", new_color_cards[n])
+        printf("%d ", new_color_cards[n]);
     }
-    printf("Colors\n")
+    printf("Colors\n");
     for(int n=0; n<numberOfRows; ++n){
         new_colors_randomized[n] = new_colors_mapper[new_colors[n]]; // generate numbers
-        printf("%d ", new_colors[n])
+        printf("%d ", new_colors[n]);
     }
 
     std::string name = "main";
