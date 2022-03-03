@@ -1637,7 +1637,7 @@ __global__ void launch_gpu_bfs_color_kernel( int N, int curr, int *levels,
         // Race condition, but any color which has overwritten this vertex
         // must by definition be un-finished, thus the result is an
         // un-finished color claims the predecessor.
-        if (!color_cardinalities[colors[v]])
+        if (!color_cardinalities[colors[vertexToClaim]])
             colors[vertexToClaim] = colors[v];
     }
 }
