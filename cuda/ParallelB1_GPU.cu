@@ -1703,6 +1703,7 @@ __global__ void launch_level_masked( int N, int *levels,
     if (v >= N)
         return;
     levels[v] *= vertex_finished[v];
+    printf("Vertex %d level %d\n",v,levels[v]);
 }
 
 __global__ void launch_gpu_bfs_color_kernel( int N, int curr, int *levels,
