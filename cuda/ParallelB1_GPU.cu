@@ -1188,7 +1188,7 @@ void PerformMSBFS(int numberOfRows,
             checkLastErrorCUDA(__FILE__, __LINE__);
 
             // Current isnt incremented yet, curr == source.
-            launch_gpu_bfs_color_kernel<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
+            launch_gpu_msbfs_color_kernel<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
                                                                         curr, 
                                                                         global_levels,
                                                                         global_colors_dev_ptr,
