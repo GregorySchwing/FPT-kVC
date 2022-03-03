@@ -248,23 +248,18 @@ int main(int argc, char *argv[])
     double percentTri = ((double)sum)/((double)numberOfRows) * 100.00;
     printf("%.2f %%\n", percentTri);
 
-    // Rename variable for clarity moving forward.  Any vertex not in a triangle
-    // is considered a viable path for BFS
-    int * vertex_partitioned_dev = triangle_counter_dev;
-
-
     PerformBFS(numberOfRows,
                 global_levels,
                 global_row_offsets_dev_ptr,
                 global_columns_dev_ptr,
-                vertex_partitioned_dev,
+                triangle_counter_dev,
                 global_colors_dev_ptr,
                 global_predecessors);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);
     cudaMemcpy(&new_colors[0], &global_colors_dev_ptr[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
-    cudaMemcpy(&new_vertex_finished[0], &vertex_partitioned_dev[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(&new_vertex_finished[0], &triangle_counter_dev[0], numberOfRows * sizeof(int) , cudaMemcpyDeviceToHost);
 
     cudaDeviceSynchronize();
     checkLastErrorCUDA(__FILE__, __LINE__);

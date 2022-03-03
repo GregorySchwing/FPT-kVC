@@ -1213,7 +1213,6 @@ void PerformBFS(int numberOfRows,
                 global_levels,
                 global_colors_dev_ptr,
                 global_vertex_finished_dev_ptr,
-                global_vertex_finished_dev_ptr,
                 global_predecessors);
 
             cudaDeviceSynchronize();
@@ -1644,7 +1643,6 @@ __global__ void launch_gpu_bfs_color_kernel( int N, int curr, int *levels,
 __global__ void launch_gpu_bfs_finish_colors_kernel( int N, int curr, int *levels,
                                                     int * colors,
                                                     int * color_cardinalities,
-                                                    int * vertex_finished,
                                                     int * predecessors){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     if (v >= N)
