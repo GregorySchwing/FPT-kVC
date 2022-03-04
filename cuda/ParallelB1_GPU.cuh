@@ -270,12 +270,19 @@ void CallInduceSubgraph(Graph & g,
                     int * new_cols_host,
                     int * new_vals_host);
 
-void CallMIS(   Graph & g,
-                int * new_row_offs_dev,
-                int * new_cols_dev,
-                int * new_vals_dev,
-                int * new_degrees_dev,
-                int * vertex_remaining);
+void CallMIS(   int numberOfRows,
+                int * global_marked,
+                int * global_MIS,
+                int * global_row_offsets_dev_ptr,
+                int * global_columns_dev_ptr,
+                int * global_vertex_finished_dev_ptr);
+
+__global__ void MISKernel(int numberOfRows,
+                            int * marked,
+                            int * degree,
+                            int * nodes,
+                            int * edges,
+                            int * vertex_finished);
 
 void CallCountTriangles(
                         int numberOfRows,

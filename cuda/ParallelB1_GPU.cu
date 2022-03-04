@@ -168,18 +168,49 @@ void CallInduceSubgraph(Graph & g,
     checkLastErrorCUDA(__FILE__, __LINE__);
 }
 
-void CallMIS(   Graph & g,
-                int * new_row_offs_dev,
-                int * new_cols_dev,
-                int * new_vals_dev,
-                int * new_degrees_dev,
-                int * triangle_remaining_boolean
-            ){
-    int remainingTrianglesCount = 1;
-    while(remainingTrianglesCount){ 
+void CallMIS(   int numberOfRows,
+                int * global_marked,
+                int * global_MIS,
+                int * global_degree,
+                int * global_row_offsets_dev_ptr,
+                int * global_columns_dev_ptr,
+                int * global_vertex_finished_dev_ptr){
+    int I = 0;
+    while(!I){ 
         
     }
 }
+
+
+__global__ void MISKernel(int numberOfRows,
+                            int * marked,
+                            int * degree,
+                            int * nodes,
+                            int * edges,
+                            int * vertex_finished){
+
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= numberOfRows)
+        return;
+    if (!vertex_finished[v]) {
+        int myDegree = degree[v];
+        // iterate over neighbors
+        int num_nbr = nodes[v+1] - nodes[v];
+        int * nbrs = & edges[ nodes[v] ];
+        for(int i = 0; i < num_nbr; i++) {
+            int w = nbrs[i];
+            int flag = vertex_finished[w];
+            if (myDegree < degree[w] && !flag) {
+                marked[v] = 0;
+            }
+            if (myDegree == degree[w] && !flag && h(v) < h(w)) {
+                marked[v] = 0;
+            }
+        }
+    }
+}
+
+
 
 void CallCountTriangles(
                         int numberOfRows,
