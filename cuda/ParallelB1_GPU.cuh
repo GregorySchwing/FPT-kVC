@@ -277,12 +277,23 @@ void CallMIS(   int numberOfRows,
                 int * global_columns_dev_ptr,
                 int * global_vertex_finished_dev_ptr);
 
+void CallMaxMatching(int numberOfRows,
+                int * global_levels,
+                int * global_row_offsets_dev_ptr,
+                int * global_columns_dev_ptr,
+                int * global_vertex_finished_dev_ptr,
+                int * global_colors_dev_ptr,
+                int * global_predecessors);
+
 __global__ void MISKernel(int numberOfRows,
                             int * marked,
                             int * degree,
                             int * nodes,
                             int * edges,
                             int * vertex_finished);
+
+__device__ void colour(int v);
+
 
 void CallCountTriangles(
                         int numberOfRows,

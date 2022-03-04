@@ -181,8 +181,121 @@ void CallMIS(   int numberOfRows,
     }
 }
 
+void CallMaxMatching(int numberOfRows,
+                int * global_levels,
+                int * global_row_offsets_dev_ptr,
+                int * global_columns_dev_ptr,
+                int * global_vertex_finished_dev_ptr,
+                int * global_colors_dev_ptr,
+                int * global_predecessors){
+        int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
+        int curr = 0;
+        int zero = 0;
+        int * finished = &zero;
+        int * finished_gpu;
+
+        enum colors{blue, red, black};
+
+        cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
+        cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  0, size_t(1));
+        cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_levels),  blue, size_t(numberOfRows));
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+
+// Partition remaining graph into colors of cardinality 1 or 2.
+        do {
+            cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  1, size_t(1));
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+            launch_gpu_bfs_kernel<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
+                                    curr++, 
+                                    global_levels,
+                                    global_row_offsets_dev_ptr,
+                                    global_columns_dev_ptr,
+                                    global_colors_dev_ptr,
+                                    global_vertex_finished_dev_ptr,
+                                    global_predecessors,
+                                    finished_gpu);
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+
+            // Current isnt incremented yet, curr == source.
+            launch_gpu_bfs_color_kernel<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
+                                                                        curr, 
+                                                                        global_levels,
+                                                                        global_colors_dev_ptr,
+                                                                        global_vertex_finished_dev_ptr,
+                                                                        global_predecessors);
+
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+
+
+            launch_gpu_bfs_finish_colors_kernel<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
+                curr, 
+                global_levels,
+                global_colors_dev_ptr,
+                global_vertex_finished_dev_ptr,
+                global_predecessors);
+
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+
+            cudaMemcpy(&finished[0], &finished_gpu[0], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
+            cudaDeviceSynchronize();
+            checkLastErrorCUDA(__FILE__, __LINE__);
+        } while (!(*finished));
+        cudaDeviceSynchronize();
+        checkLastErrorCUDA(__FILE__, __LINE__);
+        
+}
+
+__device__ void colour(int v){
+    int h0 = 0;
+    int h1= 0;
+    int h2= 0;
+    int h3= 0;
+    int a0 = h0;
+    int a1 = h1;
+    int a2 = h2;
+    int a3 = h3;
+    for (int i = 0; i < 15; ++i){
+
+    }
+}
+
+
 
 __global__ void MISKernel(int numberOfRows,
+                            int * marked,
+                            int * degree,
+                            int * nodes,
+                            int * edges,
+                            int * vertex_finished){
+
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= numberOfRows)
+        return;
+    if (!vertex_finished[v]) {
+        int myDegree = degree[v];
+        // iterate over neighbors
+        int num_nbr = nodes[v+1] - nodes[v];
+        int * nbrs = & edges[ nodes[v] ];
+        for(int i = 0; i < num_nbr; i++) {
+            int w = nbrs[i];
+            int flag = vertex_finished[w];
+            if (myDegree < degree[w] && !flag) {
+                marked[v] = 0;
+            }
+            if (myDegree == degree[w] && !flag && h(v) < h(w)) {
+                marked[v] = 0;
+            }
+        }
+    }
+}
+
+
+__global__ void MaximalMatchingKernel(int numberOfRows,
                             int * marked,
                             int * degree,
                             int * nodes,
