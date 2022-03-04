@@ -71,12 +71,14 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                             int * predecessors,
                             int * finished);
 
-__global__ void launch_gpu_bfs_color_kernel( int N, int curr, int *levels,
-                                            int * colors,
-                                            int * color_cardinalities,
-                                            int * predecessors);
+__global__ void launch_gpu_msbfs_kernel( int N, int curr, int *levels,
+                            int *nodes, int *edges, 
+                            int * colors,
+                            int * color_finished,
+                            int * predecessors,
+                            int * finished);
 
-__global__ void launch_gpu_msbfs_color_kernel( int N, int curr, int *levels,
+__global__ void launch_gpu_bfs_color_kernel( int N, int curr, int *levels,
                                             int * colors,
                                             int * color_cardinalities,
                                             int * predecessors);

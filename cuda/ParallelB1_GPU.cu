@@ -516,6 +516,7 @@ __global__ void CalculateConflictDegreeNeighborhoodSum(int numberOfRows,
     int v = threadIdx.x + blockDim.x * blockIdx.x;
     int neighborhoodSum = 0;
     if (v >= numberOfRows)
+
         return;
     for (int i = new_row_offs_dev[v]; i < new_row_offs_dev[v+1]; ++i){
         neighborhoodSum += triangle_counter_dev[new_cols_dev[i]];
@@ -1164,10 +1165,6 @@ void PerformMSBFS(int numberOfRows,
 
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);  
-        
-        launch_level_masked<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
-                                                                 global_levels,
-                                                                 global_vertex_finished_dev_ptr);
     
         // Partition remaining graph into colors of cardinality 1 or 2.
         do {
@@ -1175,7 +1172,7 @@ void PerformMSBFS(int numberOfRows,
 
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
-            launch_gpu_bfs_kernel<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
+            launch_gpu_msbfs_kernel<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
                                     curr++, 
                                     global_levels,
                                     global_row_offsets_dev_ptr,
@@ -1188,7 +1185,7 @@ void PerformMSBFS(int numberOfRows,
             checkLastErrorCUDA(__FILE__, __LINE__);
 
             // Current isnt incremented yet, curr == source.
-            launch_gpu_msbfs_color_kernel<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
+            launch_gpu_bfs_color_kernel<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
                                                                         curr, 
                                                                         global_levels,
                                                                         global_colors_dev_ptr,
@@ -1697,6 +1694,36 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
 }
 
 // Vertices belonging to triangles aren't traversed.
+__global__ void launch_gpu_msbfs_kernel( int N, int curr, int *levels,
+                                            int *nodes, int *edges, 
+                                            int * colors,
+                                            int * vertex_finished,
+                                            int * predecessors,
+                                            int * finished){
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= N)
+        return;
+    if (!vertex_finished[v]) {
+        int maxW = -1;
+        // iterate over neighbors
+        int num_nbr = nodes[v+1] - nodes[v];
+        int * nbrs = & edges[ nodes[v] ];
+        for(int i = 0; i < num_nbr; i++) {
+            int w = nbrs[i];
+            int flag = vertex_finished[w];
+            if (maxW < w && !flag) { // if not visited yet
+                *finished = 0;
+                maxW = w;
+            }
+        }
+        if(maxW >= 0){
+            levels[maxW] = curr + 1;
+            predecessors[maxW] = v;
+        }
+    }
+}
+
+// Vertices belonging to triangles aren't traversed.
 __global__ void launch_level_masked( int N, int *levels,
                                             int * vertex_finished){
     int v = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1719,23 +1746,6 @@ __global__ void launch_gpu_bfs_color_kernel( int N, int curr, int *levels,
         // must by definition be un-finished, thus the result is an
         // un-finished color claims the predecessor.
         colors[vertexToClaim] = colors[v];
-    }
-}
-
-__global__ void launch_gpu_msbfs_color_kernel( int N, int curr, int *levels,
-                                            int * colors,
-                                            int * color_cardinalities,
-                                            int * predecessors){
-    int v = threadIdx.x + blockDim.x * blockIdx.x;
-    if (v >= N)
-        return;
-    if (levels[v] == curr) {
-        printf("VERTEX %d ACTIVE ON BFS ITER %d\n", v, curr);
-        int vertexToClaim = predecessors[v];
-        // Must prevent simple color exchanges
-        // Can use a hash function instead of vertex ids..
-        if(vertexToClaim < v)
-            colors[vertexToClaim] = colors[v];
     }
 }
 
