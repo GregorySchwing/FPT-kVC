@@ -1146,7 +1146,7 @@ void CopyGraphFromDevice(Graph & g,
 }
 
 void PerformMSBFS(int numberOfRows,
-                int * global_levels,
+                int * global_marked,
                 int * global_row_offsets_dev_ptr,
                 int * global_columns_dev_ptr,
                 int * global_vertex_finished_dev_ptr,
@@ -1154,27 +1154,23 @@ void PerformMSBFS(int numberOfRows,
                 int * global_predecessors){
 
         int oneThreadPerNode = (numberOfRows + threadsPerBlock - 1) / threadsPerBlock;
-        int curr = 0;
         int zero = 0;
         int * finished = &zero;
         int * finished_gpu;
 
         cudaMalloc( (void**)&finished_gpu, 1 * sizeof(int) );
-        cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  0, size_t(1));
-        cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_levels),  INT_MAX, size_t(numberOfRows));
-
         cudaDeviceSynchronize();
         checkLastErrorCUDA(__FILE__, __LINE__);  
     
         // Partition remaining graph into colors of cardinality 1 or 2.
         do {
             cuMemsetD32(reinterpret_cast<CUdeviceptr>(finished_gpu),  1, size_t(1));
-
+            cuMemsetD32(reinterpret_cast<CUdeviceptr>(global_marked),  0, size_t(numberOfRows));
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
-            launch_gpu_msbfs_kernel<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
-                                    curr++, 
-                                    global_levels,
+            launch_gpu_connect_kernel<<<oneThreadPerNode,threadsPerBlock>>>(
+                                    numberOfRows,
+                                    global_marked,
                                     global_row_offsets_dev_ptr,
                                     global_columns_dev_ptr,
                                     global_colors_dev_ptr,
@@ -1185,27 +1181,15 @@ void PerformMSBFS(int numberOfRows,
             checkLastErrorCUDA(__FILE__, __LINE__);
 
             // Current isnt incremented yet, curr == source.
-            launch_gpu_bfs_color_kernel<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
-                                                                        curr, 
-                                                                        global_levels,
+            launch_gpu_connect_color_kernel<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
+                                                                        global_marked,
                                                                         global_colors_dev_ptr,
                                                                         global_vertex_finished_dev_ptr,
                                                                         global_predecessors);
 
-            cudaDeviceSynchronize();
-            checkLastErrorCUDA(__FILE__, __LINE__);
-
-
-            launch_gpu_bfs_finish_colors_kernel<<<oneThreadPerNode,threadsPerBlock>>>(numberOfRows,
-                curr, 
-                global_levels,
-                global_colors_dev_ptr,
-                global_vertex_finished_dev_ptr,
-                global_predecessors);
 
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
-
             cudaMemcpy(&finished[0], &finished_gpu[0], 1 * sizeof(int) , cudaMemcpyDeviceToHost);
             cudaDeviceSynchronize();
             checkLastErrorCUDA(__FILE__, __LINE__);
@@ -1694,7 +1678,7 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
 }
 
 // Vertices belonging to triangles aren't traversed.
-__global__ void launch_gpu_msbfs_kernel( int N, int curr, int *levels,
+__global__ void launch_gpu_connect_kernel( int N, int *marked,
                                             int *nodes, int *edges, 
                                             int * colors,
                                             int * vertex_finished,
@@ -1717,7 +1701,7 @@ __global__ void launch_gpu_msbfs_kernel( int N, int curr, int *levels,
             }
         }
         if(maxW >= 0){
-            levels[maxW] = curr + 1;
+            marked[maxW] = 1;
             predecessors[maxW] = v;
         }
     }
@@ -1746,6 +1730,25 @@ __global__ void launch_gpu_bfs_color_kernel( int N, int curr, int *levels,
         // must by definition be un-finished, thus the result is an
         // un-finished color claims the predecessor.
         colors[vertexToClaim] = colors[v];
+    }
+}
+
+
+__global__ void launch_gpu_connect_color_kernel( int N, int *marked,
+                                            int * colors,
+                                            int * color_cardinalities,
+                                            int * predecessors){
+    int v = threadIdx.x + blockDim.x * blockIdx.x;
+    if (v >= N)
+        return;
+    if (marked[v]) {
+        int vertexToClaim = predecessors[v];
+        // Race condition, but any color which has overwritten this vertex
+        // must by definition be un-finished, thus the result is an
+        // un-finished color claims the predecessor.
+        colors[vertexToClaim] = colors[v];
+        color_cardinalities[v] = 1; 
+        color_cardinalities[vertexToClaim] = 1;
     }
 }
 

@@ -71,7 +71,7 @@ __global__ void launch_gpu_bfs_kernel( int N, int curr, int *levels,
                             int * predecessors,
                             int * finished);
 
-__global__ void launch_gpu_msbfs_kernel( int N, int curr, int *levels,
+__global__ void launch_gpu_connect_kernel( int N, int *marked,
                             int *nodes, int *edges, 
                             int * colors,
                             int * color_finished,
@@ -79,6 +79,12 @@ __global__ void launch_gpu_msbfs_kernel( int N, int curr, int *levels,
                             int * finished);
 
 __global__ void launch_gpu_bfs_color_kernel( int N, int curr, int *levels,
+                                            int * colors,
+                                            int * color_cardinalities,
+                                            int * predecessors);
+
+
+__global__ void launch_gpu_connect_color_kernel( int N, int *marked,
                                             int * colors,
                                             int * color_cardinalities,
                                             int * predecessors);
