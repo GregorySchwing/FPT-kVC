@@ -259,8 +259,21 @@ __device__ void colour(int v){
     int a1 = h1;
     int a2 = h2;
     int a3 = h3;
+    int a4, a5;
+    int * K;
+    int * R;
     for (int i = 0; i < 15; ++i){
-
+        a4 = (a1 & a2) | ((~a1) & a3);
+        a5 = a3;
+        a3 = a2;
+        a2 = a1;
+        a1 = a1 + (a0 + a4 + K[i] + v)*(2^R[i]);
+        a0 = a5;
+        h1 += a1;
+        h2 += a2;
+        h3 += a3;
+        h4 += a4;
+        v = r*v;
     }
 }
 
